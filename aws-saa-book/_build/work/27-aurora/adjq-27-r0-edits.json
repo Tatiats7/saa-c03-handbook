@@ -1,0 +1,231 @@
+[
+ {
+  "id": "aurora-q012",
+  "section": "2-deep.md#a-secondary-region-takes-over-by-failover-after-an-outage-by-switchover-when-healthy",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.K6"],
+  "topics": ["databases", "resilience"],
+  "services": ["aurora"],
+  "concept": "global-failover-for-region-outage",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an Amazon Aurora global database for Aurora PostgreSQL. The primary cluster is in us-east-1, and one secondary cluster is in us-west-2. The applications connect to the database through the global writer endpoint, and the company does not want to change their connection settings. An outage makes the primary cluster in us-east-1 unavailable, and the company must restore write access in us-west-2 as soon as possible. The company accepts the loss of recent writes that were not yet replicated. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["An outage makes the primary cluster in us-east-1 unavailable", "restore write access in us-west-2 as soon as possible", "does not want to change their connection settings", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run a managed failover of the global database to the secondary cluster in us-west-2, and keep the applications on the global writer endpoint.",
+    "correct": true,
+    "why": "Failover is the way to [recover from an unplanned outage](../facts/aurora.md#aurora-global-db-failover-use-for-unplanned-outage), and the global writer endpoint then points to the [cluster endpoint of the new primary cluster](../facts/aurora.md#aurora-global-writer-endpoint-follows-switchover-failover).",
+    "concept": "global-database-managed-failover",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Run a switchover of the global database to the secondary cluster in us-west-2, and keep the applications on the global writer endpoint.",
+    "correct": false,
+    "why": "Switchovers are meant for a global database whose clusters are all [in a healthy state](../facts/aurora.md#aurora-global-db-switchover-healthy-only-unplanned-use-failover), and the primary cluster here is down.",
+    "concept": "global-database-switchover",
+    "trap": "aurora-trap-switchover-for-region-outage",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Remove the secondary cluster in us-west-2 from the global database, and change the applications to use the cluster endpoint of that cluster.",
+    "correct": false,
+    "why": "Removing the cluster [immediately stops the replication](../facts/aurora.md#aurora-global-db-detach-secondary-standalone-readwrite) and gives a writable cluster, but the team changes every application and rebuilds the global database later.",
+    "concept": "detach-secondary-cluster",
+    "trap": "aurora-trap-detach-is-managed-failover",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Restore the most recent cluster snapshot to a new cluster in us-west-2, and change the applications to use the endpoint of the new cluster.",
+    "correct": false,
+    "why": "Snapshots reach another Region when you [manually copy Aurora snapshots](../facts/aurora.md#aurora-no-cross-region-automated-backup-replication), and a restored cluster misses every write after its snapshot and takes longer to start.",
+    "concept": "snapshot-restore-other-region",
+    "trap": null,
+    "misconception": "a cluster snapshot in the second Region is a fast way back to current data after a Region outage",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "The primary Region has an outage, so this is an unplanned event. AWS says that the managed failover [method is recommended for disaster recovery](../facts/aurora.md#aurora-global-db-managed-failover-recommended-for-dr). It promotes the secondary cluster in us-west-2, and the global writer endpoint follows the new primary cluster, so the applications change nothing.",
+  "takeaway": "Region outage in an Aurora global database: managed failover. Planned move while both Regions are healthy: switchover.",
+  "twin": "If the stem said \"For a planned maintenance event, the company must move the primary role to us-west-2 while both Regions are healthy, with no data loss\" instead: the switchover, because its [RPO is 0 (no data loss)](../facts/aurora.md#aurora-global-switchover-rpo-zero).",
+  "say": "An outage calls for a managed failover; a switchover is for a global database whose clusters are healthy.",
+  "facts": [
+   "aurora-global-db-failover-use-for-unplanned-outage",
+   "aurora-global-writer-endpoint-follows-switchover-failover",
+   "aurora-global-db-switchover-healthy-only-unplanned-use-failover",
+   "aurora-global-db-detach-secondary-standalone-readwrite",
+   "aurora-no-cross-region-automated-backup-replication",
+   "aurora-global-db-managed-failover-recommended-for-dr",
+   "aurora-global-switchover-rpo-zero"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-as-soon-as-possible"],
+  "twin_of": null
+ },
+ {
+  "id": "aurora-q016",
+  "section": "2-deep.md#a-secondary-region-takes-over-by-failover-after-an-outage-by-switchover-when-healthy",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.K6"],
+  "topics": ["databases", "resilience"],
+  "services": ["aurora"],
+  "concept": "global-switchover-planned-move",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an Amazon Aurora global database for Aurora PostgreSQL. The primary cluster is in us-east-1, and one secondary cluster is in us-west-2. The applications connect to the database through the global writer endpoint, and the company does not want to change their connection settings. For a planned maintenance event, the company must move the primary role to us-west-2 while both Regions are healthy, with no data loss. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["For a planned maintenance event", "while both Regions are healthy", "with no data loss", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run a managed failover of the global database to us-west-2 without waiting for the clusters to synchronize, and keep the applications on the global writer endpoint.",
+    "correct": false,
+    "why": "Managed failover [doesn't wait for data to synchronize](../facts/aurora.md#aurora-global-db-managed-failover-no-wait-async) between the Regions, so writes that were not yet replicated can be lost.",
+    "concept": "global-database-managed-failover",
+    "trap": "aurora-trap-global-failover-no-data-loss",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Run a switchover of the global database to the secondary cluster in us-west-2, and keep the applications on the global writer endpoint.",
+    "correct": true,
+    "why": "A switchover lets you [relocate the primary cluster](../facts/aurora.md#aurora-global-db-switchover-planned-no-data-loss) of a healthy global database, and its [RPO is 0 (no data loss)](../facts/aurora.md#aurora-global-switchover-rpo-zero).",
+    "concept": "global-database-switchover",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Remove the secondary cluster in us-west-2 from the global database, and change the applications to use the cluster endpoint of that cluster.",
+    "correct": false,
+    "why": "Removing the cluster [immediately stops the replication](../facts/aurora.md#aurora-global-db-detach-secondary-standalone-readwrite), so the team stops the writes first, changes every application and rebuilds the global database.",
+    "concept": "detach-secondary-cluster",
+    "trap": "aurora-trap-detach-is-managed-failover",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Restore the most recent cluster snapshot to a new cluster in us-west-2, and change the applications to use the endpoint of the new cluster.",
+    "correct": false,
+    "why": "A restored cluster holds the data of its snapshot, so the writes after the snapshot are lost, and you first [manually copy Aurora snapshots](../facts/aurora.md#aurora-no-cross-region-automated-backup-replication) to us-west-2.",
+    "concept": "snapshot-restore-other-region",
+    "trap": null,
+    "misconception": "a snapshot restore in the second Region moves the primary role without losing data",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Both Regions are healthy and the move is planned. AWS describes switchover for [controlled scenarios, such as operational maintenance](../facts/aurora.md#aurora-global-db-switchover-controlled-scenarios). The switchover synchronizes the secondary cluster before the roles change, and the global writer endpoint then points to the [cluster endpoint of the new primary cluster](../facts/aurora.md#aurora-global-writer-endpoint-follows-switchover-failover).",
+  "takeaway": "Planned move with healthy Regions and no data loss: switchover. Region outage: managed failover.",
+  "twin": "If the stem said \"An outage makes the primary cluster in us-east-1 unavailable, and the company must restore write access in us-west-2 as soon as possible\" instead: the managed failover, because it is how you [recover from an unplanned outage](../facts/aurora.md#aurora-global-db-failover-use-for-unplanned-outage).",
+  "say": "A planned move with both Regions healthy is a switchover, which loses no data.",
+  "facts": [
+   "aurora-global-db-managed-failover-no-wait-async",
+   "aurora-global-db-switchover-planned-no-data-loss",
+   "aurora-global-switchover-rpo-zero",
+   "aurora-global-db-detach-secondary-standalone-readwrite",
+   "aurora-no-cross-region-automated-backup-replication",
+   "aurora-global-db-switchover-controlled-scenarios",
+   "aurora-global-writer-endpoint-follows-switchover-failover",
+   "aurora-global-db-failover-use-for-unplanned-outage"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead"],
+  "twin_of": "aurora-q012"
+ },
+ {
+  "id": "aurora-q022",
+  "section": "1-fast.md#choose-it-or-not",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": ["4.3.K9"],
+  "topics": ["databases"],
+  "services": ["aurora-serverless", "dynamodb", "aurora", "elasticache"],
+  "concept": "dynamodb-for-key-value-sessions",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company stores user session data for a web application. Every request reads or writes one session item by its session ID, and the application does not join the session data with other data. The session store holds the only copy of the session data, so the data must be stored durably. Traffic is spiky, with sudden peaks of millions of requests. Which database will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["one session item by its session ID", "does not join the session data", "stored durably", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Amazon Aurora Serverless v2, with a sessions table and a capacity range that scales the DB instances with the request load.",
+    "correct": false,
+    "why": "Spiky traffic suggests Aurora Serverless v2, but Aurora is a [fully managed relational database engine](../facts/aurora.md#aurora-is-managed-relational-engine), and the team still has to [specify the minimum and maximum capacity range](../facts/aurora-serverless.md#aurora-serverless-specify-min-max-capacity-range).",
+    "concept": "aurora-serverless-v2",
+    "trap": "how-the-exam-asks-trap-keyword-bait",
+    "misconception": null,
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "b",
+    "text": "Amazon DynamoDB, with one table that uses the session ID as the partition key and stores each session as one item.",
+    "correct": true,
+    "why": "The decision guide lists DynamoDB as a key-value database for [session stores or shopping carts](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store), a serverless and fully managed database.",
+    "concept": "dynamodb-key-value",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "A provisioned Amazon Aurora MySQL DB cluster, with a sessions table on the writer and Aurora Replicas behind the reader endpoint.",
+    "correct": false,
+    "why": "It works, but the team sizes and runs a relational cluster for lookups by one key, and provisioned clusters are [suitable for steady workloads](../facts/aurora-serverless.md#aurora-serverless-provisioned-suited-to-steady-workloads), not spiky ones.",
+    "concept": "provisioned-aurora-cluster",
+    "trap": null,
+    "misconception": "a relational cluster with replicas is the default home for any application data",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Amazon ElastiCache as the only session store, with no other database behind the cache for the session items.",
+    "correct": false,
+    "why": "ElastiCache is an [ephemeral cache for frequently accessed data](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer), and using a cache [as if it is durably stored](../facts/dynamodb.md#dynamodb-wa-cache-not-durable-store) is an anti-pattern when it holds the only copy.",
+    "concept": "elasticache-as-store",
+    "trap": "aurora-trap-cache-as-database",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "Each request reads or writes one item by its key, with no joins, so this is a key-value workload. DynamoDB gives [single-digit millisecond performance at any scale](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store), and AWS describes it as serverless and fully managed. Aurora fits relational work, such as [migrating or modernizing an on-premises relational workload](../facts/aurora.md#aurora-dg-use-when-relational-modernize).",
+  "takeaway": "One item by one key, no joins, spiky traffic: DynamoDB. Spiky traffic alone does not point to Aurora Serverless v2.",
+  "twin": "If the stem said \"reports join the sessions with the orders and customers tables\" instead: Amazon Aurora, because it is a [fully managed relational database engine](../facts/aurora.md#aurora-is-managed-relational-engine).",
+  "say": "Lookups by one key with spiky traffic point to DynamoDB, not to a relational database.",
+  "facts": [
+   "dynamodb-decision-guide-key-value-session-store",
+   "aurora-is-managed-relational-engine",
+   "aurora-serverless-specify-min-max-capacity-range",
+   "aurora-serverless-provisioned-suited-to-steady-workloads",
+   "dynamodb-decision-guide-elasticache-caching-layer",
+   "dynamodb-wa-cache-not-durable-store",
+   "aurora-dg-use-when-relational-modernize"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-spiky"],
+  "twin_of": null
+ }
+]

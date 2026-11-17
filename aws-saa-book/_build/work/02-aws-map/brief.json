@@ -1,0 +1,1185 @@
+{
+  "chapter": "02",
+  "version": 1,
+  "by": "brief-02",
+  "date": "2026-10-12",
+  "angle": "follow one request: from the Region that holds the resource, into its Availability Zones, out to a second Region, toward the users at the edge; then ask who secures each layer and how a review checks the whole design. Front chapter, medium template; Well-Architected is an overview only (the pillars return in chapters 40 to 43).",
+  "template": "medium (SPEC chapter_overrides 02); files 1-fast.md, 2-deep.md, 2-services.md (registry cards: aws-cli, management-console); generated 3-do.md, 4-say.md, 5-quiz.md, sources.md",
+  "notes_for_writers": [
+    "Question stems never name Callvale; they say 'A company'. The services of a question are the in-scope services it mentions (Amazon EC2, Amazon S3, Amazon CloudFront, AWS CLI, ...): the keys global-infrastructure and well-architected cannot be carried by a question.",
+    "No counts of Regions, AZs, edge locations or Local Zones in prose except the two B-list rows (34 Regions for an AWS account, 6 AZs in us-east-1), each as retrieved on the snapshot date. The landing-page headline counts are not quotable (brief.v0 d002): do not write them.",
+    "No sentence on 'fault tolerance' as a term distinct from high availability: no AWS page in the corpus defines it (brief.v0 d067). Use the facts on Multi-AZ, multi-Region and resiliency instead.",
+    "Region choice has no AWS-given order. Write the four factors as a checklist; the one supported ranking is that a higher-priced Region is chosen only for latency, residency or sovereignty (well-architected-region-pricing-differs-choose-by-cost).",
+    "Cross-references that do not exist yet are xref markers: 03 (root user, IAM roles), 10 (subnets per AZ), 13 (Route 53 failover), 15 (CloudFront), 20 (Local Zones, Wavelength, Outposts in depth), 21 (S3 Block Public Access), 38 (Well-Architected Tool), 40 (HA and DR patterns, RTO and RPO strategies), 41 (AWS Budgets).",
+    "Task 0 (aws-map-t02, the budget alert) depends on the budgets facts of chapter 41 (budgets-alerts-on-actual-or-forecasted-spend, budgets-data-updated-up-to-three-times-a-day, budgets-monitoring-and-notifications-free), which are mech-pass, not verified, on 2026-10-12. The tasks writer adds the task only after they are verified; until then list it as parked. They are deliberately not named in any facts list of this brief (B04).",
+    "Displays: F2 forbids a link text that says 'we' for AWS. The Old line of the AZ-mapping change and some quotes of global-infrastructure-no-automatic-cross-region-replication carry 'we'; request a display (facts request --fact ... --display) rather than linking those words.",
+    "Story numbers allowed in this chapter (data/startup.json uses_numbers): pilot_teams (3), review_findings (12), availability_zones_used (1 at stage 0), call_minutes_per_month (1,200). No other Callvale number."
+  ],
+  "sections": [
+    {
+      "file": "1-fast.md",
+      "section": "predict",
+      "heading": "Predict",
+      "role": "predict",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "prompts": [
+          "Predict 1 (gist trap): A web application runs on four EC2 instances in one Availability Zone. Is the application highly available?",
+          "Predict 2: A company stores customer recordings in an Amazon S3 bucket. Who decides whether the bucket is public: AWS or the company?"
+        ],
+        "gist_trap": "Predict 1 (common sense says four instances are enough; trap aws-map-trap-one-az-is-highly-available)"
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "look-first",
+      "heading": "Look first",
+      "role": "task",
+      "minutes": 3,
+      "bullets": ["1.1.K3"],
+      "facts": ["management-console-cloudshell-region-follows-console-region"],
+      "plan": {
+        "text": "One or two sentences: open AWS CloudShell, list the Availability Zones of your Region with their names and AZ IDs, then list the Regions your account can use.",
+        "task_region": "aws-map-t01"
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "in-one-breath",
+      "heading": "In one breath",
+      "role": "breath",
+      "minutes": 2,
+      "bullets": ["1.1.K3", "1.1.K5"],
+      "facts": [
+        "global-infrastructure-region-is-separate-geographic-area",
+        "global-infrastructure-az-definition-discrete-data-centers",
+        "global-infrastructure-edge-location-services",
+        "well-architected-shared-responsibility-of-versus-in-the-cloud",
+        "well-architected-security-in-the-cloud-you-retain-control",
+        "global-infrastructure-edge-locations-connected-to-regions-by-backbone",
+        "global-infrastructure-s3-regional-recovers-from-az-failure",
+        "global-infrastructure-local-zone-extension-of-region-own-internet"
+      ],
+      "plan": {
+        "say_it": "At most 25 words: AWS runs Regions, each a separate geographic area with several Availability Zones, plus edge locations near users; AWS secures the cloud, you secure what you put in it.",
+        "problem_it_solves": "The bold field: a workload needs a place close to its users and its data rules, a way to survive the loss of one data center, and a clear line between AWS's security work and yours.",
+        "predict_the_picture": "Where does an edge location sit: inside a Region, or close to the users?",
+        "hero": "aws-map-hero",
+        "startup_example": "The Problem of STARTUP.md 02, word for word (at most 60 words with its label)."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "words-that-go-together",
+      "heading": "Words that go together",
+      "role": "words",
+      "minutes": 1,
+      "bullets": ["1.1.K3"],
+      "facts": [],
+      "plan": {
+        "rows": [
+          {"term": "Region", "collocation": "in a Region", "partner": "in", "plain": "A separate geographic area with several Availability Zones", "not": "Availability Zone"},
+          {"term": "Availability Zone", "collocation": "across Availability Zones", "partner": "across", "plain": "One or more separate data centers inside a Region", "not": "data center (one building)"},
+          {"term": "edge location", "collocation": "cache at the edge", "partner": "cache", "plain": "A site near users where services such as CloudFront run", "not": "Local Zone, which runs your compute"},
+          {"term": "high availability", "collocation": "design for high availability", "partner": "design", "plain": "The workload keeps working when one part fails", "not": "a second Region"},
+          {"term": "shared responsibility model", "collocation": "security of the cloud, security in the cloud", "partner": "of / in", "plain": "AWS secures the infrastructure; you secure what you build on it", "not": "AWS secures everything", "term_status": "term request: not in data/terms.json yet; write <!-- needs-term: shared responsibility model --> until the orchestrator adds it"}
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "choose-it-or-not",
+      "heading": "Choose it or not",
+      "role": "choose",
+      "minutes": 2,
+      "bullets": ["2.2.K1", "3.2.K2"],
+      "facts": [
+        "global-infrastructure-single-az-failure-takes-all-instances",
+        "global-infrastructure-zonal-resource-deploy-in-multiple-azs",
+        "global-infrastructure-regional-services-fail-independently",
+        "global-infrastructure-az-latency-single-digit-ms",
+        "global-infrastructure-no-synchronous-cross-region-replication",
+        "vpc-dev-test-one-az-saves-money",
+        "global-infrastructure-production-at-least-two-azs",
+        "global-infrastructure-multi-region-only-for-extreme-resilience",
+        "global-infrastructure-edge-location-services",
+        "global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator",
+        "global-infrastructure-faq-local-zones-select-services-closer-to-users",
+        "global-infrastructure-faq-local-zones-vs-availability-zones-core-vs-full-services",
+        "global-infrastructure-local-zone-must-be-enabled-then-subnet"
+      ],
+      "plan": {
+        "compare_tables": [
+          {
+            "h3": "One zone or several zones or a second Region",
+            "columns": ["Question", "One Availability Zone", "Several Availability Zones", "A second Region"],
+            "rows": [
+              "Does it survive the loss of one Availability Zone? (No: single-az-failure-takes-all-instances | Yes: zonal-resource-deploy-in-multiple-azs | Yes)",
+              "Does it survive the loss of a whole Region? (No | No | Yes: regional-services-fail-independently)",
+              "Can data be copied synchronously? (one copy only | Yes, between zones: az-latency-single-digit-ms | No: no-synchronous-cross-region-replication)",
+              "When does AWS point to it? (dev and test to save money: vpc-dev-test-one-az-saves-money | every production workload: production-at-least-two-azs | extreme resilience: multi-region-only-for-extreme-resilience)"
+            ],
+            "deciding_question": "Must the workload survive the loss of a whole Region, or only the loss of one Availability Zone?"
+          },
+          {
+            "h3": "Edge location or Local Zone or Region",
+            "columns": ["Question", "Edge location", "Local Zone", "Region"],
+            "rows": [
+              "What runs there? (CloudFront, Route 53, AWS WAF, AWS Shield: edge-location-services | select services such as compute and storage: faq-local-zones-select-services-closer-to-users | the full array of services: faq-local-zones-vs-availability-zones-core-vs-full-services)",
+              "How do you use it? (attach a service such as CloudFront | enable it, then create a subnet: local-zone-must-be-enabled-then-subnet | choose the Region)",
+              "Typical need (content and DNS close to users around the world | compute close to users in one city | everything else)"
+            ],
+            "deciding_question": "Must the users get content and DNS answers close to them, or must your own compute run close to them?"
+          }
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "signals-and-traps",
+      "heading": "Signals and traps",
+      "role": "signals",
+      "minutes": 2,
+      "bullets": ["1.1.K5", "2.2.K1", "3.2.K2", "3.3.K1"],
+      "facts": [
+        "global-infrastructure-customer-content-stays-in-chosen-region",
+        "global-infrastructure-faq-local-zones-data-residency-local-storage-services",
+        "global-infrastructure-zonal-resource-deploy-in-multiple-azs",
+        "global-infrastructure-regional-services-fail-independently",
+        "global-infrastructure-multi-region-only-for-extreme-resilience",
+        "global-infrastructure-edge-location-services",
+        "global-infrastructure-faq-local-zones-single-digit-millisecond-latency-workloads",
+        "global-infrastructure-faq-wavelength-ultralow-latency-for-5g-devices",
+        "global-infrastructure-faq-outposts-for-workloads-that-must-stay-on-premises",
+        "well-architected-customer-responsible-for-guest-os-apps-security-groups",
+        "well-architected-abstracted-services-aws-runs-os-customer-manages-data",
+        "global-infrastructure-single-az-failure-takes-all-instances",
+        "global-infrastructure-production-at-least-two-azs",
+        "iam-shared-responsibility-customer-applies-permissions-with-iam",
+        "global-infrastructure-most-customers-single-region-suffices",
+        "global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern"
+      ],
+      "plan": {
+        "signal_rows": [
+          {"stem": "\"the data must stay in <country>\"", "think": "a Region in that country", "because": "customer-content-stays-in-chosen-region", "but_not_if": "no Region exists there: a Local Zone with local storage (faq-local-zones-data-residency-local-storage-services)"},
+          {"stem": "\"remain available if an Availability Zone fails\"", "think": "at least two Availability Zones", "because": "zonal-resource-deploy-in-multiple-azs", "but_not_if": "the stem says the whole Region fails: a second Region"},
+          {"stem": "\"survive the failure of an entire AWS Region\"", "think": "a second Region", "because": "regional-services-fail-independently", "but_not_if": "data residency allows only one Region: Multi-AZ in that Region (multi-region-only-for-extreme-resilience)"},
+          {"stem": "\"users around the world\" and \"static content\"", "think": "Amazon CloudFront at edge locations", "because": "edge-location-services", "but_not_if": "the application's own compute must run in one city: a Local Zone"},
+          {"stem": "\"single-digit millisecond latency\" for users in one metro area", "think": "a Local Zone", "because": "faq-local-zones-single-digit-millisecond-latency-workloads", "but_not_if": "the users are on 5G devices: a Wavelength Zone; the workload must stay on premises: AWS Outposts"},
+          {"stem": "\"patch the operating system\" of EC2 instances", "think": "the customer's job", "because": "customer-responsible-for-guest-os-apps-security-groups", "but_not_if": "the service is Amazon S3 or Amazon DynamoDB: AWS runs the operating system (abstracted-services-aws-runs-os-customer-manages-data)"}
+        ],
+        "traps_list": [
+          "aws-map-trap-one-az-is-highly-available",
+          "aws-map-trap-managed-means-aws-secures-data",
+          "aws-map-trap-multi-region-for-high-availability"
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "changed-recently",
+      "heading": "Changed recently",
+      "role": "changed",
+      "minutes": 1,
+      "bullets": ["1.1.K3", "2.2.K1"],
+      "facts": [
+        "global-infrastructure-az-name-mapping-independent-per-account",
+        "global-infrastructure-az-id-same-physical-location-every-account",
+        "management-console-private-access-all-traffic-through-vpc-endpoints-since-2026-06"
+      ],
+      "plan": {
+        "entries": [
+          {
+            "date": "2025-11",
+            "what": "How Availability Zone names map to physical zones in new accounts.",
+            "now_fact": "global-infrastructure-az-name-mapping-independent-per-account",
+            "old": "each account had its own mapping, so us-east-1a could be a different physical zone in two accounts (changed.was; request a display without 'we')",
+            "now": "accounts created starting November 2025 get the same mapping",
+            "exam_expects": "the old behavior: names can differ between accounts. Prefer the AZ ID, which is right under both (az-id-same-physical-location-every-account).",
+            "status": "examinable"
+          },
+          {
+            "date": "2026-06-15",
+            "what": "AWS Management Console Private Access without internet access.",
+            "now_fact": "management-console-private-access-all-traffic-through-vpc-endpoints-since-2026-06",
+            "old": "still required internet connectivity (changed.was)",
+            "now": "eliminating the need for any internet access",
+            "exam_expects": "recognition only; no exam bullet names it. Prefer an option that is right under both values.",
+            "status": "examinable (GA before the 2026-07-15 cutoff)"
+          }
+        ],
+        "not_examinable_entry": "management-console-global-view-map-view-since-2026-08 goes to 2-deep.md under the B-list (U3)."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "check",
+      "heading": "Check",
+      "role": "check",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [
+        "global-infrastructure-single-az-failure-takes-all-instances",
+        "global-infrastructure-zonal-resource-deploy-in-multiple-azs",
+        "well-architected-abstracted-services-aws-runs-os-customer-manages-data",
+        "iam-shared-responsibility-customer-applies-permissions-with-iam"
+      ],
+      "plan": {
+        "prompts": [
+          "Check 1 (parallel to Predict 1): A team runs two instances in AZ 1 and two in AZ 2 behind a load balancer. AZ 1 fails. Does the application keep serving? Reveal ends with a 'Predict 1:' paragraph (No for four instances in one zone).",
+          "Check 2 (parallel to Predict 2): A team moves its job records to Amazon DynamoDB. Who sets the IAM permissions on the table? Reveal ends with a 'Predict 2:' paragraph (the company decides; AWS runs the platform)."
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "recap-from-memory",
+      "heading": "Recap from memory",
+      "role": "recap",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "prompts": [
+          "Recap 1: Say the one-breath definition from 'In one breath'.",
+          "Recap 2: Say the deciding question of the table 'One zone or several zones or a second Region'.",
+          "Recap 3: From the signals table: who patches the operating system of an EC2 instance, and what changes for Amazon S3?"
+        ],
+        "rule": "Each prompt asks only for a sentence, row or cell that 1-fast.md states (U4)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "how-it-works",
+      "heading": "How it works",
+      "role": "how",
+      "minutes": 28,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "subsections_in_order": [
+          "each-request-goes-to-one-region-and-your-resources-stay-there",
+          "the-best-region-is-near-your-users-and-meets-your-data-rules",
+          "availability-zones-fail-separately-so-production-uses-at-least-two",
+          "a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+          "edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them",
+          "aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+          "the-well-architected-framework-turns-six-pillars-into-review-questions"
+        ],
+        "pass_route_subsections": [
+          "availability-zones-fail-separately-so-production-uses-at-least-two",
+          "a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+          "aws-secures-the-cloud-and-you-secure-what-you-put-in-it"
+        ],
+        "causal_chain": "request -> its Region -> which Region -> zones inside the Region -> beyond the Region -> toward the users -> who secures each layer -> how a review checks it all",
+        "file_devices": "Go deeper: exactly 3 (subsections 3, 4, 5). Spot the bug: exactly 1 (subsection 6). Each subsection: problem, numbered trace with bold step names, compressing table, one Why, one Exam signal, Say it, Stop and answer (U1). 150 to 400 words each; 1,300 to 1,800 words for the section; about 4 minutes each."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "each-request-goes-to-one-region-and-your-resources-stay-there",
+      "heading": "Each request goes to one Region and your resources stay there",
+      "parent": "how-it-works",
+      "order": 1,
+      "minutes": 4,
+      "route": "full",
+      "bullets": ["1.1.K3", "3.3.K1"],
+      "facts": [
+        "global-infrastructure-region-is-separate-geographic-area",
+        "global-infrastructure-region-isolated-for-fault-tolerance",
+        "management-console-some-services-need-no-region-selection",
+        "iam-resources-global-same-role-any-region",
+        "global-infrastructure-regional-endpoint-syntax",
+        "global-infrastructure-regional-resource-visible-only-in-its-region",
+        "management-console-missing-resources-check-region",
+        "global-infrastructure-no-automatic-cross-region-replication",
+        "global-infrastructure-customer-content-stays-in-chosen-region",
+        "global-infrastructure-opt-in-regions-after-march-2019",
+        "vpc-default-vpc-in-each-region",
+        "global-infrastructure-partition-names-aws-aws-cn-aws-us-gov",
+        "global-infrastructure-account-type-cannot-reach-other-partition-regions"
+      ],
+      "plan": {
+        "problem": "Every resource must live somewhere. AWS needs one rule for where a resource lives and who can find it.",
+        "trace": [
+          "**Choose the Region.** The console Region selector or the CLI Region names it; some services, such as IAM, need no Region (management-console-some-services-need-no-region-selection, iam-resources-global-same-role-any-region).",
+          "**Call the Regional endpoint.** The request goes to service-code.region-code.amazonaws.com (regional-endpoint-syntax).",
+          "**Create the resource there.** A regional resource is specific to its Region and you see only the resources of the Region you specify (regional-resource-visible-only-in-its-region).",
+          "**Nothing is copied for you.** AWS does not replicate resources across Regions unless you use a replication or copy feature (no-automatic-cross-region-replication); customer content stays in the Region where you use the service (customer-content-stays-in-chosen-region)."
+        ],
+        "table": "Truth table 'Resource | Where it lives | Seen from another Region?': an EC2 instance (one Region: no), an S3 bucket (one Region: no), an IAM role (global: yes).",
+        "why": "Isolation is the point: each Region is designed to be isolated from the others, which gives fault tolerance and stability (region-isolated-for-fault-tolerance), and you keep control of where data lives.",
+        "exam_signal": "\"the resources do not appear in the console\" points to the Region selector: the console might be showing another Region (management-console-missing-resources-check-region).",
+        "exam_trap_callout": "aws-map-trap-region-auto-replicates",
+        "try_it": "aws-map-t03",
+        "body_extras": "One sentence each, optional: a Region introduced after March 20, 2019 must be enabled first (opt-in-regions-after-march-2019); GovCloud (US) and China Regions are other partitions that a standard account cannot reach (partition facts).",
+        "say_it": "The short answer is: a resource lives in the Region you chose. The thing to watch is that AWS copies nothing to other Regions for you.",
+        "stop_and_answer": "A team creates an Amazon DynamoDB table in us-east-1. A script calls the endpoint dynamodb.us-west-2.amazonaws.com and asks for the table. Does the script find it? (No: the endpoint names another Region.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "the-best-region-is-near-your-users-and-meets-your-data-rules",
+      "heading": "The best Region is near your users and meets your data rules",
+      "parent": "how-it-works",
+      "order": 2,
+      "minutes": 4,
+      "route": "full",
+      "bullets": ["4.2.K3", "3.3.K1"],
+      "facts": [
+        "global-infrastructure-region-choice-services-and-latency",
+        "well-architected-region-choice-closer-to-users-latency-sovereignty",
+        "well-architected-region-pricing-differs-choose-by-cost",
+        "global-infrastructure-region-pricing-differs-local-market",
+        "well-architected-cheaper-region-for-non-critical-when-no-restrictions",
+        "well-architected-data-transfer-cost-keep-data-close",
+        "management-console-services-list-by-region-updated-daily",
+        "well-architected-region-choice-affects-carbon-footprint",
+        "well-architected-customer-responsibility-varies-by-service-region-law"
+      ],
+      "plan": {
+        "problem": "Regions differ in distance to users, in the services they offer, in the law that applies and in price. A wrong choice is hard to undo later.",
+        "trace": [
+          "**Check the data rules.** Legal requirements can decide the location (region-choice-services-and-latency: 'to meet legal requirements'); responsibilities also vary with the Regions you choose and the laws that apply (customer-responsibility-varies-by-service-region-law).",
+          "**Measure latency.** A Region close to the majority of users lowers network latency (region-choice-services-and-latency; well-architected-region-choice-closer-to-users-latency-sovereignty).",
+          "**Confirm the services.** Choose a Region that has the services and features you need; the Services by Region page is updated daily (services-list-by-region-updated-daily).",
+          "**Compare the price.** Pricing differs by Region (region-pricing-differs-local-market); deploy in a higher-priced Region only to meet latency, residency or sovereignty needs (well-architected-region-pricing-differs-choose-by-cost); with no such obligations, non-critical dev and test can run in a cheaper Region (cheaper-region-for-non-critical-when-no-restrictions)."
+        ],
+        "table": "'Requirement | What it does to the list of Regions': data residency (keeps only Regions in the allowed place), users in one area (prefers the nearest Region), a needed service (removes Regions without it), price (picks among the rest).",
+        "order_rule": "No AWS-given order: write 'Use them as a checklist'. The one supported ranking is price after latency and residency (well-architected-region-pricing-differs-choose-by-cost).",
+        "why": "Keep data close to the customers and the resources that use it, because data transfer between places costs money (data-transfer-cost-keep-data-close).",
+        "exam_signal": "\"development and test\" with no data rules and \"MOST cost-effective\" points to a lower-priced Region (cheaper-region-for-non-critical-when-no-restrictions).",
+        "go_deeper": null,
+        "say_it": "The short answer is: put the workload near its users, inside the law. The thing to watch is price, which differs by Region.",
+        "stop_and_answer": "A company's production runs in Asia Pacific (Sydney) for local users. It needs a test environment with no data privacy obligations. Where can the test instances run for less? (A lower-priced Region, AWS's own example names us-east-1.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "availability-zones-fail-separately-so-production-uses-at-least-two",
+      "heading": "Availability Zones fail separately so production uses at least two",
+      "parent": "how-it-works",
+      "order": 3,
+      "minutes": 5,
+      "route": "pass",
+      "bullets": ["1.1.K3", "2.2.K1", "3.2.K2"],
+      "facts": [
+        "global-infrastructure-az-definition-discrete-data-centers",
+        "global-infrastructure-az-no-shared-fate",
+        "global-infrastructure-az-distance-within-100-km",
+        "global-infrastructure-az-interconnect-metro-fiber",
+        "global-infrastructure-az-latency-single-digit-ms",
+        "global-infrastructure-inter-az-traffic-encrypted",
+        "global-infrastructure-region-min-three-azs",
+        "global-infrastructure-zonal-resource-deploy-in-multiple-azs",
+        "vpc-subnet-one-az-protects-from-zone-failure",
+        "global-infrastructure-single-az-failure-takes-all-instances",
+        "global-infrastructure-regional-service-definition",
+        "global-infrastructure-s3-regional-recovers-from-az-failure",
+        "global-infrastructure-production-at-least-two-azs",
+        "global-infrastructure-az-deployments-separated-in-time",
+        "global-infrastructure-fault-isolation-boundary-definition",
+        "global-infrastructure-az-code-is-region-code-plus-letter",
+        "global-infrastructure-az-name-mapping-independent-per-account",
+        "global-infrastructure-az-id-same-physical-location-every-account",
+        "global-infrastructure-constrained-az-count-differs"
+      ],
+      "plan": {
+        "problem": "One data center can lose power or flood. A Region needs a way to survive that without stopping.",
+        "trace": [
+          "**An Availability Zone is a separate site.** One or more discrete data centers with redundant power, networking and connectivity, in separate facilities (az-definition-discrete-data-centers).",
+          "**Zones do not share fate.** They are designed not to be hit at the same time by one event and are within 100 km of each other (az-no-shared-fate, az-distance-within-100-km).",
+          "**Zones are close enough to copy data synchronously.** Metro fiber with single-digit millisecond latency (az-interconnect-metro-fiber, az-latency-single-digit-ms); traffic between zones is encrypted (inter-az-traffic-encrypted).",
+          "**A zonal resource lives in one zone.** An instance or a subnet belongs to one zone (zonal-resource-deploy-in-multiple-azs, vpc-subnet-one-az-protects-from-zone-failure); if every instance is in the failed zone, none is available (single-az-failure-takes-all-instances).",
+          "**A Regional service spreads itself.** Amazon S3 spreads data across zones and is designed to recover from a zone failure (regional-service-definition, s3-regional-recovers-from-az-failure). So production runs in at least two zones (production-at-least-two-azs); every Region has at least three (region-min-three-azs)."
+        ],
+        "table": "Truth table 'Where it runs | Zone that fails | Result': four instances in AZ 1 | AZ 1 | none available; two in AZ 1 and two in AZ 2 | AZ 1 | two keep serving; one S3 bucket | any one zone | S3 is designed to recover.",
+        "why": "A failure stays inside a boundary (fault-isolation-boundary-definition); AWS even rolls out its own updates to one zone at a time (az-deployments-separated-in-time).",
+        "exam_signal": "\"remain available if an Availability Zone fails\" points to resources in at least two Availability Zones (production-at-least-two-azs).",
+        "go_deeper": {
+          "title": "AZ names and AZ IDs",
+          "content": "A zone code is the Region code plus a letter (az-code-is-region-code-plus-letter); in older accounts the letters map to physical zones per account, and accounts created from November 2025 share one mapping (az-name-mapping-independent-per-account); an AZ ID such as use1-az2 is the same physical zone in every account, so use it to match zones across accounts (az-id-same-physical-location-every-account); a constrained zone can be missing from a new account's list (constrained-az-count-differs)."
+        },
+        "trap_in_fast_list": "aws-map-trap-one-az-is-highly-available",
+        "say_it": "The short answer is: put production in at least two zones. The thing to watch is a subnet, which lives in one zone.",
+        "stop_and_answer": "An Auto Scaling group runs six instances in two subnets. Both subnets are in AZ 1. AZ 1 fails. How many instances keep serving? (None: a subnet lives in one zone.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "heading": "A second Region protects against Region failure but replicates asynchronously",
+      "parent": "how-it-works",
+      "order": 4,
+      "minutes": 5,
+      "route": "pass",
+      "bullets": ["2.2.K1", "3.3.K1"],
+      "facts": [
+        "global-infrastructure-regional-services-fail-independently",
+        "global-infrastructure-multi-region-avoids-correlated-failures",
+        "global-infrastructure-most-customers-single-region-suffices",
+        "global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern",
+        "global-infrastructure-multi-region-only-for-extreme-resilience",
+        "global-infrastructure-multi-region-duplicate-everything-no-cross-region-dependency",
+        "global-infrastructure-no-synchronous-cross-region-replication",
+        "global-infrastructure-async-cross-region-replication-may-lose-data",
+        "well-architected-multi-az-is-ha-and-dr-multi-region-active-passive",
+        "well-architected-rpo-definition",
+        "well-architected-rto-definition",
+        "global-infrastructure-control-plane-definition-crudl",
+        "global-infrastructure-data-plane-definition-primary-function",
+        "global-infrastructure-existing-resources-survive-control-plane-impairment",
+        "global-infrastructure-static-stability-definition",
+        "global-infrastructure-pre-provision-capacity-instead-of-control-plane-recovery",
+        "global-infrastructure-static-stability-example-three-per-az-fifty-percent",
+        "global-infrastructure-auto-scaling-relies-on-ec2-control-plane",
+        "global-infrastructure-route53-dns-and-health-checks-continue-during-control-plane-impairment",
+        "global-infrastructure-iam-control-plane-us-east-1"
+      ],
+      "plan": {
+        "problem": "Zones protect against the loss of a data center. A rarer event can impair a Regional service, and some workloads must survive even that.",
+        "trace": [
+          "**Regions fail independently.** A failure of a Regional service is designed not to affect that service in another Region (regional-services-fail-independently, multi-region-avoids-correlated-failures).",
+          "**Most workloads stop at Multi-AZ.** Most customers reach their resilience goals in one Region (most-customers-single-region-suffices); going multi-Region when multi-AZ meets the requirements is an anti-pattern (multi-region-when-multi-az-suffices-is-anti-pattern).",
+          "**Extreme resilience uses at least two Regions,** if data residency allows it (multi-region-only-for-extreme-resilience), and every component is duplicated in each Region (multi-region-duplicate-everything-no-cross-region-dependency).",
+          "**Replication between Regions is asynchronous.** AWS offers no synchronous cross-Region replication (no-synchronous-cross-region-replication), so a failover can lose data (async-cross-region-replication-may-lose-data).",
+          "**Two numbers size the loss.** The RPO is the acceptable time since the last recovery point; the RTO is the acceptable delay until service returns (rpo-definition, rto-definition)."
+        ],
+        "table": "'Requirement | Design | Replication': survive the loss of a zone | Multi-AZ in one Region | synchronous is possible; survive the loss of a Region | a second Region | asynchronous, so the RPO is above zero.",
+        "why": "Multi-AZ is part of a high availability strategy and of disaster recovery; disaster recovery can add a second Region with active/passive failover (multi-az-is-ha-and-dr-multi-region-active-passive).",
+        "exam_signal": "\"survive the failure of an entire AWS Region\" points to a second Region, with asynchronous replication (no-synchronous-cross-region-replication).",
+        "go_deeper": {
+          "title": "control planes and static stability",
+          "content": "A control plane creates, changes and lists resources; a data plane does the work (control-plane-definition-crudl, data-plane-definition-primary-function). Existing resources keep running when the control plane is impaired (existing-resources-survive-control-plane-impairment), and Route 53 keeps answering DNS and running health checks (route53-dns-and-health-checks-continue...). So recover with capacity that already runs: three instances in each of three zones, 50% extra (static-stability-definition, pre-provision-capacity..., static-stability-example-three-per-az-fifty-percent), instead of waiting for Auto Scaling, which needs the EC2 control plane (auto-scaling-relies-on-ec2-control-plane)."
+        },
+        "exam_trap_callout": "aws-map-trap-sync-replication-across-regions",
+        "trap_in_fast_list": "aws-map-trap-multi-region-for-high-availability",
+        "say_it": "The short answer is: a second Region covers a Region failure. The thing to watch is that the copy runs a little behind.",
+        "stop_and_answer": "A database in Region A replicates asynchronously to Region B. The last replicated write arrived 20 seconds before Region A failed. What can the company lose, and which number states whether that is acceptable? (The last 20 seconds of writes; the RPO.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them",
+      "heading": "Edge locations serve users nearby and Local Zones run compute near them",
+      "parent": "how-it-works",
+      "order": 5,
+      "minutes": 4,
+      "route": "full",
+      "bullets": ["3.2.K2", "1.1.K3"],
+      "facts": [
+        "global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator",
+        "global-infrastructure-edge-location-services",
+        "global-infrastructure-edge-locations-connected-to-regions-by-backbone",
+        "global-infrastructure-each-pop-isolated",
+        "global-infrastructure-fiber-backbone-20-million-km",
+        "global-infrastructure-local-zones-definition-close-to-population-centers",
+        "global-infrastructure-local-zone-extension-of-region-own-internet",
+        "global-infrastructure-faq-local-zones-select-services-closer-to-users",
+        "global-infrastructure-faq-local-zones-vs-availability-zones-core-vs-full-services",
+        "global-infrastructure-local-zone-must-be-enabled-then-subnet",
+        "global-infrastructure-faq-local-zone-parent-availability-zone-control-plane",
+        "global-infrastructure-local-zone-subnets-same-routing-rules",
+        "global-infrastructure-faq-wavelength-ultralow-latency-for-5g-devices",
+        "global-infrastructure-faq-outposts-for-workloads-that-must-stay-on-premises",
+        "global-infrastructure-outposts-definition-extends-aws-to-premises",
+        "global-infrastructure-local-zone-no-vpc-endpoints-no-site-to-site-vpn",
+        "global-infrastructure-faq-dedicated-local-zones-exclusive-use",
+        "global-infrastructure-local-zones-pricing-no-enable-charge-different-prices",
+        "global-infrastructure-wavelength-carrier-gateway-no-inbound-from-internet"
+      ],
+      "plan": {
+        "problem": "A Region can be far from some users, and distance adds latency. AWS has two ways to come closer: its own edge services, and small extensions of a Region.",
+        "trace": [
+          "**The request reaches a point of presence.** Points of presence host Amazon CloudFront, Amazon Route 53 and AWS Global Accelerator (pop-hosts-cloudfront-route53-global-accelerator); AWS WAF, AWS Shield and AWS Firewall Manager are also provided through edge locations (edge-location-services).",
+          "**The backbone carries it to the Region.** Edge locations connect to the Regions over the AWS network backbone (edge-locations-connected-to-regions-by-backbone); each point of presence is isolated from the others (each-pop-isolated).",
+          "**A Local Zone runs your compute in a city.** It is an extension of a Region near large population centers, with select services such as compute and storage (local-zones-definition-close-to-population-centers, local-zone-extension-of-region-own-internet, faq-local-zones-select-services-closer-to-users); an Availability Zone offers the full array of services (faq-local-zones-vs-availability-zones-core-vs-full-services).",
+          "**You opt in, then add a subnet.** Enable the Local Zone, create a subnet in it, launch resources there (local-zone-must-be-enabled-then-subnet); its parent Availability Zone handles some control plane operations (faq-local-zone-parent-availability-zone-control-plane).",
+          "**Two more edges.** Wavelength Zones serve 5G devices (faq-wavelength-ultralow-latency-for-5g-devices); AWS Outposts runs AWS on premises for workloads that must stay there (faq-outposts-for-workloads-that-must-stay-on-premises, outposts-definition-extends-aws-to-premises)."
+        ],
+        "table": "'Need | Choose': content and DNS close to users around the world | edge locations (CloudFront, Route 53); your compute in one city with single-digit millisecond latency | a Local Zone; apps for 5G devices | a Wavelength Zone; the workload must stay in your building | AWS Outposts.",
+        "why": "A Local Zone subnet follows the same routing rules as any subnet of the VPC (local-zone-subnets-same-routing-rules), so the application keeps one network.",
+        "exam_signal": "\"single-digit millisecond latency\" for users in one metro area points to a Local Zone (faq-local-zones-single-digit-millisecond-latency-workloads, linked in the fast file; here link faq-local-zones-select-services-closer-to-users or the definition fact).",
+        "go_deeper": {
+          "title": "what a Local Zone does not have",
+          "content": "No VPC endpoints inside Local Zone subnets and no AWS Site-to-Site VPN (local-zone-no-vpc-endpoints-no-site-to-site-vpn); enabling costs nothing but prices differ from the parent Region (local-zones-pricing-no-enable-charge-different-prices); a Dedicated Local Zone is built for one customer or community (faq-dedicated-local-zones-exclusive-use); a Wavelength carrier gateway accepts no inbound connection from the internet (wavelength-carrier-gateway-no-inbound-from-internet)."
+        },
+        "exam_trap_callout": "aws-map-trap-edge-location-runs-workloads",
+        "say_it": "The short answer is: edge locations bring AWS services to users, and Local Zones bring your compute. The thing to watch is that a Local Zone has fewer services.",
+        "stop_and_answer": "A news site serves the same images to readers on five continents from one Region. Should it add a Local Zone in each reader's city, or use edge locations? (Edge locations through CloudFront: the content is the same everywhere and no compute must move.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+      "heading": "AWS secures the cloud and you secure what you put in it",
+      "parent": "how-it-works",
+      "order": 6,
+      "minutes": 5,
+      "route": "pass",
+      "bullets": ["1.1.K5"],
+      "facts": [
+        "well-architected-shared-responsibility-of-versus-in-the-cloud",
+        "well-architected-aws-responsible-for-infrastructure-security-of-the-cloud",
+        "well-architected-aws-controls-host-os-virtualization-and-facilities",
+        "well-architected-customer-responsible-for-guest-os-apps-security-groups",
+        "well-architected-ec2-is-iaas-customer-does-all-security-configuration",
+        "well-architected-abstracted-services-aws-runs-os-customer-manages-data",
+        "iam-shared-responsibility-customer-applies-permissions-with-iam",
+        "well-architected-patch-management-is-a-shared-control",
+        "well-architected-configuration-management-is-a-shared-control",
+        "well-architected-inherited-controls-definition",
+        "well-architected-shared-controls-definition",
+        "well-architected-customer-specific-controls-definition",
+        "well-architected-customer-responsibility-varies-by-service-region-law",
+        "well-architected-security-in-the-cloud-you-retain-control",
+        "well-architected-resiliency-is-shared-of-versus-in",
+        "well-architected-multi-tenant-managed-services-aws-patches-without-customer-action",
+        "well-architected-review-audit-reports-to-determine-inherited-controls"
+      ],
+      "plan": {
+        "problem": "Ana's question in plain words: AWS says that it is secure, so who fixes a public bucket? The answer depends on the layer.",
+        "trace": [
+          "**Facilities, hardware and network: AWS.** AWS protects the infrastructure that runs all its services (aws-responsible-for-infrastructure-security-of-the-cloud).",
+          "**Host operating system and virtualization: AWS.** AWS controls everything from the host operating system down to the physical facilities (aws-controls-host-os-virtualization-and-facilities).",
+          "**On Amazon EC2, the guest operating system and up: you.** You patch the guest operating system, run the application and configure the security groups (customer-responsible-for-guest-os-apps-security-groups; ec2-is-iaas-customer-does-all-security-configuration).",
+          "**On Amazon S3 or DynamoDB, the data and its permissions: you.** AWS runs the operating system and platform; you manage the data, its encryption options and the IAM permissions (abstracted-services-aws-runs-os-customer-manages-data, iam-shared-responsibility-customer-applies-permissions-with-iam).",
+          "**Some controls are shared.** Patching and configuration management are split between AWS and you (patch-management-is-a-shared-control, configuration-management-is-a-shared-control); physical controls are inherited (inherited-controls-definition)."
+        ],
+        "table": "Truth table 'Layer | Amazon EC2 | Amazon S3': facilities and hardware | AWS | AWS; operating system | you (guest OS) | AWS; network firewall | you (security groups) | not applicable; data and encryption choices | you | you; who can read the data | you (IAM) | you (IAM and bucket policy).",
+        "diagram": "aws-map-shared-responsibility",
+        "why": "You keep control of the security you choose for your content, platform and applications, as in your own data center (security-in-the-cloud-you-retain-control); your share also changes with the services, Regions and laws (customer-responsibility-varies-by-service-region-law).",
+        "exam_signal": "\"patch the operating system of the EC2 instances\" points to the customer (customer-responsible-for-guest-os-apps-security-groups); \"physical security of the data center\" points to AWS.",
+        "spot_the_bug": "A startup's security notes say: 'Amazon S3 is a managed service, so AWS controls who can read our objects. Our only job is to patch our EC2 instance.' What is wrong? (The patching half is right; on S3 the company still applies the permissions with IAM and manages its data: abstracted-services-aws-runs-os-customer-manages-data.)",
+        "exam_trap_callout": "aws-map-trap-ec2-guest-os-patched-by-aws",
+        "trap_in_fast_list": "aws-map-trap-managed-means-aws-secures-data",
+        "say_it": "The short answer is: AWS secures the building and the hosts, and you secure your data and access. The thing to watch is the service type.",
+        "stop_and_answer": "A team moves its job records from a database on an EC2 instance to Amazon DynamoDB. Which task moves to AWS, and which task stays with the team? (Patching the operating system moves to AWS: multi-tenant-managed-services-aws-patches-without-customer-action; deciding who can read the table stays.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "the-well-architected-framework-turns-six-pillars-into-review-questions",
+      "heading": "The Well-Architected Framework turns six pillars into review questions",
+      "parent": "how-it-works",
+      "order": 7,
+      "minutes": 4,
+      "route": "full",
+      "bullets": ["1.1.K3", "4.2.K3"],
+      "facts": [
+        "well-architected-framework-definition-best-practices-and-questions",
+        "well-architected-six-pillars",
+        "well-architected-pillar-operational-excellence-definition",
+        "well-architected-pillar-security-definition",
+        "well-architected-pillar-reliability-definition",
+        "well-architected-pillar-performance-efficiency-definition",
+        "well-architected-pillar-cost-optimization-definition",
+        "well-architected-pillar-sustainability-definition",
+        "well-architected-general-design-principles",
+        "well-architected-review-is-conversation-not-audit",
+        "well-architected-review-at-milestones-before-go-live-and-continually",
+        "well-architected-review-risks-hri-and-mri-definitions",
+        "well-architected-review-outcome-prioritized-issues",
+        "well-architected-security-and-operational-excellence-not-traded-off",
+        "well-architected-tradeoff-examples-dev-versus-mission-critical",
+        "well-architected-faq-tool-reviews-workloads-against-best-practices",
+        "well-architected-faq-tool-no-additional-charge",
+        "well-architected-cost-optimization-design-principles"
+      ],
+      "plan": {
+        "problem": "A design can work on demo day and still fail under load, cost too much or leak data. A team needs one shared set of questions to find that early.",
+        "trace": [
+          "**Start from best practices and questions.** The Framework is a consistent set of best practices and a set of questions to evaluate an architecture (framework-definition-best-practices-and-questions).",
+          "**Ask the questions of six pillars.** Operational excellence, security, reliability, performance efficiency, cost optimization and sustainability (six-pillars).",
+          "**Hold the review as a conversation.** It is not an audit and takes hours, not days; review early in design and before go-live (review-is-conversation-not-audit, review-at-milestones-before-go-live-and-continually).",
+          "**Sort the findings.** A high risk issue may cause significant negative impact; a medium risk issue less (review-risks-hri-and-mri-definitions); the outcome is a prioritized list of issues (review-outcome-prioritized-issues)."
+        ],
+        "table": "'Pillar | It asks' with six rows, each from the pillar definition facts (overview only; the design principles of each pillar wait for chapters 40 to 43).",
+        "why": "Trade-offs depend on the business: a development environment can trade reliability for cost, but security and operational excellence are generally not traded off (security-and-operational-excellence-not-traded-off, tradeoff-examples-dev-versus-mission-critical).",
+        "exam_signal": "\"review the workload against AWS best practices\" points to the AWS Well-Architected Tool, which has no additional charge (faq-tool-reviews-workloads-against-best-practices, faq-tool-no-additional-charge).",
+        "try_it": "aws-map-t02 (Task 0, the budget alert: the cost pillar's 'Implement Cloud Financial Management', cost-optimization-design-principles). Parked until the chapter 41 budgets facts are verified; if it stays parked, the Try it callout is left out.",
+        "say_it": "The short answer is: the Framework is six sets of questions about your design. The thing to watch is that security is not traded away.",
+        "stop_and_answer": "A team runs a development copy and a production copy of one workload. To save money, which pillar can the development copy give up some of, and which pillar can it not? (It can trade reliability for cost; it does not trade security.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "numbers-that-decide-answers",
+      "heading": "Numbers that decide answers",
+      "role": "numbers",
+      "minutes": 2,
+      "bullets": [],
+      "facts": [
+        "global-infrastructure-region-min-three-azs",
+        "global-infrastructure-production-at-least-two-azs",
+        "global-infrastructure-az-distance-within-100-km",
+        "global-infrastructure-az-latency-single-digit-ms",
+        "global-infrastructure-region-count-aws-account-34",
+        "global-infrastructure-us-east-1-six-azs",
+        "global-infrastructure-opt-in-regions-after-march-2019",
+        "well-architected-availability-99-9-percent-max-downtime",
+        "well-architected-availability-99-99-percent-max-downtime",
+        "global-infrastructure-static-stability-example-three-per-az-fifty-percent",
+        "management-console-cloudshell-persistent-storage-1-gb-per-region",
+        "management-console-multi-session-up-to-five-identities",
+        "management-console-global-view-map-view-since-2026-08"
+      ],
+      "plan": {
+        "a_list": [
+          {"fact": "global-infrastructure-region-min-three-azs", "display": "at least three Availability Zones", "why_it_decides": "a design can always spread across three zones in a Region"},
+          {"fact": "global-infrastructure-production-at-least-two-azs", "display": "at least two Availability Zones (AZs) in a Region", "why_it_decides": "one zone is never the highly available answer"},
+          {"fact": "global-infrastructure-az-distance-within-100-km", "display": "within 100 km", "why_it_decides": "zones are close enough for synchronous copies but far enough apart for one disaster"},
+          {"fact": "global-infrastructure-az-latency-single-digit-ms", "display": "single-digit millisecond", "why_it_decides": "synchronous replication works between zones, not between Regions"}
+        ],
+        "b_list": [
+          {"fact": "global-infrastructure-region-count-aws-account-34", "what": "Regions for an AWS account, as retrieved (GovCloud and China not counted)"},
+          {"fact": "global-infrastructure-us-east-1-six-azs", "what": "Availability Zones in us-east-1, as retrieved"},
+          {"fact": "global-infrastructure-opt-in-regions-after-march-2019", "what": "Regions introduced after this date must be enabled"},
+          {"fact": "well-architected-availability-99-9-percent-max-downtime", "what": "maximum yearly downtime at 99.9% (8 hours 45 minutes)"},
+          {"fact": "well-architected-availability-99-99-percent-max-downtime", "what": "maximum yearly downtime at 99.99% (52 minutes)"},
+          {"fact": "global-infrastructure-static-stability-example-three-per-az-fifty-percent", "what": "extra instances to stay statically stable across three zones (50%)"},
+          {"fact": "management-console-cloudshell-persistent-storage-1-gb-per-region", "what": "CloudShell home directory storage per Region"},
+          {"fact": "management-console-multi-session-up-to-five-identities", "what": "console identities signed in at once in one browser"}
+        ],
+        "not_examinable_entry_under_b_list": {
+          "fact": "management-console-global-view-map-view-since-2026-08",
+          "date": "2026-08-12",
+          "what": "AWS Global View in the console shows Regions and Local Zones on a map.",
+          "old": "a list of AWS locations",
+          "status": "not examinable yet",
+          "exam_expects_ends": "Do not let this number decide an answer."
+        }
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "decision-record",
+      "heading": "Decision record",
+      "role": "example",
+      "minutes": 3,
+      "bullets": ["3.3.K1", "4.2.K3"],
+      "facts": [
+        "global-infrastructure-region-choice-services-and-latency",
+        "well-architected-region-choice-closer-to-users-latency-sovereignty",
+        "global-infrastructure-regional-services-fail-independently",
+        "global-infrastructure-region-min-three-azs",
+        "global-infrastructure-production-at-least-two-azs"
+      ],
+      "plan": {
+        "context": "STARTUP 02 trigger (data/startup.json chapters.02.trigger): demo day goes well; an investor asks for a technical review; you run a first Well-Architected review with Ana and Ben; it lists 12 high-risk findings. At most 80 words.",
+        "requirement": "Exam English, from the qualifier 'lowest latency for customers': The workload must serve the first customers, on the US East Coast, with the LOWEST latency.",
+        "options": ["US West (Oregon), near the founders", "US East (N. Virginia), near the first customers", "two Regions from the first day"],
+        "decision": "US East (N. Virginia), planned for three Availability Zones.",
+        "trade_off": "A Region failure stops the service. Callvale accepts this risk until stage 4. Link regional-services-fail-independently if a field states the AWS behavior.",
+        "diagrams": ["aws-map-before", "aws-map-after"],
+        "no_spot_the_bug": "Spot the bug is in subsection 6, not here."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "faq-quick-fire",
+      "heading": "FAQ quick-fire",
+      "role": "faq",
+      "minutes": 2,
+      "bullets": ["3.2.K2", "1.1.K3"],
+      "facts": [
+        "global-infrastructure-faq-local-zones-data-residency-local-storage-services",
+        "global-infrastructure-faq-local-zones-vs-availability-zones-core-vs-full-services",
+        "well-architected-faq-tool-no-additional-charge",
+        "management-console-cloudshell-faq-home-directory-persists-1-gb-per-region",
+        "management-console-cloudshell-faq-same-privileges-as-console-login"
+      ],
+      "plan": {
+        "items": [
+          {"n": 1, "question": "Can a Local Zone help you meet a data residency requirement?", "answer": "Yes", "fact": "global-infrastructure-faq-local-zones-data-residency-local-storage-services", "faq_page": "Local Zones FAQ"},
+          {"n": 2, "question": "Does a Local Zone offer every AWS service that its parent Region offers?", "answer": "No", "fact": "global-infrastructure-faq-local-zones-vs-availability-zones-core-vs-full-services", "faq_page": "Local Zones FAQ"},
+          {"n": 3, "question": "Do you pay extra to review a workload in the AWS Well-Architected Tool?", "answer": "No", "fact": "well-architected-faq-tool-no-additional-charge", "faq_page": "Well-Architected Tool FAQ"},
+          {"n": 4, "question": "Can AWS CloudShell keep your files between sessions?", "answer": "Yes, in the home directory, per Region", "fact": "management-console-cloudshell-faq-home-directory-persists-1-gb-per-region", "faq_page": "CloudShell FAQ"},
+          {"n": 5, "question": "Can AWS CloudShell do more than your console sign-in allows?", "answer": "No", "fact": "management-console-cloudshell-faq-same-privileges-as-console-login", "faq_page": "CloudShell FAQ"}
+        ],
+        "rule": "Each reveal quotes whole sentences of the evidence quote of that fact, with its URL (D12)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "in-the-real-world",
+      "heading": "In the real world",
+      "role": "realworld",
+      "minutes": 1,
+      "bullets": ["2.2.K1"],
+      "facts": ["well-architected-case-vanguard-well-architected-tool-resilience"],
+      "plan": {
+        "case": "Vanguard used the AWS Well-Architected Tool to communicate best practices and build more resilient applications; quote at most 25 words from the case-study evidence; 'It shows:' a review gives a whole organization one baseline. The year must come from the case page; if the page states none, ask the orchestrator before writing the bold company line."
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "aws-cli",
+      "heading": "AWS CLI",
+      "role": "card",
+      "service": "aws-cli",
+      "minutes": 1,
+      "bullets": ["1.1.K3"],
+      "facts": [
+        "aws-cli-definition-open-source-command-line-tool",
+        "aws-cli-recommended-short-term-console-credentials",
+        "aws-cli-long-term-iam-user-credentials-not-recommended",
+        "aws-cli-ec2-instance-metadata-role-credentials",
+        "management-console-cloudshell-console-credentials-no-configuration"
+      ],
+      "plan": {
+        "what_it_is": "An open source tool that runs AWS commands in your shell, with the functionality of the console (aws-cli-definition-open-source-command-line-tool).",
+        "stem_signals": ["\"automate the task with scripts\"", "\"from the command line\"", "\"without storing long-term access keys\" (AWS CloudShell, or short-term credentials)"],
+        "do_not_confuse_with": "AWS CloudShell: CloudShell is a browser shell that already has the CLI and your console sign-in.",
+        "one_fact": "aws-cli-long-term-iam-user-credentials-not-recommended",
+        "say_it": "The AWS CLI does from a terminal what the console does in a browser. Use short-term credentials, not stored keys.",
+        "source": "AWS CLI User Guide (docs.aws.amazon.com/cli/latest/userguide/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "aws-management-console",
+      "heading": "AWS Management Console",
+      "role": "card",
+      "service": "management-console",
+      "minutes": 1,
+      "bullets": ["1.1.K3"],
+      "facts": [
+        "management-console-console-unified-navigation-features",
+        "management-console-cloudshell-browser-based-pre-authenticated",
+        "management-console-some-services-need-no-region-selection",
+        "management-console-multi-session-up-to-five-identities",
+        "management-console-private-access-limits-console-to-known-accounts-from-vpc"
+      ],
+      "plan": {
+        "what_it_is": "The web application that gives one place to reach every service console, with search, notifications and AWS CloudShell (console-unified-navigation-features).",
+        "stem_signals": ["\"a web-based interface\" to manage resources", "\"run AWS CLI commands from the browser\" (AWS CloudShell)", "\"use the console only from the corporate network for known accounts\" (Console Private Access)"],
+        "do_not_confuse_with": "AWS CLI: the same actions from a command line, for scripts.",
+        "one_fact": "management-console-cloudshell-browser-based-pre-authenticated",
+        "say_it": "The console is the browser front door to every AWS service, and CloudShell gives you a signed-in terminal inside it.",
+        "source": "AWS Management Console Getting Started Guide (docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/)"
+      }
+    }
+  ],
+  "traps": [
+    {
+      "id": "aws-map-trap-region-auto-replicates",
+      "belief": "AWS copies my resources and data to another Region for me.",
+      "truth": "AWS does not replicate resources across Regions unless you use a replication or copy feature or copy them yourself.",
+      "facts": ["global-infrastructure-no-automatic-cross-region-replication", "global-infrastructure-customer-content-stays-in-chosen-region"],
+      "where": "2-deep.md, Exam trap callout in subsection 1"
+    },
+    {
+      "id": "aws-map-trap-one-az-is-highly-available",
+      "belief": "Several instances in one Availability Zone make an application highly available.",
+      "truth": "If every instance is in one Availability Zone and that zone fails, none is available; production runs in at least two zones.",
+      "facts": ["global-infrastructure-single-az-failure-takes-all-instances", "global-infrastructure-production-at-least-two-azs"],
+      "where": "1-fast.md, Traps list"
+    },
+    {
+      "id": "aws-map-trap-multi-region-for-high-availability",
+      "belief": "To be highly available, a workload needs a second Region.",
+      "truth": "Most workloads reach their resilience goals with several Availability Zones in one Region; a second Region is for extreme resilience or a Region failure.",
+      "facts": ["global-infrastructure-most-customers-single-region-suffices", "global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern", "global-infrastructure-multi-region-only-for-extreme-resilience"],
+      "where": "1-fast.md, Traps list"
+    },
+    {
+      "id": "aws-map-trap-sync-replication-across-regions",
+      "belief": "Data can be copied synchronously to another Region, so a Region failover loses nothing.",
+      "truth": "AWS has no synchronous cross-Region replication feature, so a failover can lose data; synchronous copies work between Availability Zones.",
+      "facts": ["global-infrastructure-no-synchronous-cross-region-replication", "global-infrastructure-async-cross-region-replication-may-lose-data", "global-infrastructure-az-latency-single-digit-ms"],
+      "where": "2-deep.md, Exam trap callout in subsection 4"
+    },
+    {
+      "id": "aws-map-trap-edge-location-runs-workloads",
+      "belief": "An edge location is a small Region where I can launch my own instances near users.",
+      "truth": "Edge locations provide services such as CloudFront and Route 53; your own compute near users runs in a Local Zone, an extension of a Region.",
+      "facts": ["global-infrastructure-edge-location-services", "global-infrastructure-local-zone-extension-of-region-own-internet", "global-infrastructure-faq-local-zones-select-services-closer-to-users"],
+      "where": "2-deep.md, Exam trap callout in subsection 5"
+    },
+    {
+      "id": "aws-map-trap-managed-means-aws-secures-data",
+      "belief": "With a managed service such as Amazon S3, AWS decides who can read my data.",
+      "truth": "AWS runs the infrastructure, operating system and platform; you manage the data, its encryption options and the IAM permissions.",
+      "facts": ["well-architected-abstracted-services-aws-runs-os-customer-manages-data", "iam-shared-responsibility-customer-applies-permissions-with-iam"],
+      "where": "1-fast.md, Traps list"
+    },
+    {
+      "id": "aws-map-trap-ec2-guest-os-patched-by-aws",
+      "belief": "AWS patches the operating system of my EC2 instances.",
+      "truth": "AWS patches the infrastructure; the customer patches the guest operating system and applications of an EC2 instance.",
+      "facts": ["well-architected-patch-management-is-a-shared-control", "well-architected-customer-responsible-for-guest-os-apps-security-groups", "well-architected-ec2-is-iaas-customer-does-all-security-configuration"],
+      "where": "2-deep.md, Exam trap callout in subsection 6"
+    }
+  ],
+  "comparison_tables": [
+    {"where": "1-fast.md#choose-it-or-not", "h3": "One zone or several zones or a second Region", "neighbours": ["one Availability Zone", "Multi-AZ", "multi-Region"], "deciding_question": "Must the workload survive the loss of a whole Region, or only the loss of one Availability Zone?"},
+    {"where": "1-fast.md#choose-it-or-not", "h3": "Edge location or Local Zone or Region", "neighbours": ["edge location", "Local Zone", "Region"], "deciding_question": "Must the users get content and DNS answers close to them, or must your own compute run close to them?"}
+  ],
+  "question_slots": [
+    {
+      "slot": 1,
+      "bullet": "2.2.K1",
+      "concept": "multi-az-for-zone-failure",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-must", "ee-most-cost-effective"],
+      "qualifier": "MOST cost-effectively",
+      "section": "2-deep.md#availability-zones-fail-separately-so-production-uses-at-least-two",
+      "services": ["ec2", "elb", "auto-scaling"],
+      "trap": "aws-map-trap-one-az-is-highly-available",
+      "other_traps": ["aws-map-trap-multi-region-for-high-availability"],
+      "twin": "strict twin A of slot 7: stem ends '...must remain available if an Availability Zone fails.'; key: instances in two Availability Zones behind a load balancer; neutral option words shared with slot 7",
+      "plan": "A company runs a web application on EC2 instances in one Availability Zone. Options (identical in slot 7): two zones behind a load balancer; a second copy in another Region with DNS failover; larger instances in the current zone; more instances in the current zone."
+    },
+    {
+      "slot": 2,
+      "bullet": "1.1.K5",
+      "concept": "shared-responsibility-ec2-guest-os",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-patch"],
+      "qualifier": "none",
+      "section": "2-deep.md#aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+      "services": ["ec2"],
+      "trap": "aws-map-trap-ec2-guest-os-patched-by-aws",
+      "plan": "Which task is the company's responsibility for its EC2 instances under the shared responsibility model? Key: patch the guest operating system. Distractors: physical security of the facilities, patching the virtualization layer, the host operating system."
+    },
+    {
+      "slot": 3,
+      "bullet": "1.1.K5",
+      "concept": "shared-responsibility-abstracted-service",
+      "difficulty": 1,
+      "type": "multi",
+      "select": 2,
+      "layer": "core",
+      "exam_english": ["ee-select-two", "ee-sensitive"],
+      "qualifier": "none",
+      "section": "2-deep.md#aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+      "services": ["s3", "dynamodb"],
+      "trap": "aws-map-trap-managed-means-aws-secures-data",
+      "plan": "A company stores sensitive recordings in Amazon S3 and job records in Amazon DynamoDB. Which TWO tasks are the company's responsibility? Keys: grant access with IAM policies; choose the encryption options for the data. Distractors: patch the S3 operating system, maintain the storage hardware, patch DynamoDB hosts."
+    },
+    {
+      "slot": 4,
+      "bullet": "3.2.K2",
+      "concept": "local-zone-for-metro-compute",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-lowest-latency", "ee-edge"],
+      "qualifier": "LOWEST latency",
+      "section": "2-deep.md#edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them",
+      "services": ["ec2", "cloudfront"],
+      "trap": "aws-map-trap-edge-location-runs-workloads",
+      "plan": "An application on EC2 serves interactive sessions to users in one large city far from the nearest Region; it needs single-digit millisecond latency. Key: EC2 in a Local Zone near the city. Distractors: CloudFront in front of the Regional instances (keyword-bait 'edge'), a second Region farther away, larger instances."
+    },
+    {
+      "slot": 5,
+      "bullet": "3.2.K2",
+      "concept": "edge-locations-for-global-static-content",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-users-around-the-world", "ee-least-operational-overhead"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them",
+      "services": ["cloudfront", "s3"],
+      "trap": null,
+      "misconception": "Lower latency for users everywhere needs a copy of the application in many Regions.",
+      "plan": "Static images in one S3 bucket, users around the world complain about slow loads. Key: Amazon CloudFront distribution with the bucket as origin. Distractors: copies of the bucket and application in several Regions (violates qualifier), Local Zones in each city, larger S3 storage class change (different-problem)."
+    },
+    {
+      "slot": 6,
+      "bullet": "4.2.K3",
+      "concept": "cheaper-region-for-dev-test",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-most-cost-effective"],
+      "qualifier": "MOST cost-effective",
+      "section": "2-deep.md#the-best-region-is-near-your-users-and-meets-your-data-rules",
+      "services": ["ec2"],
+      "trap": null,
+      "misconception": "An EC2 instance costs the same in every Region.",
+      "plan": "Production in Asia Pacific (Sydney) for local users; a new development and test environment has no data privacy, security or business location requirements. Key: run the dev/test EC2 instances in a lower-priced Region. Distractors: same Region as production, a Region near the developers regardless of price, a Local Zone."
+    },
+    {
+      "slot": 7,
+      "bullet": "2.2.K1",
+      "concept": "multi-region-for-region-failure",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-must", "ee-most-cost-effective"],
+      "qualifier": "MOST cost-effectively",
+      "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "services": ["ec2", "elb", "route53"],
+      "trap": "aws-map-trap-one-az-is-highly-available",
+      "twin": "strict twin B of slot 1 (twin_of slot 1): the one changed phrase is '...must remain available if the AWS Region fails.'; options identical to slot 1; key moves to the second copy in another Region with DNS failover",
+      "plan": "Same scenario and options as slot 1; at least 3 other questions stand between the twins."
+    },
+    {
+      "slot": 8,
+      "bullet": "1.1.K3",
+      "concept": "data-residency-region-choice",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-data-residency", "ee-ensure"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there",
+      "services": ["s3", "ec2"],
+      "trap": "aws-map-trap-region-auto-replicates",
+      "worked": {"think_aloud": true, "wrong_path": false},
+      "plan": "A company must ensure that customer data stays in one country where an AWS Region exists. Key: create the resources in that Region and use no cross-Region replication or copy features. Distractors: turn on a setting that stops AWS from copying data to other Regions (trap: there is nothing to stop), deploy in the nearest Region in another country, put the data behind CloudFront."
+    },
+    {
+      "slot": 9,
+      "bullet": "3.3.K1",
+      "concept": "sync-in-region-async-cross-region",
+      "difficulty": 3,
+      "type": "multi",
+      "select": 2,
+      "layer": "extended",
+      "exam_english": ["ee-select-two", "ee-which-combination", "ee-acceptable", "ee-cross-region"],
+      "qualifier": "LEAST data loss within the Region (writer chooses the capitalised qualifier)",
+      "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "services": ["rds"],
+      "trap": "aws-map-trap-sync-replication-across-regions",
+      "plan": "A database must lose no committed write if an Availability Zone fails, and must be recoverable in a second Region if the Region fails; a few minutes of loss is acceptable in a Region failure. Keys: a standby in a second Availability Zone with synchronous replication; an asynchronous replica in a second Region. Distractors: synchronous replica in another Region (trap), asynchronous copy to another zone only, nightly backups copied to another Region (violates the zone requirement). Option words stay generic unless the questions writer finds verified RDS facts in chapter 26."
+    },
+    {
+      "slot": 10,
+      "bullet": "2.2.K1",
+      "concept": "az-id-across-accounts",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-ensure"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#availability-zones-fail-separately-so-production-uses-at-least-two",
+      "services": ["vpc", "ec2"],
+      "trap": null,
+      "misconception": "An Availability Zone name such as us-east-1a is the same physical zone in every account.",
+      "plan": "Two accounts share a subnet and must place resources in the same physical zone. Key: match the zones by AZ ID. Distractors: match by AZ name (misconception), pick the zone with the same letter in both accounts' console, ask AWS Support to align names. Volatility: the name mapping changed in 2025-11; the key (AZ ID) is right under both values, so the change never decides it. Do not state the account creation date in the stem."
+    },
+    {
+      "slot": 11,
+      "bullet": "1.1.K3",
+      "concept": "regional-resource-wrong-region-view",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [],
+      "qualifier": "none",
+      "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there",
+      "services": ["ec2", "management-console"],
+      "trap": null,
+      "misconception": "AWS moved or deleted the instances when they do not appear in the console.",
+      "plan": "An engineer launched EC2 instances yesterday; today the console list is empty, and no one deleted anything. Most likely cause: the console shows another Region. Distractors: AWS moved them to another Region, the instances stopped and are hidden, the account lost permissions to list."
+    },
+    {
+      "slot": 12,
+      "bullet": "2.2.K1",
+      "concept": "static-stability-pre-provision",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-mission-critical", "ee-most-resilient"],
+      "qualifier": "MOST resilient",
+      "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "services": ["ec2", "auto-scaling", "elb"],
+      "trap": null,
+      "misconception": "Auto Scaling replaces the capacity of a failed Availability Zone at once, so pre-provisioned spare capacity is waste.",
+      "plan": "A mission-critical web tier needs six instances of capacity at all times and must keep full capacity during an Availability Zone failure. Key: run three instances in each of three Availability Zones (statically stable). Distractors: six instances across three zones and rely on Auto Scaling to replace (depends on the EC2 control plane), six instances in one zone, a second Region with no instances (pilot) for zone failures."
+    }
+  ],
+  "question_plan_summary": {
+    "write": 12,
+    "ship": "10 (core 5, extended 5)",
+    "core_slots": [1, 2, 3, 5, 7, 8, 11],
+    "extended_slots": [4, 6, 9, 10, 12],
+    "difficulty": {"1": [2, 3, 11], "2": [1, 4, 5, 6, 7, 8], "3": [9, 10, 12]},
+    "multi": [3, 9],
+    "twin_pairs": [[1, 7]],
+    "strict_twin": [1, 7],
+    "worked": [8],
+    "trap_based": [1, 2, 3, 4, 7, 8, 9],
+    "trap_share": "7 of 12",
+    "note": "Core has 7 slots so that one weak core question can be cut and 5 core still ship; core questions are difficulty 1 or 2."
+  },
+  "terms": [
+    "region",
+    "availability-zone",
+    "edge-location",
+    "high-availability",
+    "latency",
+    "multi-az",
+    "recovery-point-objective",
+    "recovery-time-objective"
+  ],
+  "term_requests": [
+    "shared responsibility model",
+    "Local Zone",
+    "Well-Architected Framework",
+    "pillar",
+    "AZ ID",
+    "point of presence",
+    "control plane",
+    "data plane",
+    "static stability",
+    "partition",
+    "Wavelength Zone",
+    "high risk issue",
+    "workload"
+  ],
+  "tasks": [
+    {
+      "id": "aws-map-t01",
+      "type": "look",
+      "title": "List the Availability Zones and Regions of your account",
+      "section": "1-fast.md#look-first",
+      "kills": "\"A Region is one data center.\"",
+      "trap": null,
+      "pass_route": false,
+      "facts": ["global-infrastructure-region-is-separate-geographic-area", "global-infrastructure-az-definition-discrete-data-centers", "global-infrastructure-az-id-same-physical-location-every-account", "management-console-cloudshell-region-follows-console-region"],
+      "plan": "CloudShell only, read-only: aws ec2 describe-availability-zones with a query for ZoneName and ZoneId; aws ec2 describe-regions with a query for RegionName and OptInStatus. Cost $0. She sees several zones per Region and an AZ ID next to each name."
+    },
+    {
+      "id": "aws-map-t02",
+      "type": "try",
+      "title": "Create a monthly cost budget with an email alert",
+      "section": "2-deep.md#the-well-architected-framework-turns-six-pillars-into-review-questions",
+      "kills": "\"A budget stops spending when the limit is reached.\"",
+      "trap": null,
+      "pass_route": true,
+      "facts": [],
+      "status": "parked",
+      "parked_reason": "Task 0 of LEARNING 7.2 (SPEC chapter_overrides 02 note). Needs the chapter 41 facts budgets-alerts-on-actual-or-forecasted-spend, budgets-data-updated-up-to-three-times-a-day and budgets-monitoring-and-notifications-free to be verified (mech-pass on 2026-10-12). Verify by the task tag; tag the budget with book=saa and task=aws-map-t02 if the CLI create-budget call takes tags, else a name with the prefix saa-.",
+      "plan": "aws budgets create-budget with a small monthly cost limit and an email subscriber; break-it step: predict whether the budget stops an instance at the limit; explain links the alert and update-frequency facts; cleanup aws budgets delete-budget; verify returns nothing."
+    },
+    {
+      "id": "aws-map-t03",
+      "type": "try",
+      "title": "Create a resource in one Region and look for it in another",
+      "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there",
+      "kills": "\"AWS copies my resources to every Region.\"",
+      "trap": "aws-map-trap-region-auto-replicates",
+      "pass_route": false,
+      "facts": ["global-infrastructure-regional-resource-visible-only-in-its-region", "global-infrastructure-no-automatic-cross-region-replication", "vpc-default-vpc-in-each-region"],
+      "plan": "Cost $0. aws ec2 create-security-group in the default VPC of the CloudShell Region, name saa-aws-map-t03, tags book=saa and task=aws-map-t03, no rules (nothing opened). Capture GroupId. Break-it step: predict, then describe-security-groups with --region us-west-2 and the task tag filter (empty); explain with regional-resource-visible-only-in-its-region. Cleanup: delete-security-group. Verify: describe-security-groups with the tag filter task=aws-map-t03 returns nothing."
+    }
+  ],
+  "speak": [
+    {
+      "id": "aws-map-s01",
+      "kind": "explain",
+      "persona": "Ana, CEO of Callvale",
+      "prompt": "AWS says that it is secure. So why is the public bucket our problem and not theirs?",
+      "section": "2-deep.md#aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+      "layer": "core",
+      "pass_route": true,
+      "must_points": [
+        "AWS secures the infrastructure that runs its services (well-architected-aws-responsible-for-infrastructure-security-of-the-cloud)",
+        "for Amazon S3 the customer manages the data and applies permissions with IAM (well-architected-abstracted-services-aws-runs-os-customer-manages-data)",
+        "the customer keeps control of the security it chooses for its content (well-architected-security-in-the-cloud-you-retain-control)"
+      ],
+      "check_back": "Which other buckets hold customer recordings today?"
+    },
+    {
+      "id": "aws-map-s02",
+      "kind": "compare",
+      "persona": "a startup founder in office hours",
+      "prompt": "Do we need a second Region to be highly available, or are Availability Zones enough?",
+      "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "layer": "extended",
+      "pass_route": false,
+      "must_points": [
+        "most customers reach their resilience goals in one Region with Multi-AZ (global-infrastructure-most-customers-single-region-suffices)",
+        "production runs in at least two Availability Zones (global-infrastructure-production-at-least-two-azs)",
+        "a second Region is for extreme resilience, if data rules allow (global-infrastructure-multi-region-only-for-extreme-resilience)",
+        "replication between Regions is asynchronous (global-infrastructure-no-synchronous-cross-region-replication)"
+      ],
+      "check_back": "What does your biggest customer's contract say about a Region outage?"
+    }
+  ],
+  "cards": [
+    {"id_hint": "aws-map-c001", "type": "number", "deck": "core", "front": "In AWS, every Region has {{c1::at least three}} Availability Zones.", "facts": ["global-infrastructure-region-min-three-azs"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "aws-map-c002", "type": "number", "deck": "core", "front": "The Well-Architected reliability pillar says to run production in {{c1::at least two Availability Zones (AZs) in a Region}}.", "facts": ["global-infrastructure-production-at-least-two-azs"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "aws-map-c003", "type": "differ", "deck": "core", "front": "Shared responsibility model: security of the cloud or security in the cloud, which one is the customer's?", "back": "Security in the cloud", "facts": ["well-architected-security-in-the-cloud-you-retain-control"], "section": "2-deep.md#aws-secures-the-cloud-and-you-secure-what-you-put-in-it", "trap": "aws-map-trap-managed-means-aws-secures-data"},
+    {"id_hint": "aws-map-c004", "type": "cannot", "deck": "core", "front": "In AWS, are your resources copied to another Region automatically?", "back": "No", "facts": ["global-infrastructure-no-automatic-cross-region-replication"], "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there", "trap": "aws-map-trap-region-auto-replicates"},
+    {"id_hint": "aws-map-c005", "type": "number", "deck": "extended", "front": "The Availability Zones of one Region are all {{c1::within 100 km}} of each other.", "facts": ["global-infrastructure-az-distance-within-100-km"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "aws-map-c006", "type": "number", "deck": "extended", "front": "Latency between Availability Zones of one Region is {{c1::single-digit millisecond}}.", "facts": ["global-infrastructure-az-latency-single-digit-ms"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "aws-map-c007", "type": "cannot", "deck": "extended", "front": "In AWS, can you replicate data synchronously between two Regions?", "back": "No", "facts": ["global-infrastructure-no-synchronous-cross-region-replication"], "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously", "trap": "aws-map-trap-sync-replication-across-regions"},
+    {"id_hint": "aws-map-c008", "type": "decide", "deck": "extended", "front": "Users in one city need single-digit millisecond latency to your EC2 compute, and no Region is near. LOWEST latency?", "back": "A Local Zone near the city", "facts": ["global-infrastructure-faq-local-zones-single-digit-millisecond-latency-workloads"], "section": "2-deep.md#edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them", "trap": "aws-map-trap-edge-location-runs-workloads"},
+    {"id_hint": "aws-map-c009", "type": "decide", "deck": "extended", "front": "Static content, users around the world, LOWEST latency with the least effort?", "back": "Amazon CloudFront at edge locations", "facts": ["global-infrastructure-edge-location-services"], "section": "2-deep.md#edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them"},
+    {"id_hint": "aws-map-c010", "type": "differ", "deck": "extended", "front": "AZ name or AZ ID: which one names the same physical zone in every AWS account?", "back": "The AZ ID", "facts": ["global-infrastructure-az-id-same-physical-location-every-account"], "section": "2-deep.md#availability-zones-fail-separately-so-production-uses-at-least-two"},
+    {"id_hint": "aws-map-c011", "type": "differ", "deck": "extended", "front": "Amazon EC2 or Amazon S3: on which one does the customer patch the operating system?", "back": "Amazon EC2", "facts": ["well-architected-customer-responsible-for-guest-os-apps-security-groups", "well-architected-abstracted-services-aws-runs-os-customer-manages-data"], "section": "2-deep.md#aws-secures-the-cloud-and-you-secure-what-you-put-in-it", "trap": "aws-map-trap-ec2-guest-os-patched-by-aws"},
+    {"id_hint": "aws-map-c012", "type": "decide", "deck": "extended", "front": "A team must check a workload against AWS best practices and get a prioritized list of issues, at no extra charge. Which tool?", "back": "AWS Well-Architected Tool", "facts": ["well-architected-faq-tool-reviews-workloads-against-best-practices", "well-architected-faq-tool-no-additional-charge"], "section": "2-deep.md#the-well-architected-framework-turns-six-pillars-into-review-questions"}
+  ],
+  "cards_plan_summary": "12 written cards: core 4, extended 8; every A-list row has one number card (c001, c002, c005, c006).",
+  "diagrams": [
+    {
+      "id": "aws-map-hero",
+      "kind": "arch",
+      "where": "1-fast.md#in-one-breath (inside Predict the picture)",
+      "claim": "A Region holds several isolated Availability Zones, and edge locations serve users close to where they are.",
+      "alt": "A map with users on the left, a nearby edge location and a Local Zone, the AWS network backbone in the middle, and a Region on the right that contains three Availability Zones.",
+      "say": [
+        "A user's request reaches a nearby edge location, where services such as Amazon CloudFront and Amazon Route 53 run.",
+        "The edge location sends the request over the AWS network backbone to a Region.",
+        "The Region is a separate geographic area with multiple Availability Zones.",
+        "A Regional service such as Amazon S3 spreads requests and data across Availability Zones.",
+        "Each Availability Zone is one or more discrete data centers with redundant power, networking and connectivity.",
+        "A Local Zone extends the Region to a place close to the users."
+      ],
+      "facts": [
+        "global-infrastructure-edge-location-services",
+        "global-infrastructure-edge-locations-connected-to-regions-by-backbone",
+        "global-infrastructure-region-is-separate-geographic-area",
+        "global-infrastructure-s3-regional-recovers-from-az-failure",
+        "global-infrastructure-az-definition-discrete-data-centers",
+        "global-infrastructure-local-zone-extension-of-region-own-internet",
+        "global-infrastructure-region-isolated-for-fault-tolerance"
+      ]
+    },
+    {
+      "id": "aws-map-shared-responsibility",
+      "kind": "compare",
+      "where": "2-deep.md#aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+      "claim": "On Amazon EC2 you manage the guest operating system, but on Amazon S3 AWS runs it, and you still own data and permissions.",
+      "alt": "Two stacks side by side, Amazon EC2 and Amazon S3. In both stacks AWS owns the facilities, the hardware and the virtualization layer. On Amazon EC2 the customer owns the guest operating system, the application, the security groups and the data. On Amazon S3 AWS also runs the operating system and the platform, and the customer owns the data, the encryption choices and the IAM permissions.",
+      "say": [],
+      "facts": [
+        "well-architected-aws-controls-host-os-virtualization-and-facilities",
+        "well-architected-customer-responsible-for-guest-os-apps-security-groups",
+        "well-architected-abstracted-services-aws-runs-os-customer-manages-data"
+      ]
+    },
+    {
+      "id": "aws-map-before",
+      "kind": "arch",
+      "where": "2-deep.md#decision-record",
+      "claim": "At demo day, one hand-built instance in one Availability Zone runs everything, and the review marks its high-risk findings.",
+      "alt": "One AWS Region with one Availability Zone in use. A single instance runs the web application, the worker and the database, and a public bucket holds the audio. Red markers show the review's findings: the root user's access key in the code, the public bucket, an open database port, SSH open to the world, one volume and no backups.",
+      "say": [],
+      "facts": []
+    },
+    {
+      "id": "aws-map-after",
+      "kind": "arch",
+      "where": "2-deep.md#decision-record",
+      "claim": "The plan keeps US East (N. Virginia) and prepares three Availability Zones, so that later chapters can spread each layer across zones.",
+      "alt": "The same Region, US East (N. Virginia), with three Availability Zones labeled AZ 1, AZ 2 and AZ 3. The demo-day instance is still in AZ 1, and AZ 2 and AZ 3 are empty and marked as planned.",
+      "say": [],
+      "facts": []
+    }
+  ],
+  "fact_requests": [],
+  "fact_requests_note": "No new fact is needed for a planned sentence: every planned claim has a verified fact. Gaps that the plan avoids instead of filling: headline counts of Regions, zones, edge locations and Local Zones (not quotable, brief.v0 d002); a definition of 'fault tolerance' (no page, d067); the purpose of a Regional edge cache (chapter 15 owns it, d033); AWS Artifact for audit reports (chapter 09 owns it, d053). Dependency, not a request: the chapter 41 budgets facts for Task 0 (aws-map-t02) are still mech-pass."
+}

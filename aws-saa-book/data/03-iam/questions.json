@@ -1,0 +1,3233 @@
+{
+ "v": 1,
+ "chapter": "iam",
+ "items": [
+  {
+   "id": "iam-q002",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S3"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "sts"
+   ],
+   "concept": "trust-vs-permissions-policy",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has an IAM role in its production account for reading reports from an Amazon S3 bucket in the same account. Developers in the company's development account must use the role. Their IAM policies allow sts:AssumeRole on the role ARN. When a developer calls AssumeRole, the call fails with an access denied error. Which change will fix the problem with the LEAST operational overhead?",
+   "keywords": [
+    "the call fails with an access denied error",
+    "Their IAM policies allow sts:AssumeRole",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Update the trust policy of the role in the production account so that it names the development account as a principal.",
+     "correct": true,
+     "why": "The AssumeRole call itself fails, and the caller side already allows it. The trust policy [names who can assume the role](../facts/iam.md#iam-role-trust-policy-names-who-can-assume).",
+     "concept": "trust-policy",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Update the permissions policy of the role so that it allows s3:GetObject on the report bucket and on the objects in it.",
+     "correct": false,
+     "why": "The permissions policy acts after the session exists, and here the AssumeRole call itself fails, so the trust side is broken.",
+     "concept": "permissions-policy",
+     "trap": "iam-trap-trust-policy-grants-actions",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Add a bucket policy to the report bucket that allows s3:GetObject for the development account as the principal.",
+     "correct": false,
+     "why": "It does not touch the failing AssumeRole call, and across accounts AWS [allows the request only if both evaluations return Allow](../facts/iam.md#iam-eval-cross-account-needs-both-policies).",
+     "concept": "cross-account-resource-policy",
+     "trap": "iam-trap-cross-account-one-policy",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "d",
+     "text": "Create an IAM user in the production account for each developer, with an access key and read access to the bucket.",
+     "correct": false,
+     "why": "It works, but each user brings long-term keys that [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), which is more work and more risk.",
+     "concept": "iam-user-keys",
+     "trap": "iam-trap-iam-users-for-people",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "A role has two policies. The trust policy [names who can assume the role](../facts/iam.md#iam-role-trust-policy-names-who-can-assume), and the permissions policy decides what the session can do. The developers' own allow for sts:AssumeRole is [only half of the cross-account trust](../facts/iam.md#iam-assume-role-two-permissions-checked). The call still fails, so the trust policy lacks the development account.",
+   "takeaway": "AssumeRole fails: check the trust policy and the caller's own allow. A later call fails: fix the permissions policy.",
+   "twin": "If the stem said \"the call succeeds, but the next call to read a report fails\" instead: update the permissions policy, because the trust check already passed.",
+   "say": "AssumeRole itself fails, and their side allows it, so the trust policy is missing the development account.",
+   "facts": [
+    "iam-role-trust-policy-names-who-can-assume",
+    "iam-assume-role-two-permissions-checked",
+    "iam-eval-cross-account-needs-both-policies",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "The caller's identity policy already allows sts:AssumeRole, so the denial comes from the role's side: the role's trust policy does not trust the development account (or its principals). Add the development account (or the developer roles) as a principal in the role's trust policy."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-assume-role-two-permissions-checked",
+       "iam-cross-account-role-vs-resource-policy",
+       "iam-principal-account-delegates-to-account",
+       "iam-role-permissions-policy-defines-session-permissions",
+       "iam-role-trust-policy-names-who-can-assume",
+       "iam-users-have-long-term-credentials-roles-do-not"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q004",
+   "section": "2-deep.md#same-account-access-needs-one-allow-but-cross-account-access-needs-two",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S5"
+   ],
+   "topics": [
+    "identity",
+    "security",
+    "storage"
+   ],
+   "services": [
+    "iam",
+    "s3"
+   ],
+   "concept": "cross-account-both-policies",
+   "difficulty": 3,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "MOST securely",
+   "stem": "A company has two AWS accounts. An application runs on Amazon EC2 instances in account A and uses an IAM role. The application must read objects from an Amazon S3 bucket in account B. The security team requires that the bucket stays private and that access is limited to this one application. Which combination of steps will meet these requirements MOST securely? (Select TWO.)",
+   "keywords": [
+    "bucket in account B",
+    "stays private",
+    "MOST securely"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a statement to the bucket policy in account B that allows s3:GetObject for the ARN of the application's IAM role in account A.",
+     "correct": true,
+     "why": "The [resource-based policy in the trusting account must allow the requester](../facts/iam.md#iam-eval-cross-account-needs-both-policies), and this statement names one role.",
+     "concept": "bucket-policy-cross-account",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Add a statement to the identity-based policy of the IAM role in account A that allows s3:GetObject on the objects in the bucket.",
+     "correct": true,
+     "why": "The [identity-based policy in the trusted account must allow the access](../facts/iam.md#iam-eval-cross-account-needs-both-policies), so account A grants the action too.",
+     "concept": "identity-policy-cross-account",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add a statement to the bucket policy in account B that allows s3:GetObject with the wildcard character as the principal of the statement.",
+     "correct": false,
+     "why": "A wildcard principal with Allow grants access to all users, [including anonymous users (public access)](../facts/iam.md#iam-principal-wildcard-is-public), so the bucket is no longer private.",
+     "concept": "wildcard-principal",
+     "trap": "iam-trap-wildcard-principal-means-account",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Create an IAM user in account B with read access to the bucket, and store the access key of the user on the EC2 instances.",
+     "correct": false,
+     "why": "It works, but stored access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), which is less secure than a role.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "e",
+     "text": "Attach an SCP to account B that allows s3:GetObject for the IAM role of the application in account A on the bucket.",
+     "correct": false,
+     "why": "[An SCP never grants permissions](../facts/iam.md#iam-scp-never-grants-permissions), so an SCP does not give the role access to the bucket.",
+     "concept": "scp-ceiling",
+     "trap": "iam-trap-scp-grants",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The role and the bucket are in different accounts. AWS [allows the request only if both evaluations return Allow](../facts/iam.md#iam-eval-cross-account-needs-both-policies). So account B allows the role in the bucket policy, and account A allows the action in the role's own policy. Both statements name one role and one action, so the bucket stays private.",
+   "takeaway": "Cross-account access needs an allow in the resource's account and in the principal's account.",
+   "twin": "If the stem said \"a bucket in account A\" instead: one statement is enough, because [the permissions of identity-based and resource-based policies are a union](../facts/iam.md#iam-eval-same-account-identity-or-resource-allow).",
+   "say": null,
+   "facts": [
+    "iam-eval-cross-account-needs-both-policies",
+    "iam-principal-wildcard-is-public",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-scp-never-grants-permissions",
+    "iam-eval-same-account-identity-or-resource-allow"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-which-combination",
+    "ee-select-two",
+    "ee-most-secure"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for a combination of two steps that is MOST secure.",
+     "I mark the constraints: the role is in account A, the bucket is in account B, the bucket stays private, and only this application reads it.",
+     "Before I look at the options, I predict one step: a bucket policy in account B that names the role, because a bucket policy names who can read.",
+     "I remove the wildcard principal, because it makes the bucket public. I remove the SCP, because an SCP never grants permissions. I remove the IAM user, because its key is a long-term credential.",
+     "Between the bucket policy alone and the bucket policy with the role's own allow, the difference is the second account. My first idea breaks because the role and the bucket are in different accounts, so both accounts must allow the read. I also choose the role's identity-based policy.",
+     "Check: the two statements name one role and one action, and the bucket stays private. Time: 90 seconds."
+    ],
+    "wrong_path": true
+   },
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a",
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "Cross-account access needs an allow on both sides: the role's identity-based policy in account A allows s3:GetObject on the bucket objects, and the bucket policy in account B allows s3:GetObject for that specific role ARN. No public principal, no IAM user keys."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a",
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-best-practice-ec2-use-role-not-long-term-keys",
+       "iam-eval-cross-account-needs-both-policies",
+       "iam-principal-wildcard-is-public",
+       "iam-resource-based-policy-names-principal-same-or-other-account",
+       "iam-scp-never-grants-permissions",
+       "iam-scp-not-outside-principals-or-resource-policies"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a",
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "e"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2"
+   ]
+  },
+  {
+   "id": "iam-q001",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S3"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "sts"
+   ],
+   "concept": "role-for-ec2-vs-roles-anywhere",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an order-processing application on Amazon EC2 instances in one AWS Region. The application reads and writes objects in an Amazon S3 bucket. Company policy requires that no long-term credentials are stored where the application runs. The company also runs a private certificate authority that issues certificates to its servers. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Amazon EC2 instances in one AWS Region",
+    "no long-term credentials are stored",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Attach an IAM role through an instance profile, and let the AWS SDK load the temporary credentials from the instance metadata.",
+     "correct": true,
+     "why": "The instance profile passes the role to the instances, and code can [get automatic temporary security credentials from the instance metadata](../facts/iam.md#iam-instance-profile-one-role-and-metadata-credentials), so no key is stored.",
+     "concept": "instance-profile",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Use IAM Roles Anywhere with certificates from the private certificate authority, and exchange each certificate for temporary role credentials.",
+     "correct": false,
+     "why": "It works, but it [requires PKI, the ability to issue and manage certificates](../facts/iam.md#iam-roles-anywhere-for-on-premises-and-hybrid-workloads), for instances that already get role credentials from AWS.",
+     "concept": "roles-anywhere",
+     "trap": "iam-trap-instance-profile-vs-roles-anywhere",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create an IAM user for the application, store its access key in an encrypted file where the application runs, and rotate it monthly.",
+     "correct": false,
+     "why": "Access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), so a stored key breaks the company policy, even when it is encrypted.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Move the application to new Amazon EC2 instances, and attach an IAM role to the new instances through an instance profile.",
+     "correct": false,
+     "why": "The application already runs on EC2, and a role can be [attached to an instance that is already running](../facts/iam.md#iam-ec2-role-credentials-rotate-automatically), so no migration is needed.",
+     "concept": "migrate-to-ec2",
+     "trap": null,
+     "misconception": "moves a workload to solve a credentials problem",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The application runs on EC2, so the shortest path is a role. [AWS delivers the temporary credentials of an IAM role to that compute resource](../facts/iam.md#iam-compute-services-receive-role-credentials-no-keys-needed), and the credentials are [temporary and updated automatically](../facts/iam.md#iam-ec2-role-credentials-rotate-automatically). Nothing is stored, and no key needs rotation by hand.",
+   "takeaway": "Code on EC2 gets credentials from an instance profile role, not from a stored key.",
+   "twin": "If the stem said \"servers in the company's data center\" instead: IAM Roles Anywhere, because it [extends the capabilities of IAM to on-premises and hybrid cloud workloads](../facts/iam.md#iam-roles-anywhere-for-on-premises-and-hybrid-workloads).",
+   "say": "On EC2 I'd attach a role through an instance profile, so no key is stored.",
+   "facts": [
+    "iam-instance-profile-one-role-and-metadata-credentials",
+    "iam-roles-anywhere-for-on-premises-and-hybrid-workloads",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-compute-services-receive-role-credentials-no-keys-needed",
+    "iam-ec2-role-credentials-rotate-automatically"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-mandates"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for the solution with the LEAST operational overhead.",
+     "I mark the constraints: the application runs on Amazon EC2 instances, no long-term credentials can be stored where it runs, and a private certificate authority exists.",
+     "Before I look at the options, I predict an IAM role through an instance profile, because AWS delivers the temporary credentials of a role to an EC2 instance.",
+     "I remove the IAM user, because its access key stays valid until someone revokes it. I remove the move to new instances, because the application already runs on EC2.",
+     "Between the instance profile and IAM Roles Anywhere the difference is where the code runs; the stem says EC2 instances, so the certificate authority does not matter here, and Roles Anywhere would only add certificates to manage.",
+     "Check: the instance profile meets every constraint, stores no key and needs no certificates. Time: 90 seconds."
+    ],
+    "wrong_path": false
+   },
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "The app already runs on EC2, so attach an IAM role through an instance profile to the existing instances; the SDK gets rotating temporary credentials from instance metadata. The private CA is a distractor (IAM Roles Anywhere is for workloads outside AWS)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "docs/IAM/latest/UserGuide/id_roles_use_switch-role-ec2#a role can also be attached to an Amazon",
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-best-practice-ec2-use-role-not-long-term-keys",
+       "iam-best-practice-workloads-outside-aws-temporary-credentials",
+       "iam-compute-services-receive-role-credentials-no-keys-needed",
+       "iam-ec2-role-credentials-rotate-automatically",
+       "iam-instance-profile-one-role-and-metadata-credentials",
+       "iam-long-term-keys-valid-until-revoked-temporary-expire",
+       "iam-roles-anywhere-for-on-premises-and-hybrid-workloads"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q003",
+   "section": "2-deep.md#aws-allows-a-request-only-when-nothing-denies-and-something-allows",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K1"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam"
+   ],
+   "concept": "scp-guardrail-root",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations with all features enabled. The company adds new member accounts every month. Administrators in each member account can edit the IAM policies of that account. The security team must ensure that no principal in any member account, including the root user, can stop or delete the AWS CloudTrail trail of the account. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "adds new member accounts every month",
+    "including the root user",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an SCP that denies the actions that stop or delete CloudTrail trails, and attach the SCP to the root of the organization.",
+     "correct": true,
+     "why": "Attached [to the root of your organization](../facts/iam.md#iam-scp-faq-attach-at-root-ou-or-account), the SCP reaches every member account, new ones too, and it applies [including the member account's root user](../facts/iam.md#iam-scp-applies-to-member-root-user).",
+     "concept": "scp-guardrail-root",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Create an SCP that denies the actions that stop or delete CloudTrail trails, and attach it to each member account when the account is created.",
+     "correct": false,
+     "why": "It works, but every new account needs one more attachment, which is more work than one SCP on the root of the organization.",
+     "concept": "scp-per-account",
+     "trap": null,
+     "misconception": "attaches an organization guardrail account by account",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Remove the actions that stop or delete CloudTrail trails from the identity-based policies of every IAM user and IAM role in the member accounts.",
+     "correct": false,
+     "why": "Administrators can add the actions back, and you [cannot attach identity-based policies to the root user](../facts/iam.md#iam-root-user-no-identity-policies-or-boundary).",
+     "concept": "identity-policy-removal",
+     "trap": null,
+     "misconception": "believes that removing an allow inside an account stops the administrators of that account",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Set a permissions boundary that leaves out the actions that stop or delete CloudTrail trails on every IAM user and IAM role.",
+     "correct": false,
+     "why": "A boundary does not reach the root user, because you [cannot set a permissions boundary for the root user](../facts/iam.md#iam-root-user-no-identity-policies-or-boundary).",
+     "concept": "permissions-boundary-scope",
+     "trap": "iam-trap-boundary-limits-root",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The stem asks for a guardrail that holds against administrators and the root user. Member account principals [cannot remove or change SCPs that are applied to that account](../facts/iam.md#iam-scp-faq-member-principals-cannot-change-scps), and an SCP limits principals [including the member account's root user](../facts/iam.md#iam-scp-applies-to-member-root-user). Its Deny wins, because [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow).",
+   "takeaway": "To stop everyone in member accounts, the root user too, put a Deny in an SCP on the organization root.",
+   "twin": "If the stem said \"the trail of the management account\" instead: an SCP does not help, because SCPs [do not affect users or roles in the management account](../facts/iam.md#iam-scp-no-effect-on-management-account).",
+   "say": "A Deny in an SCP sits above every member account, so administrators and the root user lose the action.",
+   "facts": [
+    "iam-scp-faq-attach-at-root-ou-or-account",
+    "iam-scp-applies-to-member-root-user",
+    "iam-root-user-no-identity-policies-or-boundary",
+    "iam-scp-faq-member-principals-cannot-change-scps",
+    "iam-eval-explicit-deny-overrides-allow",
+    "iam-scp-no-effect-on-management-account"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-ensure",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "An SCP that denies cloudtrail:StopLogging and cloudtrail:DeleteTrail (and similar), attached to the organization root so every current and future member account, including its root user, inherits it."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-boundary-applies-to-users-and-roles-not-slr",
+       "iam-root-user-no-identity-policies-or-boundary",
+       "iam-scp-applies-to-member-root-user",
+       "iam-scp-faq-attach-at-root-ou-or-account",
+       "iam-scp-faq-member-principals-cannot-change-scps"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1"
+   ]
+  },
+  {
+   "id": "iam-q008",
+   "section": "2-deep.md#aws-allows-a-request-only-when-nothing-denies-and-something-allows",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S2"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "s3"
+   ],
+   "concept": "explicit-deny",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a data pipeline on Amazon EC2 instances that use one IAM role. The role has an AWS managed policy that allows all Amazon S3 actions. The role also has a customer managed policy with a Deny statement for s3:PutObject on the raw/ prefix of a bucket. The Deny statement was written for an old job that no longer runs. A new job now fails with an access denied error when it uploads to that prefix. No SCP or permissions boundary applies to the role. Which solution will fix the uploads with the LEAST operational overhead?",
+   "keywords": [
+    "a Deny statement for s3:PutObject",
+    "an old job that no longer runs",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a second IAM role without the Deny statement, and run the new job on separate Amazon EC2 instances that use the new role.",
+     "correct": false,
+     "why": "It works, but a new role, a new instance profile and new instances are far more work than one edit to the policy that holds the Deny.",
+     "concept": "second-role",
+     "trap": null,
+     "misconception": "builds new infrastructure to avoid editing one policy",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Attach the AdministratorAccess managed policy to the role, so that its allow for every action on every resource outweighs the Deny statement.",
+     "correct": false,
+     "why": "[AdministratorAccess grants all actions for all services and resources](../facts/iam.md#iam-job-function-poweruseraccess-excludes-iam-org), but it is one more allow, and [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow).",
+     "concept": "admin-allow",
+     "trap": "iam-trap-allow-beats-deny",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Edit the customer managed policy to remove the Deny statement for the raw/ prefix, and leave the AWS managed policy on the role unchanged.",
+     "correct": true,
+     "why": "The Deny statement causes the failure, because [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow). Without it, the allow of the managed policy decides the upload.",
+     "concept": "remove-deny",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Add a statement to the bucket policy that allows s3:PutObject on the raw/ prefix for the ARN of the IAM role that the instances use.",
+     "correct": false,
+     "why": "A bucket policy adds one more allow, and [even one explicit deny that applies](../facts/iam.md#iam-eval-deny-checked-first) makes the final decision Deny.",
+     "concept": "bucket-policy-allow",
+     "trap": "iam-trap-allow-beats-deny",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "Two policies of the role disagree. AWS [first looks for a Deny statement in every policy that applies](../facts/iam.md#iam-eval-deny-checked-first), and [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow). So an added allow, in any policy type, leaves the upload denied. The Deny was written for a job that no longer runs, so removing it is the one change that fixes the upload.",
+   "takeaway": "An added allow does not beat a Deny statement; change the Deny statement itself.",
+   "twin": "If the stem said \"the Deny statement is in an SCP on the account\" instead: the change belongs in the organization, because principals in the member account [cannot remove or change SCPs that are applied to that account](../facts/iam.md#iam-scp-faq-member-principals-cannot-change-scps).",
+   "say": "A Deny beats every allow, so I'd remove the old Deny instead of adding another allow.",
+   "facts": [
+    "iam-eval-explicit-deny-overrides-allow",
+    "iam-eval-deny-checked-first",
+    "iam-job-function-poweruseraccess-excludes-iam-org",
+    "iam-scp-faq-member-principals-cannot-change-scps"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "An explicit Deny overrides any Allow, from any policy, so adding allows cannot help. Remove the obsolete Deny statement from the customer managed policy."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-eval-deny-checked-first",
+       "iam-eval-explicit-deny-overrides-allow",
+       "iam-faq-least-privilege-definition",
+       "iam-instance-profile-one-role-and-metadata-credentials"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": "review 03 exam-003/005/006: verified items shipped in place of q007, q014 and q012"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1"
+   ]
+  },
+  {
+   "id": "iam-q009",
+   "section": "2-deep.md#iam-identity-center-gives-employees-one-sign-in-for-many-accounts",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K2"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "iam-identity-center",
+    "organizations"
+   ],
+   "concept": "identity-center-vs-iam-users",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations with all features enabled and has 40 member accounts. About 300 employees need access to the AWS Management Console and the AWS CLI in several accounts, based on their job functions. The company has no external identity provider. The security team wants to centrally manage which employees can access each account, and employees must use one sign-in to reach all their accounts. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "40 member accounts",
+    "centrally manage which employees can access each account",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create IAM users for the employees in each member account, add the users to IAM groups by job function, and attach policies to each group.",
+     "correct": false,
+     "why": "It works, but every member account repeats the same users, groups and policies, and employees sign in to each account separately.",
+     "concept": "iam-users-per-account",
+     "trap": "iam-trap-iam-users-for-people",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Enable IAM Identity Center, create the employees as users and groups in its identity store, and assign permission sets to the groups for each account.",
+     "correct": true,
+     "why": "Identity Center [applies these permissions to the selected accounts automatically](../facts/iam.md#iam-idc-permission-sets), and employees reach their accounts through the AWS access portal.",
+     "concept": "identity-center-permission-sets",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create an Amazon Cognito user pool for the employees, and map each group in the user pool to an IAM role in every member account.",
+     "correct": false,
+     "why": "Amazon Cognito manages [identities for your customer facing applications](../facts/iam.md#iam-idc-cognito-not-an-identity-source), not the workforce of the company.",
+     "concept": "cognito-for-workforce",
+     "trap": "iam-trap-cognito-vs-identity-center",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Create IAM users in one central account, and let the users switch to roles that the security team creates in each member account.",
+     "correct": false,
+     "why": "It works, but the team still manages IAM users and a role in every member account, and AWS calls Identity Center the [primary tool to manage the AWS access of your workforce users](../facts/iam.md#iam-idc-recommended-front-door-for-workforce).",
+     "concept": "central-iam-users-switch-role",
+     "trap": "iam-trap-iam-users-for-people",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The employees are a workforce that works in many accounts of one organization. AWS calls IAM Identity Center the [recommended front door into AWS](../facts/iam.md#iam-idc-recommended-front-door-for-workforce), and Identity Center [creates and manages IAM roles in individual AWS accounts for each permission set](../facts/iam.md#iam-idc-creates-role-per-permission-set). The team manages users, groups and permission sets in one place, and each employee has one sign-in.",
+   "takeaway": "Employees in many accounts get IAM Identity Center with permission sets, not IAM users in each account.",
+   "twin": "If the stem said \"customers of the company's mobile app need to sign in\" instead: Amazon Cognito, because Cognito manages [identities for your customer facing applications](../facts/iam.md#iam-idc-cognito-not-an-identity-source).",
+   "say": "For employees across many accounts I'd use IAM Identity Center with permission sets.",
+   "facts": [
+    "iam-idc-permission-sets",
+    "iam-idc-recommended-front-door-for-workforce",
+    "iam-idc-creates-role-per-permission-set",
+    "iam-idc-cognito-not-an-identity-source"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-centrally-manage",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Enable IAM Identity Center in the organization, use its built-in identity store as the identity source (no external IdP), create groups by job function, and assign permission sets to groups per account; users get one sign-in portal for console and CLI."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-best-practice-human-users-federate-with-identity-center",
+       "iam-decision-guide-cognito-for-own-application-auth",
+       "iam-idc-accounts-need-organizations-all-features",
+       "iam-idc-cognito-not-an-identity-source",
+       "iam-idc-console-cli-v2-and-mobile",
+       "iam-idc-identity-sources",
+       "iam-idc-permission-sets",
+       "iam-idc-recommended-front-door-for-workforce",
+       "iam-users-have-long-term-credentials-roles-do-not"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q010",
+   "section": "2-deep.md#cognito-and-roles-anywhere-give-app-users-and-servers-temporary-credentials",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K2"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "cognito",
+    "sts",
+    "s3"
+   ],
+   "concept": "cognito-identity-pools",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST securely",
+   "stem": "A company is building a mobile app that lets each user upload photos directly to an Amazon S3 bucket. Users sign up and sign in to the app through an Amazon Cognito user pool. The company expects the app to grow quickly. Company policy requires that the app does not contain long-term AWS credentials. Each upload must use temporary credentials. Which solution will meet these requirements MOST securely?",
+   "keywords": [
+    "mobile app",
+    "does not contain long-term AWS credentials",
+    "MOST securely"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a user in IAM Identity Center for each app user, and let the app request credentials for a permission set that allows uploads.",
+     "correct": false,
+     "why": "AWS calls Identity Center the [primary tool to manage the AWS access of your workforce users](../facts/iam.md#iam-idc-recommended-front-door-for-workforce), and app customers are not the company's workforce.",
+     "concept": "identity-center-for-app-users",
+     "trap": "iam-trap-cognito-vs-identity-center",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Use an Amazon Cognito identity pool to give each signed-in user temporary credentials for an IAM role that allows all Amazon S3 actions.",
+     "correct": false,
+     "why": "It works, but a role with every Amazon S3 action gives each app user far more than an upload needs, which breaks least privilege.",
+     "concept": "identity-pool-broad-role",
+     "trap": null,
+     "misconception": "gives the app role broad permissions because the credentials are temporary",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Call the AWS STS GetFederationToken operation from the app for each user, and pass a session policy that allows uploads to the bucket.",
+     "correct": false,
+     "why": "GetFederationToken is called with [the long-term credentials of an IAM user](../facts/sts.md#sts-getfederationtoken-long-term-user-credentials), so the app would hold a long-term key.",
+     "concept": "getfederationtoken-in-app",
+     "trap": null,
+     "misconception": "A mobile app needs an access key embedded in the app to upload to Amazon S3.",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Use an Amazon Cognito identity pool to give each signed-in user temporary credentials for an IAM role that allows s3:PutObject on the bucket.",
+     "correct": true,
+     "why": "Cognito [identity pools deliver temporary IAM credentials](../facts/iam.md#iam-federation-cognito-identity-pools-deliver-iam-credentials) to signed-in users, and a role that allows s3:PutObject on one bucket grants what each upload needs.",
+     "concept": "identity-pool-narrow-role",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "App users are not employees, so their credentials come from Amazon Cognito. The user pool signs the user in, and Cognito [identity pools deliver temporary IAM credentials](../facts/iam.md#iam-federation-cognito-identity-pools-deliver-iam-credentials) for a role. For mobile apps AWS points to [Amazon Cognito or AssumeRoleWithWebIdentity](../facts/sts.md#sts-getfederationtoken-long-term-user-credentials), not to GetFederationToken. A role that allows s3:PutObject on the one bucket keeps each credential narrow.",
+   "takeaway": "Mobile app users get temporary AWS credentials from a Cognito identity pool, with a narrow role.",
+   "twin": "If the stem said \"employees need console access to the company's AWS accounts\" instead: IAM Identity Center, because it is the [primary tool to manage the AWS access of your workforce users](../facts/iam.md#iam-idc-recommended-front-door-for-workforce).",
+   "say": null,
+   "facts": [
+    "iam-federation-cognito-identity-pools-deliver-iam-credentials",
+    "sts-getfederationtoken-long-term-user-credentials",
+    "iam-idc-recommended-front-door-for-workforce"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-temporary",
+    "ee-most-secure",
+    "ee-mandates"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Use an Amazon Cognito identity pool that trusts the user pool, exchanging the user pool token for temporary credentials of an authenticated IAM role scoped to least privilege (s3:PutObject on the bucket, ideally on a per-user prefix)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "cognito-user-pool-vs-identity-pool",
+       "iam-best-practice-least-privilege-definition",
+       "iam-faq-least-privilege-definition",
+       "iam-federation-cognito-identity-pools-deliver-iam-credentials",
+       "iam-idc-cognito-not-an-identity-source",
+       "iam-idc-recommended-front-door-for-workforce",
+       "sts-getfederationtoken-long-term-user-credentials"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q005",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S3"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "sts"
+   ],
+   "concept": "role-for-ec2-vs-roles-anywhere",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an order-processing application on servers in the company's data center. The application reads and writes objects in an Amazon S3 bucket. Company policy requires that no long-term credentials are stored where the application runs. The company also runs a private certificate authority that issues certificates to its servers. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "servers in the company's data center",
+    "no long-term credentials are stored",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Attach an IAM role through an instance profile, and let the AWS SDK load the temporary credentials from the instance metadata.",
+     "correct": false,
+     "why": "Instance profiles and instance metadata belong to Amazon EC2 instances. Servers in a data center are not EC2 instances, so no credentials arrive.",
+     "concept": "instance-profile",
+     "trap": "iam-trap-instance-profile-vs-roles-anywhere",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Use IAM Roles Anywhere with certificates from the private certificate authority, and exchange each certificate for temporary role credentials.",
+     "correct": true,
+     "why": "IAM Roles Anywhere [extends the capabilities of IAM to on-premises and hybrid cloud workloads](../facts/iam.md#iam-roles-anywhere-for-on-premises-and-hybrid-workloads), and the company already has the certificate authority.",
+     "concept": "roles-anywhere",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create an IAM user for the application, store its access key in an encrypted file where the application runs, and rotate it monthly.",
+     "correct": false,
+     "why": "Access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), so a stored key breaks the company policy, even when it is encrypted.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Move the application to new Amazon EC2 instances, and attach an IAM role to the new instances through an instance profile.",
+     "correct": false,
+     "why": "It works, but a migration to Amazon EC2 is far more work than using the certificate authority that the company already runs.",
+     "concept": "migrate-to-ec2",
+     "trap": null,
+     "misconception": "moves a workload to solve a credentials problem",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The servers are outside AWS, so the instance profile path does not exist for them. Workloads outside AWS [can still use temporary credentials](../facts/iam.md#iam-best-practice-workloads-outside-aws-temporary-credentials), and IAM Roles Anywhere delivers them in exchange for a certificate. No key is stored, and the company already runs the certificate authority.",
+   "takeaway": "Servers outside AWS get role credentials through IAM Roles Anywhere and a certificate.",
+   "twin": "If the stem said \"Amazon EC2 instances in one AWS Region\" instead: an IAM role through an instance profile, because [AWS delivers the temporary credentials of an IAM role to that compute resource](../facts/iam.md#iam-compute-services-receive-role-credentials-no-keys-needed).",
+   "say": null,
+   "facts": [
+    "iam-roles-anywhere-for-on-premises-and-hybrid-workloads",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-best-practice-workloads-outside-aws-temporary-credentials",
+    "iam-compute-services-receive-role-credentials-no-keys-needed"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-mandates",
+    "ee-on-premises"
+   ],
+   "twin_of": "iam-q001",
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "The servers are on premises and the company has a private CA, so use IAM Roles Anywhere: a trust anchor for the CA, a profile and a role, and exchange the X.509 certificates for temporary role credentials. No long-term keys on the servers."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "docs/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles#Use an instance profile to pass an IAM r",
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-best-practice-workloads-outside-aws-temporary-credentials",
+       "iam-instance-profile-one-role-and-metadata-credentials",
+       "iam-long-term-keys-valid-until-revoked-temporary-expire",
+       "iam-roles-anywhere-for-on-premises-and-hybrid-workloads"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q007",
+   "section": "2-deep.md#same-account-access-needs-one-allow-but-cross-account-access-needs-two",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S2"
+   ],
+   "topics": [
+    "identity",
+    "security",
+    "storage"
+   ],
+   "services": [
+    "iam",
+    "s3"
+   ],
+   "concept": "group-not-principal",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company stores reports in an Amazon S3 bucket. Analysts sign in to the same AWS account and belong to an IAM group named analysts. A developer adds a statement to the bucket policy that names the ARN of the analysts group as the principal and allows s3:GetObject on the report objects. The statement does not give the analysts access to the reports. What should the developer name as the principal instead?",
+   "keywords": [
+    "names the ARN of the analysts group as the principal",
+    "the same AWS account"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "An IAM role that the analysts assume",
+     "correct": true,
+     "why": "A bucket policy can name a role: [you must indicate the account, user, role, or AWS STS federated user principal](../facts/iam.md#iam-principal-element-resource-policy-not-identity-policy).",
+     "concept": "role-as-principal",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "The name of the analysts group instead of its ARN",
+     "correct": false,
+     "why": "The form of the name changes nothing, because you [cannot identify a user group as a principal](../facts/iam.md#iam-principal-group-cannot-be-principal).",
+     "concept": "group-name-as-principal",
+     "trap": "iam-trap-group-as-principal",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "A permissions boundary that is set on the analysts group",
+     "correct": false,
+     "why": "A boundary is not a principal, and it [does not provide permissions on its own](../facts/iam.md#iam-boundary-limits-but-never-grants).",
+     "concept": "boundary-as-principal",
+     "trap": "iam-trap-scp-grants",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "The access key ID of each analyst's IAM user",
+     "correct": false,
+     "why": "An access key ID is a credential, not a principal: [you must indicate the account, user, role, or AWS STS federated user principal](../facts/iam.md#iam-principal-element-resource-policy-not-identity-policy).",
+     "concept": "access-key-as-principal",
+     "trap": null,
+     "misconception": "confuses a credential with the principal that holds it",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "In a bucket policy, [you must indicate the account, user, role, or AWS STS federated user principal](../facts/iam.md#iam-principal-element-resource-policy-not-identity-policy), and you [cannot identify a user group as a principal](../facts/iam.md#iam-principal-group-cannot-be-principal). A role that the analysts assume is a valid principal. In one account, [the permissions of identity-based and resource-based policies are a union](../facts/iam.md#iam-eval-same-account-identity-or-resource-allow), so the bucket policy can give the role the read.",
+   "takeaway": "A bucket policy names a role or a user as the principal, not an IAM group.",
+   "twin": "If the stem said \"the analysts sign in to another AWS account\" instead: the role also needs its own allow, because the [identity-based policy in the trusted account must allow the access](../facts/iam.md#iam-eval-cross-account-needs-both-policies).",
+   "say": null,
+   "facts": [
+    "iam-principal-element-resource-policy-not-identity-policy",
+    "iam-principal-group-cannot-be-principal",
+    "iam-eval-same-account-identity-or-resource-allow",
+    "iam-boundary-limits-but-never-grants",
+    "iam-eval-cross-account-needs-both-policies"
+   ],
+   "sources": [],
+   "exam_english": [],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "verified",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "An IAM group is not a principal and cannot be named in a resource-based policy. Name an actual principal: the individual IAM users' ARNs or an IAM role the analysts assume (or skip the bucket policy and grant access through the group's identity policy, since it is the same account)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-boundary-applies-to-users-and-roles-not-slr",
+       "iam-boundary-limits-but-never-grants",
+       "iam-principal-element-resource-policy-not-identity-policy",
+       "iam-principal-group-cannot-be-principal",
+       "iam-resource-based-policy-names-principal-same-or-other-account"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": "review 03 exam-005/006/012: swapped out of the shipped set for verified items that cover 1.1.K5, the allow-beats-deny trap and the difficulty mix"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1"
+   ]
+  },
+  {
+   "id": "iam-q011",
+   "section": "2-deep.md#passing-a-role-to-a-service-needs-the-passrole-permission",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S3"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "ec2"
+   ],
+   "concept": "passrole",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a project in one AWS account. Developers launch Amazon EC2 instances for the project and attach one of two project IAM roles to each instance. The account also has an IAM role with the AdministratorAccess policy for an operations tool. The developers' IAM policy allows ec2:RunInstances and allows iam:PassRole on all roles. The security team must apply least privilege: developers keep launching instances with the project roles, but they cannot attach the administrator role to an instance. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "allows iam:PassRole on all roles",
+    "cannot attach the administrator role",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Set a permissions boundary on the two project roles that limits them to the project's actions, and keep the developers' current IAM policy unchanged.",
+     "correct": false,
+     "why": "A boundary limits what the project roles can do, but the developers still hold iam:PassRole on the administrator role, so they can still attach it.",
+     "concept": "boundary-on-passed-roles",
+     "trap": null,
+     "misconception": "believes a boundary on the project roles controls which role a developer can pass",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Move the administrator role and the operations tool to a separate AWS account, and keep the developers' current IAM policy unchanged.",
+     "correct": false,
+     "why": "It works, because [PassRole only works with a service in the same AWS account](../facts/iam.md#iam-passrole-required-to-give-role-to-service), but moving the tool is far more work than one policy edit.",
+     "concept": "move-admin-role",
+     "trap": null,
+     "misconception": "moves a workload to another account to solve a permissions problem",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Change the developers' IAM policy so that iam:PassRole allows only the ARNs of the two project roles, and keep the permission to launch instances.",
+     "correct": true,
+     "why": "The Resource element of iam:PassRole limits which roles a developer can pass, so a developer cannot pass [a role that has more permissions than you want the user to have](../facts/iam.md#iam-passrole-prevents-privilege-escalation).",
+     "concept": "passrole-scoped",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Detach the IAM roles from the instances, and give each developer an access key with the project permissions to store on the instances they launch.",
+     "correct": false,
+     "why": "Stored keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), so this trades a role problem for a long-term credential on every instance.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "To give an instance a role, the developer [must have the iam:PassRole permission for that role](../facts/iam.md#iam-passrole-required-to-give-role-to-service). These developers have it for every role in the account. Limiting iam:PassRole to the two project role ARNs stops them from passing [a role that has more permissions than you want the user to have](../facts/iam.md#iam-passrole-prevents-privilege-escalation), and launches with the project roles keep working.",
+   "takeaway": "Stop privilege escalation through roles by scoping iam:PassRole to the approved role ARNs.",
+   "twin": "If the stem said \"developers create new roles for their instances, and the roles must stay under a set maximum\" instead: a permissions boundary, because it sets the [maximum permissions that an identity-based policy can grant](../facts/iam.md#iam-permissions-boundary-sets-maximum-does-not-grant).",
+   "say": "I'd scope iam:PassRole to the project roles, so nobody can hand the admin role to an instance.",
+   "facts": [
+    "iam-passrole-prevents-privilege-escalation",
+    "iam-passrole-required-to-give-role-to-service",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-permissions-boundary-sets-maximum-does-not-grant"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-privilege",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "Restrict iam:PassRole in the developers' policy to the ARNs of the two project roles (optionally with iam:PassedToService ec2.amazonaws.com), keeping ec2:RunInstances."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-best-practice-ec2-use-role-not-long-term-keys",
+       "iam-boundary-limits-but-never-grants",
+       "iam-passrole-prevents-privilege-escalation",
+       "iam-passrole-required-to-give-role-to-service"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1"
+   ]
+  },
+  {
+   "id": "iam-q012",
+   "section": "2-deep.md#condition-keys-narrow-an-allow-to-the-right-organization-or-network",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.K1"
+   ],
+   "topics": [
+    "identity",
+    "security",
+    "storage"
+   ],
+   "services": [
+    "iam",
+    "s3",
+    "organizations"
+   ],
+   "concept": "principalorgid-condition",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations with all features enabled and adds new member accounts every week. Applications in every member account write log files to one Amazon S3 bucket in a central logging account. The IAM roles of the applications already allow s3:PutObject on the bucket. The security team must restrict writes to the bucket to principals in the organization's accounts, including accounts that are created later. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "adds new member accounts every week",
+    "including accounts that are created later",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a bucket policy statement that allows s3:PutObject with the wildcard character as the principal and with no condition on the statement.",
+     "correct": false,
+     "why": "Without a condition, a wildcard principal with Allow grants access to all users, [including anonymous users (public access)](../facts/iam.md#iam-principal-wildcard-is-public).",
+     "concept": "wildcard-principal",
+     "trap": "iam-trap-wildcard-principal-means-account",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Add a bucket policy statement that allows s3:PutObject for every principal, with a condition that aws:PrincipalOrgID equals the organization ID.",
+     "correct": true,
+     "why": "The [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) condition compares the caller's organization with the ID in the policy, and the policy will [automatically include the correct accounts](../facts/iam.md#iam-condition-key-principalorgid) as accounts join.",
+     "concept": "principalorgid-bucket-policy",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Attach an SCP to the root of the organization that allows s3:PutObject on the bucket for the principals of every member account.",
+     "correct": false,
+     "why": "[An SCP never grants permissions](../facts/iam.md#iam-scp-never-grants-permissions), and SCPs [do not affect resource-based policies directly](../facts/iam.md#iam-scp-not-outside-principals-or-resource-policies), so the bucket policy still decides who writes.",
+     "concept": "scp-as-grant",
+     "trap": "iam-trap-scp-grants",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Add a bucket policy statement that allows s3:PutObject for a list of every member account ID, and update the list when an account is created.",
+     "correct": false,
+     "why": "It works, but every new account means one more policy edit, and [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) removes that work.",
+     "concept": "account-id-list",
+     "trap": null,
+     "misconception": "lists every account by hand when one condition key covers the organization",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The writers are in other accounts, so the [resource-based policy in the trusting account must allow the requester](../facts/iam.md#iam-eval-cross-account-needs-both-policies). A list of account IDs needs an edit for each new account. The [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) key compares the organization of the caller, and policies that use it [automatically include the correct accounts](../facts/iam.md#iam-condition-key-principalorgid) when accounts are added or removed.",
+   "takeaway": "Restrict a resource to every account of an organization, now and later, with aws:PrincipalOrgID.",
+   "twin": "If the stem said \"two partner accounts outside the organization\" instead: name the two account IDs as principals, because the [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) condition matches callers from the organization alone.",
+   "say": "I'd allow the whole organization with aws:PrincipalOrgID, so new accounts are covered without edits.",
+   "facts": [
+    "iam-condition-key-principalorgid",
+    "iam-principal-wildcard-is-public",
+    "iam-scp-never-grants-permissions",
+    "iam-scp-not-outside-principals-or-resource-policies",
+    "iam-eval-cross-account-needs-both-policies"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-restrict",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "verified",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "Bucket policy with Principal * and a condition aws:PrincipalOrgID equal to the organization ID, which automatically includes new accounts."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-condition-key-principalorgid",
+       "iam-principal-wildcard-is-public",
+       "iam-scp-never-grants-permissions",
+       "iam-scp-not-outside-principals-or-resource-policies"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": "review 03 exam-005/006/012: swapped out of the shipped set for verified items that cover 1.1.K5, the allow-beats-deny trap and the difficulty mix"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1"
+   ]
+  },
+  {
+   "id": "iam-q013",
+   "section": "2-deep.md#a-kms-key-policy-decides-whether-iam-policies-count-for-the-key",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.S4"
+   ],
+   "topics": [
+    "security",
+    "identity"
+   ],
+   "services": [
+    "iam",
+    "kms",
+    "s3"
+   ],
+   "concept": "kms-key-policy",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company manages its own keys in AWS KMS. An application on Amazon EC2 instances uses an IAM role to read objects from an Amazon S3 bucket in the same account. The objects are encrypted with SSE-KMS and a customer managed key. The role's IAM policy allows s3:GetObject on the bucket and kms:Decrypt on the key. The key policy has one statement, which allows the key administrators' IAM role to use and manage the key. Every read fails with an access denied error. Which solution will fix the reads with the LEAST operational overhead?",
+   "keywords": [
+    "manages its own keys",
+    "The key policy has one statement",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a statement to the bucket policy that allows s3:GetObject and kms:Decrypt for the application's IAM role on the bucket and the key.",
+     "correct": false,
+     "why": "When Amazon S3 decrypts the object, [each service checks the permissions of the same IAM principal](../facts/iam.md#iam-forward-access-sessions-check-caller-permissions), so AWS KMS still needs the key policy to allow the role.",
+     "concept": "bucket-policy-for-key",
+     "trap": "iam-trap-kms-without-key-policy",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Attach the AdministratorAccess managed policy to the application's IAM role, so that its identity-based policy allows every AWS KMS action on the key.",
+     "correct": false,
+     "why": "Unless the key policy allows it, [IAM policies cannot allow access to a KMS key](../facts/iam.md#iam-kms-iam-policy-needs-key-policy-permission), so a broader IAM policy changes nothing.",
+     "concept": "broader-iam-policy",
+     "trap": "iam-trap-kms-without-key-policy",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Create a new customer managed key with the default key policy, re-encrypt every object with the new key, and schedule the old key for deletion.",
+     "correct": false,
+     "why": "It works, because [the default key policy enables IAM policies](../facts/iam.md#iam-kms-iam-policy-needs-key-policy-permission), but re-encrypting every object is far more work than one key policy statement.",
+     "concept": "new-key-default-policy",
+     "trap": null,
+     "misconception": "replaces a key to avoid editing its key policy",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Add a statement to the key policy that allows the application's IAM role to use kms:Decrypt on the key, and keep the IAM policy unchanged.",
+     "correct": true,
+     "why": "The key policy is [the primary way to control access](../facts/iam.md#iam-kms-key-policy-required-primary-control) to a KMS key, and a statement that allows the role gives it kms:Decrypt on the key.",
+     "concept": "key-policy-statement",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "A KMS key works differently from most resources. Unless the key policy explicitly allows it, [IAM policies cannot allow access to a KMS key](../facts/iam.md#iam-kms-iam-policy-needs-key-policy-permission). This key policy names the administrators' role and nothing else, so the kms:Decrypt allow in the application role's policy does not count. One key policy statement for the application role fixes every read.",
+   "takeaway": "For a KMS key, an IAM allow counts when the key policy enables IAM policies or names the role.",
+   "twin": "If the stem said \"the role is in another AWS account\" instead: change the key policy and the role's IAM policy, because for cross-account use [neither policy alone is sufficient](../facts/iam.md#iam-kms-cross-account-key-policy-and-iam-policy).",
+   "say": null,
+   "facts": [
+    "iam-kms-key-policy-required-primary-control",
+    "iam-kms-iam-policy-needs-key-policy-permission",
+    "iam-forward-access-sessions-check-caller-permissions",
+    "iam-kms-cross-account-key-policy-and-iam-policy"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-manages-its-own-keys",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "The key policy has no statement that enables IAM policies (no account root principal) and does not name the application role, so the role's kms:Decrypt in its IAM policy has no effect. Add a key policy statement that allows the application role kms:Decrypt (or add the statement that enables IAM policies for the account)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-best-practice-least-privilege-definition",
+       "iam-kms-iam-policy-needs-key-policy-permission",
+       "iam-kms-key-policy-required-primary-control",
+       "iam-kms-no-principal-has-access-unless-allowed"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q014",
+   "section": "2-deep.md#access-analyzer-and-last-accessed-data-find-permissions-to-remove",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K4"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "cloudtrail",
+    "lambda"
+   ],
+   "concept": "policy-generation",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a batch application on AWS Lambda. During testing, a developer attached the AdministratorAccess policy to the function's execution role. The application has now run in production for two months, and an AWS CloudTrail trail records the account's activity. The security team must replace the policy with a policy that follows the principle of least privilege and that matches the actions the function really uses. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "the actions the function really uses",
+    "an AWS CloudTrail trail records the account's activity",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Download the IAM credential report, find the services that the role used, and write a customer managed policy that allows those services.",
+     "correct": false,
+     "why": "The credential report [lists all users in the account and the status of their credentials](../facts/iam.md#iam-credential-report-contents), not the actions that a role used.",
+     "concept": "credential-report",
+     "trap": "iam-trap-audit-tool-shows-activity",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Read two months of CloudTrail log files by hand, list every action that the role called, and write a customer managed policy from the list.",
+     "correct": false,
+     "why": "It works, but reading two months of logs by hand is far more work than letting Access Analyzer generate the same policy.",
+     "concept": "manual-cloudtrail-review",
+     "trap": null,
+     "misconception": "builds by hand what Access Analyzer generates from the same logs",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Use IAM Access Analyzer to generate a policy from the role's CloudTrail activity, review the generated policy, and attach it in place of AdministratorAccess.",
+     "correct": true,
+     "why": "Access Analyzer can [analyze your CloudTrail logs](../facts/iam.md#iam-access-analyzer-policy-generation-from-cloudtrail) for the role and [generate an IAM policy based on that activity](../facts/iam.md#iam-access-analyzer-policy-generation-from-cloudtrail), which the team reviews before use.",
+     "concept": "access-analyzer-policy-generation",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Run the IAM policy simulator for each AWS action against the role, and keep in a new policy the actions that the simulator allows.",
+     "correct": false,
+     "why": "The simulator [does not make an actual AWS service request](../facts/iam.md#iam-policy-simulator-no-real-request), and with AdministratorAccess it reports every action as allowed, not as used.",
+     "concept": "policy-simulator",
+     "trap": "iam-trap-audit-tool-shows-activity",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The team needs the actions that the function really called, and CloudTrail already holds them. IAM Access Analyzer [generates a fine-grained policy based on the access activity captured in your logs](../facts/iam.md#iam-faq-access-analyzer-policy-generation), and policy generation can analyze [90 days](../facts/iam.md#iam-access-analyzer-policy-generation-time-range) of CloudTrail data, which covers the two months. The team reviews the generated policy and replaces AdministratorAccess with it.",
+   "takeaway": "To cut a broad role down to least privilege, generate a policy from its CloudTrail activity with IAM Access Analyzer.",
+   "twin": "If the stem said \"find the roles in the account that are no longer used\" instead: an unused access analyzer, because it reports [unused roles, unused access keys and unused passwords](../facts/iam.md#iam-access-analyzer-unused-access-findings).",
+   "say": "I'd let IAM Access Analyzer generate the policy from CloudTrail, then review it.",
+   "facts": [
+    "iam-access-analyzer-policy-generation-from-cloudtrail",
+    "iam-credential-report-contents",
+    "iam-policy-simulator-no-real-request",
+    "iam-faq-access-analyzer-policy-generation",
+    "iam-access-analyzer-policy-generation-time-range",
+    "iam-access-analyzer-unused-access-findings"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-privilege",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "verified",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Use IAM Access Analyzer policy generation on the Lambda execution role, using the CloudTrail trail's activity, review and refine the generated policy, and attach it in place of AdministratorAccess."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-access-analyzer-policy-generation-from-cloudtrail",
+       "iam-access-analyzer-policy-generation-time-range",
+       "iam-credential-report-contents",
+       "iam-faq-access-analyzer-policy-generation",
+       "iam-faq-policy-simulator-effective-permissions",
+       "iam-policy-simulator-no-real-request"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": "review 03 exam-005/006/012: swapped out of the shipped set for verified items that cover 1.1.K5, the allow-beats-deny trap and the difficulty mix"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-1",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q020",
+   "section": "2-deep.md#the-root-user-and-iam-users-hold-long-term-credentials",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S1"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam"
+   ],
+   "concept": "root-user-mfa",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company has a new AWS account. Two founders share the password of the root user and sign in as the root user every day to launch Amazon EC2 instances and to edit IAM policies. A deployment script on an EC2 instance uses an access key of the root user. An auditor asks the company to protect the root user and to follow AWS security best practices. Which action should the company take?",
+   "keywords": [
+    "sign in as the root user every day",
+    "uses an access key of the root user"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Turn on MFA for the root user, and keep using the root user and its access key for daily administration and for the script.",
+     "correct": false,
+     "why": "MFA protects the sign-in, but the root user [must not be used for everyday tasks, even administrative ones](../facts/iam.md#iam-root-user-not-for-everyday-tasks-roles-instead), and the access key stays.",
+     "concept": "mfa-makes-root-safe",
+     "trap": "iam-trap-root-for-daily-admin",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Set a permissions boundary on the root user that allows only Amazon EC2 and IAM actions, and keep the access key for the script.",
+     "correct": false,
+     "why": "You [cannot set a permissions boundary for the root user](../facts/iam.md#iam-root-user-no-identity-policies-or-boundary), so the boundary limits nothing, and the access key stays in use.",
+     "concept": "boundary-on-root",
+     "trap": "iam-trap-boundary-limits-root",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Turn on MFA for the root user, delete its access key, and do the daily work and the script through identities that use IAM roles.",
+     "correct": true,
+     "why": "MFA guards the sign-in, and AWS advises [do not create access keys for the root user](../facts/iam.md#iam-root-do-not-create-access-keys); roles then carry the daily work and the script.",
+     "concept": "root-mfa-no-keys-roles",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Keep the root user for daily work, rotate its access key every month, and store the new key in an encrypted file on the instance.",
+     "correct": false,
+     "why": "A rotated key is still a root key with [full access to all services and resources in the account, including billing information](../facts/iam.md#iam-root-do-not-create-access-keys).",
+     "concept": "rotate-root-key",
+     "trap": "iam-trap-root-for-daily-admin",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "AWS recommends that you [require MFA for additional security](../facts/iam.md#iam-best-practice-require-mfa-for-iam-and-root-users) where the root user is still needed. The root user [must not be used for everyday tasks, even administrative ones](../facts/iam.md#iam-root-user-not-for-everyday-tasks-roles-instead), so the founders and the script move to identities that use IAM roles. AWS also says [do not create access keys for the root user](../facts/iam.md#iam-root-do-not-create-access-keys), so the key is deleted.",
+   "takeaway": "Protect the root user with MFA, keep no root access key, and do daily work through IAM roles.",
+   "twin": "If the stem said \"the one IAM administrator removed their own permissions\" instead: use the root user, because you [sign in as the root user to edit policies and restore those permissions](../facts/iam.md#iam-root-task-restore-admin-permissions).",
+   "say": "Turn on MFA for the root user, delete its access key, and do daily work through roles.",
+   "facts": [
+    "iam-best-practice-require-mfa-for-iam-and-root-users",
+    "iam-root-user-not-for-everyday-tasks-roles-instead",
+    "iam-root-do-not-create-access-keys",
+    "iam-root-user-no-identity-policies-or-boundary",
+    "iam-root-task-restore-admin-permissions"
+   ],
+   "sources": [],
+   "exam_english": [],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Enable MFA on the root user, delete the root access keys, stop using root for daily work (use individual identities with roles, for example IAM Identity Center for the founders) and give the script an IAM role through an instance profile."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-best-practice-require-mfa-for-iam-and-root-users",
+       "iam-root-do-not-create-access-keys",
+       "iam-root-do-not-share-credentials",
+       "iam-root-user-no-identity-policies-or-boundary",
+       "iam-root-user-not-for-everyday-tasks-roles-instead"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q021",
+   "section": "2-deep.md#every-aws-call-is-a-signed-request-that-iam-answers",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K5"
+   ],
+   "topics": [
+    "identity",
+    "security",
+    "storage",
+    "databases"
+   ],
+   "services": [
+    "iam",
+    "s3",
+    "dynamodb"
+   ],
+   "concept": "shared-responsibility-iam",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company stores customer records in Amazon S3 buckets and Amazon DynamoDB tables. Employees in three teams need different access to the records. A new compliance officer lists the security tasks for this workload and asks which tasks belong to the company under the AWS shared responsibility model. The company wants to assign an owner in the company to each of its own tasks. Which task is the responsibility of the company?",
+   "keywords": [
+    "Employees in three teams need different access",
+    "the responsibility of the company"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Patching the operating system of the hosts that run the Amazon S3 and Amazon DynamoDB services",
+     "correct": false,
+     "why": "For abstracted services such as these, [AWS operates the infrastructure layer, the operating system, and platforms](../facts/iam.md#iam-shared-responsibility-customer-applies-permissions-with-iam).",
+     "concept": "host-patching",
+     "trap": "iam-trap-customer-secures-aws-infrastructure",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Protecting the data center buildings and the network hardware that run the storage services",
+     "correct": false,
+     "why": "AWS is responsible for [protecting the infrastructure that runs all of the services offered in the AWS Cloud](../facts/iam.md#iam-shared-responsibility-security-of-versus-in-the-cloud), and the facilities are part of it.",
+     "concept": "facility-security",
+     "trap": "iam-trap-customer-secures-aws-infrastructure",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Updating the platform software that runs the Amazon DynamoDB service with the latest security fixes",
+     "correct": false,
+     "why": "The platform of an abstracted service belongs to AWS: [AWS operates the infrastructure layer, the operating system, and platforms](../facts/iam.md#iam-shared-responsibility-customer-applies-permissions-with-iam).",
+     "concept": "platform-patching",
+     "trap": "iam-trap-customer-secures-aws-infrastructure",
+     "misconception": null,
+     "distractor_type": "keyword-bait"
+    },
+    {
+     "id": "d",
+     "text": "Granting each team the IAM permissions that it needs on the buckets and the tables",
+     "correct": true,
+     "why": "The customer manages the data side, which includes [using IAM tools to apply the appropriate permissions](../facts/iam.md#iam-shared-responsibility-customer-applies-permissions-with-iam) for each team.",
+     "concept": "customer-iam-permissions",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Under the model, AWS is responsible for [protecting the infrastructure that runs all of the services offered in the AWS Cloud](../facts/iam.md#iam-shared-responsibility-security-of-versus-in-the-cloud). For abstracted services such as Amazon S3 and DynamoDB, [AWS operates the infrastructure layer, the operating system, and platforms](../facts/iam.md#iam-shared-responsibility-customer-applies-permissions-with-iam). The company manages its data, which includes [using IAM tools to apply the appropriate permissions](../facts/iam.md#iam-shared-responsibility-customer-applies-permissions-with-iam) for each team.",
+   "takeaway": "For Amazon S3 and DynamoDB, AWS runs the infrastructure and the platform; the company sets the IAM permissions.",
+   "twin": "If the stem said \"a database on Amazon EC2 instances\" instead: the company owns more of the stack, because the customer's share is [determined by the AWS Cloud services that a customer selects](../facts/iam.md#iam-shared-responsibility-security-of-versus-in-the-cloud).",
+   "say": "AWS runs the hosts and the platform; we decide who gets which IAM permissions on our data.",
+   "facts": [
+    "iam-shared-responsibility-customer-applies-permissions-with-iam",
+    "iam-shared-responsibility-security-of-versus-in-the-cloud"
+   ],
+   "sources": [],
+   "exam_english": [],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Under the shared responsibility model, the customer manages identity and access to its data (IAM permissions, data classification, encryption choices); AWS manages the managed-service platform, host OS patching and physical security."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-shared-responsibility-customer-applies-permissions-with-iam",
+       "iam-shared-responsibility-security-of-versus-in-the-cloud",
+       "www/compliance/shared-responsibility-model#For abstracted services, such as Amazon "
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": "review 03 exam-003/005/006: verified items shipped in place of q007, q014 and q012"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q022",
+   "section": "2-deep.md#iam-identity-center-gives-employees-one-sign-in-for-many-accounts",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S6",
+    "1.1.K2"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam"
+   ],
+   "concept": "directory-federation",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has 40 AWS accounts in AWS Organizations with all features enabled. Employees sign in with user accounts in an Active Directory domain in the company's data center. The data center already connects to a VPC through AWS Direct Connect. The employees must use their existing Active Directory credentials to access the AWS accounts. The company does not want to run domain controllers in AWS or to keep copies of the users or passwords in AWS. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "existing Active Directory credentials",
+    "does not want to run domain controllers in AWS",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Configure SAML 2.0 federation from an AD FS server in the data center to an IAM identity provider and IAM roles in each AWS account.",
+     "correct": false,
+     "why": "It works, but you [federate workforce users through your identity provider to specific AWS accounts](../facts/iam.md#iam-federation-with-iam-per-account-saml-or-oidc), so each account needs its own provider and roles.",
+     "concept": "saml-per-account",
+     "trap": null,
+     "misconception": "federates each account separately when one central sign-in service exists",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Create IAM users in each AWS account with a script that copies the user names from Active Directory, and require MFA for each IAM user.",
+     "correct": false,
+     "why": "Employees get new passwords, because [IAM users have long-term credentials such as passwords and access keys](../facts/iam.md#iam-users-have-long-term-credentials-roles-do-not), so the Active Directory credentials stay unused.",
+     "concept": "copy-users-to-iam",
+     "trap": "iam-trap-iam-users-for-people",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Use IAM Identity Center with AWS Managed Microsoft AD as the identity source, and create a trust relationship with the on-premises domain.",
+     "correct": false,
+     "why": "It runs [a highly available pair of domain controllers](../facts/directory-service.md#directory-service-managed-ad-dc-pair-across-azs) in AWS, but AD Connector works [without caching any information in the cloud](../facts/iam.md#iam-idc-on-premises-ad-two-options).",
+     "concept": "managed-ad-trust",
+     "trap": "iam-trap-onprem-ad-needs-aws-directory",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Use IAM Identity Center with AD Connector as the identity source, and assign permission sets to Active Directory groups for the AWS accounts.",
+     "correct": true,
+     "why": "AD Connector is a directory gateway that works [without caching any information in the cloud](../facts/iam.md#iam-idc-on-premises-ad-two-options), and permission sets give each group its access.",
+     "concept": "idc-ad-connector",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "IAM Identity Center manages access to [multiple AWS accounts, AWS applications, and other SAML-enabled cloud applications](../facts/iam.md#iam-idc-built-on-iam-for-multi-account-access), and it [applies these permissions to the selected accounts automatically](../facts/iam.md#iam-idc-permission-sets). An on-premises domain connects through AD Connector, which works [without caching any information in the cloud](../facts/iam.md#iam-idc-on-premises-ad-two-options). Its VPC reaches the data center through a [(VPN) connection or Direct Connect](../facts/directory-service.md#directory-service-ad-connector-needs-vpn-or-direct-connect), and the stem gives that link. Employees keep their Active Directory credentials, and no domain controllers run in AWS.",
+   "takeaway": "Employees in an on-premises Active Directory reach many accounts through IAM Identity Center with AD Connector.",
+   "twin": "If the stem said \"employees sign in with Okta Universal Directory\" instead: connect Okta as the identity source, because IAM Identity Center supports [Microsoft Active Directory, Okta Universal Directory, Microsoft Entra ID](../facts/iam.md#iam-idc-identity-sources).",
+   "say": "Use IAM Identity Center with AD Connector, so employees keep their AD passwords and no directory runs in AWS.",
+   "facts": [
+    "iam-idc-built-on-iam-for-multi-account-access",
+    "iam-idc-permission-sets",
+    "iam-idc-on-premises-ad-two-options",
+    "iam-federation-with-iam-per-account-saml-or-oidc",
+    "iam-users-have-long-term-credentials-roles-do-not",
+    "iam-idc-identity-sources",
+    "directory-service-managed-ad-dc-pair-across-azs",
+    "directory-service-ad-connector-needs-vpn-or-direct-connect"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-on-premises",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "rejected",
+   "rev": 3,
+   "keyRev": 1,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r1b",
+      "stem_only": "Use IAM Identity Center (enabled in the Organizations management account) with AD Connector as the identity source. AD Connector is a directory proxy over the existing Direct Connect link: it forwards sign-in requests to the on-premises domain controllers, so no domain controllers run in AWS and no users or passwords are copied or cached in AWS. Assign permission sets to AD groups for the 40 accounts centrally."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r1b",
+      "citations": [
+       "docs/decision-guides/latest/decision-guides/choosing-aws-security-services#You can centrally manage workforce acces",
+       "docs/directoryservice/latest/admin-guide/ad_connector_getting_started#When connected to your existing director",
+       "docs/directoryservice/latest/admin-guide/directory_microsoft_ad#It creates a highly available pair of do",
+       "docs/singlesignon/latest/userguide/what-is#You can also use IAM Identity Center per",
+       "iam-best-practice-human-users-federate-with-identity-center",
+       "iam-federation-with-iam-per-account-saml-or-oidc",
+       "iam-idc-on-premises-ad-two-options",
+       "iam-idc-permission-sets",
+       "iam-users-have-long-term-credentials-roles-do-not",
+       "www/iam/faqs#You might be using IAM users for workfor"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": "The hard requirement 'not keep copies of the users ... in AWS' can be read literally against C, because IAM Identity Center with an Active Directory identity source synchronizes user and group records from AD into its identity store, while B (AD FS SAML to IAM roles) stores no user records in AWS at all; rewording to 'not keep copies of the passwords or maintain a second user directory in AWS' would remove this reading.",
+      "solver": "solve-03-ambiguity-r1b",
+      "case_option": "a"
+     }
+    ],
+    "note": "ambiguity flag",
+    "edits": 1,
+    "checked": "2026-10-12"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-03-r0b",
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q024",
+   "section": "2-deep.md#a-permissions-boundary-lets-developers-create-roles-without-escalating",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K4"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "lambda"
+   ],
+   "concept": "permissions-boundary-delegation",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A platform team lets developers create IAM roles for their AWS Lambda functions in a shared AWS account. The roles must follow the principle of least privilege. No role that a developer creates can have more permissions than a maximum set that the platform team defines. Other teams in the same account need permissions beyond that maximum. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "No role that a developer creates can have more permissions",
+    "Other teams in the same account need permissions beyond that maximum",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Attach an SCP to the shared account that allows only the actions in the maximum set, and let the developers write any role policy.",
+     "correct": false,
+     "why": "An SCP sets the [maximum permissions for IAM users and IAM roles](../facts/iam.md#iam-scp-limits-permissions-does-not-grant) in the account, so the other teams lose their wider permissions too.",
+     "concept": "scp-for-some-roles",
+     "trap": null,
+     "misconception": "uses an account-wide guardrail to limit only some roles",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Set a managed policy with the maximum set as the permissions boundary of each role that the developers create, beside each role's policy.",
+     "correct": true,
+     "why": "The role can do what is [allowed by both its identity-based policies and its permissions boundaries](../facts/iam.md#iam-permissions-boundary-sets-maximum-does-not-grant), so each policy stays under the ceiling.",
+     "concept": "boundary-on-delegated-roles",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Set the maximum set as the permissions boundary of each new role, and leave the role's own policy empty so that the boundary grants access.",
+     "correct": false,
+     "why": "A boundary [does not provide permissions on its own](../facts/iam.md#iam-boundary-limits-but-never-grants), so a role with an empty policy can do nothing.",
+     "concept": "boundary-as-grant",
+     "trap": "iam-trap-scp-grants",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Have the platform team review and approve the permissions policy of each new role by hand before the developers use the role.",
+     "correct": false,
+     "why": "It works, but each new role waits for a person, and one boundary policy sets the ceiling for every role without a review.",
+     "concept": "manual-role-review",
+     "trap": null,
+     "misconception": "uses a manual review where a policy control sets the limit",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "A permissions boundary sets the [maximum permissions that an identity-based policy can grant](../facts/iam.md#iam-permissions-boundary-sets-maximum-does-not-grant) to a role. Each developer still writes a least-privilege policy for the role, and the role can do what is [allowed by both its identity-based policies and its permissions boundaries](../facts/iam.md#iam-permissions-boundary-sets-maximum-does-not-grant). The boundary is set on these roles and not on the account, so the other teams keep their permissions.",
+   "takeaway": "To let developers create roles under a ceiling, set a permissions boundary on those roles; it limits and does not grant.",
+   "twin": "If the stem said \"every principal in the account, including administrators\" instead: an SCP, because it sets the [maximum permissions for IAM users and IAM roles](../facts/iam.md#iam-scp-limits-permissions-does-not-grant) in the accounts that it reaches.",
+   "say": "Put a permissions boundary on the roles that developers create, so no role goes above the ceiling.",
+   "facts": [
+    "iam-permissions-boundary-sets-maximum-does-not-grant",
+    "iam-scp-limits-permissions-does-not-grant",
+    "iam-boundary-limits-but-never-grants",
+    "iam-best-practice-boundaries-delegate-role-creation"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-privilege",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "Use a managed policy as a permissions boundary on each developer-created role (enforced by requiring iam:PermissionsBoundary on iam:CreateRole); the boundary caps the maximum while the role's own policy grants. SCPs would hit the other teams."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-best-practice-boundaries-delegate-role-creation",
+       "iam-boundary-applies-to-users-and-roles-not-slr",
+       "iam-boundary-limits-but-never-grants",
+       "iam-scp-applies-to-member-root-user",
+       "iam-scp-never-grants-permissions"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2"
+   ]
+  },
+  {
+   "id": "iam-q025",
+   "section": "2-deep.md#condition-keys-narrow-an-allow-to-the-right-organization-or-network",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.K1"
+   ],
+   "topics": [
+    "identity",
+    "security",
+    "storage"
+   ],
+   "services": [
+    "iam",
+    "sts",
+    "s3"
+   ],
+   "concept": "mfa-condition",
+   "difficulty": 2,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company's administrators use the AWS CLI with the access keys of their IAM users to manage objects in an Amazon S3 bucket. Their IAM policy allows all Amazon S3 actions on the bucket. Each administrator already has an MFA device registered to the IAM user. A new security rule requires that a request to delete an object succeeds only after the administrator authenticates with the MFA device. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+   "keywords": [
+    "use the AWS CLI with the access keys",
+    "succeeds only after the administrator authenticates with the MFA device",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Turn on S3 MFA Delete on the bucket so that each administrator's IAM user must enter an MFA code to delete an object.",
+     "correct": false,
+     "why": "S3 MFA Delete [cannot be applied to an IAM user](../facts/iam.md#iam-s3-mfa-delete-root-only), so it does not cover deletes by these administrators.",
+     "concept": "s3-mfa-delete-iam-user",
+     "trap": "iam-trap-mfa-device-protects-api-calls",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Change the IAM policy so that it allows s3:DeleteObject on the bucket only when the aws:MultiFactorAuthPresent condition key is true.",
+     "correct": true,
+     "why": "To enforce MFA for API calls, a policy uses [the aws:MultiFactorAuthPresent condition key](../facts/iam.md#iam-mfa-condition-key-multifactorauthpresent), and here the delete allow depends on it.",
+     "concept": "mfa-condition-key",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Keep signing delete requests with the access keys, because the MFA devices that are registered to the IAM users add MFA status to each key.",
+     "correct": false,
+     "why": "The condition key is missing from these requests, because [long-term access keys do not include it](../facts/iam.md#iam-mfa-condition-key-multifactorauthpresent).",
+     "concept": "access-key-carries-mfa",
+     "trap": "iam-trap-mfa-device-protects-api-calls",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Have each administrator call AWS STS GetSessionToken with an MFA code, and use the temporary credentials that it returns for delete requests.",
+     "correct": true,
+     "why": "MFA protection needs temporary credentials [obtained with AssumeRole or GetSessionToken](../facts/iam.md#iam-mfa-protection-only-with-temporary-credentials), and GetSessionToken needs no new role.",
+     "concept": "getsessiontoken-mfa",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "e",
+     "text": "Create a new IAM role that allows s3:DeleteObject and requires MFA in its trust policy, and remove s3:DeleteObject from the administrators' IAM policy.",
+     "correct": false,
+     "why": "It works, but a new role with its trust and permissions policies is more to build than one condition and one CLI call.",
+     "concept": "mfa-role-for-deletes",
+     "trap": null,
+     "misconception": "builds a new role where a condition on the existing policy is enough",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "MFA protection for API calls is [available only with temporary security credentials](../facts/iam.md#iam-mfa-protection-only-with-temporary-credentials) that are [obtained with AssumeRole or GetSessionToken](../facts/iam.md#iam-mfa-protection-only-with-temporary-credentials). A policy enforces MFA with [the aws:MultiFactorAuthPresent condition key](../facts/iam.md#iam-mfa-condition-key-multifactorauthpresent), and [long-term access keys do not include it](../facts/iam.md#iam-mfa-condition-key-multifactorauthpresent). So each administrator calls GetSessionToken with an MFA code, and the changed policy allows deletes for those sessions.",
+   "takeaway": "Enforce MFA with aws:MultiFactorAuthPresent, and give users MFA-backed temporary credentials from GetSessionToken.",
+   "twin": "If the stem said \"the administrators assume a role in another AWS account\" instead: put the condition in the role's trust policy, because for cross-account delegation [the role's trust policy must include it](../facts/iam.md#iam-mfa-condition-key-multifactorauthpresent).",
+   "say": "Add an MFA condition to the delete permission, and have administrators get MFA-backed session credentials with GetSessionToken.",
+   "facts": [
+    "iam-mfa-protection-only-with-temporary-credentials",
+    "iam-mfa-condition-key-multifactorauthpresent",
+    "iam-s3-mfa-delete-root-only"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-which-combination",
+    "ee-select-two",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Require MFA in the IAM policy: allow s3:DeleteObject only when aws:MultiFactorAuthPresent is true (or deny it when MFA is absent). For the CLI, administrators call sts:GetSessionToken with their MFA serial and code and use the returned temporary credentials, which carry MFA context."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "docs/IAM/latest/UserGuide/id_credentials_mfa_configure-api-require#Amazon S3 MFA Delete cannot be applied t",
+       "docs/IAM/latest/UserGuide/id_credentials_mfa_configure-api-require#The key is only present when the user au",
+       "iam-assume-role-replaces-original-permissions",
+       "iam-mfa-assumerole-credentials-lack-mfa-context",
+       "iam-mfa-condition-key-multifactorauthpresent",
+       "iam-mfa-protection-only-with-temporary-credentials",
+       "iam-s3-mfa-delete-root-only",
+       "sts-compare-getsessiontoken-row"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "e"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q027",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S2"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "sts"
+   ],
+   "concept": "temporary-credentials-revocation",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A developer accidentally pushed the temporary credentials of an IAM role to a public code repository. The credentials came from an AssumeRole call and are valid for several more hours. Many applications assume the same role every few minutes, and a short interruption for these applications is acceptable. The security team must stop the leaked credentials from working as soon as possible. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "temporary credentials of an IAM role",
+    "as soon as possible",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Look up the session token of the leaked credentials in AWS CloudTrail, and revoke that one session token through the AWS STS API.",
+     "correct": false,
+     "why": "Temporary credentials [cannot be revoked](../facts/sts.md#sts-temporary-credentials-cannot-be-revoked-permissions-can-change) one set at a time, so no AWS STS call cancels one session token.",
+     "concept": "revoke-one-token",
+     "trap": "iam-trap-revoke-temporary-credentials",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Delete the IAM role, create a new role with the same policies under a new name, and update every application to assume the new role.",
+     "correct": false,
+     "why": "Replacing the role changes every application, but revoking sessions [denies all permissions to all actions](../facts/iam.md#iam-revoke-role-sessions-denies-credentials-issued-before) for older credentials and keeps the role.",
+     "concept": "replace-role",
+     "trap": null,
+     "misconception": "believes that a role must be replaced to end its sessions",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Write an inline policy that denies all actions to sessions issued before the current time, test it, and then attach it to the role.",
+     "correct": false,
+     "why": "It works, but the revoke action builds the same deny with [aws:TokenIssueTime](../facts/iam.md#iam-revoke-sessions-token-issue-time-condition) for you, so writing and testing it is extra work.",
+     "concept": "hand-written-revoke-policy",
+     "trap": null,
+     "misconception": "writes by hand the deny policy that the revoke action creates",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Revoke the active sessions of the role so that every credential issued before the revocation time is denied on the next request.",
+     "correct": true,
+     "why": "Credentials [issued before the specified time become invalid](../facts/iam.md#iam-revoke-role-sessions-denies-credentials-issued-before), and the applications recover when they next assume the role.",
+     "concept": "revoke-role-sessions",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Temporary credentials [cannot be revoked](../facts/sts.md#sts-temporary-credentials-cannot-be-revoked-permissions-can-change) one by one, but their permissions are [evaluated each time a request is made](../facts/sts.md#sts-temporary-credentials-cannot-be-revoked-permissions-can-change). Revoking the role's active sessions adds an inline policy that [denies all permissions to all actions](../facts/iam.md#iam-revoke-role-sessions-denies-credentials-issued-before) for older credentials. Credentials [issued before the specified time become invalid](../facts/iam.md#iam-revoke-role-sessions-denies-credentials-issued-before), and the applications get new credentials at their next AssumeRole call.",
+   "takeaway": "For leaked role credentials, revoke the role's active sessions: older credentials stop working, and new sessions continue.",
+   "twin": "If the stem said \"the leaked secret is the access key of an IAM user\" instead: deactivate and replace the key, because the revoke policy [does not affect requests that are signed with the long-term credentials](../facts/iam.md#iam-revoke-sessions-token-issue-time-condition).",
+   "say": "Revoke the role's active sessions; every older credential is denied, and new sessions keep working.",
+   "facts": [
+    "sts-temporary-credentials-cannot-be-revoked-permissions-can-change",
+    "iam-revoke-role-sessions-denies-credentials-issued-before",
+    "iam-revoke-sessions-token-issue-time-condition"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-as-soon-as-possible",
+    "ee-acceptable",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0",
+      "stem_only": "Use the console's Revoke active sessions on the role, which attaches the AWSRevokeOlderSessions inline policy denying all actions when aws:TokenIssueTime is older than now; applications simply assume the role again."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0",
+      "citations": [
+       "iam-revoke-role-sessions-denies-credentials-issued-before",
+       "iam-revoke-sessions-token-issue-time-condition",
+       "sts-temporary-credentials-cannot-be-revoked-permissions-can-change"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": "review 03 exam-003/005/006: verified items shipped in place of q007, q014 and q012"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2"
+   ]
+  },
+  {
+   "id": "iam-q023",
+   "section": "2-deep.md#an-external-id-stops-the-confused-deputy-in-third-party-roles",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S3"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "sts"
+   ],
+   "concept": "external-id",
+   "difficulty": 2,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "MOST securely",
+   "stem": "A company uses a third-party monitoring service that runs in the vendor's own AWS account. The vendor needs read-only access to the configuration of resources in the company's AWS account. The vendor serves many customers and gives each customer a unique ID for this connection. The security team must prevent other customers of the vendor from using the vendor to reach the company's account. Which combination of steps will meet these requirements MOST securely? (Select TWO.)",
+   "keywords": [
+    "gives each customer a unique ID",
+    "prevent other customers of the vendor",
+    "MOST securely"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an IAM user for the vendor with a read-only policy, and send the vendor the access key of the user through an encrypted channel.",
+     "correct": false,
+     "why": "It works, but access keys would [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), and a role gives temporary credentials.",
+     "concept": "vendor-access-key",
+     "trap": "iam-trap-iam-users-for-people",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Put the read-only actions in the trust policy of the role, so that the vendor's account can assume the role and read the configuration.",
+     "correct": false,
+     "why": "A trust policy names [who can assume the role](../facts/iam.md#iam-role-trust-policy-names-who-can-assume); the read actions belong in the permissions policy, which decides what the session does.",
+     "concept": "actions-in-trust-policy",
+     "trap": "iam-trap-trust-policy-grants-actions",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Create an IAM role whose trust policy names the vendor's AWS account as the principal, and attach a read-only permissions policy to the role.",
+     "correct": true,
+     "why": "The trust policy lets the vendor's account in, and [the permissions policy of the role being assumed determines what the temporary credentials](../facts/iam.md#iam-role-permissions-policy-defines-session-permissions) can do.",
+     "concept": "cross-account-role",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Choose one external ID value in the company, and give the same value to every vendor that assumes a role in the company's account.",
+     "correct": false,
+     "why": "The value should be [generated and controlled by the third party and unique per customer](../facts/iam.md#iam-external-id-prevents-confused-deputy), so one shared value protects no customer.",
+     "concept": "shared-external-id",
+     "trap": "iam-trap-external-id-chosen-by-customer",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "e",
+     "text": "Add a condition to the trust policy of the role that requires the sts:ExternalId value that the vendor generated for the company.",
+     "correct": true,
+     "why": "The external ID is [an sts:ExternalId condition in the role's trust policy](../facts/iam.md#iam-external-id-prevents-confused-deputy), so a request without the company's value fails.",
+     "concept": "external-id-condition",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "A role gives the vendor temporary credentials. The external ID is [an sts:ExternalId condition in the role's trust policy](../facts/iam.md#iam-external-id-prevents-confused-deputy), with a value [generated and controlled by the third party and unique per customer](../facts/iam.md#iam-external-id-prevents-confused-deputy). This stops the confused deputy, where [an entity without permission coerces a more privileged entity to act for it](../facts/iam.md#iam-external-id-prevents-confused-deputy).",
+   "takeaway": "A third party gets a role that trusts its account, plus an external ID condition with the vendor's unique value.",
+   "twin": "If the stem said \"the vendor must also add tags to resources\" instead: add the tagging actions to the permissions policy, because [the permissions policy of the role being assumed determines what the temporary credentials](../facts/iam.md#iam-role-permissions-policy-defines-session-permissions) can do.",
+   "say": "Give the vendor a read-only role that trusts its account, and require the external ID that the vendor generated for you.",
+   "facts": [
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-role-trust-policy-names-who-can-assume",
+    "iam-role-permissions-policy-defines-session-permissions",
+    "iam-external-id-prevents-confused-deputy"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-which-combination",
+    "ee-select-two",
+    "ee-most-secure",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Create a cross-account IAM role trusting the vendor's AWS account, with a read-only permissions policy, and add a trust policy condition on sts:ExternalId equal to the unique ID the vendor gave the company (confused deputy protection)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "docs/IAM/latest/UserGuide/confused-deputy#The `ExternalId` value must be unique am",
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-external-id-prevents-confused-deputy",
+       "iam-faq-roles-for-cross-account-access",
+       "iam-long-term-keys-valid-until-revoked-temporary-expire",
+       "iam-role-permissions-policy-defines-session-permissions",
+       "iam-role-trust-policy-names-who-can-assume"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q026",
+   "section": "2-deep.md#access-analyzer-and-last-accessed-data-find-permissions-to-remove",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.K4",
+    "1.1.K1"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "s3",
+    "kms"
+   ],
+   "concept": "access-analyzer-external",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations and runs workloads in three AWS Regions. The security team must audit which Amazon S3 buckets, AWS KMS keys, and IAM roles in the member accounts allow access from principals outside the organization. The team wants a new finding to appear when a policy change shares a resource outside the organization. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "runs workloads in three AWS Regions",
+    "allow access from principals outside the organization",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create one IAM Access Analyzer external access analyzer with the organization as the zone of trust in the Region where the security team works.",
+     "correct": false,
+     "why": "An analyzer [analyzes only policies of resources in the Region where it is enabled](../facts/iam.md#iam-access-analyzer-external-is-regional), so buckets and keys in the other Regions stay unchecked.",
+     "concept": "one-analyzer-all-regions",
+     "trap": "iam-trap-access-analyzer-global",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Generate the IAM credential report in each member account every day, and review which users and access keys can reach the resources.",
+     "correct": false,
+     "why": "The credential report [lists all users in the account and the status of their credentials](../facts/iam.md#iam-credential-report-contents); it does not read resource policies.",
+     "concept": "credential-report",
+     "trap": "iam-trap-audit-tool-shows-activity",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Create an IAM Access Analyzer external access analyzer with the organization as the zone of trust in each of the three Regions.",
+     "correct": true,
+     "why": "AWS says to [create an external access analyzer in each Region](../facts/iam.md#iam-access-analyzer-external-is-regional) where you use supported resources, and the organization zone covers every member account.",
+     "concept": "analyzer-per-region",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Run AWS Lambda functions in each Region that read every resource policy daily and report each statement that names an outside principal.",
+     "correct": false,
+     "why": "It works, but it is code to maintain, and Access Analyzer already uses [logic-based reasoning on resource-based policies](../facts/iam.md#iam-access-analyzer-external-finding-per-shared-resource) without custom code.",
+     "concept": "custom-policy-scanner",
+     "trap": null,
+     "misconception": "writes custom scanning code where a managed analyzer exists",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "An external access analyzer [generates a finding for resources that allow public or cross-account access](../facts/iam.md#iam-access-analyzer-continuous-public-cross-account-findings). With the organization as the zone of trust, [access by principals inside it is considered trusted](../facts/iam.md#iam-access-analyzer-zone-of-trust), so the findings show outside access. The analyzer [analyzes only policies of resources in the Region where it is enabled](../facts/iam.md#iam-access-analyzer-external-is-regional), so the team creates one in each Region.",
+   "takeaway": "External access analyzers are Regional: create one in each Region, with the organization as the zone of trust.",
+   "twin": "If the stem said \"find unused roles and unused access keys\" instead: one unused access analyzer, because [findings for the analyzer do not change based on Region](../facts/iam.md#iam-access-analyzer-unused-not-per-region).",
+   "say": "Create an external access analyzer for the organization in each Region that you use.",
+   "facts": [
+    "iam-access-analyzer-continuous-public-cross-account-findings",
+    "iam-access-analyzer-zone-of-trust",
+    "iam-access-analyzer-external-is-regional",
+    "iam-credential-report-contents",
+    "iam-access-analyzer-external-finding-per-shared-resource",
+    "iam-access-analyzer-unused-not-per-region"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-audit",
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "Create IAM Access Analyzer external access analyzers with the organization as the zone of trust (from the management or delegated administrator account). Analyzers are Regional, so create one in each of the three Regions used; findings update on policy changes."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-access-analyzer-continuous-public-cross-account-findings",
+       "iam-access-analyzer-external-is-regional",
+       "iam-access-analyzer-external-resource-types",
+       "iam-access-analyzer-zone-of-trust",
+       "iam-credential-report-contents",
+       "iam-faq-access-analyzer-external-and-internal-findings"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  },
+  {
+   "id": "iam-q006",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S3"
+   ],
+   "topics": [
+    "identity",
+    "security"
+   ],
+   "services": [
+    "iam",
+    "sts"
+   ],
+   "concept": "trust-vs-permissions-policy",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has an IAM role in its production account for reading reports from an Amazon S3 bucket in the same account. Developers in the company's development account must use the role. Their IAM policies allow sts:AssumeRole on the role ARN. When a developer calls AssumeRole, the call succeeds, but the next call to read a report fails with an access denied error. Which change will fix the problem with the LEAST operational overhead?",
+   "keywords": [
+    "the call succeeds",
+    "the next call to read a report fails",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Update the trust policy of the role in the production account so that it names the development account as a principal.",
+     "correct": false,
+     "why": "AssumeRole already succeeds, so the trust policy works. The failure comes later, inside the role session.",
+     "concept": "trust-policy",
+     "trap": "iam-trap-trust-policy-grants-actions",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Update the permissions policy of the role so that it allows s3:GetObject on the report bucket and on the objects in it.",
+     "correct": true,
+     "why": "[The permissions policy of the role being assumed determines what the temporary credentials](../facts/iam.md#iam-role-permissions-policy-defines-session-permissions) can do, and the read is missing there.",
+     "concept": "permissions-policy",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add a bucket policy to the report bucket that allows s3:GetObject for the development account as the principal.",
+     "correct": false,
+     "why": "Inside the session the caller is the role, not the developer, because [the permissions are not cumulative](../facts/iam.md#iam-assume-role-replaces-original-permissions).",
+     "concept": "role-session-permissions",
+     "trap": "iam-trap-role-adds-permissions",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Create an IAM user in the production account for each developer, with an access key and read access to the bucket.",
+     "correct": false,
+     "why": "It works, but each user brings long-term keys that [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), which is more work and more risk.",
+     "concept": "iam-user-keys",
+     "trap": "iam-trap-iam-users-for-people",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "AssumeRole succeeds, so the trust check passed. The read fails inside the session, and [the permissions policy of the role being assumed determines what the temporary credentials](../facts/iam.md#iam-role-permissions-policy-defines-session-permissions) can do. Adding s3:GetObject to the permissions policy of the role fixes the session with one change.",
+   "takeaway": "The session fails after AssumeRole succeeds: fix the permissions policy of the role.",
+   "twin": "If the stem said \"the call fails with an access denied error\" instead: update the trust policy, because the request stops at the trust check.",
+   "say": null,
+   "facts": [
+    "iam-role-permissions-policy-defines-session-permissions",
+    "iam-assume-role-replaces-original-permissions",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-must"
+   ],
+   "twin_of": "iam-q002",
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-closed-r0b",
+      "stem_only": "AssumeRole works, so the trust policy is fine; the read fails because the role's permissions policy does not allow s3:GetObject on the report bucket objects. Add s3:GetObject (and s3:ListBucket if needed) to the role's permissions policy."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-open-r0b",
+      "citations": [
+       "iam-access-keys-prefer-temporary-credentials",
+       "iam-assume-role-replaces-original-permissions",
+       "iam-assume-role-two-permissions-checked",
+       "iam-eval-same-account-identity-or-resource-allow",
+       "iam-role-permissions-policy-defines-session-permissions",
+       "iam-role-trust-policy-names-who-can-assume",
+       "iam-users-have-long-term-credentials-roles-do-not"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-03-ambiguity-r0b",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-12",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-03-2",
+    "traps-03"
+   ]
+  }
+ ]
+}

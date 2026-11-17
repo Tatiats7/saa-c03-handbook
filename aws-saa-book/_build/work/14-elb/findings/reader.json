@@ -1,0 +1,229 @@
+{
+ "lens": "reader",
+ "chapter": "14",
+ "by": "review-14-reader",
+ "date": "2026-10-13",
+ "basis": "First review after edit (pass_seq 1). sync 14 run first (written=0, unchanged=11). Read 1-fast.md (skim pass, then full), 2-deep.md, 3-do.md, 4-say.md, 5-quiz.md, and data/14-elb/{questions,cards,speak,tasks}.json, as the reader in READER.md.",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "data/14-elb/speak.json",
+   "section": "elb-s04",
+   "quote": "The thing to watch is the few seconds before the health checks notice.",
+   "type": "wrong",
+   "severity": "blocking",
+   "evidence": "Fact elb-alb-health-check-interval-default-30-seconds: 'The default is 30 seconds if the target type is `instance` or `ip`'. Fact elb-alb-unhealthy-threshold-default-2: 'The default is 2.' With the defaults a failed target is found after two failed checks 30 seconds apart, so about a minute, not 'a few seconds'. The chapter's own A-list says 'Failure is found after two intervals'. She will say this sentence to a founder; it understates the gap by an order of magnitude. Say 'up to about a minute with the default settings' (linked to both facts) or 'the time the health checks need to notice'.",
+   "status": "fixed",
+   "resolution": "fix-14: same fix as claims-01: 'The thing to watch is the time the health checks need to notice a failure.' A script holds no links and no unverified spoken number (P106, P109), so the duration is left out."
+  },
+  {
+   "id": "reader-02",
+   "file": "14-elb/3-do.md",
+   "section": "Elastic Load Balancing: do it",
+   "quote": "Nothing here yet.",
+   "type": "missing-content",
+   "severity": "should",
+   "evidence": "3-do.md and 4-say.md both print only 'Nothing here yet.' because every task (elb-t01, elb-t02, elb-t03) and every speak item (elb-s01 to elb-s04) in data/14-elb/ still has status 'candidate'; TOOLS-items.md section 3: 'Only items with status: ready are printed'. TOOLS-rules.md R5: 'A reviewer sets cards, speak items and tasks to ready ... after the item lint is clean.' The reader meets the gap three times: 1-fast 'Look first' tells her to 'Open AWS CloudShell and read the security policy' over an empty task region, and both 'Try it' callouts of 2-deep ('See [3-do.md](3-do.md)') lead to an empty page. All 24 cards are also 'candidate' (and the ledger warns 'C201 deck core: 6 cards; needed 14'). Set the items ready with tasks/speak/cards set-status after their lint, then sync.",
+   "status": "fixed",
+   "resolution": "fix-14: same fix as claims-04: the 8 pending A-list number cards were added (core deck now 14), and all tasks, speak items and 32 cards were set to ready; sync 14 printed 3-do.md, 4-say.md and the Look first task region."
+  },
+  {
+   "id": "reader-03",
+   "file": "14-elb/2-deep.md",
+   "section": "A Network Load Balancer gives static IP addresses and can keep client IPs",
+   "quote": "Why do the addresses stay fixed? They [must be completely controlled by you](../facts/elb.md#elb-nlb-faq-no-mix-eip-and-elb-ips) or by Elastic Load Balancing, so the [addresses known to your clients do not change](../facts/elb.md#elb-nlb-faq-no-mix-eip-and-elb-ips).",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "Fact elb-nlb-faq-no-mix-eip-and-elb-ips is about a rule against mixing address sources: claim 'A Network Load Balancer cannot mix ELB-provided IPs with Elastic IPs or assigned private IPs'. It does not explain why NLB addresses are static. The cause the reader needs is in step 1 of the same subsection: each zone has a network interface that gives one static IP address per zone (fact elb-nlb-static-ip-per-az-optional-eip), while an ALB's node addresses 'can be remapped quickly' (elb-dns-ttl-60-seconds-remap). As written she learns a wrong cause and effect. Rewrite the Why line as the contrast (one fixed address per zone vs remapped node addresses) and, if kept, present the no-mixing rule as a separate restriction.",
+   "status": "fixed",
+   "resolution": "fix-14: the Why line is now the contrast: 'The NLB keeps one network interface and its address in each zone. On an ALB, the node [IP addresses can be remapped quickly](elb-dns-ttl-60-seconds-remap).' The no-mixing rule is dropped from the prose (word ceiling). The elb-q006 explanation got the same fix (exam-04)."
+  },
+  {
+   "id": "reader-04",
+   "file": "14-elb/2-deep.md",
+   "section": "Targets can stay private and accept traffic only from the load balancer",
+   "quote": "Yes. Target logs [only contain the IP address](../facts/elb.md#elb-alb-xff-holds-client-ip) of the load balancer, and the VPC rule allows it. But every resource in the VPC can now reach the targets directly.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The question is about which source address the security group sees; the answer uses a fact about server access logs (elb-alb-xff-holds-client-ip: 'your server access logs only contain the IP address of the load balancer'). The missing step is the mechanism the subsection already taught: the node sends the request 'using its private IP address' (elb-node-sends-to-target-private-ip), and that address is inside the VPC range, so a rule that allows the VPC range allows it. State that cause directly and link elb-node-sends-to-target-private-ip.",
+   "status": "fixed",
+   "resolution": "fix-14: same fix as claims-10: 'Yes. The load balancer reaches its targets [using private IP addresses](elb-targets-need-no-public-ip) inside the VPC, so the VPC rule allows them.'"
+  },
+  {
+   "id": "reader-05",
+   "file": "14-elb/2-deep.md",
+   "section": "Cross-zone load balancing spreads requests over the targets in every enabled zone",
+   "quote": "Why turn it off? Each zone then serves its own clients, and an NLB [provides stable IP support and zonal isolation](../facts/elb.md#elb-nlb-faq-key-features).",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The 'Why' line gives no cause the reader can repeat. 'zonal isolation' is never explained, and the fact elb-nlb-faq-key-features lists NLB features in general, not a reason to turn cross-zone off. The cost reason is in the table just above (NLB: 'Charged for regional data transfer between Availability Zones', fact elb-nlb-faq-cross-zone-regional-data-transfer-charged) but the prose never connects it. Write the cause and effect: with cross-zone off, traffic stays in its zone, so no inter-zone data charge on an NLB or GWLB, and a problem in one zone stays in that zone. Explain 'zonal isolation' in plain words or drop it.",
+   "status": "fixed",
+   "resolution": "fix-14: now 'Why turn it off? Traffic then stays in its zone, which AWS calls zonal isolation: an NLB [provides stable IP support and zonal isolation]. It also avoids the NLB and GWLB charge in the table.' The term is explained and the cost reason is tied to the table rows."
+  },
+  {
+   "id": "reader-06",
+   "file": "14-elb/2-deep.md",
+   "section": "A Gateway Load Balancer passes packets through appliances without changing them",
+   "quote": "| One appliance fails | It [reroutes traffic to a healthy appliance instance](../facts/elb.md#elb-gwlb-faq-one-appliance-fails-reroute) |\n| Existing flows, default setting | It will [send existing flows to the same target](../facts/elb.md#elb-gwlb-target-failover-default-no-rebalance) |",
+   "type": "contradiction",
+   "severity": "should",
+   "evidence": "Read together, the two rows say the GWLB reroutes traffic and also keeps sending it to the failed appliance. The fact that resolves this is already in the canon: elb-gwlb-target-failover-default-no-rebalance, quote 'However, new flows are sent to healthy targets. This is the default behavior.' Make row 1 'New flows' and row 2 'Existing flows', or add the new-flows display to row 2. The same confusion follows into the Changed recently note under Numbers ('flows stay on the failed target').",
+   "status": "fixed",
+   "resolution": "fix-14: same fix as claims-11 (rows now 'One appliance fails: new flows' and 'One appliance fails: existing flows, default setting'). The Changed recently Old line now links the same fact: 'it will [send existing flows to the same target] after a failure.'"
+  },
+  {
+   "id": "reader-07",
+   "file": "14-elb/2-deep.md",
+   "section": "Decision record",
+   "quote": "**Decision.** An ALB in three zones: it [routes traffic only to the healthy targets](../facts/elb.md#elb-routes-only-to-healthy-targets), and an NLB is [Layer 4](../facts/elb.md#elb-compare-layer-per-type).",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The reasons do not map to the stated requirement ('Survive the loss of an instance or a zone, serve HTTPS, and route by URL path later'). 'Routes traffic only to the healthy targets' is true of the NLB as well, so it does not separate the options, and 'an NLB is Layer 4' leaves out the consequence (no path rules, which the requirement asks for). The spare-instance option is not rejected at all (the 2-deep table already says 'Down until moved by hand'). Give one reason per rejected option, each tied to a requirement word. The section is also over budget (lint W201: 330 words, allows 280), so this is a rewrite, not an addition.",
+   "status": "fixed",
+   "resolution": "fix-14: the decision now gives one reason per rejected option, each tied to a requirement: 'An ALB in three zones. A spare instance is down until moved by hand. An NLB reads [Layer 4], so it cannot route by path.' The section is still over its budget (W201, 347 words): the after-diagram steps gained fact links (claims-13) and the alt texts are fixed by the diagram specs."
+  },
+  {
+   "id": "reader-08",
+   "file": "14-elb/2-deep.md",
+   "section": "An HTTPS listener decrypts requests at the load balancer with its certificate",
+   "quote": "No. Add the certificate to the list. By default, an ALB holds [25](../facts/acm.md#acm-alb-certificates-per-load-balancer) besides its default certificate.",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "Fact acm-alb-certificates-per-load-balancer is a quota: 'Certificates per Application Load Balancer (excluding default certificates) | 25 | Yes' (adjustable). 'By default, an ALB holds 25' reads as if a new ALB already holds 25 certificates. The word 'default' also appears twice with two meanings (default quota, default certificate). Say: 'The default quota is 25 extra certificates per ALB, and you can raise it.' The B-list row says it correctly ('Extra certificates per ALB, default quota').",
+   "status": "fixed",
+   "resolution": "fix-14: now 'The default quota is [25] extra certificates per ALB, and you can ask to raise it.' (The B-list row was cut for the file word ceiling; the Stop-and-answer keeps the number.)"
+  },
+  {
+   "id": "reader-09",
+   "file": "14-elb/2-deep.md",
+   "section": "A Network Load Balancer gives static IP addresses and can keep client IPs",
+   "quote": "| NLB, instance targets or UDP | The source address: [otherwise, the default is enabled](../facts/elb.md#elb-nlb-client-ip-preservation-defaults) |",
+   "type": "unclear",
+   "severity": "should",
+   "evidence": "'otherwise' points back to a condition that is not in the cell, so the row reads as a broken sentence. The fact elb-nlb-client-ip-preservation-defaults quote is 'The default is disabled if the target group type is IP address and the target group protocol is TCP or TLS. Otherwise, the default is enabled.' Use a display that stands alone in the cell, for example 'The source address, on by default' with the link on a phrase that does not start with 'otherwise', or reorder the rows so the disabled case comes first and the cell says 'all other cases'. STYLE: one idea per cell, no dangling references.",
+   "status": "fixed",
+   "resolution": "fix-14: rows reordered: 'NLB, IP targets with TCP or TLS | Not by default: [the default is disabled]' first, then 'NLB, every other case | The source address. [Otherwise, the default is enabled]', so 'otherwise' now follows its condition (the fact has no display without it)."
+  },
+  {
+   "id": "reader-10",
+   "file": "14-elb/2-deep.md",
+   "section": "Each load balancer type reads a different layer of the traffic",
+   "quote": "| AWS WAF | Listed: [Amazon CloudFront, Amazon API Gateway, Application Load Balancer](../facts/waf.md#waf-protected-resource-types) | Not listed | Not listed |",
+   "type": "unclear",
+   "severity": "should",
+   "evidence": "'Listed' and 'Not listed' do not say what list. A skim reader gets 'AWS WAF: Listed / Not listed' and no gist. Write the row as a question with an answer, for example row label 'Can AWS WAF protect it?' and cells 'Yes: on the list of protected resources' / 'No'. READER.md: 'Headings, tables and captions must give a correct gist on their own'.",
+   "status": "fixed",
+   "resolution": "fix-14: the row is now 'Can AWS WAF protect it? | Yes: [Amazon CloudFront, Amazon API Gateway, Application Load Balancer] | No | No'."
+  },
+  {
+   "id": "reader-11",
+   "file": "14-elb/1-fast.md",
+   "section": "Check",
+   "quote": "**Check 1.** Every ALB target fails its health checks at the same time. Do requests stop?",
+   "type": "skim-answerable",
+   "severity": "should",
+   "evidence": "READER.md: 'questions must test what the gist misses.' A skim of the Signals and traps section answers all three Check items word for word: Check 1 is trap 4 ('If every target fails its health checks, requests stop' / 'fails open'), Check 2 is the signals row 'static IP addresses, partner allow-list' plus the 'NLB with the ALB as a target' column, Check 3 is the 'offload TLS' row's 'But not if' cell and trap 5. Recap 1 and Recap 3 repeat traps 1 and 2. Keep the Recap items as retrieval practice, but make at least two Check items apply a mechanism to a new case (for example: two targets in AZ 1, six in AZ 2 behind an NLB with defaults; or a deregistered target with a 10-minute request).",
+   "status": "fixed",
+   "resolution": "fix-14: Check 1 and Check 2 now apply a mechanism to a new case: Check 1 'An NLB with default settings has two targets in AZ 1 and six in AZ 2. Which targets run hot?' (cross-zone off by default, each node uses the targets in its zone); Check 2 'Scale-in deregisters an ALB target in the middle of a 10-minute upload. Does the upload finish with default settings?' (draining only for the 300-second deregistration delay). Check 3 and the Recap items are kept."
+  },
+  {
+   "id": "reader-12",
+   "file": "14-elb/1-fast.md",
+   "section": "Check",
+   "quote": "**Predict 1:** No: with ELB health checks, [Amazon EC2 Auto Scaling replaces the unhealthy instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace).",
+   "type": "structure",
+   "severity": "should",
+   "evidence": "The Predict answers sit inside the answers of unrelated Check items: the Predict 1 answer (who replaces an instance) is hidden under Check 1 (fail open), Predict 2 under Check 2, Predict 3 under Check 3. Predict says 'The answers are in the Check section', but she has to open each Check answer and find a Predict line in it. She reads fast and trusts the first gist; give the Predict answers their own labelled details block ('Predict answers') at the top of Check. Also the Predict 1 answer leaves out the condition that decides it: without an Auto Scaling group nothing replaces the instance, and by default the group 'ignores the results of the Elastic Load Balancing' checks (fact ec2-auto-scaling-elb-health-checks-ignored-by-default).",
+   "status": "fixed",
+   "resolution": "fix-14: the three Predict answers now sit together at the top of Check, after the line 'Answers to the three Predict questions:', in one reveal (the allowed summary is 'Answer'; L107 refuses other summaries). Predict 1 now gives the condition: 'No. On a failed check, [it stops routing traffic to that target]. An Auto Scaling group replaces it only with ELB health checks: by default, the group [ignores the results of the Elastic Load Balancing] checks.'"
+  },
+  {
+   "id": "reader-13",
+   "file": "14-elb/2-deep.md",
+   "section": "Each load balancer type reads a different layer of the traffic",
+   "quote": "A Network Load Balancer (NLB) handles [millions of requests per second](../facts/elb.md#elb-nlb-millions-of-requests-per-second) and picks a target [using a flow hash algorithm](../facts/elb.md#elb-nlb-flow-hash-target-selection).",
+   "type": "term-unexplained",
+   "severity": "should",
+   "evidence": "Terms used and never explained (STYLE: explain a term at first use): 'flow hash algorithm' (here, again in the NLB subsection and in the explanations of elb-q002, elb-q008, elb-q016); 'zonal isolation' (cross-zone subsection); 'Classic Load Balancer' (FAQ 3, the only mention in the chapter); 'back-ends' (encryption subsection); 'GENEVE' (GWLB subsection and A-list); 'slow start' (B-list); 'instead of the default' in the GWLB Stop-and-answer without naming the default (5-tuple); 'Amazon Application Recovery Controller (ARC)', which is the key of elb-q019 but is not named in 2-deep. One short clause each is enough, for example 'a flow hash: the same connection always goes to the same target'.",
+   "status": "fixed",
+   "resolution": "fix-14: flow hash: '..., which keeps one connection on one target'; zonal isolation: 'Traffic then stays in its zone, which AWS calls zonal isolation'; FAQ 3: 'an older Classic Load Balancer'; back-ends: '... to the back-ends, the targets'; GENEVE: 'The GWLB wraps each original packet inside a packet of the [GENEVE protocol on port 6081]'; GWLB answer: 'instead of the default, [a combination of a 5-tuple] that includes the ports'; ARC named in the zonal shift Go deeper. The slow start B-list row was cut (file word ceiling), so the term no longer appears."
+  },
+  {
+   "id": "reader-14",
+   "file": "14-elb/2-deep.md",
+   "section": "A Gateway Load Balancer passes packets through appliances without changing them",
+   "quote": "3. **Wrap and send.** The GWLB sends packets to an appliance with the [GENEVE protocol on port 6081](../facts/elb.md#elb-gwlb-5-tuple-geneve-6081), and it [does not change any part of the packet](../facts/elb.md#elb-gwlb-faq-layer3-gateway-layer4-bump-in-wire).",
+   "type": "unclear",
+   "severity": "note",
+   "evidence": "'Wrap' and 'does not change any part of the packet' look like a contradiction to a reader who does not know encapsulation. Add the cause and effect in one sentence: the GWLB puts the original packet unchanged inside a GENEVE packet, so the appliance sees the original source and destination.",
+   "status": "fixed",
+   "resolution": "fix-14: step 3 now reads 'The GWLB wraps each original packet inside a packet of the [GENEVE protocol on port 6081]. It [does not change any part of the packet], so the appliance sees the original source and destination.'"
+  },
+  {
+   "id": "reader-15",
+   "file": "14-elb/2-deep.md",
+   "section": "FAQ quick-fire",
+   "quote": "**FAQ 4.** Does an ALB authenticate its targets?",
+   "type": "ambiguous",
+   "severity": "note",
+   "evidence": "An ALB can authenticate users (card elb-c032 'which load balancer can sign users in'), so 'authenticate its targets' is easy to misread under stress. The quote is about back-end server certificates ('only encryption is supported to the back-ends'). Ask 'Does an ALB check the certificates of its HTTPS targets?'.",
+   "status": "fixed",
+   "resolution": "fix-14: FAQ 4 now asks 'Does an ALB check the certificates of its HTTPS targets?'"
+  },
+  {
+   "id": "reader-16",
+   "file": "14-elb/2-deep.md",
+   "section": "Sticky sessions send a user back to one target and bypass the algorithm",
+   "quote": "> **Exam trap:** Many think that sticky sessions keep sessions safe.",
+   "type": "unclear",
+   "severity": "note",
+   "evidence": "'safe' can mean secure or durable; the reader may hear a security claim. The truth sentence is about durability ('scale-in still ends the sessions on that instance'). Write 'keep sessions when an instance is removed'.",
+   "status": "fixed",
+   "resolution": "fix-14: now 'Many think that sticky sessions keep sessions when an instance is removed.'"
+  },
+  {
+   "id": "reader-17",
+   "file": "14-elb/2-deep.md",
+   "section": "You pay for each load balancer hour and its busiest capacity dimension",
+   "quote": "**Stop and answer.** In one hour an ALB uses 4 LCUs of new connections, 10 of active connections and 2 of processed bytes. How many LCUs are billed?",
+   "type": "unclear",
+   "severity": "note",
+   "evidence": "Step 2 says capacity units are billed 'used per minute' (fact elb-capacity-units-billed-per-minute), but the exercise gives hourly totals, and it gives three of the four dimensions in the table (rule evaluations missing). Give all four values and say 'for each hour' or 'in one minute' consistently, or the reader stops to wonder which number is meant.",
+   "status": "fixed",
+   "resolution": "fix-14: same fix as claims-20: steady traffic, all four dimensions per minute, 'How many LCUs are billed for each minute?'"
+  },
+  {
+   "id": "reader-18",
+   "file": "14-elb/2-deep.md",
+   "section": "Numbers that decide answers",
+   "quote": "> **Old:** flows stay on the failed target, [aka fail-open behavior](../facts/elb.md#elb-change-gwlb-tcp-reset-2026-09).<br>",
+   "type": "style",
+   "severity": "note",
+   "evidence": "'aka' is an abbreviation an ESL reader may not know (STYLE: plain English, no idioms); choose a display from the quote without it. The callout also sits under Numbers, far from the GWLB subsection it belongs to; place it at the end of the GWLB subsection or in 1-fast Changed recently with the status 'not examinable yet'.",
+   "status": "fixed",
+   "resolution": "fix-14: 'aka' is gone: the Old line now reads 'it will [send existing flows to the same target](elb-gwlb-target-failover-default-no-rebalance) after a failure.' (the change fact's only Old display holds 'aka'). The callout stays under Numbers: moving it into the GWLB subsection would push 2-deep.md over its file word ceiling, and 1-fast Changed recently is already over its budget; the placement check of L107 is not implemented yet (R11)."
+  },
+  {
+   "id": "reader-19",
+   "file": "14-elb/1-fast.md",
+   "section": "Words that go together",
+   "quote": "| health check (HELTH chek) | **fail** a health check |",
+   "type": "style",
+   "severity": "note",
+   "evidence": "Pronunciation help goes to easy words (health check, stateless, latency; repeated in 2-deep: 'health check (HELTH chek)', 'stateless (STAYT-less)') while the words she is likely to stumble on out loud have none: GENEVE, ephemeral, Server Name Indication, deregistration. Move the respellings to the hard words.",
+   "status": "rejected",
+   "resolution": "fix-14: deferred. Respellings come from the term bank (data/terms.json) that the glossary and the W901 term rules share; adding respellings for GENEVE, ephemeral and deregistration is a term-bank change for its owner, and a guessed respelling would be an unverified pronunciation. Reported to the orchestrator."
+  },
+  {
+   "id": "reader-20",
+   "file": "14-elb/1-fast.md",
+   "section": "In one breath",
+   "quote": "## In one breath (3 min)",
+   "type": "budget",
+   "severity": "note",
+   "evidence": "Ledger lint warnings: W201 'In one breath' has 291 words (allows 0 to 280); W201 'How it works' has 3556 words (allows 2600 to 3500); W201 'Decision record' has 330 words (allows 0 to 280). Also the Look first time box says 3 min while task elb-t01 says 'minutes': 4. Trim the hero step list or the startup example in In one breath; trim the Decision record together with reader-07.",
+   "status": "rejected",
+   "resolution": "fix-14: partly done. The startup example and the problem line were trimmed, but the hero steps gained the fact links that claims-13 requires, so In one breath is at 295 words (W201 warning). In 2-deep.md the fixes added words, so seven B-list rows, the weighted target groups Go deeper, the NLB Spot the bug (now Check 1 of 1-fast.md) and other sentences were cut to keep the file under its L201 ceiling of 4,500 words; How it works stays a W201 warning at 3,599. The Decision record is at 347 words because its after-diagram steps now carry fact links. The Look first time box (3 min) is left: the 4-minute task has four short read-only commands."
+  }
+ ]
+}

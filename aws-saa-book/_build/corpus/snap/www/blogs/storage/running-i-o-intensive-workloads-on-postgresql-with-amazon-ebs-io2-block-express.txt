@@ -1,0 +1,130 @@
+Skip to Main Content
+## AWS Storage Blog
+# Running I/O intensive workloads on PostgreSQL with Amazon EBS io2 Block Express
+Databases are a fundamental component for any organization with its own IT infrastructure powering various applications. Making sure of the smooth operation of database servers is vital because any performance disruptions can impact numerous users and their activities. Many companies experience performance slowdowns in their applications due to storage latency during database operations.
+To tackle this problem, AWS unveiled Amazon Elastic Block Store (Amazon EBS) io2 Block Express in December 2020. This solution aims to optimize storage management for high-performance database servers, enabling them to efficiently handle I/O intensive workloads.
+This post examines the performance differences between a PostgreSQL database running on Amazon EBS gp3 and io2 Block Express. io2 Block Express allows you to attain up to 256,000 IOPS and 4,000 MiB/s throughput per volume. It supports expansive storage needs with up to 64 TiB per volume, while making sure of low-variance sub-millisecond disk I/O latency. The low latency is achieved by Scalable Reliable Datagrams (SRD), an advanced communication protocol integrated into the AWS Nitro System. This post is a part of series that has shown how to achieve higher database performance using Amazon EBS io2 Block Express volumes for Oracle databases.
+## Database performance comparison overview
+To measure database performance, it’s essential to consider key metrics such as IOPS, latency, and throughput. IOPS quantifies the number of input and output operations per second, latency indicates the time it takes for a single I/O request to complete, and throughput measures the amount of data that can be read or written per second.
+To assess database performance, we used HammerDB, an open-source database benchmarking and load testing tool that supports multiple database platforms, such as PostgreSQL. It is widely used to measure the performance and scalability of database systems under simulated workloads. For PostgreSQL, HammerDB implements the Transaction Processing Performance Council-C (TPC-C) benchmark, which emulates the online transaction processing (OLTP) workload of a wholesale supplier, and the Transaction Processing Performance Council-H (TPC-H) benchmark for evaluating the performance of Online Analytical Processing (OLAP) systems, which focuses on decision support systems (DSS) and measures how efficiently a database can handle complex analytical queries on large datasets.
+This tool measures the average transaction rate in transactions per second (TPS) in OLTP testing and queries per hour in OLAP testing. Using benchmark data allows us to compare the performance of Amazon EBS gp3 with io2 Block Express under identical stress test conditions.
+We provisioned two environments on Amazon Elastic Compute Cloud (Amazon EC2) with the instance type of r5b.24xlarge to examine the impact of storage performance on the database using four types of tests: OLTP Load test, OLTP Stress test, OLAP Load test, and OLAP Stress test by configuring PostgreSQL databases on each of these environments. One environment was configured with Amazon EBS gp3 volume type and the other with Amazon EBS io2 Block Express volume type.
+We compared the database transactional and latency performance using different storage types of io2 Block Express and gp3. Based on the results analysis, for the same IOPS and throughput configuration on each of these EBS volume types, io2 Block Express performed 2.08 times better on transactions per minute (TPM) and provided 3.85 times lower latency for OLTP workloads and 2.78 times lower latency for OLAP workloads. Therefore, io2 Block Express is a recommended solution for database workloads that are sensitive to disk latencies and where performance is a priority over cost. Detailed test results are shown in the following sections.
+### Comparing EBS volume types gp3 and io2 Block Express
+The following figure is a quick comparison of features and pricing between gp3 and io2 Block Express volumes.
+| Volume type | gp3 | io2 Block Express |
+| Durability | 99.8% – 99.9% durability (0.1% – 0.2% annual failure rate) | 99.999% durability (0.001% annual failure rate) |
+| Use-Cases | – Low-latency interactive apps – Development and test environments | – Workloads that need sub-millisecond latency, and sustained IOPS performance or more than 64,000 IOPS or 1,000 MiB/s of throughput |
+| Volume size | 1 GiB – 16 TiB | 4 GiB – 64 TiB |
+| Max IOPS per volume | 1,000 MiB/s | 4,000 MiB/s |
+| Latency | single digit millisecond | sub-millisecond |
+| Price | Storage price: – $0.08/GB-month IOPS price: – 3,000 IOPS included – $0.005/provisioned IOPS-month over 3,000 IOPS Throughput price: – 125 MiB/s included – $0.04/provisioned MiB/s-month over 125 MiBps | Storage price: – $0.125/GB-month IOPS price: – $0.065/provisioned IOPS-month up to 32,000 IOPS – $0.046/provisioned IOPS-month from 32,001 to 64,000 IOPS – $0.032/provisioned IOPS-month for greater than 64,000 IOPS |
+| Durability | 99.8% – 99.9% durability (0.1% – 0.2% annual failure rate) | 99.999% durability (0.001% annual failure rate) |
+### Durability advantages
+EBS io2 Block Express volumes offers 100 times better durability than EBS gp3 volumes, with an annual failure rate of just 0.001% compared to gp3’s 0.1-0.2%. This makes io2 Block Express particularly valuable for:
+- Mission-critical databases
+- Financial transaction systems
+- Healthcare applications
+- Any workload where data loss is unacceptable
+### Benchmarking system configuration
+The following configuration was used to run performance tests for the comparison:
+- An EC2 instance of type r5b.24xlarge with 96vCPU/768GB RAM
+- Operating system: Amazon Linux 2023
+- PostgreSQL database: PostgreSQL 16.5
+- Storage configuration: We provisioned the storage for gp3 and io2 Block Express to match IOPS (80000 IOPS) and throughput (8000 MiB/s) for both configurations. This resulted in eight gp3 volumes (per volume: 10000 IOPS, 1000 MiB/s) as opposed to two io2 Block Express volumes (per volume: 40000 IOPS, 4000 MiB/s) to achieve the same total performance metrics. The r5b.24xlarge instance can support a maximum throughput of 7500 MiB/s.
+### Benchmarking data generation
+To compare the performance of Amazon EBS gp3 and io2 Block Express, we loaded the PostgreSQL database with approximately 1 TB of data using the HammerDB tool with 100 warehouses and 10 virtual users, which generated OLTP and OLAP schema, as shown in the following images.
+Figure 1: Schema Build Option – OLTP
+The image below shows the setting for OLAP schema generation with scale factor of 100 chosen for the benchmark test.
+Figure 2: Schema Build Option – OLAP
+For more information on how the data was created for benchmark purposes, refer to this HammerDB link.
+### Benchmark performance analysis
+To benchmark performance, the load was generated using the HammerDB tool and stress tests were run for each of the different storage configurations for the same simulated workload in both OLTP and OLAP scenarios.
+### Benchmark test overview
+The following four tests were performed against the PostgreSQL database with RAID-0 configured on gp3 and io2 Block Express to compare performance.
+- OLTP load test: Using this article as a reference and keeping the same CPU and memory configuration, we tested the database with different storage configurations using both io2 Block Express and gp3 when the OLTP schema was being loaded or built to compare against I/O write latency.
+- OLAP load test: Using this article as a reference and keeping the same CPU and memory configuration, we tested database with different storage configurations using both io2 Block Express and gp3 when the OLAP schema was being loaded or built to compare against I/O write latency.
+- OLTP stress test: In this test, while executing same stress test (100 warehouses, 10 virtual users, and 10 million transactions per user with timed duration of 10 minutes) on the database with different storage configurations on both gp3 and io2 Block Express, the latency of Amazon EBS was measured along with the TPM, as shown in the following figure.
+Figure 3: Stress Test Options – OLTP
+4. OLAP stress test: In this test, while executing same stress test (10 query sets per user, and 10 virtual users) on the database with different storage configurations on both gp3 and io2 Block Express, the latency of Amazon EBS was measured, as shown in the following figure.
+Figure 4: Stress Test Options – OLAP
+### Benchmark test results
+In this section, we give details about the results from the benchmark tests run against the PostgreSQL database running with RAID-0 on Amazon EBS io2 Block Express and gp3.
+OLTP load test: In PostgreSQL, while loading the schema for 100 warehouses with 10 users in parallel, write latency per volume on io2 Block express was 3.47 times lower than gp3 on average, shown in the following figures.
+Figure 5: Latency Performance in milliseconds – gp3
+As seen in the image below there is a significant improvement in latency performance for io2 Block Express for same data load.
+Figure 6: Latency Performance in milliseconds – io2 Block Express
+Figure 7: Average Write Latency in milliseconds – gp3
+Average write latency for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 8: Average Write Latency in milliseconds – io2 Block Express
+OLAP load test: In PostgreSQL, while loading the schema for 100 warehouses with 10 users in parallel and 10 query set per user for OLAP schema, write latency per volume on io2 Block express was 3.13 times lower than gp3 on average.
+Figure 9: Latency Performance in milliseconds – gp3
+Latency performance with OLAP load test for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 10: Latency Performance in milliseconds – io2 Block Express
+Figure 11: Average Write Latency in milliseconds – gp3
+Average write latency for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 12: Average Write Latency in milliseconds – io2 Block Express
+OLTP stress test: For the PostgreSQL database with the RAID-0 configuration, the average latency with 80K IOPS running on io2 Block Express volumes was observed to be 0.39 milliseconds, whereas with 80K IOPS running on gp3, the average disk latency was observed to be 1.67 milliseconds. Amazon EBS io2 Block Express was 4.28 times faster than gp3 in terms of disk latency, achieving very low time to complete a single I/O operation on a block device running on the PostgreSQL database.
+Figure 13: Latency Performance in milliseconds – gp3
+Latency performance with OLTP load test for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 14: Latency Performance in milliseconds – io2 Block Express
+Figure 15: Average Write Latency in milliseconds – gp3
+Average write latency for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 16: Average Write Latency in milliseconds – io2 Block Express
+In this stress test, the number of new orders per minute (NOPM) were computed. With gp3 volumes, we observed 129,729 TPM resulting in 55,120 NOPM. With io2 block express we got 269,823 TPM, resulting in 117,460 NOPM. This was a 2.08 times improvement in TPM and a 2.13 times improvement in NOPM.
+Figure 17: Transactions per Minute – gp3
+HammerDB results showcasing the TPM metrics and NOPM metrics are seen for gp3 in the image above and io2 Block Express in the image below:
+Figure 18: Transactions per Minute – io2 Block Express
+OLAP stress test: For the PostgreSQL database with the RAID-0 configuration, the maximum latency with 80K IOPS running on io2 Block Express volumes was observed to be 0.7 milliseconds for writes and 0.54 milliseconds for reads. On the other hand, with 80K IOPS running on gp3, the maximum disk latency was observed to be 3.44 milliseconds for writes and 0.81 milliseconds for reads. Amazon EBS io2 Block Express showed 4.91 times better performance for writes and 1.50 times better performance for reads as compared to gp3, achieving very low time to complete a single I/O operation on a block device running the PostgreSQL database, as shown in the following figures.
+Figure 19: Latency Performance in milliseconds – gp3 (OLAP Stress Test)
+Latency performance with OLAP stress test for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 20: Latency Performance in milliseconds – io2 Block Express (OLAP Stress Test)
+Figure 21: Average Latency Performance in milliseconds – gp3 (OLAP Stress Test)
+Average write latency per volume in OLAP stress test for gp3 is seen in the above image and io2 Block Express in the image below:
+Figure 22: Average Latency Performance in milliseconds – io2 Block Express (OLAP Stress Test)
+### Cost and performance use cases for gp3 and io2 Block Express
+The following is the cost performance comparison for gp3 and io2 Block Express
+#### gp3:
+- Optimal for: development, test environments, and production workloads that can tolerate single-digit millisecond latencies
+- Cost-effective choice at $1,375.36/month for the tested configuration
+- Durability: 99.8% – 99.9% (0.1% – 0.2% annual failure rate)
+- Best for: budget-conscious workloads where sub-millisecond latency isn’t critical
+#### io2 Block Express:
+- Optimal for: mission-critical production workloads needing consistent sub-millisecond latency
+- Higher cost at $5,408/month delivers:
+- 2.07 times higher transaction throughput
+- 4.28 times faster I/O response time
+- Durability: 99.999% (0.001% annual failure rate)
+- Best for: performance-sensitive workloads where data durability and consistent sub-millisecond latency are essential
+Amazon EBS io2 Block Express is the premium storage solution for high-performance database workloads, particularly those that are sensitive to disk latencies and need sub-millisecond response times. It excels in scenarios where performance and durability are paramount considerations.
+The key advantages of io2 Block Express include:
+- Superior performance: ideal for I/O-intensive critical workloads, delivering consistently low latency and high throughput.
+- Sub-millisecond responsiveness: crucial for applications that demand rapid data access and processing.
+- Enhanced durability: offers higher durability as compared to standard EBS volumes, making it suitable for mission-critical data.
+- Scalability: supports larger volume sizes and higher IOPS, accommodating growing and demanding workloads.
+Although gp3 volumes may be suitable for less demanding workloads or where cost is a primary factor, io2 Block Express is the go-to choice for databases and applications that need the highest levels of performance, consistency, and reliability. It’s particularly well-suited for enterprise-grade databases, high-performance computing, and data-intensive applications where every millisecond counts.
+For a detailed analysis of storage patterns and the benefits of moving to the AWS cloud, this Amazon storage post provides valuable insights.
+## Cleaning Up
+The services involved in this solution incur costs. So as not to incur additional costs, make sure to clean up the resources created:
+- Amazon EC2 instances – Stop or delete (terminate) the Amazon EC2 instances that you provisioned.
+- Amazon EBS volumes – Delete the EBS volumes created.
+## Conclusion
+For workloads that demand high performance and sub-millisecond latencies, where performance takes precedence over cost, Amazon EBS io2 Block Express is the ideal block storage solution.
+Amazon EBS io2 Block Express uses advanced communication protocols developed as part of the AWS Nitro System. It delivers up to 256K IOPS and 4000 MiB/s of throughput per volume, supports a maximum volume size of 64 TiB, and makes sure of consistently low-variance sub-millisecond disk I/O latency.
+In performance benchmarks using a PostgreSQL workload on an r5b.24xlarge EC2 instance, io2 Block Express demonstrated superior transactional and I/O performance as compared to Amazon EBS gp3.
+The following table highlights the percentage performance improvements observed during testing, showcasing the advantages of io2 Block Express for high-performance PostgreSQL database workloads over gp3.
+The tests in this post were run on the PostgreSQL database, which demonstrated that io2 Block Express performed 3.95 times faster on average than gp3 across all test scenarios. Similar performance improvements can be expected when running other database engines such as Microsoft SQL Server, Oracle, and MySQL, as these benefits stem from the underlying storage architecture rather than being specific to PostgreSQL.
+Thank you for reading this post on the benefits of using io2 Block Express over gp3 for I/O intensive database workloads. To learn more about Amazon EBS, check out the tech doc. If you have any comments or questions, then please leave them in the comments section.
+Loading comments…
+### Resources
+- AWS Cloud Storage
+- Getting Started with AWS Storage
+- What's New with AWS Storage
+- Case Studies
+### Follow
+- Twitter
+- Facebook
+- LinkedIn
+- Twitch
+- RSS Feed
+- Email Updates

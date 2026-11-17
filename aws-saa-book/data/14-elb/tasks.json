@@ -1,0 +1,482 @@
+{
+ "v": 1,
+ "chapter": "elb",
+ "items": [
+  {
+   "id": "elb-t01",
+   "type": "look",
+   "title": "Read the TLS policy and the load balancer quota of your account",
+   "kills": "\"The certificate decides which TLS versions a client can use.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "elasticloadbalancing:DescribeSSLPolicies",
+    "elasticloadbalancing:DescribeAccountLimits",
+    "elasticloadbalancing:DescribeLoadBalancers"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read the TLS versions of the security policy ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09. The console gives this policy to a new HTTPS listener.",
+     "command": "aws elbv2 describe-ssl-policies --names ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09 --query \"SslPolicies[0].SslProtocols\"",
+     "expect": "Two versions, TLSv1.2 and TLSv1.3, in any order. The output names no certificate: the versions come from the policy.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the same list for ELBSecurityPolicy-2016-08. An HTTPS listener that you create with the AWS CLI gets this policy when the command names no policy.",
+     "command": "aws elbv2 describe-ssl-policies --names ELBSecurityPolicy-2016-08 --query \"SslPolicies[0].SslProtocols\"",
+     "expect": "Three versions: TLSv1, TLSv1.1 and TLSv1.2, and no TLSv1.3. With this policy, a listener accepts older TLS versions than with the policy of step 1, whatever its certificate.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read how many Application Load Balancers this account can have in the Region that CloudShell uses.",
+     "command": "aws elbv2 describe-account-limits --query \"Limits[?Name=='application-load-balancers'].Max\"",
+     "expect": "[\"50\"], unless someone raised this quota for the account. The quota counts the load balancers of one Region.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the load balancers that already exist in this Region, with the type and the scheme of each one.",
+     "command": "aws elbv2 describe-load-balancers --query \"LoadBalancers[].[LoadBalancerName,Type,Scheme]\"",
+     "expect": "Often an empty list in a learning account. Otherwise one row for each load balancer: its name, a type such as application or network, and the scheme internet-facing or internal.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "elb-alb-security-policy-protocols-ciphers",
+    "elb-alb-https-default-security-policy",
+    "elb-tls-recommended-post-quantum-policy",
+    "elb-alb-quota-load-balancers-per-region",
+    "elb-scheme-choose-internal-or-internet-facing",
+    "elb-alb-tls-policy-protocols-pq-and-2016-08"
+   ],
+   "sources": [
+    {
+     "title": "Security policies for your Application Load Balancer (example describe-ssl-policies commands, protocols by policy)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/describe-ssl-policies.html"
+    },
+    {
+     "title": "describe-ssl-policies (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/describe-ssl-policies.html"
+    },
+    {
+     "title": "Quotas for your Application Load Balancers",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-limits.html"
+    },
+    {
+     "title": "describe-account-limits (AWS CLI Command Reference, example output)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/describe-account-limits.html"
+    },
+    {
+     "title": "describe-load-balancers (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/describe-load-balancers.html"
+    }
+   ],
+   "chapter": "elb",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "elb-t02",
+   "type": "try",
+   "title": "Route by path with listener rules and predict the rule order",
+   "kills": "\"The most specific rule wins, whatever its priority.\"",
+   "trap": "elb-trap-one-lb-per-service",
+   "section": "2-deep.md#listener-rules-are-checked-in-priority-order-and-the-default-rule-comes-last",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "More than $0: one load balancer for less than one hour. A load balancer is billed for each hour or partial hour that it runs, and the capacity units that it uses per minute add to that. The internal scheme gives it only private IP addresses, so no public IPv4 address charge applies.",
+   "cost_if_forgotten": "More than $0 a day: a forgotten load balancer is billed for each hour or partial hour, 24 hours a day, until you delete it. The hourly rate of your Region is on the Elastic Load Balancing pricing page.",
+   "cost_facts": [
+    "elb-partial-hour-billed-as-full-hour",
+    "elb-capacity-units-billed-per-minute",
+    "elb-pricing-public-ipv4-and-data-transfer-extra"
+   ],
+   "permissions": [
+    "ec2:DescribeSubnets",
+    "elasticloadbalancing:CreateLoadBalancer",
+    "elasticloadbalancing:CreateListener",
+    "elasticloadbalancing:CreateRule",
+    "elasticloadbalancing:AddTags",
+    "elasticloadbalancing:DescribeRules",
+    "elasticloadbalancing:SetRulePriorities",
+    "elasticloadbalancing:DeleteRule",
+    "elasticloadbalancing:DeleteListener",
+    "elasticloadbalancing:DeleteLoadBalancer",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "These commands create nothing. List the Application Load Balancers of the Region: aws elbv2 describe-load-balancers --query \"LoadBalancers[?Type=='application'].[LoadBalancerName,LoadBalancerArn]\" Copy one ARN as <LB_ARN> and list its listeners: aws elbv2 describe-listeners --load-balancer-arn <LB_ARN> --query \"Listeners[].[Port,ListenerArn]\" Copy one listener ARN as <LISTENER_ARN> and read its rules: aws elbv2 describe-rules --listener-arn <LISTENER_ARN> --query \"Rules[].[Priority,Conditions[].Field]\" Read the rules from the lowest priority number to the highest, and the default rule last: that is the order that the listener uses. If the Region has no Application Load Balancer, answer the predict question of step 6 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the IDs of two default subnets. Each default subnet is in a different Availability Zone, and an Application Load Balancer needs subnets in at least two.",
+     "command": "aws ec2 describe-subnets --filters Name=default-for-az,Values=true",
+     "capture": {
+      "name": "SUBNETS",
+      "query": "Subnets[0:2].SubnetId"
+     },
+     "expect": "No output. SUBNETS now holds two subnet IDs. If it holds fewer than two, this Region has no default subnets: use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create an internal Application Load Balancer in those two subnets. The scheme internal gives its nodes only private IP addresses, so no client on the internet can reach it. From here, the hourly charge runs.",
+     "command": "aws elbv2 create-load-balancer --name saa-elb-t02 --type application --scheme internal --subnets $SUBNETS --tags Key=book,Value=saa Key=task,Value=elb-t02",
+     "capture": {
+      "name": "LB_ARN",
+      "query": "LoadBalancers[0].LoadBalancerArn"
+     },
+     "expect": "No output. LB_ARN now holds the ARN of the new load balancer.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Add an HTTP listener on port 80. Its default rule returns a fixed 404 response with the text default. No target is needed for a fixed response.",
+     "command": "aws elbv2 create-listener --load-balancer-arn $LB_ARN --protocol HTTP --port 80 --default-actions \"Type=fixed-response,FixedResponseConfig={StatusCode=404,ContentType=text/plain,MessageBody=default}\" --tags Key=book,Value=saa Key=task,Value=elb-t02",
+     "capture": {
+      "name": "LISTENER_ARN",
+      "query": "Listeners[0].ListenerArn"
+     },
+     "expect": "No output. LISTENER_ARN now holds the ARN of the listener.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Add a rule with priority 20: a request whose path matches /api/* gets a fixed 200 response with the text api.",
+     "command": "aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 20 --conditions \"Field=path-pattern,Values=/api/*\" --actions \"Type=fixed-response,FixedResponseConfig={StatusCode=200,ContentType=text/plain,MessageBody=api}\" --tags Key=book,Value=saa Key=task,Value=elb-t02",
+     "capture": {
+      "name": "API_RULE_ARN",
+      "query": "Rules[0].RuleArn"
+     },
+     "expect": "No output. API_RULE_ARN now holds the ARN of the rule.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "A teammate adds a catch-all rule with priority 10: every path matches /*, and the response is the text catch-all.",
+     "command": "aws elbv2 create-rule --listener-arn $LISTENER_ARN --priority 10 --conditions \"Field=path-pattern,Values=/*\" --actions \"Type=fixed-response,FixedResponseConfig={StatusCode=200,ContentType=text/plain,MessageBody=catch-all}\" --tags Key=book,Value=saa Key=task,Value=elb-t02",
+     "capture": {
+      "name": "CATCH_RULE_ARN",
+      "query": "Rules[0].RuleArn"
+     },
+     "expect": "No output. CATCH_RULE_ARN now holds the ARN of the catch-all rule.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Predict first: a request for /api/orders matches both /api/* and /*. Does it get api or catch-all? Then read the priority, the path and the response text of every rule.",
+     "command": "aws elbv2 describe-rules --listener-arn $LISTENER_ARN --query \"Rules[].[Priority,Conditions[0].Values[0],Actions[0].FixedResponseConfig.MessageBody]\"",
+     "expect": "Three rows, in any order: 10 with /* and catch-all, 20 with /api/* and api, and default with null and default. The listener checks rules from the lowest priority number to the highest, so /api/orders gets catch-all. A more specific path does not move a rule forward.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Fix it: give the catch-all rule priority 30, so that the listener checks the /api/* rule first.",
+     "command": "aws elbv2 set-rule-priorities --rule-priorities RuleArn=$CATCH_RULE_ARN,Priority=30 --query \"Rules[].[Priority,Conditions[0].Values[0]]\"",
+     "expect": "One row: 30 with /*.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the rules of the listener again.",
+     "command": "aws elbv2 describe-rules --listener-arn $LISTENER_ARN --query \"Rules[].[Priority,Conditions[0].Values[0],Actions[0].FixedResponseConfig.MessageBody]\"",
+     "expect": "20 with /api/* and api, 30 with /* and catch-all, and default. A request for /api/orders now gets api, and a request for /home gets catch-all. The default rule now answers no request, because every path matches /* first.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the catch-all rule.",
+     "command": "aws elbv2 delete-rule --rule-arn $CATCH_RULE_ARN"
+    },
+    {
+     "text": "Delete the /api/* rule.",
+     "command": "aws elbv2 delete-rule --rule-arn $API_RULE_ARN"
+    },
+    {
+     "text": "Delete the listener.",
+     "command": "aws elbv2 delete-listener --listener-arn $LISTENER_ARN"
+    },
+    {
+     "text": "Delete the load balancer.",
+     "command": "aws elbv2 delete-load-balancer --load-balancer-arn $LB_ARN"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=elb-t02 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "An empty list. If the load balancer is still in the list, wait one minute and run the command again."
+   },
+   "still_costs": [
+    "The load balancer, until delete-load-balancer has run: it is billed for each hour or partial hour that it runs.",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the ARN with aws elbv2 describe-load-balancers --names saa-elb-t02 --query \"LoadBalancers[0].LoadBalancerArn\" and run delete-load-balancer with it. Deleting a load balancer also deletes its listeners."
+   ],
+   "facts": [
+    "elb-alb-subnets-two-azs-different",
+    "elb-internal-nodes-private-ips-only",
+    "elb-listener-checks-connection-requests",
+    "elb-alb-fixed-response-action",
+    "elb-alb-condition-types",
+    "elb-alb-rule-priority-1-to-50000",
+    "elb-alb-rules-lowest-priority-first",
+    "elb-alb-default-rule-last-no-conditions",
+    "elb-partial-hour-billed-as-full-hour",
+    "elb-capacity-units-billed-per-minute",
+    "elb-pricing-public-ipv4-and-data-transfer-extra",
+    "elb-tagging-api-getresources-elb-resources"
+   ],
+   "sources": [
+    {
+     "title": "Create an Application Load Balancer (AWS CLI: create an internal Application Load Balancer)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/tutorial-application-load-balancer-cli.html"
+    },
+    {
+     "title": "Add a listener rule for your Application Load Balancer (AWS CLI: a fixed-response action)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/add-rule.html"
+    },
+    {
+     "title": "Edit a listener rule for your Application Load Balancer (AWS CLI: update rule priorities)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-rule.html"
+    },
+    {
+     "title": "Listener rules for your Application Load Balancer",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-rules.html"
+    },
+    {
+     "title": "Delete a listener rule for your Application Load Balancer",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/delete-rule.html"
+    },
+    {
+     "title": "Delete a listener for your Application Load Balancer",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/delete-listener.html"
+    },
+    {
+     "title": "Delete an Application Load Balancer",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-delete.html"
+    },
+    {
+     "title": "create-load-balancer (AWS CLI Command Reference, example 2: an internal load balancer)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/create-load-balancer.html"
+    },
+    {
+     "title": "create-listener (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/create-listener.html"
+    },
+    {
+     "title": "create-rule (AWS CLI Command Reference, example 2: a fixed response)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/create-rule.html"
+    },
+    {
+     "title": "describe-rules (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/describe-rules.html"
+    },
+    {
+     "title": "set-rule-priorities (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/set-rule-priorities.html"
+    },
+    {
+     "title": "delete-rule (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/delete-rule.html"
+    },
+    {
+     "title": "delete-listener (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/delete-listener.html"
+    },
+    {
+     "title": "delete-load-balancer (AWS CLI Command Reference: deleting a load balancer also deletes its listeners)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/delete-load-balancer.html"
+    },
+    {
+     "title": "describe-subnets (AWS CLI Command Reference, filter default-for-az)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html"
+    },
+    {
+     "title": "get-resources (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    }
+   ],
+   "chapter": "elb",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "elb-t03",
+   "type": "try",
+   "title": "Read and tune the health check of a target group",
+   "kills": "\"The load balancer stops sending requests to a target after one failed health check.\"",
+   "trap": null,
+   "section": "2-deep.md#health-checks-decide-which-registered-targets-receive-requests",
+   "pass_route": false,
+   "minutes": 10,
+   "cost": "$0. Elastic Load Balancing bills a load balancer for each hour or partial hour that it runs and for the capacity units that it uses. This task creates a target group and no load balancer.",
+   "cost_if_forgotten": "$0 a day. The task creates no load balancer, and the hourly charge is a charge for a load balancer.",
+   "cost_facts": [
+    "elb-partial-hour-billed-as-full-hour",
+    "elb-capacity-units-billed-per-minute"
+   ],
+   "permissions": [
+    "ec2:DescribeVpcs",
+    "elasticloadbalancing:CreateTargetGroup",
+    "elasticloadbalancing:AddTags",
+    "elasticloadbalancing:DescribeTargetGroups",
+    "elasticloadbalancing:DescribeTargetGroupAttributes",
+    "elasticloadbalancing:ModifyTargetGroup",
+    "elasticloadbalancing:DeleteTargetGroup",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "This command creates nothing. It lists the health check settings of every target group in the Region: aws elbv2 describe-target-groups --query \"TargetGroups[].[TargetGroupName,HealthCheckIntervalSeconds,HealthyThresholdCount,UnhealthyThresholdCount]\" A row with 30, 5 and 2 uses the default interval and thresholds. An empty list means that the Region has no target groups: answer the predict question of step 5 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the ID of the default VPC of the Region that CloudShell uses.",
+     "command": "aws ec2 describe-vpcs --filters Name=is-default,Values=true",
+     "capture": {
+      "name": "VPC_ID",
+      "query": "Vpcs[0].VpcId"
+     },
+     "expect": "No output. VPC_ID now holds an ID that starts with vpc-. If it holds None, this Region has no default VPC: use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a target group for IP address targets, with HTTP on port 80. The command names no health check setting.",
+     "command": "aws elbv2 create-target-group --name saa-elb-t03 --protocol HTTP --port 80 --target-type ip --vpc-id $VPC_ID --tags Key=book,Value=saa Key=task,Value=elb-t03",
+     "capture": {
+      "name": "TG_ARN",
+      "query": "TargetGroups[0].TargetGroupArn"
+     },
+     "expect": "No output. TG_ARN now holds the ARN of the new target group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Guess the values first. Then read the health check settings of the target group: protocol, path, interval in seconds, healthy threshold, unhealthy threshold and success code.",
+     "command": "aws elbv2 describe-target-groups --target-group-arns $TG_ARN --query \"TargetGroups[0].[HealthCheckProtocol,HealthCheckPath,HealthCheckIntervalSeconds,HealthyThresholdCount,UnhealthyThresholdCount,Matcher.HttpCode]\"",
+     "expect": "HTTP, /, 30, 5, 2 and 200. A target that fails is unhealthy after two failed checks, 30 seconds apart. A target that recovers needs five passed checks in a row.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read how long the target group lets in-flight requests finish when a target is deregistered.",
+     "command": "aws elbv2 describe-target-group-attributes --target-group-arn $TG_ARN --query \"Attributes[?Key=='deregistration_delay.timeout_seconds'].Value\"",
+     "expect": "[\"300\"]: the deregistration delay in seconds.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Try to make one failed health check enough: set the unhealthy threshold to 1.",
+     "command": "aws elbv2 modify-target-group --target-group-arn $TG_ARN --unhealthy-threshold-count 1",
+     "expect": "An error message about the value 1. The target group keeps an unhealthy threshold of 2.",
+     "break_it": true,
+     "predict": "You want the load balancer to stop sending requests to a target after one failed check. Does AWS accept an unhealthy threshold of 1?",
+     "explain": "A target is unhealthy after [2 consecutive failed health checks](../facts/elb.md#elb-alb-unhealthy-threshold-default-2), and you can set this threshold from [2 to 10](../facts/elb.md#elb-alb-unhealthy-threshold-default-2). So one failed check does not make a target unhealthy. To detect a failure sooner, shorten the interval, which can be [5 to 300 seconds](../facts/elb.md#elb-alb-health-check-interval-default-30-seconds)."
+    },
+    {
+     "text": "Fix it: keep the threshold of 2 and set the interval to 10 seconds, so that a failing target is detected sooner.",
+     "command": "aws elbv2 modify-target-group --target-group-arn $TG_ARN --health-check-interval-seconds 10 --query \"TargetGroups[0].[HealthCheckIntervalSeconds,UnhealthyThresholdCount]\"",
+     "expect": "10 and 2. A failing target is now unhealthy after two failed checks 10 seconds apart, not 30 seconds apart.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the target group.",
+     "command": "aws elbv2 delete-target-group --target-group-arn $TG_ARN"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=elb-t03 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "An empty list. If the target group is still in the list, wait one minute and run the command again."
+   },
+   "still_costs": [
+    "Nothing: the task creates no load balancer. Delete the target group anyway, so that no unused target group stays in the account.",
+    "If the CloudShell session ended before the cleanup, TG_ARN is empty. Find the ARN with aws elbv2 describe-target-groups --names saa-elb-t03 --query \"TargetGroups[0].TargetGroupArn\" and run delete-target-group with it."
+   ],
+   "facts": [
+    "elb-health-checks-per-target-group",
+    "elb-alb-target-types-instance-ip-lambda",
+    "elb-alb-health-check-protocol-default-http",
+    "elb-alb-health-check-path-default-slash",
+    "elb-alb-health-check-interval-default-30-seconds",
+    "elb-alb-healthy-threshold-default-5",
+    "elb-alb-unhealthy-threshold-default-2",
+    "elb-alb-health-check-success-code-default-200",
+    "elb-deregistration-delay-default-300-seconds",
+    "elb-alb-deregistration-waits-for-in-flight",
+    "elb-unhealthy-target-stop-resume",
+    "elb-partial-hour-billed-as-full-hour",
+    "elb-capacity-units-billed-per-minute",
+    "elb-tagging-api-getresources-elb-resources"
+   ],
+   "sources": [
+    {
+     "title": "Create a target group for your Application Load Balancer (AWS CLI: HTTP, IP targets, default health check settings)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-target-group.html"
+    },
+    {
+     "title": "Health checks for Application Load Balancer target groups (health check settings and defaults)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html"
+    },
+    {
+     "title": "Update the health check settings of an Application Load Balancer target group (AWS CLI: modify-target-group)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/modify-health-check-settings.html"
+    },
+    {
+     "title": "Edit target group attributes (deregistration_delay.timeout_seconds)",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html"
+    },
+    {
+     "title": "Delete an Application Load Balancer target group",
+     "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/delete-target-group.html"
+    },
+    {
+     "title": "describe-vpcs (AWS CLI Command Reference, filter is-default)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpcs.html"
+    },
+    {
+     "title": "create-target-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/create-target-group.html"
+    },
+    {
+     "title": "describe-target-groups (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/describe-target-groups.html"
+    },
+    {
+     "title": "describe-target-group-attributes (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/describe-target-group-attributes.html"
+    },
+    {
+     "title": "modify-target-group (AWS CLI Command Reference, unhealthy threshold range)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/modify-target-group.html"
+    },
+    {
+     "title": "delete-target-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/elbv2/delete-target-group.html"
+    },
+    {
+     "title": "get-resources (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    }
+   ],
+   "chapter": "elb",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

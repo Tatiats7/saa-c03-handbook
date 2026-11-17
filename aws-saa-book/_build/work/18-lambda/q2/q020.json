@@ -1,0 +1,75 @@
+[
+ {
+  "id": "lambda-q020",
+  "section": "2-deep.md#aws-services-push-events-to-a-function-and-lambda-polls-queues-and-streams",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.S5"],
+  "topics": ["integration", "patterns", "compute"],
+  "services": ["lambda", "step-functions", "sqs", "cloudwatch"],
+  "concept": "orchestrate-not-chain",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an order workflow as a chain of five AWS Lambda functions. Each function calls the next function synchronously with the AWS SDK and waits for its answer. Retry logic is written by hand in every function. Costs are higher than expected, and when an order fails, the team cannot see which step failed. The company wants to orchestrate the steps with managed retries and a clear view of each step. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["calls the next function synchronously", "orchestrate the steps with managed retries", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Merge the five functions into one larger function that runs every step in order, and keep the retry code for each step inside it.",
+    "correct": false,
+    "why": "The hand-written retries stay, and one large function makes it [hard to enforce least privilege](../facts/lambda.md#lambda-monolith-breaks-least-privilege), because its role allows every resource.",
+    "concept": "monolith-function",
+    "trap": null,
+    "misconception": "believes that one large function is simpler to run than a managed workflow",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Raise the timeout of each calling function, so that each caller waits longer for the next function and has time for its retries.",
+    "correct": false,
+    "why": "Longer timeouts keep the callers [running in a wait state](../facts/lambda.md#lambda-chaining-cost-wait-state), and [you pay for the duration of an invocation](../facts/lambda.md#lambda-chaining-cost-wait-state).",
+    "concept": "longer-caller-timeouts",
+    "trap": null,
+    "misconception": "believes that a longer wait fixes a chain of synchronous calls",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Create an AWS Step Functions state machine that runs each function as one task, with retry and error handling rules for each step.",
+    "correct": true,
+    "why": "Step Functions gives [visual workflow orchestration](../facts/lambda.md#lambda-step-functions-orchestrate-errors), runs one function for each task and [handles errors at each step](../facts/lambda.md#lambda-step-functions-orchestrate-errors).",
+    "concept": "step-functions-state-machine",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Put an Amazon SQS queue between each pair of functions, and build a dashboard from custom metrics that each function publishes about its step.",
+    "correct": false,
+    "why": "It works, because AWS suggests to [use an Amazon SQS queue between Lambda functions](../facts/lambda.md#lambda-chaining-anti-pattern-sqs-or-step-functions), but queues and a custom dashboard are more to build.",
+    "concept": "queues-and-custom-dashboard",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Functions that call other functions directly are [generally an anti-pattern](../facts/lambda.md#lambda-chaining-anti-pattern-sqs-or-step-functions), because each caller waits and is billed while it waits. Step Functions coordinates the flow between the functions and [handles errors at each step](../facts/lambda.md#lambda-step-functions-orchestrate-errors), so retries leave the code and each step is visible in the workflow.",
+  "takeaway": "A chain of functions that call each other synchronously becomes a Step Functions workflow.",
+  "twin": "If the stem said \"each step hands off work, and nobody needs a view of the flow\" instead: queues between the functions fit, because AWS suggests to [use an Amazon SQS queue between Lambda functions](../facts/lambda.md#lambda-chaining-anti-pattern-sqs-or-step-functions).",
+  "say": "Functions that call functions and wait pay twice, so I'd move the chain into a Step Functions workflow.",
+  "facts": [
+   "lambda-step-functions-orchestrate-errors",
+   "lambda-chaining-cost-wait-state",
+   "lambda-monolith-breaks-least-privilege",
+   "lambda-chaining-anti-pattern-sqs-or-step-functions"
+  ],
+  "sources": [],
+  "exam_english": ["ee-orchestrate", "ee-least-operational-overhead"],
+  "twin_of": null
+ }
+]

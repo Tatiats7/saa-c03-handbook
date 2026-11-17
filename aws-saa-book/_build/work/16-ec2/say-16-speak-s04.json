@@ -1,0 +1,160 @@
+[
+ {
+  "id": "ec2-s04",
+  "kind": "decide",
+  "prompt": "Our service loads a large model into memory for 20 minutes every morning. Can we switch the servers off at night without that wait?",
+  "persona": "an ML startup CTO you advise",
+  "ten_second": "Yes, hibernate them. At night the memory is saved to the encrypted root volume. In the morning it loads back.",
+  "sixty_second": [
+   "The short answer is yes: hibernate the instances instead of stopping them.",
+   "It works like this. Hibernation saves the memory to the EBS root volume.",
+   "When the instance starts again, the memory is loaded back, so the model is already there.",
+   "At night you pay for the disk storage, not for instance usage.",
+   "The thing to watch is the setup. You turn hibernation on only when you launch the instance.",
+   "The root volume must be encrypted EBS.",
+   "On Linux, the memory must be one hundred fifty gibibytes or less.",
+   "And instances in an Auto Scaling group can't hibernate.",
+   "In your case, check the memory size first.",
+   "How much memory does each instance have, and are they in an Auto Scaling group?"
+  ],
+  "skeleton": [
+   "hibernate, memory to root volume",
+   "pay storage, not instance",
+   "turn on at launch, encrypted EBS",
+   "memory limit, no Auto Scaling"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Hibernation saves the RAM contents to the EBS root volume and reloads them when the instance starts, so a slow-to-start application returns to service sooner.",
+    "accept": [
+     "memory goes to disk and comes back",
+     "the model stays loaded"
+    ],
+    "facts": [
+     "ec2-hibernate-saves-ram-to-root-volume",
+     "ec2-faq-hibernate-use-case-prewarm"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "You turn on hibernation when you launch the instance; you cannot turn it on for an existing instance.",
+    "accept": [
+     "only at launch",
+     "not on the running instances"
+    ],
+    "facts": [
+     "ec2-hibernate-enable-only-at-launch"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "The root volume must be an encrypted EBS volume, and a Linux instance cannot hibernate with more than 150 GiB of RAM.",
+    "accept": [
+     "encrypted EBS root volume",
+     "a memory limit for hibernation"
+    ],
+    "facts": [
+     "ec2-hibernate-root-volume-requirements",
+     "ec2-hibernate-ram-limits-linux-windows"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "A hibernated instance has no instance usage fee; you pay standard EBS storage rates and any Elastic IP addresses.",
+    "accept": [
+     "you pay for the disk, not the instance"
+    ],
+    "facts": [
+     "ec2-hibernate-no-instance-fee-ebs-rates"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "You cannot hibernate an instance in an Auto Scaling group; a warm pool with hibernated instances saves the RAM contents instead.",
+    "accept": [
+     "Auto Scaling groups use a warm pool"
+    ],
+    "facts": [
+     "ec2-hibernate-not-in-auto-scaling-group",
+     "ec2-auto-scaling-warm-pool-hibernated-ram"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "we can turn hibernation on for the running instances tonight",
+    "correct": "You can't enable hibernation on an existing instance. Turn it on when you launch the new instances.",
+    "fact": "ec2-hibernate-enable-only-at-launch"
+   },
+   {
+    "error": "we pay nothing while they hibernate",
+    "correct": "A hibernated instance is charged at standard EBS rates for storage, and Elastic IP addresses are still charged.",
+    "fact": "ec2-hibernate-no-instance-fee-ebs-rates"
+   },
+   {
+    "error": "any instance size can hibernate",
+    "correct": "A Linux instance cannot hibernate with more than 150 GiB of RAM, and a Windows instance cannot with more than 16 GiB.",
+    "fact": "ec2-hibernate-ram-limits-linux-windows"
+   }
+  ],
+  "terms": [
+   {
+    "say": "hibernate an instance",
+    "avoid": [
+     "sleep the server"
+    ]
+   },
+   {
+    "say": "root volume",
+    "avoid": [
+     "boot disk"
+    ]
+   },
+   {
+    "say": "instance",
+    "avoid": [
+     "server",
+     "box"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "Can they stay hibernated over a long holiday?",
+    "answer": "Yes, for up to 60 days. To keep one longer, start the hibernated instance, stop it, and start it again.",
+    "facts": [
+     "ec2-hibernate-max-duration"
+    ]
+   },
+   {
+    "question": "Our instances run in an Auto Scaling group. Does that change the answer?",
+    "answer": "Yes. You can't hibernate an instance in an Auto Scaling group. Use a warm pool with hibernated instances, which saves the RAM contents to the root volume.",
+    "facts": [
+     "ec2-hibernate-not-in-auto-scaling-group",
+     "ec2-auto-scaling-warm-pool-hibernated-ram"
+    ]
+   }
+  ],
+  "facts": [
+   "ec2-faq-hibernate-use-case-prewarm",
+   "ec2-hibernate-saves-ram-to-root-volume",
+   "ec2-hibernate-enable-only-at-launch",
+   "ec2-hibernate-ram-limits-linux-windows",
+   "ec2-hibernate-root-volume-requirements",
+   "ec2-hibernate-no-instance-fee-ebs-rates",
+   "ec2-hibernate-not-in-auto-scaling-group",
+   "ec2-auto-scaling-warm-pool-hibernated-ram",
+   "ec2-hibernate-max-duration"
+  ],
+  "section": "2-deep.md#hibernation-saves-the-memory-to-an-encrypted-ebs-root-volume",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false
+ }
+]

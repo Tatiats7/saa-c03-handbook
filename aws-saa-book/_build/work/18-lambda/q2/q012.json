@@ -1,0 +1,89 @@
+[
+ {
+  "id": "lambda-q012",
+  "section": "2-deep.md#rds-proxy-pools-the-database-connections-that-many-concurrent-functions-would-exhaust",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.S1"],
+  "topics": ["databases", "compute"],
+  "services": ["lambda", "rds-proxy", "rds", "api-gateway"],
+  "concept": "rds-proxy-connections",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an order API on Amazon API Gateway with AWS Lambda functions. The functions write orders to an Amazon RDS for PostgreSQL DB instance. Each copy of a function opens its own database connection. During traffic spikes, the database returns too many connections errors, and some orders fail. Every request must be served, and the solution must require minimal code changes. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["too many connections errors", "Every request must be served", "minimal code changes", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Set the reserved concurrency of the functions to 10, so that no more than 10 copies of the functions connect to the database at the same time.",
+    "correct": false,
+    "why": "Requests above the cap fail with a [throttling error (429 status code)](../facts/lambda.md#lambda-throttle-429), so orders still fail, and the stem says every request must be served.",
+    "concept": "reserved-concurrency-cap",
+    "trap": null,
+    "misconception": "caps the copies of the function when every request must still be served",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Create an Amazon RDS Proxy for the DB instance, and change the database endpoint in the configuration of the functions to the proxy endpoint.",
+    "correct": true,
+    "why": "The proxy keeps a pool of connections that many function copies share, and Lambda functions benefit from the [connection pooling offered by RDS Proxy](../facts/rds-proxy.md#rds-proxy-lambda-connection-pooling).",
+    "concept": "rds-proxy-endpoint",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Change the functions so that each invocation opens a new database connection at its start and closes the connection before it returns.",
+    "correct": false,
+    "why": "A connection for each invocation adds work, and many concurrent copies can still [exhaust database connection limits](../facts/lambda.md#lambda-vpc-db-connections-rds-proxy).",
+    "concept": "connection-per-invocation",
+    "trap": "lambda-trap-connection-per-invocation",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Move the database to a larger DB instance class that accepts more connections, and keep the functions and their connection code as they are.",
+    "correct": false,
+    "why": "A resize costs more and needs planning, and with fixed capacity [you might exceed your connection quota](../facts/lambda.md#lambda-rds-connection-quota-spikes) again at a larger spike.",
+    "concept": "larger-db-instance",
+    "trap": null,
+    "misconception": "believes that a larger database ends the connection problem, although connections still grow with concurrency",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Each concurrent environment keeps its own connection, so high concurrency can [exhaust database connection limits](../facts/lambda.md#lambda-vpc-db-connections-rds-proxy). RDS Proxy lets applications [pool and share database connections](../facts/rds-proxy.md#rds-proxy-definition-pool-share), and most applications can use it with [no code changes](../facts/rds-proxy.md#rds-proxy-faq-no-code-changes): the functions read a new endpoint.",
+  "takeaway": "Many Lambda copies that exhaust database connections need RDS Proxy in front of the database.",
+  "twin": "If the stem said \"Some requests can be rejected during spikes to protect the database\" instead: reserved concurrency also fits, because it can [cap traffic rates to downstream resources](../facts/lambda.md#lambda-faq-per-function-concurrency-control).",
+  "say": "RDS Proxy pools the connections, so every copy of the function shares a few database connections.",
+  "facts": [
+   "lambda-vpc-db-connections-rds-proxy",
+   "rds-proxy-definition-pool-share",
+   "rds-proxy-faq-no-code-changes",
+   "rds-proxy-lambda-connection-pooling",
+   "lambda-throttle-429",
+   "lambda-rds-connection-quota-spikes",
+   "lambda-faq-per-function-concurrency-control"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-minimal-code-changes", "ee-must"],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the solution with the LEAST operational overhead.",
+    "I mark the constraints: too many connections errors during spikes, every request must be served, and minimal code changes.",
+    "Before I look at the options, I predict reserved concurrency, because a cap on the copies of the function also caps the database connections.",
+    "I remove the connection for each invocation, because many concurrent copies still exhaust the connection limit. I remove the larger instance class, because the database keeps a fixed capacity and the resize costs more.",
+    "Between reserved concurrency and RDS Proxy the difference is what happens to the requests above the cap. My first idea breaks because Lambda answers those requests with a throttling error, and the stem says every request must be served. The proxy pools the connections instead, so every request still reaches the database.",
+    "Check: RDS Proxy serves every request, needs a new endpoint but no new code logic, and adds no servers to manage. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ }
+]

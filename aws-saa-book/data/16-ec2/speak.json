@@ -1,0 +1,650 @@
+{
+ "v": 1,
+ "chapter": "ec2",
+ "items": [
+  {
+   "id": "ec2-s01",
+   "kind": "explain",
+   "prompt": "The instance is at 9% most of the day. Are we paying for a size that we do not need?",
+   "persona": "Ana, CEO of Callvale",
+   "ten_second": "Probably yes. The instance is bigger than the work needs. A smaller size that can burst for the morning peak costs less.",
+   "sixty_second": [
+    "The short answer is yes, you are probably paying for unused capacity.",
+    "It works like this. An instance is the virtual computer that you rent from AWS.",
+    "When it is bigger than the work, you pay for idle power.",
+    "AWS Compute Optimizer reads your usage and says when a smaller size still meets the need.",
+    "Your use is low most of the day, with a short peak in the morning.",
+    "For that shape, a burstable instance fits. It earns credits in quiet hours and spends them in the peak.",
+    "The thing to watch is the change itself. You have to stop the instance to change its size.",
+    "And the morning peak must still fit in the new size.",
+    "In your case, I'd move the web part to a smaller burstable instance.",
+    "Can we take a short maintenance window on a weekday night?"
+   ],
+   "skeleton": [
+    "yes, the size is too big",
+    "Compute Optimizer compares use and size",
+    "burstable earns credits, spends in peak",
+    "resize needs a stop"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "An instance is over-provisioned when it can be sized down and still meet the performance requirements, and over-provisioning leads to extra costs.",
+     "accept": [
+      "the instance is bigger than the work needs",
+      "you pay for capacity you do not use"
+     ],
+     "facts": [
+      "ec2-compute-optimizer-over-provisioned-definition",
+      "ec2-wa-over-under-provisioning-effects"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "AWS Compute Optimizer analyzes the instance specifications and utilization metrics, and recommends changes to improve performance, save money, or both.",
+     "accept": [
+      "Compute Optimizer tells you the right size",
+      "an AWS tool compares the size with the real use"
+     ],
+     "facts": [
+      "ec2-compute-optimizer-improve-performance-save-money"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A burstable instance earns CPU credits while it stays below its baseline and spends them when it bursts above the baseline.",
+     "accept": [
+      "it saves credits in quiet hours and spends them in the peak",
+      "a burstable size for low use with peaks"
+     ],
+     "facts": [
+      "ec2-burstable-standard-earn-spend-credits",
+      "ec2-burstable-low-utilization-waste-use-t"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "You must stop an EBS-backed instance before you change its instance type, so you plan for downtime.",
+     "accept": [
+      "changing the size needs a short stop",
+      "plan a maintenance window"
+     ],
+     "facts": [
+      "ec2-resize-must-stop-instance"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Right-size before you commit to a purchasing option, because oversized instances waste money under any purchasing model.",
+     "accept": [
+      "fix the size before you buy a discount"
+     ],
+     "facts": [
+      "ec2-right-size-before-committing"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "AWS changes the size while the instance keeps running",
+     "correct": "You must stop an EBS-backed instance before you change its instance type, so plan a short downtime.",
+     "fact": "ec2-resize-must-stop-instance"
+    },
+    {
+     "error": "after the change the morning peak no longer matters",
+     "correct": "Under-provisioning can result in poor performance. The new size still has to handle the morning peak.",
+     "fact": "ec2-wa-over-under-provisioning-effects"
+    },
+    {
+     "error": "a burstable instance can run at full CPU all day for the same price",
+     "correct": "If a workload consistently requires CPU usage much higher than the baseline, AWS suggests dedicated CPU instances such as M or C.",
+     "fact": "ec2-faq-burstable-sustained-high-cpu-use-m-or-c"
+    }
+   ],
+   "terms": [
+    {
+     "say": "instance",
+     "avoid": [
+      "server",
+      "box"
+     ]
+    },
+    {
+     "say": "burstable instance",
+     "avoid": [
+      "burst server"
+     ]
+    },
+    {
+     "say": "right-size",
+     "avoid": [
+      "downgrade the machine"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Do we pay extra if the morning peak goes above the baseline?",
+     "answer": "In unlimited mode, the hourly price covers the spikes if the average stays at or below the baseline over a rolling 24-hour period. Above that, you pay a flat additional rate per vCPU-hour.",
+     "facts": [
+      "ec2-burstable-unlimited-24-hour-baseline-rule"
+     ]
+    },
+    {
+     "question": "Should we buy a Savings Plan first, to get the discount now?",
+     "answer": "Right-size first. Oversized instances waste money under any purchasing model, so a commitment on the large size keeps paying for the waste.",
+     "facts": [
+      "ec2-right-size-before-committing"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-compute-optimizer-over-provisioned-definition",
+    "ec2-wa-over-under-provisioning-effects",
+    "ec2-compute-optimizer-improve-performance-save-money",
+    "ec2-burstable-standard-earn-spend-credits",
+    "ec2-burstable-low-utilization-waste-use-t",
+    "ec2-resize-must-stop-instance",
+    "ec2-right-size-before-committing",
+    "ec2-faq-burstable-sustained-high-cpu-use-m-or-c",
+    "ec2-burstable-unlimited-24-hour-baseline-rule"
+   ],
+   "section": "2-deep.md#scaling-up-needs-a-stop-and-scaling-out-adds-instances-instead",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "ec2-s02",
+   "kind": "compare",
+   "prompt": "Should we buy a Savings Plan, or run everything on Spot to save money?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Both lower the price, but for different work. Use a Savings Plan for the steady base, and Spot only for work that can restart.",
+   "sixty_second": [
+    "Both lower your bill, but they fit different kinds of work.",
+    "It works like this. With a Savings Plan, you commit to steady use for a long term.",
+    "It pays off for work that runs all the time, like your database.",
+    "Spot uses spare AWS capacity at a big discount.",
+    "But Amazon EC2 can take it back with two minutes of notice.",
+    "So Spot fits stateless work that can stop and restart, like batch jobs.",
+    "The thing to watch is this. Never put the database or a hard deadline on Spot.",
+    "And a Savings Plan gives a discount, not reserved capacity.",
+    "In your case, mix them. Put the steady base on a Savings Plan, and restartable jobs on Spot.",
+    "Which of your jobs can restart if an instance disappears?"
+   ],
+   "skeleton": [
+    "both cut cost, different work",
+    "Savings Plan for steady base",
+    "Spot can leave in two minutes",
+    "not the database, no capacity"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Steady workloads with consistent, predictable use, such as databases, benefit most from long-term commitments through Savings Plans.",
+     "accept": [
+      "a Savings Plan for the steady base",
+      "commit only for what runs all the time"
+     ],
+     "facts": [
+      "ec2-steady-state-savings-plans"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Amazon EC2 can interrupt a Spot Instance, with two minutes of notice, when it needs the capacity back.",
+     "accept": [
+      "AWS can take Spot back",
+      "Spot can disappear with a short warning"
+     ],
+     "facts": [
+      "ec2-spot-only-difference-interruption-two-minutes"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Spot suits stateless, fault-tolerant, flexible applications, and does not suit inflexible, stateful or fault-intolerant work.",
+     "accept": [
+      "Spot is for work that can restart",
+      "not for the database"
+     ],
+     "facts": [
+      "ec2-spot-recommended-stateless-fault-tolerant-flexible",
+      "ec2-spot-not-suitable-stateful-inflexible"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Savings Plans do not provide a capacity reservation; an On-Demand Capacity Reservation holds capacity.",
+     "accept": [
+      "a Savings Plan is a discount, not capacity"
+     ],
+     "facts": [
+      "ec2-faq-savings-plans-no-capacity-reservation"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "A common pattern is Savings Plans for baseline capacity and On-Demand or Spot Instances for fluctuating workloads.",
+     "accept": [
+      "mix the purchasing options"
+     ],
+     "facts": [
+      "ec2-hybrid-purchasing-common-pattern"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Spot is fine for the database too",
+     "correct": "Spot Instances are not suitable for inflexible, stateful or fault-intolerant workloads. Put the database on steady capacity.",
+     "fact": "ec2-spot-not-suitable-stateful-inflexible"
+    },
+    {
+     "error": "a Savings Plan guarantees our capacity",
+     "correct": "Savings Plans do not provide a capacity reservation. Use an On-Demand Capacity Reservation for that.",
+     "fact": "ec2-faq-savings-plans-no-capacity-reservation"
+    },
+    {
+     "error": "the Savings Plan discount also applies to our Spot Instances",
+     "correct": "Spot Instances are not covered by Savings Plans.",
+     "fact": "ec2-spot-not-covered-by-savings-plans"
+    }
+   ],
+   "terms": [
+    {
+     "say": "Savings Plan",
+     "avoid": [
+      "savings contract"
+     ]
+    },
+    {
+     "say": "Spot Instance",
+     "avoid": [
+      "spot server"
+     ]
+    },
+    {
+     "say": "interrupt",
+     "avoid": [
+      "kill"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Do we get a warning before a Spot Instance goes away?",
+     "answer": "Yes. Amazon EC2 gives two minutes of notice. The notice arrives as an EventBridge event and as items in the instance metadata, so your job can save its work.",
+     "facts": [
+      "ec2-spot-only-difference-interruption-two-minutes",
+      "ec2-spot-interruption-notice-channels"
+     ]
+    },
+    {
+     "question": "Does our Savings Plan make Spot cheaper as well?",
+     "answer": "No. Spot Instances are not covered by Savings Plans, and Spot spend does not count toward a Compute Savings Plans commitment.",
+     "facts": [
+      "ec2-spot-not-covered-by-savings-plans"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-steady-state-savings-plans",
+    "ec2-spot-only-difference-interruption-two-minutes",
+    "ec2-spot-recommended-stateless-fault-tolerant-flexible",
+    "ec2-spot-not-suitable-stateful-inflexible",
+    "ec2-faq-savings-plans-no-capacity-reservation",
+    "ec2-hybrid-purchasing-common-pattern",
+    "ec2-spot-not-covered-by-savings-plans",
+    "ec2-spot-interruption-notice-channels"
+   ],
+   "section": "2-deep.md#on-demand-bills-each-second-and-a-commitment-lowers-the-price-of-steady-use",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "ec2-s03",
+   "kind": "explain",
+   "prompt": "Our engineers SSH into production servers from home. How do we close port 22 and still fix things?",
+   "persona": "a fintech CTO you advise",
+   "ten_second": "Use Session Manager. Engineers get a shell with no open inbound port, no bastion host and no SSH keys.",
+   "sixty_second": [
+    "The short answer is: use Session Manager, a part of AWS Systems Manager.",
+    "It works like this. Each instance gets an IAM role with one AWS managed policy.",
+    "The policy is called Amazon SSM Managed Instance Core.",
+    "Engineers then open a shell on the instance through Session Manager.",
+    "There's no inbound rule, no bastion host, and no SSH key to manage.",
+    "The agent connects out over HTTPS, through VPC endpoints or outbound internet access.",
+    "So you can delete the SSH rule from the security group.",
+    "The thing to watch is the role. Without it, Session Manager usually can't connect.",
+    "In your case, try it on one test instance first, then on production.",
+    "Does anyone need a real SSH client, for example to copy files?"
+   ],
+   "skeleton": [
+    "Session Manager, no open port",
+    "role and an outbound path",
+    "delete the SSH rule",
+    "no role, no connection"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Session Manager gives access without the need to open inbound ports, maintain bastion hosts, or manage SSH keys.",
+     "accept": [
+      "no open port, no bastion, no keys",
+      "a shell without SSH"
+     ],
+     "facts": [
+      "ec2-session-manager-no-inbound-ports-bastion-keys"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "The instance must be managed by Systems Manager and have an attached IAM role with the AmazonSSMManagedInstanceCore policy.",
+     "accept": [
+      "the instance needs a role with the SSM managed policy",
+      "no role, no session"
+     ],
+     "facts": [
+      "ec2-session-manager-prereq-iam-role"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Security group rules should not permit access on port 22/tcp (SSH) or port 3389/tcp (RDP); use Session Manager for interactive access.",
+     "accept": [
+      "remove the SSH rule",
+      "close the SSH port in the security group"
+     ],
+     "facts": [
+      "vpc-wa-sec06-no-ssh-rdp-use-session-manager"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "must",
+     "point": "The SSM Agent starts every connection. Without VPC endpoints, the instance needs outbound internet access and HTTPS outbound to Systems Manager.",
+     "accept": [
+      "the agent connects out on HTTPS",
+      "private subnets need endpoints or NAT"
+     ],
+     "facts": [
+      "ec2-ssm-agent-outbound-https-443-no-inbound"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "nice",
+     "point": "The role gives the instance temporary credentials that AWS rotates automatically, so no access key is stored on the instance.",
+     "accept": [
+      "no access key on the instance"
+     ],
+     "facts": [
+      "ec2-iam-role-temporary-credentials-rotated"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "EC2 Instance Connect Endpoint connects to an instance without a bastion host and without a public IP address on the instance.",
+     "accept": [
+      "Instance Connect Endpoint for real SSH clients"
+     ],
+     "facts": [
+      "ec2-eice-no-public-ip-no-igw-no-bastion"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "restrict the SSH port to the office IP address and you are done",
+     "correct": "Security group rules should not permit access on port 22/tcp (SSH). Use Session Manager for interactive access.",
+     "fact": "vpc-wa-sec06-no-ssh-rdp-use-session-manager"
+    },
+    {
+     "error": "you need a bastion host in a public subnet",
+     "correct": "Session Manager works without the need to open inbound ports, maintain bastion hosts, or manage SSH keys.",
+     "fact": "ec2-session-manager-no-inbound-ports-bastion-keys"
+    },
+    {
+     "error": "store an access key on the instance for the agent",
+     "correct": "Use an IAM role. Its credentials are temporary, and AWS rotates them automatically.",
+     "fact": "ec2-iam-role-temporary-credentials-rotated"
+    }
+   ],
+   "terms": [
+    {
+     "say": "Session Manager",
+     "avoid": [
+      "SSM tunnel"
+     ]
+    },
+    {
+     "say": "instance",
+     "avoid": [
+      "server",
+      "box"
+     ]
+    },
+    {
+     "say": "bastion host",
+     "avoid": [
+      "jump box"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Some engineers need a real SSH client. What then?",
+     "answer": "Use EC2 Instance Connect Endpoint. It connects without a bastion host, and the instance does not need a public IP address.",
+     "facts": [
+      "ec2-eice-no-public-ip-no-igw-no-bastion"
+     ]
+    },
+    {
+     "question": "Can we see later what an engineer did in a session?",
+     "answer": "Yes. Well-Architected advises Session Manager for interactive access, with session logging to CloudWatch Logs or Amazon S3.",
+     "facts": [
+      "vpc-wa-sec06-no-ssh-rdp-use-session-manager"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-session-manager-no-inbound-ports-bastion-keys",
+    "ec2-session-manager-prereq-iam-role",
+    "vpc-wa-sec06-no-ssh-rdp-use-session-manager",
+    "ec2-iam-role-temporary-credentials-rotated",
+    "ec2-eice-no-public-ip-no-igw-no-bastion",
+    "ec2-ssm-agent-outbound-https-443-no-inbound"
+   ],
+   "section": "2-deep.md#a-role-gives-the-instance-credentials-and-session-manager-needs-no-open-port",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 2
+  },
+  {
+   "id": "ec2-s04",
+   "kind": "decide",
+   "prompt": "Our service loads a large model into memory for 20 minutes every morning. Can we switch the servers off at night without that wait?",
+   "persona": "an ML startup CTO you advise",
+   "ten_second": "Yes, if the instances are launched with hibernation turned on. At night the memory is saved to the encrypted root volume.",
+   "sixty_second": [
+    "The short answer is yes: hibernate the instances instead of stopping them.",
+    "It works like this. Hibernation saves the memory to the EBS root volume.",
+    "When the instance starts again, the memory is loaded back, so the model is already there.",
+    "At night you pay for the disk storage, not for instance usage.",
+    "The thing to watch is the setup. You turn hibernation on only when you launch the instance.",
+    "The root volume must be encrypted EBS.",
+    "On Linux, the memory must be one hundred fifty gibibytes or less.",
+    "And instances in an Auto Scaling group can't hibernate.",
+    "In your case, check the memory size first.",
+    "How much memory does each instance have, and are they in an Auto Scaling group?"
+   ],
+   "skeleton": [
+    "hibernate, memory to root volume",
+    "pay storage, not instance",
+    "turn on at launch, encrypted EBS",
+    "memory limit, no Auto Scaling"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Hibernation saves the RAM contents to the EBS root volume and reloads them when the instance starts, so a slow-to-start application returns to service sooner.",
+     "accept": [
+      "memory goes to disk and comes back",
+      "the model stays loaded"
+     ],
+     "facts": [
+      "ec2-hibernate-saves-ram-to-root-volume",
+      "ec2-faq-hibernate-use-case-prewarm"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "You turn on hibernation when you launch the instance; you cannot turn it on for an existing instance.",
+     "accept": [
+      "only at launch",
+      "not on the running instances"
+     ],
+     "facts": [
+      "ec2-hibernate-enable-only-at-launch"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "The root volume must be an encrypted EBS volume, and a Linux instance cannot hibernate with more than 150 GiB of RAM.",
+     "accept": [
+      "encrypted EBS root volume",
+      "a memory limit for hibernation"
+     ],
+     "facts": [
+      "ec2-hibernate-root-volume-requirements",
+      "ec2-hibernate-ram-limits-linux-windows"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A hibernated instance has no instance usage fee; you pay standard EBS storage rates and any Elastic IP addresses.",
+     "accept": [
+      "you pay for the disk, not the instance"
+     ],
+     "facts": [
+      "ec2-hibernate-no-instance-fee-ebs-rates"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "You cannot hibernate an instance in an Auto Scaling group; a warm pool with hibernated instances saves the RAM contents instead.",
+     "accept": [
+      "Auto Scaling groups use a warm pool"
+     ],
+     "facts": [
+      "ec2-hibernate-not-in-auto-scaling-group",
+      "ec2-auto-scaling-warm-pool-hibernated-ram"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "we can turn hibernation on for the running instances tonight",
+     "correct": "You can't enable hibernation on an existing instance. Turn it on when you launch the new instances.",
+     "fact": "ec2-hibernate-enable-only-at-launch"
+    },
+    {
+     "error": "we pay nothing while they hibernate",
+     "correct": "A hibernated instance is charged at standard EBS rates for storage, and Elastic IP addresses are still charged.",
+     "fact": "ec2-hibernate-no-instance-fee-ebs-rates"
+    },
+    {
+     "error": "any instance size can hibernate",
+     "correct": "A Linux instance cannot hibernate with more than 150 GiB of RAM, and a Windows instance cannot with more than 16 GiB.",
+     "fact": "ec2-hibernate-ram-limits-linux-windows"
+    }
+   ],
+   "terms": [
+    {
+     "say": "hibernate an instance",
+     "avoid": [
+      "sleep the server"
+     ]
+    },
+    {
+     "say": "root volume",
+     "avoid": [
+      "boot disk"
+     ]
+    },
+    {
+     "say": "instance",
+     "avoid": [
+      "server",
+      "box"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can they stay hibernated over a long holiday?",
+     "answer": "Yes, for up to 60 days. To keep one longer, start the hibernated instance, stop it, and start it again.",
+     "facts": [
+      "ec2-hibernate-max-duration"
+     ]
+    },
+    {
+     "question": "Our instances run in an Auto Scaling group. Does that change the answer?",
+     "answer": "Yes. You can't hibernate an instance in an Auto Scaling group. Use a warm pool with hibernated instances, which saves the RAM contents to the root volume.",
+     "facts": [
+      "ec2-hibernate-not-in-auto-scaling-group",
+      "ec2-auto-scaling-warm-pool-hibernated-ram"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-faq-hibernate-use-case-prewarm",
+    "ec2-hibernate-saves-ram-to-root-volume",
+    "ec2-hibernate-enable-only-at-launch",
+    "ec2-hibernate-ram-limits-linux-windows",
+    "ec2-hibernate-root-volume-requirements",
+    "ec2-hibernate-no-instance-fee-ebs-rates",
+    "ec2-hibernate-not-in-auto-scaling-group",
+    "ec2-auto-scaling-warm-pool-hibernated-ram",
+    "ec2-hibernate-max-duration"
+   ],
+   "section": "2-deep.md#hibernation-saves-the-memory-to-an-encrypted-ebs-root-volume",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 2
+  }
+ ]
+}

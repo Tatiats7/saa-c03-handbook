@@ -1,0 +1,638 @@
+[
+ {
+  "id": "aws-map-q001",
+  "section": "2-deep.md#availability-zones-fail-separately-so-production-uses-at-least-two",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K1"
+  ],
+  "topics": [
+   "resilience",
+   "compute"
+  ],
+  "services": [
+   "ec2",
+   "elb",
+   "ec2-auto-scaling",
+   "route53"
+  ],
+  "concept": "multi-az-for-zone-failure",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a web application on Amazon EC2 instances in one Availability Zone of an AWS Region. The application keeps no state on the instances, and users reach it through one DNS name. After several short outages, the company wants a more reliable design. The application must remain available if an Availability Zone fails. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "in one Availability Zone",
+   "if an Availability Zone fails",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run the instances in two Availability Zones of the current Region behind an Application Load Balancer, with an Auto Scaling group that spans both zones.",
+    "correct": true,
+    "why": "Two zones meet the requirement, and the reliability pillar asks for production workloads in [at least two Availability Zones (AZs) in a Region](../facts/global-infrastructure.md#global-infrastructure-production-at-least-two-azs).",
+    "concept": "multi-az-behind-load-balancer",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Run a second copy of the application in another AWS Region, and use Amazon Route 53 failover routing with health checks to send users to the healthy copy.",
+    "correct": false,
+    "why": "It also survives a zone failure, but it pays for a full copy in a second Region, and [most customers can achieve their resilience goals in a single Region](../facts/global-infrastructure.md#global-infrastructure-most-customers-single-region-suffices).",
+    "concept": "multi-region-failover",
+    "trap": "aws-map-trap-multi-region-for-high-availability",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Run active copies of the application in three AWS Regions at the same time, and use Amazon Route 53 latency routing with health checks to send each user to a copy.",
+    "correct": false,
+    "why": "Three active Regions survive a zone failure, but AWS names this anti-pattern: [you implement a multi-Region architecture when a multi-AZ architecture would satisfy business requirements](../facts/global-infrastructure.md#global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern).",
+    "concept": "multi-region-active-active",
+    "trap": "how-the-exam-asks-trap-always-max-availability",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add more instances in the current Availability Zone behind an Application Load Balancer, with an Auto Scaling group that replaces any unhealthy instance.",
+    "correct": false,
+    "why": "If all instances are in one zone and that zone fails, [none of your EC2 instances would be available](../facts/global-infrastructure.md#global-infrastructure-single-az-failure-takes-all-instances), however many instances run there.",
+    "concept": "more-instances-one-az",
+    "trap": "aws-map-trap-one-az-is-highly-available",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "An EC2 instance is a zonal resource, [specific to the Availability Zone in which you create it](../facts/global-infrastructure.md#global-infrastructure-zonal-resource-deploy-in-multiple-azs). AWS says to [deploy your application in multiple Availability Zones, so that your application remains available even if one Availability Zone fails](../facts/global-infrastructure.md#global-infrastructure-zonal-resource-deploy-in-multiple-azs). A second zone in the same Region adds a few instances and a load balancer, which costs less than a copy in another Region.",
+  "takeaway": "A zone failure calls for two Availability Zones behind a load balancer, not a second Region.",
+  "twin": "If the stem said \"must remain available if the AWS Region fails\" instead: the second copy in another Region, because the separation between Regions [avoids correlated failures between them](../facts/global-infrastructure.md#global-infrastructure-multi-region-avoids-correlated-failures).",
+  "say": "Two Availability Zones behind a load balancer survive a zone failure, and that is the cheapest fix.",
+  "facts": [
+   "global-infrastructure-production-at-least-two-azs",
+   "global-infrastructure-most-customers-single-region-suffices",
+   "global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern",
+   "global-infrastructure-single-az-failure-takes-all-instances",
+   "global-infrastructure-zonal-resource-deploy-in-multiple-azs",
+   "global-infrastructure-multi-region-avoids-correlated-failures"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-must",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q004",
+  "section": "2-deep.md#edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.K2"
+  ],
+  "topics": [
+   "networking",
+   "compute",
+   "performance"
+  ],
+  "services": [
+   "ec2",
+   "cloudfront",
+   "vpc"
+  ],
+  "concept": "local-zone-for-metro-compute",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LOWEST latency",
+  "stem": "A company runs an interactive design application on Amazon EC2 instances in one AWS Region. Most users work in one large city that is far from every AWS Region. The application processes each user action in real time, and the users report slow responses. The company wants to run the EC2 instances closer to users and needs single-digit millisecond latency for them. Which solution will provide the LOWEST latency for these users?",
+  "keywords": [
+   "one large city that is far from every AWS Region",
+   "single-digit millisecond latency",
+   "LOWEST latency"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create an Amazon CloudFront distribution with the Regional EC2 instances as the origin, so that users connect to an edge location.",
+    "correct": false,
+    "why": "Points of presence host [Amazon CloudFront](../facts/global-infrastructure.md#global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator), but each user action is still processed on the instances in the distant Region.",
+    "concept": "cloudfront-for-dynamic-compute",
+    "trap": "aws-map-trap-edge-location-runs-workloads",
+    "misconception": null,
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "b",
+    "text": "Move the EC2 instances to the AWS Region that is nearest to the city, and keep the current Region as a warm standby.",
+    "correct": false,
+    "why": "It lowers latency, but the nearest Region is still far from the city, while Local Zones sit [close to large population and industry centers](../facts/global-infrastructure.md#global-infrastructure-local-zones-definition-close-to-population-centers).",
+    "concept": "nearest-region",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Move the application to larger EC2 instance types with more vCPUs in the current Region to process each action faster.",
+    "correct": false,
+    "why": "Larger instances shorten the processing time, but the network distance between the city and the Region stays the same.",
+    "concept": "larger-instances-for-latency",
+    "trap": null,
+    "misconception": "Larger instances fix the delay that network distance causes.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Enable a Local Zone near the city, create a subnet in that Local Zone, and run the EC2 instances in that subnet.",
+    "correct": true,
+    "why": "To use a Local Zone, [you must first enable it](../facts/global-infrastructure.md#global-infrastructure-local-zone-must-be-enabled-then-subnet), then [create a subnet in the Local Zone](../facts/global-infrastructure.md#global-infrastructure-local-zone-must-be-enabled-then-subnet) and launch the instances there.",
+    "concept": "local-zone-subnet",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Local Zones are designed for workloads that need [single-digit millisecond latency](../facts/global-infrastructure.md#global-infrastructure-faq-local-zones-single-digit-millisecond-latency-workloads). A Local Zone is [an extension of an AWS Region in geographic proximity to your users](../facts/global-infrastructure.md#global-infrastructure-local-zone-extension-of-region-own-internet), so the EC2 instances run near the city instead of in a distant Region.",
+  "takeaway": "Compute near the users of one city runs in a Local Zone; CloudFront at the edge does not move the compute.",
+  "twin": "If the stem said \"users connect from 5G mobile devices on one carrier network\" instead: AWS Wavelength, because it is designed for [ultralow-latency applications to 5G devices](../facts/global-infrastructure.md#global-infrastructure-faq-wavelength-ultralow-latency-for-5g-devices).",
+  "say": "For compute near one city, I'd use a Local Zone; an edge location runs CloudFront, not your instances.",
+  "facts": [
+   "global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator",
+   "global-infrastructure-local-zones-definition-close-to-population-centers",
+   "global-infrastructure-local-zone-must-be-enabled-then-subnet",
+   "global-infrastructure-faq-local-zones-single-digit-millisecond-latency-workloads",
+   "global-infrastructure-local-zone-extension-of-region-own-internet",
+   "global-infrastructure-faq-wavelength-ultralow-latency-for-5g-devices"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-lowest-latency",
+   "ee-edge"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q005",
+  "section": "2-deep.md#edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.K2"
+  ],
+  "topics": [
+   "networking",
+   "storage",
+   "performance"
+  ],
+  "services": [
+   "cloudfront",
+   "s3",
+   "route53"
+  ],
+  "concept": "edge-locations-for-global-static-content",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company stores product images in one Amazon S3 bucket in a single AWS Region. A web application in the same Region shows the images to users around the world. Users far from the Region report that pages load slowly because the images take a long time to download. The images change once a week, and the application itself responds fast. Which solution will improve the download times for these users with the LEAST operational overhead?",
+  "keywords": [
+   "users around the world",
+   "the images take a long time to download",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Copy the S3 bucket and the web application to several AWS Regions, and route each user to the nearest Region with Amazon Route 53 latency routing.",
+    "correct": false,
+    "why": "It works, but in a multi-Region design [you must duplicate your workload's components in each Region](../facts/global-infrastructure.md#global-infrastructure-multi-region-duplicate-everything-no-cross-region-dependency), which adds far more operational work.",
+    "concept": "multi-region-copies-for-latency",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Create an Amazon CloudFront distribution with the S3 bucket as its origin, and serve the images to the users through the distribution.",
+    "correct": true,
+    "why": "One distribution in front of the existing bucket puts the images at edge locations near the users, and the bucket and the application stay as they are.",
+    "concept": "cloudfront-s3-origin",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Enable a Local Zone in each city where users report slow pages, and run copies of the application and the image storage there.",
+    "correct": false,
+    "why": "Local Zones bring [the core services needed for the latency-sensitive portions of your workload](../facts/global-infrastructure.md#global-infrastructure-faq-local-zones-vs-availability-zones-core-vs-full-services) close to users, but a copy in every city adds much more work.",
+    "concept": "local-zones-for-static-content",
+    "trap": null,
+    "misconception": "A Local Zone is the AWS tool for global content delivery.",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Move the images to the S3 Standard-Infrequent Access storage class, and turn on S3 Versioning to keep each weekly change.",
+    "correct": false,
+    "why": "The images still download from the one Region, so the distance to the users and the slow pages stay the same.",
+    "concept": "storage-class-for-latency",
+    "trap": null,
+    "misconception": "The S3 storage class changes the download speed for distant users.",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "[Amazon CloudFront, Amazon Route 53, AWS Firewall Manager, AWS Shield, and AWS WAF services are provided through AWS Edge Locations](../facts/global-infrastructure.md#global-infrastructure-edge-location-services). A CloudFront distribution in front of the bucket serves the images from edge locations near the users. The bucket, the Region and the application do not change.",
+  "takeaway": "Static content for users around the world: put CloudFront in front of the bucket.",
+  "twin": "If the stem said \"users in one city run an interactive application on EC2\" instead: a Local Zone, because it suits workloads that need [single-digit millisecond latency](../facts/global-infrastructure.md#global-infrastructure-faq-local-zones-single-digit-millisecond-latency-workloads).",
+  "say": "For static files and users everywhere, put CloudFront in front of the bucket and keep one Region.",
+  "facts": [
+   "global-infrastructure-edge-location-services",
+   "global-infrastructure-multi-region-duplicate-everything-no-cross-region-dependency",
+   "global-infrastructure-faq-local-zones-vs-availability-zones-core-vs-full-services",
+   "global-infrastructure-faq-local-zones-single-digit-millisecond-latency-workloads"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-users-around-the-world",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q006",
+  "section": "2-deep.md#the-best-region-is-near-your-users-and-meets-your-data-rules",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.2",
+  "bullets": [
+   "4.2.K3"
+  ],
+  "topics": [
+   "cost",
+   "compute"
+  ],
+  "services": [
+   "ec2"
+  ],
+  "concept": "cheaper-region-for-dev-test",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs its production workload on Amazon EC2 instances in the Asia Pacific (Sydney) Region to serve users in Australia. The engineers also work in Sydney. The company needs a new development and test environment that holds only synthetic test data. The company has no data privacy, security, or business requirements about where the environment runs, and extra latency for the engineers is not a concern. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "no data privacy, security, or business requirements",
+   "is not a concern",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run the development and test EC2 instances in the Asia Pacific (Sydney) Region, next to the production workload of the company.",
+    "correct": false,
+    "why": "It works, but resource prices are [different in each Region](../facts/global-infrastructure.md#global-infrastructure-region-pricing-differs-local-market), and nothing in the stem requires Sydney.",
+    "concept": "same-region-as-production",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Run the development and test EC2 instances in a Local Zone near the office of the engineers to give them lower latency.",
+    "correct": false,
+    "why": "The stem says latency is not a concern, and resources in Local Zones have [different prices than they do in parent AWS Regions](../facts/global-infrastructure.md#global-infrastructure-local-zones-pricing-no-enable-charge-different-prices).",
+    "concept": "local-zone-for-dev-test",
+    "trap": null,
+    "misconception": "A Local Zone is a cheaper place to run test workloads.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Run the development and test EC2 instances in a Region with lower prices than Sydney, such as US East (N. Virginia).",
+    "correct": true,
+    "why": "AWS gives this case as its own example: [deploying non-critical (development and test) Amazon EC2 instances in US East (N. Virginia) (us-east-1) will cost you less](../facts/well-architected.md#well-architected-cheaper-region-for-non-critical-when-no-restrictions).",
+    "concept": "lower-priced-region",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Run the development and test EC2 instances on AWS Outposts in the office of the company, so that the test data stays on premises.",
+    "correct": false,
+    "why": "Outposts is for [workloads that need to remain on premises due to latency requirements](../facts/global-infrastructure.md#global-infrastructure-faq-outposts-for-workloads-that-must-stay-on-premises), and this test environment has no such requirement.",
+    "concept": "outposts-for-dev-test",
+    "trap": null,
+    "misconception": "Test environments belong on premises.",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "AWS says to [use Regions that provide lower prices for AWS services to deploy your workloads if you have no obligations in data privacy, security and business requirements](../facts/well-architected.md#well-architected-cheaper-region-for-non-critical-when-no-restrictions). The stem removes each of those obligations and says latency is not a concern, so price decides the Region.",
+  "takeaway": "With no residency, security, or latency need, choose the lower-priced Region for development and test.",
+  "twin": "If the stem said \"the test data includes customer records that must stay in Australia\" instead: the Sydney Region, because AWS says to [only deploy in Regions with higher costs to meet latency, data residency and data sovereignty requirements](../facts/well-architected.md#well-architected-region-pricing-differs-choose-by-cost).",
+  "say": "Prices differ by Region, so with no data rules I'd put development and test in a cheaper Region.",
+  "facts": [
+   "global-infrastructure-region-pricing-differs-local-market",
+   "global-infrastructure-local-zones-pricing-no-enable-charge-different-prices",
+   "well-architected-cheaper-region-for-non-critical-when-no-restrictions",
+   "global-infrastructure-faq-outposts-for-workloads-that-must-stay-on-premises",
+   "well-architected-region-pricing-differs-choose-by-cost"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-acceptable"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q007",
+  "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K1"
+  ],
+  "topics": [
+   "resilience",
+   "compute"
+  ],
+  "services": [
+   "ec2",
+   "route53",
+   "elb",
+   "ec2-auto-scaling"
+  ],
+  "concept": "multi-region-for-region-failure",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a web application on Amazon EC2 instances in one Availability Zone of an AWS Region. The application keeps no state on the instances, and users reach it through one DNS name. After several short outages, the company wants a more reliable design. The application must remain available if the AWS Region fails. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "in one Availability Zone",
+   "if the AWS Region fails",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run the instances in two Availability Zones of the current Region behind an Application Load Balancer, with an Auto Scaling group that spans both zones.",
+    "correct": false,
+    "why": "Two zones survive a zone failure, but both zones sit inside the failed Region, so the application stops with that Region.",
+    "concept": "multi-az-for-region-failure",
+    "trap": "how-the-exam-asks-trap-multi-az-covers-region",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Run a second copy of the application in another AWS Region, and use Amazon Route 53 failover routing with health checks to send users to the healthy copy.",
+    "correct": true,
+    "why": "A copy in a second Region does not share the failure, and Route 53 can [use the status of health checks to perform failovers between Regions](../facts/global-infrastructure.md#global-infrastructure-route53-failover-use-health-checks-not-record-changes).",
+    "concept": "multi-region-failover",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Run active copies of the application in three AWS Regions at the same time, and use Amazon Route 53 latency routing with health checks to send each user to a copy.",
+    "correct": false,
+    "why": "Three active Regions also survive the failure, but they run three full copies where one copy in a second Region meets the requirement.",
+    "concept": "multi-region-active-active",
+    "trap": "how-the-exam-asks-trap-always-max-availability",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add more instances in the current Availability Zone behind an Application Load Balancer, with an Auto Scaling group that replaces any unhealthy instance.",
+    "correct": false,
+    "why": "If that one zone fails, [none of your EC2 instances would be available](../facts/global-infrastructure.md#global-infrastructure-single-az-failure-takes-all-instances), and a Region failure takes that zone too.",
+    "concept": "more-instances-one-az",
+    "trap": "aws-map-trap-one-az-is-highly-available",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "Each Region is [designed to be isolated from the other Regions](../facts/global-infrastructure.md#global-infrastructure-region-isolated-for-fault-tolerance), and that separation [avoids correlated failures between them](../facts/global-infrastructure.md#global-infrastructure-multi-region-avoids-correlated-failures). A copy in a second Region keeps serving when the first Region fails, and Route 53 health checks send users to it. One standby copy costs less than active copies in three Regions.",
+  "takeaway": "A Region failure needs a copy in a second Region; the zones of the failed Region fail with it.",
+  "twin": "If the stem said \"must remain available if an Availability Zone fails\" instead: two Availability Zones behind a load balancer, because [most customers can achieve their resilience goals in a single Region](../facts/global-infrastructure.md#global-infrastructure-most-customers-single-region-suffices).",
+  "say": "To survive a Region failure, you need a second copy in another Region and health-check failover.",
+  "facts": [
+   "global-infrastructure-route53-failover-use-health-checks-not-record-changes",
+   "global-infrastructure-single-az-failure-takes-all-instances",
+   "global-infrastructure-region-isolated-for-fault-tolerance",
+   "global-infrastructure-multi-region-avoids-correlated-failures",
+   "global-infrastructure-most-customers-single-region-suffices"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-must",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": "aws-map-q001"
+ },
+ {
+  "id": "aws-map-q009",
+  "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": [
+   "3.3.K1"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "sync-in-region-async-cross-region",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a managed relational database for an order system in one AWS Region. The database must lose no committed write if an Availability Zone fails. If the whole Region fails, the company must be able to recover the database in a second Region, and a loss of a few minutes of writes is acceptable. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "lose no committed write if an Availability Zone fails",
+   "a loss of a few minutes of writes is acceptable",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Keep a standby copy of the database in a second Availability Zone of the Region, with synchronous replication from the primary database.",
+    "correct": true,
+    "why": "The zones of a Region are close enough to [replicate data synchronously between Availability Zones](../facts/global-infrastructure.md#global-infrastructure-az-latency-single-digit-ms), so the standby holds every committed write.",
+    "concept": "sync-standby-second-az",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Keep a replica of the database in a second AWS Region, with synchronous replication so that a Region failover loses no write.",
+    "correct": false,
+    "why": "AWS [does not provide a synchronous Cross-Region replication feature](../facts/global-infrastructure.md#global-infrastructure-no-synchronous-cross-region-replication), so this replica cannot be built with an AWS feature.",
+    "concept": "sync-replica-second-region",
+    "trap": "aws-map-trap-sync-replication-across-regions",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Keep a replica of the database in a second AWS Region, with asynchronous replication from the primary database in the first Region.",
+    "correct": true,
+    "why": "The Region copy is asynchronous, and the stem accepts [the possibility of data loss or inconsistency when you fail over](../facts/global-infrastructure.md#global-infrastructure-async-cross-region-replication-may-lose-data) of a few minutes.",
+    "concept": "async-replica-second-region",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Keep a standby copy of the database in a second Availability Zone of the Region, with asynchronous replication every few minutes.",
+    "correct": false,
+    "why": "Asynchronous replication can leave the newest writes behind, so a zone failure can lose committed writes that the stem does not allow.",
+    "concept": "async-standby-second-az",
+    "trap": null,
+    "misconception": "Any copy in a second zone protects every committed write.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "e",
+    "text": "Run a self-managed database on EC2 instances in a second AWS Region, and write a custom process that ships the changes every minute.",
+    "correct": false,
+    "why": "It can meet the few minutes of loss, but a self-managed database and a custom process add far more operational work than a managed replica.",
+    "concept": "self-managed-cross-region",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The two failures need two kinds of copy. Inside the Region, the zones are close enough to [replicate data synchronously between Availability Zones](../facts/global-infrastructure.md#global-infrastructure-az-latency-single-digit-ms). Between Regions, AWS [does not provide a synchronous Cross-Region replication feature](../facts/global-infrastructure.md#global-infrastructure-no-synchronous-cross-region-replication), so the Region copy is asynchronous.",
+  "takeaway": "Synchronous copies work between zones; copies between Regions are asynchronous and can lose recent writes.",
+  "twin": "If the stem said \"a Region failure must lose no committed write\" instead: no AWS replication feature meets it, because AWS [does not provide a synchronous Cross-Region replication feature](../facts/global-infrastructure.md#global-infrastructure-no-synchronous-cross-region-replication).",
+  "say": "Synchronous to a second zone for zero loss, asynchronous to a second Region with a few minutes of loss.",
+  "facts": [
+   "global-infrastructure-az-latency-single-digit-ms",
+   "global-infrastructure-no-synchronous-cross-region-replication",
+   "global-infrastructure-async-cross-region-replication-may-lose-data"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-select-two",
+   "ee-which-combination",
+   "ee-acceptable",
+   "ee-cross-region"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q010",
+  "section": "2-deep.md#availability-zones-fail-separately-so-production-uses-at-least-two",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K1"
+  ],
+  "topics": [
+   "networking",
+   "resilience"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "az-id-across-accounts",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a latency-sensitive application in AWS account A and its database in AWS account B, in the same AWS Region. The VPCs of the two accounts are connected, and each account creates subnets in its own VPC. The company wants the application instances and the database in the same physical Availability Zone. The engineers in each account choose zones by the names that their own console shows, such as us-east-1a. The company must ensure that both workloads use the same physical zone. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "choose zones by the names that their own console shows",
+   "ensure that both workloads use the same physical zone",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create the application subnet in the zone that has the same Availability Zone name, such as us-east-1a, as the database subnet in the other account.",
+    "correct": false,
+    "why": "A zone name [might not be the same physical location as it is in another account](../facts/global-infrastructure.md#global-infrastructure-az-name-mapping-independent-per-account), so matching names does not ensure one physical zone.",
+    "concept": "match-az-name",
+    "trap": null,
+    "misconception": "An Availability Zone name such as us-east-1a is the same physical zone in every account.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Move the application and the database into one AWS account, so that both workloads see the same zone names for the same physical zones.",
+    "correct": false,
+    "why": "It can work, but moving a workload between accounts is far more work than reading one zone attribute in each account.",
+    "concept": "merge-accounts",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Open an AWS Support case to ask AWS to map the Availability Zone names of both accounts to the same physical zones.",
+    "correct": false,
+    "why": "No support case is needed, because an AZ ID already names [the same physical location in every AWS account](../facts/global-infrastructure.md#global-infrastructure-az-id-same-physical-location-every-account).",
+    "concept": "support-remap-names",
+    "trap": null,
+    "misconception": "AWS Support remaps the zone names of an account on request.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Look up the AZ ID of the database subnet, such as use1-az2, and create the application subnet in the zone with the same AZ ID.",
+    "correct": true,
+    "why": "An AZ ID names [the same physical location in every AWS account](../facts/global-infrastructure.md#global-infrastructure-az-id-same-physical-location-every-account), so equal AZ IDs mean one physical zone.",
+    "concept": "match-az-id",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "An Availability Zone ID (AZ ID) names [the same physical location in every AWS account](../facts/global-infrastructure.md#global-infrastructure-az-id-same-physical-location-every-account). Each team looks up the AZ ID of the database zone and creates its subnet in the zone with the matching AZ ID. This needs no move between accounts and no support case.",
+  "takeaway": "Across accounts, match Availability Zones by AZ ID, not by zone name.",
+  "twin": "If the stem said \"both workloads run in one AWS account\" instead: the zone name is enough, because one account sees one physical zone behind each of its zone names.",
+  "say": "Across accounts I'd match zones by AZ ID, because the AZ ID is the same physical zone everywhere.",
+  "facts": [
+   "global-infrastructure-az-name-mapping-independent-per-account",
+   "global-infrastructure-az-id-same-physical-location-every-account"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-ensure"
+  ],
+  "twin_of": null
+ }
+]

@@ -1,0 +1,115 @@
+[docs/vpc/latest/userguide/flow-logs-records-examples] lines 1-115 of 251 | https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-records-examples.html | fetched 2026-10-11T21:36:48Z
+
+
+# Flow log record examples
+<a name="flow-logs-records-examples"></a>
+
+The following are examples of flow log records that capture specific traffic flows.
+
+For information about flow log record format, see [Flow log records](flow-log-records.md). For information about how to create flow logs, see [Work with flow logs](working-with-flow-logs.md).
+
+**Topics**
++ [Accepted and rejected traffic](#flow-log-example-accepted-rejected)
++ [No data and skipped records](#flow-log-example-no-data)
++ [Security group and network ACL rules](#flow-log-example-security-groups)
++ [IPv6 traffic](#flow-log-example-ipv6)
++ [TCP flag sequence](#flow-log-example-tcp-flag)
++ [Traffic through a zonal NAT gateway](#flow-log-example-nat)
++ [Traffic through a regional NAT gateway](#flow-log-example-regional-nat)
++ [Traffic through a transit gateway](#flow-log-example-tgw)
++ [Service name, traffic path, and flow direction](#flow-log-example-traffic-path)
+
+## Accepted and rejected traffic
+<a name="flow-log-example-accepted-rejected"></a>
+
+The following are examples of default flow log records.
+
+In this example, SSH traffic (destination port 22, TCP protocol) from IP address 172.31.16.139 to network interface with private IP address is 172.31.16.21 and ID eni-1235b8ca123456789 in account 123456789010 was allowed.
+
+```
+2 123456789010 eni-1235b8ca123456789 172.31.16.139 172.31.16.21 20641 22 6 20 4249 1418530010 1418530070 ACCEPT OK
+```
+
+In this example, RDP traffic (destination port 3389, TCP protocol) to network interface eni-1235b8ca123456789 in account 123456789010 was rejected.
+
+```
+2 123456789010 eni-1235b8ca123456789 172.31.9.69 172.31.9.12 49761 3389 6 20 4249 1418530010 1418530070 REJECT OK
+```
+
+## No data and skipped records
+<a name="flow-log-example-no-data"></a>
+
+The following are examples of default flow log records.
+
+In this example, no data was recorded during the aggregation interval.
+
+```
+2 123456789010 eni-1235b8ca123456789 - - - - - - - 1431280876 1431280934 - NODATA
+```
+
+VPC Flow Logs skips records when it can't capture flow log data during an aggregation interval because it exceeds internal capacity. A single skipped record can represent multiple flows that were not captured for the network interface during the aggregation interval.
+
+```
+2 123456789010 eni-11111111aaaaaaaaa - - - - - - - 1431280876 1431280934 - SKIPDATA
+```
+
+**Note**  
+Some flow log records may be skipped during the aggregation interval (see *log-status* in [Available fields](flow-log-records.md#flow-logs-fields)). This may be caused by an internal AWS capacity constraint or internal error. If you are using AWS Cost Explorer to view VPC flow log charges and some flow logs are skipped during the flow log aggregation interval, the number of flow logs reported in AWS Cost Explorer will be higher than the number of flow logs published by Amazon VPC.
+
+## Security group and network ACL rules
+<a name="flow-log-example-security-groups"></a>
+
+If you're using flow logs to diagnose overly restrictive or permissive security group rules or network ACL rules, be aware of the statefulness of these resources. Security groups are stateful — this means that responses to allowed traffic are also allowed, even if the rules in your security group do not permit it. Conversely, network ACLs are stateless, therefore responses to allowed traffic are subject to network ACL rules.
+
+For example, you use the **ping** command from your home computer (IP address is 203.0.113.12) to your instance (the network interface's private IP address is 172.31.16.139). Your security group's inbound rules allow ICMP traffic but the outbound rules do not allow ICMP traffic. Because security groups are stateful, the response ping from your instance is allowed. Your network ACL permits inbound ICMP traffic but does not permit outbound ICMP traffic. Because network ACLs are stateless, the response ping is dropped and does not reach your home computer. In a default flow log, this is displayed as two flow log records:
++ An ACCEPT record for the originating ping that was allowed by both the network ACL and the security group, and therefore was allowed to reach your instance.
++ A REJECT record for the response ping that the network ACL denied.
+
+```
+2 123456789010 eni-1235b8ca123456789 203.0.113.12 172.31.16.139 0 0 1 4 336 1432917027 1432917142 ACCEPT OK
+```
+
+```
+2 123456789010 eni-1235b8ca123456789 172.31.16.139 203.0.113.12 0 0 1 4 336 1432917094 1432917142 REJECT OK
+```
+
+If your network ACL permits outbound ICMP traffic, the flow log displays two ACCEPT records (one for the originating ping and one for the response ping). If your security group denies inbound ICMP traffic, the flow log displays a single REJECT record, because the traffic was not permitted to reach your instance.
+
+## IPv6 traffic
+<a name="flow-log-example-ipv6"></a>
+
+The following is an example of a default flow log record. In the example, SSH traffic (port 22) from IPv6 address 2001:db8:1234:a100:8d6e:3477:df66:f105 to network interface eni-1235b8ca123456789 in account 123456789010 was allowed.
+
+```
+2 123456789010 eni-1235b8ca123456789 2001:db8:1234:a100:8d6e:3477:df66:f105 2001:db8:1234:a102:3304:8879:34cf:4071 34892 22 6 54 8855 1477913708 1477913820 ACCEPT OK
+```
+
+## TCP flag sequence
+<a name="flow-log-example-tcp-flag"></a>
+
+This section contains examples of custom flow logs that capture the following fields in the following order.
+
+```
+version vpc-id subnet-id instance-id interface-id account-id type srcaddr dstaddr srcport dstport pkt-srcaddr pkt-dstaddr protocol bytes packets start end action tcp-flags log-status
+```
+
+The tcp-flags field in the examples in this section are represented by the second-to-last value in the flow log. TCP flags can help you identify the direction of the traffic, for example, which server initiated the connection.
+
+**Note**  
+For more information about the tcp-flags option and an explanation of each of the TCP flags, see [Available fields](flow-log-records.md#flow-logs-fields).
+
+In the following records (starting at 7:47:55 PM and ending at 7:48:53 PM), two connections were started by a client to a server running on port 5001. Two SYN flags (2) were received by server from the client from different source ports on the client (43416 and 43418). For each SYN, a SYN-ACK was sent from the server to the client (18) on the corresponding port.
+
+```
+3 vpc-abcdefab012345678 subnet-aaaaaaaa012345678 i-01234567890123456 eni-1235b8ca123456789 123456789010 IPv4 52.213.180.42 10.0.0.62 43416 5001 52.213.180.42 10.0.0.62 6 568 8 1566848875 1566848933 ACCEPT 2 OK
+3 vpc-abcdefab012345678 subnet-aaaaaaaa012345678 i-01234567890123456 eni-1235b8ca123456789 123456789010 IPv4 10.0.0.62 52.213.180.42 5001 43416 10.0.0.62 52.213.180.42 6 376 7 1566848875 1566848933 ACCEPT 18 OK
+3 vpc-abcdefab012345678 subnet-aaaaaaaa012345678 i-01234567890123456 eni-1235b8ca123456789 123456789010 IPv4 52.213.180.42 10.0.0.62 43418 5001 52.213.180.42 10.0.0.62 6 100701 70 1566848875 1566848933 ACCEPT 2 OK
+3 vpc-abcdefab012345678 subnet-aaaaaaaa012345678 i-01234567890123456 eni-1235b8ca123456789 123456789010 IPv4 10.0.0.62 52.213.180.42 5001 43418 10.0.0.62 52.213.180.42 6 632 12 1566848875 1566848933 ACCEPT 18 OK
+```
+
+In the second aggregation interval, one of the connections that was established during the previous flow is now closed. The server sent a FIN flag (1) to the client for the connection on port 43418. The client responded with a FIN to the server on port 43418.
+
+```
+3 vpc-abcdefab012345678 subnet-aaaaaaaa012345678 i-01234567890123456 eni-1235b8ca123456789 123456789010 IPv4 10.0.0.62 52.213.180.42 5001 43418 10.0.0.62 52.213.180.42 6 63388 1219 1566848933 1566849113 ACCEPT 1 OK
+3 vpc-abcdefab012345678 subnet-aaaaaaaa012345678 i-01234567890123456 eni-1235b8ca123456789 123456789010 IPv4 52.213.180.42 10.0.0.62 43418 5001 52.213.180.42 10.0.0.62 6 23294588 15774 1566848933 1566849113 ACCEPT 1 OK
+```

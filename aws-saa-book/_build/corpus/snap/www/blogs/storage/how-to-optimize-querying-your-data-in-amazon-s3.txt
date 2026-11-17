@@ -1,0 +1,92 @@
+Skip to Main Content
+## AWS Storage Blog
+# How to optimize querying your data in Amazon S3
+After careful consideration, we have made the decision to close new customer access to Amazon S3 Select and Amazon S3 Glacier Select, effective July 25, 2024. Amazon S3 Select and Amazon S3 Glacier Select existing customers can continue to use the service as usual. AWS continues to invest in security and availability improvements for Amazon S3 Select and Amazon S3 Glacier Select, but we do not plan to introduce new capabilities.
+October 7, 2025: Removed Amazon S3 Object Lambda as a recommended alternative, as it will be available only to existing customers that are currently using the service as well as to select AWS Partner Network (APN) partners starting on November 7th, 2025. If you would like to use the service, please sign up prior to November 7th, 2025. For capabilities similar to S3 Object Lambda, read the user guide.
+Querying data efficiently and effectively has become a critical capability for customers across industries. By querying data, customers can filter the contents of data, retrieving only the subset of data that they need. Customers need the ability to query and retrieve specific subsets of data relevant to their current needs or objectives. By extracting information from data, organizations can gain valuable insights, make data-driven decisions, and ultimately drive business success in an increasingly competitive and data-driven landscape.
+With data in Amazon S3, you have a couple options for querying data, including client-side filtering and Amazon Athena. First, you can download an S3 object to your AWS compute instance and then query it. This option provides high performance for querying a single S3 object or an object restored from the Amazon S3 Glacier storage classes. Second, for data lake use cases where you are looking to query multiple S3 objects at once, we recommend using Athena. Athena is serverless, so there is no infrastructure to set up or manage.
+In this post, we discuss how to choose the best option for querying your data in S3 and walk through the steps for using each of these options.
+## Choosing the right option for your use case
+Depending on your use case, one of the two options might be the most efficient. Let’s dive into these solutions and the unique benefits of each one.
+1. Client-side filtering
+You can download an S3 object to your AWS compute instance and query the contents using data analysis libraries on your client application. For example, in a Python application that queries Parquet objects in S3, you can use the S3 GET API to download the object and query the contents using the ‘Pandas’ library.
+This option provides high performance among the available options in most cases, depending on the query’s filtering ratio and object properties (size and compression ratio). This is because using S3 GET API to download a compressed object and querying it in your client application is usually faster than transferring the larger uncompressed query results over the network. To learn more about the S3 GET API, refer to the S3 GetObject API documentation.
+2. Amazon Athena
+Amazon Athena is an interactive query service that makes it easy to analyze data directly in S3 using standard SQL. You should use Athena if you want to run interactive impromptu SQL queries against data in S3, without having to manage any infrastructure.
+Athena uses a distributed SQL engine, Trino, to run queries on objects stored in S3, represented as Hive tables. After setting up a table, you can use Athena to query your S3 objects. You can process multiple S3 objects in a single query or even use join operations and window functions to query your S3 objects. Additionally, Athena supports data formats such as ORC and Apache Avro, and also objects compressed with the Zstandard algorithm. To learn more, refer to the Amazon Athena User Guide, “Analyzing data in S3 using Amazon Athena” blog post, and “Query restored Amazon S3 Glacier objects” in the Athena User Guide.
+## Walkthrough
+In this section, we describe how to use client-side filtering and Athena to query data from Amazon S3 and Amazon S3 Glacier storage classes. For example, you might have a log file stored in S3, containing information about each request from your application. You may want to query this log file to filter out information specific to a particular request that took longer to finish than expected. In this example, we will consider the following log file structured as a CSV file with two columns: request_id and log_text.
+R1001, this is the first log line
+R1002, this is the second log line
+For objects stored in S3 Glacier Flexible Retrieval or S3 Glacier Deep Archive storage classes, you will need to restore the relevant objects using RestoreObject API.
+# Restore objects from S3 Glacier (if applicable)
+s3.restore_object(
+Bucket='examplebucket',
+Key='archivedobjectkey',
+RestoreRequest={
+	'Days': 1,
+		'GlacierJobParameters': {
+			'Tier': 'Standard',
+		},
+},
+)
+Option 1: Client-side filtering
+Download the object using the S3 GET API and then use any data analysis library to query the object in your client application, filtering only the required subset of the object. In this example, we use the AWS SDK for Python (Boto3) with AWS Common Runtime (CRT) to download the S3 object. Then we query the object using the Pandas library with PyArrow engine.
+import pandas as pd
+import boto3
+from boto3.s3.transfer import TransferConfig
+s3 = boto3.client("s3")
+# Download the S3 object, setting concurrency based on your instance’s processing capacity.
+s3.download_file(bucket, key, 'output.parquet', Config=TransferConfig(max_concurrency=concurrency-value))
+# Filter the S3 object
+args = {'filters': [('column_1', '=', 'R1001')]}
+df = pd.read_parquet('output.parquet', engine='pyarrow', **args)
+Option 2: Amazon Athena
+Use Amazon Athena to query your S3 objects using standard SQL queries. To do this, create a table in Athena using an S3 bucket as the source location for data and run your desired queries on the Athena table. The results are stored in the query result location that you set up, and they can be downloaded upon completion of the query. To query restored objects from the S3 Glacier storage classes, you also need to enable S3 Glacier access for queries in Athena SQL workgroups. Please see this blog post for more information.
+- Open the Amazon Athena console. If this is your first time using the Athena console in your current AWS Region, then choose the Explore the query editor option to open the query editor. Choose Edit Settings to set up a query result location in S3. For each query that you run, Athena automatically stores the query results and metadata information in this query result location.
+- Create a table using Hive syntax.
+CREATE EXTERNAL TABLE IF NOT EXISTS `my_db`.`my_app_logs` (`request_id` string, `log_text` string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION 's3://my-s3-bucket/path/to/files'
+TBLPROPERTIES ('classification' = 'parquet');
+3. If you are using restored objects in Athena, then you can use the ALTER TABLE SET TBLPROPERTIES command to set the table property, as in the following example.
+ALTER TABLE table_name SET TBLPROPERTIES (‘read_restored_glacier_objects’ = ‘true’)
+4. Start a query using Athena.
+import boto3
+athena_client = boto3.client('athena')
+# Start a query
+request_id = 'R1001'
+start_query_response = athena_client.start_query_execution(
+        QueryString=f'select log_text from my_app_logs where request_id={request_id}',
+        QueryExecutionContext={'Database': 'my_db'},
+        ResultConfiguration={'OutputLocation': 's3://my-s3-bucket/path/to/results'}
+    )
+query_execution_id = response['QueryExecutionId']
+5. Monitor the progress periodically to check if the query has finished executing.
+finish_state = athena_client.get_query_execution(QueryExecutionId=query_execution_id)['QueryExecution']['Status']['State']
+# handle finish_states:
+#    wait and monitor again if RUNNING/QUEUED
+#    throw an error or start a new query if FAILED/CANCELLED
+6. Get the query results if your query ran successfully.
+if finish_state == 'SUCCEEDED':
+    athena_query_response = s3.get_object(Bucket=self.output_location,
+                                     Key=f'results/{query_execution_id}.csv')
+## Conclusion
+In this post, we discussed options for querying data in Amazon S3, each with its own benefits. We talked about how you can choose the right option for your use case and walked through the steps you can take to start using each of these options.
+In summary, you can download your objects into your Amazon compute instance and use a data analysis library for client-side filtering to get high performance for querying single S3 objects or restored S3 Glacier storage class objects. You can use Athena to query single or multiple S3 objects, or restored S3 Glacier storage class objects, with SQL queries, and benefit from its support of additional file formats and compression types. This is particularly suited for serverless workloads where you can run SQL queries against data in S3, without having to manage any infrastructure.
+Thank you for reading this post. Feel free to leave any comments in the following section.
+Loading comments…
+### Resources
+- AWS Cloud Storage
+- Getting Started with AWS Storage
+- What's New with AWS Storage
+- Case Studies
+### Follow
+- Twitter
+- Facebook
+- LinkedIn
+- Twitch
+- RSS Feed
+- Email Updates

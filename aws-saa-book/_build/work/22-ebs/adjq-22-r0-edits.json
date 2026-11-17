@@ -1,0 +1,334 @@
+[
+ {
+  "id": "ebs-q006",
+  "section": "2-deep.md#ssd-volumes-serve-small-random-io-and-hdd-volumes-serve-large-sequential-reads",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.1",
+  "bullets": ["4.1.K6", "4.1.S10"],
+  "topics": ["storage", "cost", "performance"],
+  "services": ["ebs"],
+  "concept": "st1-for-sequential-throughput",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a workload on one Amazon EC2 instance that is built on the Nitro System. The instance boots from a separate root volume, and the workload keeps its data on one 2 TiB Amazon EBS data volume. The workload is a log processing job that reads large files sequentially many times a day and must finish each scan quickly. Each scan needs a sustained read throughput of 60 MiB/s from start to end. The company must choose the volume type for the data volume. Which volume type is the MOST cost-effective choice that meets these requirements?",
+  "keywords": [
+   "reads large files sequentially many times a day",
+   "sustained read throughput of 60 MiB/s",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "A General Purpose SSD (gp3) volume, with IOPS and throughput provisioned above the included baseline only as far as the workload needs them.",
+    "correct": false,
+    "why": "gp3 meets the rate, but in the example Region its storage costs [$0.08 per GB-month](../facts/ebs.md#ebs-gp3-storage-price-example), against [$0.045 per GB-month](../facts/ebs.md#ebs-st1-storage-price-example) for st1.",
+    "concept": "gp3-volume",
+    "trap": null,
+    "misconception": "SSD is the cheapest fit for any workload that must be fast",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "A Provisioned IOPS SSD (io2 Block Express) volume, with IOPS provisioned for the busiest hour of the workload and kept at that level all day.",
+    "correct": false,
+    "why": "It works, but io2 Block Express is for needs such as [consistent sub-millisecond latency](../facts/ebs.md#ebs-io2-use-cases), which a log scan does not have.",
+    "concept": "io2-block-express-volume",
+    "trap": null,
+    "misconception": "the fastest SSD type is needed for fast scans",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "A Throughput Optimized HDD (st1) volume, sized so that its throughput matches the reads and writes that the workload performs each day.",
+    "correct": true,
+    "why": "st1 is built for [big data, data warehouses, log processing](../facts/ebs.md#ebs-st1-use-cases), and after a burst it keeps [40 MiB/s per TiB](../facts/ebs.md#ebs-st1-max-throughput), which covers 60 MiB/s on 2 TiB.",
+    "concept": "st1-volume",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "A Cold HDD (sc1) volume, which has the lowest storage price per GB of all EBS volume types, sized to hold the data of the workload.",
+    "correct": false,
+    "why": "sc1 costs less per GB, but after its burst it falls to [12 MiB/s per TiB](../facts/ebs.md#ebs-sc1-max-throughput), which is well below 60 MiB/s on a 2 TiB volume.",
+    "concept": "sc1-volume",
+    "trap": "how-the-exam-asks-trap-cheapest-wins",
+    "misconception": null,
+    "distractor_type": "keyword-bait"
+   }
+  ],
+  "explanation": "A steady 60 MiB/s of large, sequential reads decides this question. HDD volumes measure performance [in terms of throughput rather than IOPS](../facts/ebs.md#ebs-hdd-performance-in-throughput-not-iops), and st1 is designed for [frequently accessed, throughput-intensive workloads](../facts/ebs.md#ebs-st1-low-cost-frequent-throughput) such as log processing. sc1 fits [colder data requiring fewer scans per day](../facts/ebs.md#ebs-sc1-use-cases), and gp3 costs more per GB than st1 for the same scan.",
+  "takeaway": "Frequent large, sequential scans point to st1; rare scans of cold data point to sc1.",
+  "twin": "If the stem said \"a relational database with small, random reads and writes that needs about 10,000 IOPS\" instead: gp3, because such a workload [won't perform well on HDD-backed volumes](../facts/ebs.md#ebs-faq-hdd-not-for-random-small-io).",
+  "say": "Big sequential scans many times a day: that's st1.",
+  "facts": [
+   "ebs-hdd-performance-in-throughput-not-iops",
+   "ebs-io2-use-cases",
+   "ebs-st1-use-cases",
+   "ebs-st1-low-cost-frequent-throughput",
+   "ebs-sc1-use-cases",
+   "ebs-faq-hdd-not-for-random-small-io",
+   "ebs-gp3-storage-price-example",
+   "ebs-st1-storage-price-example",
+   "ebs-st1-max-throughput",
+   "ebs-sc1-max-throughput"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-cost-effective"],
+  "twin_of": "ebs-q001"
+ },
+ {
+  "id": "ebs-q009",
+  "section": "2-deep.md#instance-store-data-lives-on-the-host-and-ends-with-the-instance",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.1",
+  "bullets": ["3.1.K3", "3.1.S1"],
+  "topics": ["storage", "resilience", "cost"],
+  "services": ["ebs", "instance-store", "ec2"],
+  "concept": "ebs-keeps-data-through-stop",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a media processing application on a fleet of Amazon EC2 instances in one AWS Region. Each instance writes many working files while it processes a job, and the job needs about 2,000 IOPS of small, random reads and writes on each instance. The company must make sure that the files are still there after the instances are stopped and started again for maintenance every weekend. Which storage solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "still there after the instances are stopped and started again",
+   "about 2,000 IOPS of small, random reads and writes",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Launch the fleet on an instance type that provides instance store volumes, and write the working files to those volumes.",
+    "correct": false,
+    "why": "Instance store data is lost when the instance is [stopped, hibernated, or terminated](../facts/instance-store.md#instance-store-data-persists-reboot-not-stop), so the weekend stop erases the files.",
+    "concept": "instance-store-scratch",
+    "trap": "ec2-trap-stop-keeps-instance-store",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Attach a General Purpose SSD (gp3) Amazon EBS volume to each instance, and write the working files to that volume.",
+    "correct": true,
+    "why": "An EBS volume keeps its data through a stop, and gp3 includes a baseline of [3,000 IOPS](../facts/ebs.md#ebs-gp3-baseline-iops) in the price of storage, which covers this job.",
+    "concept": "ebs-for-scratch-data",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Attach a Provisioned IOPS SSD (io2 Block Express) Amazon EBS volume to each instance, and write the working files to that volume.",
+    "correct": false,
+    "why": "It works, but io2 Block Express is for needs such as [consistent sub-millisecond latency](../facts/ebs.md#ebs-io2-use-cases), while gp3 is [the lowest cost SSD volume](../facts/ebs.md#ebs-gp3-lowest-cost-ssd).",
+    "concept": "io2-for-working-files",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Attach a Cold HDD (sc1) Amazon EBS volume to each instance, and write the working files to that volume.",
+    "correct": false,
+    "why": "Small, random I/O [won't perform well on HDD-backed volumes](../facts/ebs.md#ebs-faq-hdd-not-for-random-small-io), so a low price per GB does not help when the job needs fast I/O.",
+    "concept": "hdd-for-random-io",
+    "trap": "how-the-exam-asks-trap-cheapest-wins",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The deciding phrase is the weekend stop and start. An EBS volume is [off-instance storage](../facts/ebs.md#ebs-volume-persists-independently-of-instance) that [remains attached throughout the stop-start cycle](../facts/ebs.md#ebs-volume-stays-attached-through-stop-start), while instance store data is [cryptographically erased](../facts/instance-store.md#instance-store-data-persists-reboot-not-stop) at a stop. Among the EBS types, gp3 is [the lowest cost SSD volume](../facts/ebs.md#ebs-gp3-lowest-cost-ssd), and its included [3,000 IOPS](../facts/ebs.md#ebs-gp3-baseline-iops) cover the 2,000 IOPS of each instance.",
+  "takeaway": "Data that has to survive a stop goes on an EBS volume, not on instance store.",
+  "twin": "If the stem said \"the files are temporary scratch data that need the lowest latency\" instead: instance store, because it gives [high random I/O performance with very low latency](../facts/instance-store.md#instance-store-ssd-high-random-io).",
+  "say": null,
+  "facts": [
+   "instance-store-data-persists-reboot-not-stop",
+   "ebs-gp3-baseline-iops",
+   "ebs-io2-use-cases",
+   "ebs-gp3-lowest-cost-ssd",
+   "ebs-faq-hdd-not-for-random-small-io",
+   "ebs-volume-persists-independently-of-instance",
+   "ebs-volume-stays-attached-through-stop-start",
+   "instance-store-ssd-high-random-io"
+  ],
+  "sources": [],
+  "exam_english": ["ee-ensure", "ee-most-cost-effective"],
+  "twin_of": "ebs-q002"
+ },
+ {
+  "id": "ebs-q011",
+  "section": "2-deep.md#copying-or-sharing-a-snapshot-puts-the-backup-in-another-region-or-account",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": ["1.3.S5", "1.3.S2"],
+  "topics": ["security", "storage", "resilience"],
+  "services": ["ebs", "kms"],
+  "concept": "share-encrypted-snapshot-cross-account",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company stores customer data on Amazon EBS volumes and takes daily snapshots of them. All of the snapshots are encrypted with the AWS managed key for Amazon EBS. A new security rule requires a copy of each snapshot in a separate, isolated backup account in the same AWS Region, so that a compromise of the production account does not reach the copies. Which solution will meet these requirements in the MOST secure way?",
+  "keywords": [
+   "encrypted with the AWS managed key",
+   "isolated backup account",
+   "MOST secure"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Share the existing snapshots with the backup account, and let the backup account copy them with a KMS key that it owns.",
+    "correct": false,
+    "why": "[You can't share snapshots that are encrypted](../facts/ebs.md#ebs-snapshot-aws-managed-key-not-shareable) with the AWS managed key, so the backup account gets nothing to copy.",
+    "concept": "share-aws-managed-key-snapshot",
+    "trap": "ebs-trap-share-snapshot-with-aws-managed-key",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Edit the key policy of the AWS managed key for Amazon EBS to allow the backup account, and share the existing snapshots with that account.",
+    "correct": false,
+    "why": "You [cannot change any properties of AWS managed keys](../facts/kms.md#kms-aws-managed-key-cannot-change), including their key policies, so the backup account gets no access.",
+    "concept": "edit-aws-managed-key-policy",
+    "trap": "kms-trap-aws-managed-key-controllable",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Copy the snapshots with a customer managed key, share that key and the copies with the backup account, and let that account copy them with a KMS key that it owns.",
+    "correct": true,
+    "why": "A copy can use a new key [during a snapshot copy operation](../facts/ebs.md#ebs-encryption-key-fixed-change-on-copy), and to share the copy [you must also share the customer managed key](../facts/ebs.md#ebs-snapshot-share-encrypted-share-cmk-too).",
+    "concept": "copy-with-customer-managed-key-and-share",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Copy the snapshots with a customer managed key, share that key and the copies with every account in the organization, and let each account copy them with its own key.",
+    "correct": false,
+    "why": "It works, but every account in the organization can then read the copies, which is less secure than one isolated account.",
+    "concept": "share-with-whole-organization",
+    "trap": null,
+    "misconception": "sharing a backup with every account of the organization is as safe as sharing it with one account",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The AWS managed key decides this question. Only snapshots [encrypted with a customer managed key](../facts/ebs.md#ebs-snapshot-aws-managed-key-not-shareable) can be shared. So the company copies each snapshot with that kind of key and shares the key and the copies with the one backup account. That account then copies them [using a KMS key that you own](../facts/ebs.md#ebs-shared-snapshot-recopy-with-own-key), which guards against [your account being compromised](../facts/ebs.md#ebs-dlm-cross-account-copy-isolated-account).",
+  "takeaway": "To share an encrypted snapshot, copy it with a customer managed key, share it with one account, and let that account copy again.",
+  "twin": "If the stem said \"the snapshots are encrypted with a customer managed key\" instead: share the snapshots directly and give the backup account permission on that key, because [you must also share the customer managed key](../facts/ebs.md#ebs-snapshot-share-encrypted-share-cmk-too).",
+  "say": "I'd copy the snapshots with a customer managed key, share it with the backup account only, and let that account copy them again.",
+  "facts": [
+   "ebs-snapshot-aws-managed-key-not-shareable",
+   "kms-aws-managed-key-cannot-change",
+   "ebs-encryption-key-fixed-change-on-copy",
+   "ebs-snapshot-share-encrypted-share-cmk-too",
+   "ebs-shared-snapshot-recopy-with-own-key",
+   "ebs-dlm-cross-account-copy-isolated-account"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-secure", "ee-isolate"],
+  "twin_of": null
+ },
+ {
+  "id": "ebs-q015",
+  "section": "2-deep.md#multi-attach-shares-one-io2-volume-and-the-application-must-coordinate-writes",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.1",
+  "bullets": ["4.1.K4"],
+  "topics": ["storage", "resilience"],
+  "services": ["ebs", "ec2"],
+  "concept": "multi-attach-for-a-cluster",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an application on two Amazon EC2 Linux instances that are built on the Nitro System. Both instances are in the same Availability Zone. The application must be highly available, so both nodes must read and write the same block storage at the same time, and either node must be able to take over at once. The application itself does not coordinate writes between the two nodes. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "same Availability Zone",
+   "the same block storage",
+   "does not coordinate writes",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a Provisioned IOPS SSD (io2 Block Express) volume with Multi-Attach turned on, and attach the volume to both instances.",
+    "correct": true,
+    "why": "Multi-Attach lets you [attach a single Provisioned IOPS SSD](../facts/ebs.md#ebs-multi-attach-provisioned-iops-same-az) volume to instances [in the same Availability Zone](../facts/ebs.md#ebs-multi-attach-provisioned-iops-same-az), as these two nodes are.",
+    "concept": "io2-multi-attach",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Create a General Purpose SSD (gp3) volume with Multi-Attach turned on, and attach the volume to both instances in the zone.",
+    "correct": false,
+    "why": "Multi-Attach is [supported exclusively on](../facts/ebs.md#ebs-multi-attach-provisioned-iops-only) io1 and io2 volumes, so a gp3 volume cannot serve both instances.",
+    "concept": "gp3-multi-attach",
+    "trap": "ebs-trap-multi-attach-any-volume-type",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Format the shared volume with the XFS file system, and mount the file system on both instances at the same time.",
+    "correct": false,
+    "why": "XFS is [not designed to be accessed simultaneously](../facts/ebs.md#ebs-multi-attach-needs-clustered-file-system) by several instances, so two nodes that mount it can corrupt the data.",
+    "concept": "standard-file-system-on-shared-volume",
+    "trap": "ebs-trap-multi-attach-as-shared-file-system",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Format the shared volume with a clustered file system, and let the cluster software coordinate the writes of both nodes.",
+    "correct": true,
+    "why": "With Multi-Attach you should [use a clustered file system](../facts/ebs.md#ebs-multi-attach-needs-clustered-file-system), which keeps the writes of both nodes safe.",
+    "concept": "clustered-file-system",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Write new code in the application that coordinates every write of both nodes to the shared volume at the block level.",
+    "correct": false,
+    "why": "Code that [coordinates safe access at the application-level](../facts/ebs.md#ebs-faq-multi-attach-application-requirements) can work, but it is new code to build and test.",
+    "concept": "custom-write-coordination",
+    "trap": null,
+    "misconception": "the team must write its own code to coordinate writes to a shared volume",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "One zone and one shared block device decide this question. Multi-Attach gives each attached instance [full read and write permission](../facts/ebs.md#ebs-multi-attach-provisioned-iops-same-az) on one io2 volume. Standard file systems are not built for that, and the application does not order its own writes, so you [use a clustered file system](../facts/ebs.md#ebs-multi-attach-needs-clustered-file-system) and let the cluster software order them.",
+  "takeaway": "Shared block storage for a cluster in one zone means io2 with Multi-Attach and a clustered file system.",
+  "twin": "If the stem said \"web servers in three Availability Zones need the same files\" instead: Amazon EFS, which stores data [within and across multiple Availability Zones](../facts/ebs.md#ebs-vs-efs-az-scope-and-sharing).",
+  "say": "Two nodes in one zone can share one io2 volume with Multi-Attach, on a clustered file system.",
+  "facts": [
+   "ebs-multi-attach-provisioned-iops-same-az",
+   "ebs-multi-attach-provisioned-iops-only",
+   "ebs-multi-attach-needs-clustered-file-system",
+   "ebs-faq-multi-attach-application-requirements",
+   "ebs-vs-efs-az-scope-and-sharing"
+  ],
+  "sources": [],
+  "exam_english": ["ee-select-two", "ee-which-combination", "ee-highly-available", "ee-least-operational-overhead"],
+  "twin_of": null
+ }
+]

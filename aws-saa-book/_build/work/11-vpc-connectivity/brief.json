@@ -1,0 +1,1929 @@
+{
+  "chapter": "11",
+  "angle": "Follow one packet as the network grows: between two VPCs over a peering connection (1), why peering stops at one hop and what a full mesh costs (2), through a transit gateway hub and its route tables (3), with separate route tables that isolate groups (4); then from a private subnet to an AWS service through an interface endpoint (5), limited by an endpoint policy (6); and last from another company's VPC to one service through PrivateLink, where only the consumer starts connections and overlapping CIDR blocks are allowed (7). Chapter 10 already taught gateway endpoints, NAT gateways and route tables; this chapter links back to them and goes deeper on interface endpoints, endpoint policies and PrivateLink.",
+  "brief_by": "brief-11",
+  "written_at": "2026-10-14",
+  "template": "medium (no chapter override). Hand files: 1-fast.md (at most 1,000 words, the file limit is an error), 2-deep.md (1,800 to 2,400 words, the file limit is an error; How it works 1,300 to 1,800 in 7 subsections, each 150 to 400 words of body and callouts). No 2-services.md (the registry entry has no cards list). Generated: 3-do.md, 4-say.md, 5-quiz.md, sources.md. Counts: 12 questions written (10 shipped: core 5, extended 5; at least 1 twin pair, 1 to 2 multiple-response, 1 worked), 2 speak items (1 pass route), 12 written cards (core 4, extended 8), 0 to 1 Look, 1 to 2 Try, 0 Lab, 1 to 4 diagrams (3 planned), at most 7 brief traps (7 planned).",
+  "base": "Pattern: _build/style/exemplar/ (README, iam-2-deep.md, vpc-2-deep-slice.md): house pattern U1 (problem, numbered trace with bold step names, compressing table when there are two or more cases, one Why reason, Exam signal, Exam trap or Go deeper or Try it or Spot the bug, Say it, Stop and answer). Shape of this brief: _build/work/19-containers/brief.json. Link texts in the plans are displays copied from _build/work/11-vpc-connectivity/fact-cards.md (chapter facts) and from the verified facts of chapters 03, 04, 10, 12, 13, 14, 21 and 28 (linked by id). A link text in [brackets] is followed by its fact id in (parentheses); copy the bracket text exactly, in lowercase where it stands mid-sentence, with the apostrophe the display has (straight ' or curly ’).",
+  "notes_for_writers": [
+    "Read the exemplar first. Each How-it-works subsection follows U1 and ends with Say it, then Stop and answer with its reveal. Spend the words on the trace, not on lists.",
+    "Budgets are tight and the file limits are errors: 1-fast.md at most 1,000 words; 2-deep.md at most 2,400. lint.word_count counts reveals, Go deeper blocks, prompts, alt texts and captions. Use the per-section aims in budgets.",
+    "Names: 'AWS Transit Gateway' is the service, 'transit gateway' the resource; never write TGW. 'AWS PrivateLink' (or PrivateLink after first use); 'VPC peering connection' (or peering connection). Spell out at first use in each file: Availability Zone (AZ), CIDR block is a bank term, AWS Resource Access Manager (AWS RAM), maximum transmission unit (MTU), Network Load Balancer (never NLB in prose), Gateway Load Balancer (never GWLB in prose).",
+    "Volatile (changed within 24 months) or recent topics are taught as options, never as the reason a key is right: PrivateLink resource and service-network endpoints (2024-12-01), cross-Region PrivateLink for endpoint services (2024-11-26) and for AWS services (2025-11-19), Transit Gateway flexible cost allocation (2025-11-21), network function attachments for AWS Network Firewall (2025-06-16), Client VPN attachments (2026-04), Transit Gateway encryption support (2025-11-20), S3 IPv6 on endpoints (2025-11), the VPC peering billing usage type (2025-04-11). Not examinable yet and absent from the whole chapter: Transit Gateway Policy-Based Routing (2026-07-30) and PrivateLink tunnel endpoints (2026-09-18).",
+    "Source conflicts (teach the documented value): endpoints per VPC: the PrivateLink FAQ says up to 100, the quotas page says a default of 50 interface and Gateway Load Balancer endpoints per VPC (use vpc-endpoints-quota-interface-gwlb-per-vpc). Peering: the PrivateLink FAQ says peering 'is limited to 125'; the quotas page gives a default of 50, adjustable up to 125 (use vpc-peering-quota-active-connections-per-vpc). The VPC FAQ names two endpoint types; the PrivateLink FAQ names five (use vpc-endpoints-faq-five-types). The PrivateLink FAQ says a public service name cannot reach VPC endpoints, while the guide says private DNS keeps the public Regional name working: teach the guide (vpc-endpoints-interface-private-dns-no-app-change); do not use privatelink-faq-public-service-name-not-supported. The whitepaper comparison table says Transit Gateway does not support security group referencing; the guide says it does since 2024-09-25: do not use that table row. The Network Load Balancer FAQ says PrivateLink cannot be set up with UDP listeners, the concepts page says an interface endpoint sends TCP or UDP: write no UDP claim.",
+    "Do not write (no verified fact, brief.v0): that Transit Gateway 'replaces' a transit VPC (d11-091); which Availability Zones an AWS service supports for its interface endpoint (d11-071, teach only the endpoint-service rule); that switching to a gateway endpoint drops open connections (rejected); that DynamoDB gateway endpoints are IPv4 only (rejected); an hourly price for an interface endpoint (not printed on the pricing page); which account pays for the provider's Network Load Balancer beyond 'it is billed for each hour or partial hour' (d11-087); that PrivateLink blocks every other path into the provider VPC (d11-098: write that the consumer reaches the service behind the endpoint service, and that only consumers start connections).",
+    "Story: stage 3, month 18; Chen exists. Allowed story numbers (data/startup.json chapters.11.uses_numbers): the CIDR blocks of A4 (prod 10.20.0.0/16, dev 10.40.0.0/16, staging 10.50.0.0/16, network 10.60.0.0/16; the bank's VPC 10.20.0.0/16) and the bank's start in 3 weeks. Write 'seven accounts' in words. No dollar amounts in story text. The NLB of the endpoint service is 'in front of Callvale's API': do not say what runs behind it (instances, an Application Load Balancer or API Gateway). Question stems say 'A company' and never name Callvale, the bank or the cast.",
+    "Displays with a contraction (can't, doesn't, aren't, won’t): use them as they are; if L803 fires on the contraction inside a link text, file a display request (facts request --fact ID --display TEXT) instead of rewording the quote.",
+    "Every subsection carries exactly one Exam signal and one Say it. Go deeper: exactly 2 (subsections 3 and 4). Spot the bug: exactly 1 (subsection 3). Exam trap callouts: exactly 4 (subsections 3, 4, 6, 7), each ending with its trap comment. Try it: subsection 1 (vpc-connectivity-t02) and, only if the tasks writer ships it, subsection 6 (vpc-connectivity-t03). Counted callouts in 2-deep.md: 4 Exam trap + up to 2 Try it = 6 of 8.",
+    "Neighbour chapters (registry numbers): IAM 03; Organizations and AWS RAM 04; Network Firewall 08; VPC, NAT gateway and gateway endpoints 10; Site-to-Site VPN and Direct Connect 12; Route 53 and Resolver endpoints 13; Elastic Load Balancing 14; S3 21; DynamoDB 28. Link a verified neighbour fact by id where the plan names one. A cross-reference to a section of another chapter is a link only if that section exists (chapter 10 '#aws-service-endpoints-are-public-but-a-vpc-endpoint-reaches-them-privately' exists; chapter 12 is not written yet: use an xref marker)."
+  ],
+  "frozen": {
+    "2-deep.md": "Nothing frozen. Write the 7 subsections from the plans below, in this order.",
+    "items": "No exemplar items exist for this chapter; write every item from the slots, cards, speak and tasks below."
+  },
+  "budgets": {
+    "rule": "lint.word_count counts every word of the file: reveals, Go deeper blocks, prompts, image alt text and captions included (code blocks and comments excluded). File limits are errors; section limits are warnings.",
+    "1-fast.md_total_max": 1000,
+    "1-fast.md_aims": "Predict 55, Look first 35 (the task region is generated and not counted), In one breath 195 (Say it 25, problem field 15, Predict the picture prompt 20, alt 35, caption 15, 4 steps of about 14 words, Startup example 55 with its label), Words 85, Choose it or not 205 (two tables), Signals and traps 230, Changed recently 60, Check 85, Recap 50 = about 1,000. Cut table cells first, never a device.",
+    "1-fast.md_callouts": "callouts_max 4: the one-breath Say it (not counted) and the Startup example (counted); the Changed recently entry does not count.",
+    "2-deep.md_total_min": 1800,
+    "2-deep.md_total_max": 2400,
+    "2-deep.md_aims": "How it works about 1,650 (H2 intro line 25; 7 subsections with body and callouts of 160 to 185 words each, Exam trap callouts included; each Stop and answer with its reveal at most 35 words; Go deeper 2 blocks of at most 80 words; Spot the bug with its reveal about 55) + Numbers 165 + Decision record 230 (fields 140; two diagrams with alt at most 35 words and caption at most 20 words each) + FAQ 225 + In the real world 85 = about 2,355. If the file runs over 2,400, cut Go deeper words first, then table cells; never drop a required device.",
+    "subsection_rule": "Body plus callouts (not Go deeper, prompts or reveals) at least 150 words per subsection (SPEC subsection_words) and at most 400; aim 160 to 185.",
+    "callouts_max_2_deep": 8,
+    "callouts_planned_2_deep": "6: Exam trap x4 (subsections 3, 4, 6, 7), Try it x2 (subsection 1 vpc-connectivity-t02; subsection 6 vpc-connectivity-t03 only if shipped). No Startup example in 2-deep.md."
+  },
+  "sections": [
+    {
+      "file": "1-fast.md",
+      "section": "predict",
+      "heading": "Predict",
+      "role": "predict",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": "Two prompts, each ending with '?'. Predict 1 is the gist trap (<!-- gist-trap -->): 'VPC A is peered with VPC B, and VPC B is peered with VPC C. Can an instance in VPC A reach an instance in VPC C?' (common sense says yes; the answer is no). Predict 2: 'Two VPCs both use the CIDR block 10.20.0.0/16. Can an application in one VPC call an API in the other VPC privately?' (yes, through PrivateLink). Answers appear only in Check (U4). No term defined in a prompt; no AWS number. At most 55 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "look-first",
+      "heading": "Look first",
+      "role": "task",
+      "minutes": 3,
+      "bullets": [
+        "1.2.K2"
+      ],
+      "facts": [
+        "vpc-endpoints-aws-services-integrating-list",
+        "vpc-endpoints-faq-gateway-endpoint-s3-ddb-route"
+      ],
+      "task": "vpc-connectivity-t01",
+      "plan": "One or two sentences (at most 35 words) and the task region for vpc-connectivity-t01 (read-only, 3 minutes): list the services you can reach through VPC endpoints in your Region. Example lead: 'Private access is not only for Amazon S3 and DynamoDB: many [AWS services integrate with AWS PrivateLink] (vpc-endpoints-aws-services-integrating-list). List them in your Region.' Then <!-- task:start id=vpc-connectivity-t01 --> <!-- task:end -->."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "in-one-breath",
+      "heading": "In one breath",
+      "role": "breath",
+      "minutes": 2,
+      "bullets": [
+        "4.4.K6",
+        "3.4.K4",
+        "1.2.K2"
+      ],
+      "facts": [
+        "transit-gateway-def-network-transit-hub",
+        "privatelink-concepts-private-ip-as-if-hosted",
+        "vpc-peering-faq-definition",
+        "transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway",
+        "vpc-faq-endpoint-types-gateway-interface",
+        "privatelink-faq-consumer-initiates-allowlisted-customers"
+      ],
+      "plan": "Say it (one-breath definition, at most 25 words, linked): 'A peering connection joins two VPCs, a transit gateway is [a network transit hub] (transit-gateway-def-network-transit-hub) for many, and PrivateLink reaches one service [using private IP addresses] (privatelink-concepts-private-ip-as-if-hosted).' Then the bold field '**The problem it solves.**' in one sentence of about 15 words: workloads in separate VPCs, accounts and data centers must talk privately, without the internet. Then the 'Predict the picture.' prompt: 'Five VPCs must all reach each other. Does each VPC send traffic straight to the other VPC, or to one hub?' with the hero vpc-connectivity-hero in a reveal, its caption and its 4 numbered steps (text fixed in diagrams). Then the Startup example callout with the problem of data/startup.json chapters.11.problem word for word (43 words; at most 60 with the label). The story never teaches a fact."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "words-that-go-together",
+      "heading": "Words that go together",
+      "role": "words",
+      "minutes": 1,
+      "bullets": [
+        "4.4.K6",
+        "3.4.K4"
+      ],
+      "facts": [],
+      "plan": "A words table of 4 rows (see words_table). Cell 1 spelled as the term field of data/terms.json; cell 2 one collocation of the bank with exactly one bold span. At most 85 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "choose-it-or-not",
+      "heading": "Choose it or not",
+      "role": "choose",
+      "minutes": 2,
+      "bullets": [
+        "3.4.S1",
+        "4.4.K6",
+        "3.4.K4",
+        "1.2.K2",
+        "4.4.S3"
+      ],
+      "facts": [
+        "transit-gateway-wp-table-architecture-comparison",
+        "vpc-peering-faq-not-transitive",
+        "transit-gateway-centralized-router-scenario",
+        "privatelink-faq-consumer-initiates-allowlisted-customers",
+        "vpc-peering-no-overlap-ipv4-ipv6",
+        "transit-gateway-faq-identical-cidr-not-routed",
+        "privatelink-wp-consumer-and-provider-may-overlap",
+        "vpc-peering-faq-no-creation-charge",
+        "transit-gateway-pricing-hourly-attachment-and-data-processing",
+        "privatelink-faq-billing-interface-gwlb-hourly-per-az",
+        "vpc-endpoints-faq-gateway-endpoint-s3-ddb-route",
+        "vpc-endpoints-faq-interface-endpoint-privatelink-services",
+        "vpc-endpoints-gwlb-fleet-of-appliances-service",
+        "vpc-endpoints-interface-traffic-resolves-to-endpoint-eni",
+        "vpc-endpoints-gwlb-routed-by-route-table",
+        "vpc-endpoints-wa-cost08-gateway-free-interface-hourly"
+      ],
+      "plan": "Two compare tables (see compare_tables), at most 4 columns each, each under its H3 and followed by its bold **Deciding question:** line. At most 205 words in all. If the section runs long, cut the pay row of table 1 to one link per cell, never a deciding question."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "signals-and-traps",
+      "heading": "Signals and traps",
+      "role": "signals",
+      "minutes": 2,
+      "bullets": [
+        "3.4.S1",
+        "4.4.K6",
+        "3.4.K4",
+        "1.2.K2",
+        "4.4.S3"
+      ],
+      "facts": [
+        "vpc-peering-wp-lowest-cost-highest-performance",
+        "transit-gateway-regional-resource-thousands-of-vpcs",
+        "privatelink-wp-consumer-and-provider-may-overlap",
+        "vpc-endpoints-wa-cost08-gateway-free-interface-hourly",
+        "vpc-endpoints-faq-interface-endpoint-privatelink-services",
+        "transit-gateway-faq-route-tables-segment",
+        "vpc-peering-faq-not-transitive",
+        "vpc-peering-edge-no-nat",
+        "vpc-peering-edge-no-igw",
+        "vpc-peering-no-overlap-ipv4-ipv6",
+        "transit-gateway-faq-identical-cidr-not-routed"
+      ],
+      "plan": "A signals table of exactly 6 rows (see signals; columns: The stem says | Think | Because | But not if) and the fixed H3 'Traps' with the 3 fast traps (vpc-connectivity-trap-peering-transitive, vpc-connectivity-trap-peering-shares-gateways, vpc-connectivity-trap-overlap-peer-or-tgw), each a list item that ends with <!-- trap: <id> --> (text in fast_traps_text). At most 230 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "changed-recently",
+      "heading": "Changed recently",
+      "role": "changed",
+      "minutes": 1,
+      "bullets": [
+        "1.2.K2"
+      ],
+      "facts": [
+        "privatelink-change-cross-region-aws-services-2025",
+        "privatelink-cross-region-aws-services-named-examples"
+      ],
+      "plan": "One examinable entry (see changed_recently.fast), in the form of CONVENTIONS D6, at most 60 words. The date (2025-11-19) equals changed.date of privatelink-change-cross-region-aws-services-2025, which is the first link in the Now line (L107)."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "check",
+      "heading": "Check",
+      "role": "check",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [
+        "vpc-peering-no-transitive-example",
+        "transit-gateway-no-routing-identical-or-overlapping-cidr",
+        "privatelink-wp-consumer-and-provider-may-overlap"
+      ],
+      "plan": "Two Check prompts parallel to Predict, each a new case, each answered in its reveal, with a separate '**Predict <n>:**' paragraph (U4). Check 1: 'A company peers a shared-services VPC with five application VPCs. Application VPC 1 must now call application VPC 2. Can the traffic pass through the shared-services VPC?' (No. VPC peering [does not support transitive peering relationships] (vpc-peering-no-transitive-example): peer the two VPCs or use a transit gateway. Predict 1: No, for the same reason: traffic does not pass through VPC B.) Check 2: 'A company's new VPC uses 10.20.0.0/16, the same block as its old VPC. Both VPCs attach to one transit gateway. Can instances in the old VPC reach the new VPC?' (No. A transit gateway [doesn't support routing between VPCs with identical CIDRs] (transit-gateway-no-routing-identical-or-overlapping-cidr). Predict 2: Yes, through PrivateLink: the two VPCs [can have overlapping IP address ranges] (privatelink-wp-consumer-and-provider-may-overlap).) Keep each reveal at about 35 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "recap-from-memory",
+      "heading": "Recap from memory",
+      "role": "recap",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": "Three Recap prompts, each asking only for a sentence, row or cell that 1-fast.md states above (U4): the deciding question under the table 'Peering, transit gateway or PrivateLink'; the 'But not if' cell of the signals row about heavy Amazon S3 traffic through a NAT gateway; the truth of the trap about a peer's NAT gateway. Reveals copy the fast-file text."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "how-it-works",
+      "heading": "How it works",
+      "role": "how",
+      "minutes": 28,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "intro_line": "About 25 words: this part follows one packet as the network grows: between two VPCs, through a hub, to an AWS service, and last to one service in another company's VPC. Not a list of subsections.",
+        "subsections_in_order": [
+          "a-peering-connection-works-only-after-both-owners-add-routes",
+          "peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+          "a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+          "separate-route-tables-let-one-transit-gateway-isolate-groups-of-vpcs",
+          "an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+          "an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+          "privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections"
+        ],
+        "pass_route_subsections": [
+          "peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+          "a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+          "an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+          "privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections"
+        ],
+        "causal_chain": "two VPCs: request, accept, routes on both sides, rules (peering) -> the limits of one hop: no transitive or edge-to-edge routing, a full mesh grows with the square of the VPC count, data transfer charges -> a hub: attachments, a static route in the VPC, the attachment's transit gateway route table, propagation -> segmentation: several route tables, isolated and shared-services groups, blackhole routes, sharing with AWS RAM -> to an AWS service: interface endpoint network interfaces, private DNS, security groups, reach from peered VPCs and on premises -> limits on that path: endpoint policy, IAM policy, bucket policy with aws:SourceVpce -> to one service of another account: endpoint service behind a load balancer, allowed principals and acceptance, interface endpoint of the consumer, one direction, overlapping CIDR blocks",
+        "minutes": "4 + 4 + 4 + 4 + 4 + 4 + 4 = 28"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "a-peering-connection-works-only-after-both-owners-add-routes",
+      "heading": "A peering connection works only after both owners add routes",
+      "parent": "how-it-works",
+      "order": 1,
+      "minutes": 4,
+      "bullets": [
+        "4.4.K6",
+        "4.4.S5"
+      ],
+      "facts": [
+        "vpc-peering-def-private-ipv4-ipv6",
+        "vpc-peering-step-request",
+        "vpc-peering-step-accept",
+        "vpc-peering-pending-acceptance-expires",
+        "vpc-peering-step-routes-manual",
+        "vpc-peering-route-target-and-destination",
+        "vpc-peering-step-security-groups",
+        "vpc-peering-sg-reference-same-region",
+        "vpc-peering-no-overlap-ipv4-ipv6",
+        "vpc-peering-overlap-status-failed",
+        "vpc-peering-route-pending-blackhole",
+        "vpc-peering-accounts-and-regions",
+        "vpc-peering-sg-reference-no-cross-region",
+        "vpc-peering-dns-default-public-resolution",
+        "vpc-peering-dns-enabled-private-resolution",
+        "vpc-peering-guide-existing-infrastructure-no-spof",
+        "vpc-peering-troubleshoot-routes",
+        "vpc-peering-troubleshoot-nacls-and-reachability",
+        "vpc-peering-no-overlap-even-if-unused-cidr",
+        "vpc-peering-accept-only-trusted-accounts"
+      ],
+      "plan": {
+        "problem": "Two teams in different AWS accounts run VPCs whose instances must call each other on private IP addresses. The traffic must not use the internet.",
+        "trace": [
+          "**Request.** The owner of the requester VPC [sends a request to the owner] of the accepter VPC (vpc-peering-step-request).",
+          "**Accept.** The connection is active after the [owner of the accepter VPC accepts] (vpc-peering-step-accept); if nobody answers, [it expires after 7 days] (vpc-peering-pending-acceptance-expires).",
+          "**Route.** Each owner [must manually add a route] to the [IP address range of the other VPC] (vpc-peering-step-routes-manual), with the [ID of the VPC peering connection] as the target (vpc-peering-route-target-and-destination).",
+          "**Allow.** If required, owners [update the security group rules] (vpc-peering-step-security-groups); in one Region a rule can [reference security groups for peered VPCs] (vpc-peering-sg-reference-same-region)."
+        ],
+        "trace_note": "Bold **requester VPC** and **accepter VPC** at first use (term requests). Write the trace steps so that each display reads as part of the sentence; at about 22 words each.",
+        "table": "What changes the result (columns: Situation | Result): the CIDR blocks match or overlap | you [cannot create a VPC peering connection] (vpc-peering-no-overlap-ipv4-ipv6), and the status [immediately goes to] failed (vpc-peering-overlap-status-failed); the request is still pending | a new route [has no effect until] the connection is active (vpc-peering-route-pending-blackhole); the peer VPC is in another Region | it works, because [The VPCs can be in different Regions] (vpc-peering-accounts-and-regions), but rules [use the CIDR block of the peer VPC] (vpc-peering-sg-reference-no-cross-region); an instance looks up the public DNS name of a peer instance | the public IP address by default; with DNS resolution turned on it [resolves to the private IP address of the EC2 instance] (vpc-peering-dns-enabled-private-resolution). Four rows; cells at most 15 words; the 'by default' clause needs vpc-peering-dns-default-public-resolution in the same cell or must be written without the absolute words.",
+        "why": "Why so few parts? A peering connection is [neither a gateway nor a VPN connection] (vpc-peering-guide-existing-infrastructure-no-spof), so there is no device to size or patch; the routes and rules are the whole configuration.",
+        "exam_signal": "\"instances in two peered VPCs cannot connect\" points to the routes, the security groups and the network ACLs: check that each [route table for its subnet contains a route] to the peer (vpc-peering-troubleshoot-routes), and let [Reachability Analyzer] find the block (vpc-peering-troubleshoot-nacls-and-reachability).",
+        "exam_trap": null,
+        "exam_trap_note": "No Exam trap callout here: vpc-connectivity-trap-overlap-peer-or-tgw lives in the fast Traps list.",
+        "try_it": "Try it callout for vpc-connectivity-t02 after the Exam signal, ending with its task comment.",
+        "body_extras": "One sentence only if words remain: accept requests only from accounts you know; a request from an unknown account can be [peer phishing] (vpc-peering-accept-only-trusted-accounts).",
+        "say_it": "The short answer is: request, accept, then add routes on both sides. The thing to watch is overlapping CIDR blocks.",
+        "stop_and_answer": "VPC A has the CIDR blocks 10.0.0.0/16 and 172.31.0.0/16. VPC B uses 172.31.0.0/16. The team will route peering traffic only to 10.0.0.0/16. Can it create the peering connection? Answer: No. You cannot peer [if any of the CIDR blocks overlap], even to [use only the non-overlapping CIDR blocks] (vpc-peering-no-overlap-even-if-unused-cidr). Keep this fact out of the trace and the table."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+      "heading": "Peering is not transitive so many VPCs need a full mesh",
+      "parent": "how-it-works",
+      "order": 2,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "4.4.K6",
+        "3.4.S1",
+        "4.4.S3",
+        "4.4.S5"
+      ],
+      "facts": [
+        "vpc-peering-no-transitive-example",
+        "vpc-peering-one-to-one-relationship",
+        "vpc-peering-edge-no-igw",
+        "vpc-peering-edge-no-nat",
+        "vpc-peering-edge-no-vpn",
+        "vpc-peering-edge-no-direct-connect",
+        "vpc-peering-edge-no-gateway-endpoint",
+        "vpc-peering-wp-full-mesh-4950-connections",
+        "vpc-peering-quota-active-connections-per-vpc",
+        "vpc-peering-faq-no-creation-charge",
+        "vpc-peering-cross-az-data-transfer-price",
+        "vpc-peering-wp-data-transfer-free-in-az",
+        "vpc-peering-wp-best-for-few-controlled-vpcs",
+        "vpc-peering-wp-lowest-cost-highest-performance",
+        "vpc-peering-wp-use-tgw-or-cloud-wan-as-hub",
+        "vpc-peering-wp-onprem-link-to-each-vpc",
+        "vpc-peering-faq-bandwidth-same-as-vpc",
+        "privatelink-wp-endpoints-reachable-over-peering-tgw-dx"
+      ],
+      "plan": {
+        "problem": "A shared-services VPC is peered with three application VPCs. The application VPCs now need each other, and the internet through the shared VPC's NAT gateway.",
+        "trace": [
+          "**One hop.** VPC peering [does not support transitive peering relationships] (vpc-peering-no-transitive-example), so traffic from one application VPC to another does not pass through the shared VPC.",
+          "**No borrowed exits.** A peered VPC cannot use its peer's gateways or connections (table below); this is called **edge-to-edge routing**.",
+          "**Count.** A **full mesh** of 100 VPCs takes [4,950 peering connections] by [n(n-1)/2] (vpc-peering-wp-full-mesh-4950-connections); one VPC has a default of [50] active connections, adjustable [up to 125] (vpc-peering-quota-active-connections-per-vpc).",
+          "**Pay.** There is [no charge for creating VPC peering connections] (vpc-peering-faq-no-creation-charge); traffic that [stays within an Availability Zone is free], and across zones it costs [$0.01/GB in both \"In\" and \"Out\" direction] (vpc-peering-cross-az-data-transfer-price)."
+        ],
+        "trace_note": "Step 2 states 'cannot' without a link only if the table follows in the same subsection; safer: link [can't use the internet gateway in VPC A] (vpc-peering-edge-no-igw) in the step and keep the other cases in the table. Bold **transitive routing**, **edge-to-edge routing** and **full mesh** at first use (term requests). The 100 VPCs in step 3 come from the fact's own example; do not compute other mesh sizes in strict text.",
+        "table": "What VPC B can use in its peer VPC A (columns: Resource in VPC A | Can VPC B use it?): an internet gateway | no: resources [can't use the internet gateway in VPC A] (vpc-peering-edge-no-igw); a NAT gateway | no: they [can't use the NAT device in VPC A] (vpc-peering-edge-no-nat); a VPN or Direct Connect connection to the data center | no: they [can't use the VPN connection] (vpc-peering-edge-no-vpn) or [can't use the Direct Connect connection] (vpc-peering-edge-no-direct-connect); a gateway endpoint for Amazon S3 | no: they [can't use the gateway endpoint to access Amazon S3] (vpc-peering-edge-no-gateway-endpoint); an instance in VPC A | yes, with routes on both sides. Five rows; cells at most 15 words.",
+        "why": "Why stop at one hop? A peering connection is [a one to one relationship between two VPCs] (vpc-peering-one-to-one-relationship): each pair has its own routes, so no VPC becomes a router for others.",
+        "exam_signal": "\"a few VPCs, the lowest latency and the lowest cost\" points to peering: AWS advises it when [the number of VPCs to be connected is less than 10] (vpc-peering-wp-best-for-few-controlled-vpcs), with the [lowest overall cost and highest aggregate performance] (vpc-peering-wp-lowest-cost-highest-performance); \"hundreds of VPCs that must all communicate\" points to [AWS Transit Gateway or AWS Cloud WAN] (vpc-peering-wp-use-tgw-or-cloud-wan-as-hub).",
+        "exam_trap": null,
+        "exam_trap_note": "No Exam trap callout here: vpc-connectivity-trap-peering-transitive and vpc-connectivity-trap-peering-shares-gateways live in the fast Traps list. Do not repeat them as callouts.",
+        "body_extras": "One sentence only if words remain: with peering, [on-premises connectivity (VPN and/or Direct Connect)] must be made to each VPC (vpc-peering-wp-onprem-link-to-each-vpc) (xref chapter 12).",
+        "say_it": "The short answer is: peering links two VPCs and nothing beyond them. The thing to watch is the number of pairs.",
+        "stop_and_answer": "VPC A has an interface endpoint for an AWS service. VPC B is peered with VPC A. Can instances in VPC B use that interface endpoint? Answer: Yes. Unlike a gateway endpoint, you can [access AWS PrivateLink endpoints over VPC peering] (privatelink-wp-endpoints-reachable-over-peering-tgw-dx). Keep this fact out of the trace and the table."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+      "heading": "A transit gateway routes between attachments with its own route tables",
+      "parent": "how-it-works",
+      "order": 3,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "4.4.K6",
+        "3.4.K4",
+        "4.4.S3",
+        "4.4.S5"
+      ],
+      "facts": [
+        "transit-gateway-def-network-transit-hub",
+        "transit-gateway-regional-resource-thousands-of-vpcs",
+        "transit-gateway-elastic-layer-3-router",
+        "transit-gateway-vpc-attachment-one-subnet-per-az-entry-exit",
+        "transit-gateway-separate-small-subnet-per-attachment",
+        "transit-gateway-faq-no-propagation-to-vpc-route-table",
+        "transit-gateway-vpc-route-to-tgw-required",
+        "transit-gateway-attachment-one-route-table-association",
+        "transit-gateway-route-evaluation-most-specific-first",
+        "transit-gateway-propagate-to-multiple-route-tables",
+        "transit-gateway-vpc-propagation-cidr-blocks",
+        "transit-gateway-route-table-association-supported-attachments",
+        "transit-gateway-peering-static-routes-only",
+        "transit-gateway-static-route-beats-propagated",
+        "transit-gateway-az-without-attachment-cannot-reach",
+        "transit-gateway-pricing-hourly-attachment-and-data-processing",
+        "transit-gateway-pricing-data-processing-per-gb-sent-to-gateway",
+        "transit-gateway-pricing-no-processing-from-peering-attachment",
+        "transit-gateway-pricing-default-allocation-source-attachment-owner",
+        "transit-gateway-fca-allocation-options-default-source",
+        "transit-gateway-flow-logs-destinations",
+        "transit-gateway-metric-packetdropcountnoroute"
+      ],
+      "plan": {
+        "problem": "Thirty VPCs in seven accounts, and later the data center, must reach each other through one point that a small team can run.",
+        "trace": [
+          "**Attach.** For each VPC you [specify one subnet from each Availability Zone] (transit-gateway-vpc-attachment-one-subnet-per-az-entry-exit), best a [separate subnet for each transit gateway VPC attachment] (transit-gateway-separate-small-subnet-per-attachment).",
+          "**Leave the VPC.** The VPC owner [needs to create a static route] to the transit gateway in the subnet route table (transit-gateway-faq-no-propagation-to-vpc-route-table).",
+          "**Look up.** Each attachment uses [a single route table] of the transit gateway (transit-gateway-attachment-one-route-table-association), which picks [The most specific route for the destination address] (transit-gateway-route-evaluation-most-specific-first).",
+          "**Learn.** An attachment can [propagate its routes] to [one or more route tables] (transit-gateway-propagate-to-multiple-route-tables): for a VPC, the [CIDR blocks of the VPC are propagated] (transit-gateway-vpc-propagation-cidr-blocks)."
+        ],
+        "trace_note": "Bold **transit gateway attachment**, **transit gateway route table**, **association** and **route propagation** at first use (term requests). Keep transit-gateway-static-route-beats-propagated and transit-gateway-az-without-attachment-cannot-reach out of the trace: the first is the Stop and answer, the second the Spot the bug.",
+        "table": "Which table holds which route (columns: Route table | Who adds the route | Example): subnet route table in the VPC | the VPC owner, as a static route | the other VPCs' range to the transit gateway; transit gateway route table | propagation from each attachment | 10.40.0.0/16 to the dev attachment; transit gateway route table, toward a peered transit gateway | you, because [only static routes are supported] (transit-gateway-peering-static-routes-only) | the other Region's range to the peering attachment. Three rows; cells at most 15 words. The CIDR blocks are example text from STARTUP A4.",
+        "why": "Why two lookups? The VPC decides what leaves the VPC; the transit gateway, which [operates at layer 3] (transit-gateway-elastic-layer-3-router), decides which attachment gets each packet.",
+        "exam_signal": "\"hundreds of VPCs and on-premises networks through one hub\" points to a transit gateway, a [Regional resource] that can [connect thousands of VPCs] (transit-gateway-regional-resource-thousands-of-vpcs); VPN, Direct Connect gateway and peering attachments join the same route tables (transit-gateway-route-table-association-supported-attachments) (xref chapter 12).",
+        "exam_trap": "vpc-connectivity-trap-tgw-propagates-to-vpc",
+        "exam_trap_text": "Wrong belief: once a VPC is attached, the transit gateway adds the routes to the VPC's subnet route tables. Truth: after you attach a VPC you must [add a route to your subnet route table] (transit-gateway-vpc-route-to-tgw-required). End with <!-- trap: vpc-connectivity-trap-tgw-propagates-to-vpc -->. At most 40 words.",
+        "spot_the_bug": "Spot the bug (the one of the file), after the Exam trap and before the Go deeper, about 55 words with its reveal: 'A VPC uses subnets in AZ 1, AZ 2 and AZ 3. Its transit gateway attachment names one subnet in AZ 1 and one in AZ 2. The routes are correct, but instances in AZ 3 cannot reach the other VPCs. What is wrong?' Reveal: the attachment has no subnet in AZ 3: [only resources that reside in Availability Zones] [where there is a transit gateway attachment] can reach the transit gateway (transit-gateway-az-without-attachment-cannot-reach); add a subnet in AZ 3 to the attachment.",
+        "go_deeper": "Go deeper: what a transit gateway costs and how you review it (at most 80 words). You pay for the [connections that you make to the Transit Gateway] each hour and for the traffic (transit-gateway-pricing-hourly-attachment-and-data-processing): processing is charged for [each gigabyte sent from a VPC] (transit-gateway-pricing-data-processing-per-gb-sent-to-gateway), not for [data sent from a peering attachment] (transit-gateway-pricing-no-processing-from-peering-attachment). By default the [account that owns the source attachment] pays (transit-gateway-pricing-default-allocation-source-attachment-owner); since November 2025 a metering policy can charge the account that [owns the destination attachment] (transit-gateway-fca-allocation-options-default-source). To review traffic, send flow logs to [Amazon CloudWatch Logs, Amazon S3, or Firehose] (transit-gateway-flow-logs-destinations) and watch [PacketDropCountNoRoute] (transit-gateway-metric-packetdropcountnoroute).",
+        "say_it": "The short answer is: the hub's route table picks the attachment. The thing to watch is the route in the VPC.",
+        "stop_and_answer": "A dev attachment propagates 10.40.0.0/16 into a transit gateway route table. An engineer also adds a static route for 10.40.0.0/16 to a VPN attachment. Where does traffic for 10.40.0.5 go? Answer: to the VPN attachment: [the static route has the higher priority], and [the propagated route is not included] (transit-gateway-static-route-beats-propagated)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "separate-route-tables-let-one-transit-gateway-isolate-groups-of-vpcs",
+      "heading": "Separate route tables let one transit gateway isolate groups of VPCs",
+      "parent": "how-it-works",
+      "order": 4,
+      "minutes": 4,
+      "bullets": [
+        "3.4.S1",
+        "4.4.K6"
+      ],
+      "facts": [
+        "transit-gateway-centralized-router-scenario",
+        "transit-gateway-default-route-table-association-propagation",
+        "transit-gateway-faq-route-tables-segment",
+        "transit-gateway-isolated-shared-services-scenario",
+        "transit-gateway-isolated-vpcs-blocked-no-route",
+        "transit-gateway-isolated-vpcs-scenario",
+        "transit-gateway-blackhole-route-drops",
+        "transit-gateway-wp-segment-routing-domains",
+        "transit-gateway-ha-by-design-single-per-region",
+        "transit-gateway-share-with-ram-accounts-or-org",
+        "transit-gateway-share-accept-in-ram",
+        "transit-gateway-network-services-account-ram",
+        "transit-gateway-create-auto-accept-shared-attachments",
+        "transit-gateway-appliance-mode-same-az-for-flow",
+        "transit-gateway-appliance-mode-off-stays-in-az",
+        "transit-gateway-inspection-appliance-mode-stateful-firewall",
+        "transit-gateway-peering-intra-and-inter-region-ipv4-ipv6"
+      ],
+      "plan": {
+        "problem": "Production, development and shared-services VPCs use one transit gateway. Production and development must not reach each other, but both use shared services.",
+        "trace": [
+          "**Default.** With the default route table for association and propagation, [all attachments can route packets to each other] (transit-gateway-centralized-router-scenario).",
+          "**Split.** You segment by [creating multiple route tables] (transit-gateway-faq-route-tables-segment): production attachments use one table, development attachments another.",
+          "**Propagate on purpose.** Each group's table learns only the shared-services routes, and the shared-services table learns both groups, so the groups can [route packets to or receive packets from] shared services (transit-gateway-isolated-shared-services-scenario).",
+          "**Drop.** A packet for the other group is [blocked because there is no route] (transit-gateway-isolated-vpcs-blocked-no-route); a [blackhole route] [drops traffic that matches the route] (transit-gateway-blackhole-route-drops)."
+        ],
+        "trace_note": "Bold **blackhole route** at first use (term request).",
+        "table": "Truth table (columns: From | To | Route in the source's table? | Result): production | shared services | yes | delivered; development | shared services | yes | delivered; shared services | production | yes, propagated | delivered; production | development | no | blocked. Four rows; plain words, no link needed (no absolute word).",
+        "why": "Why one gateway with many tables? Route tables give [routing domains] such as production and non-production (transit-gateway-wp-segment-routing-domains), and a transit gateway is [highly available by design] (transit-gateway-ha-by-design-single-per-region), so a second one adds no isolation that tables do not.",
+        "exam_signal": "\"share one transit gateway with the other accounts of the organization\" points to [AWS Resource Access Manager (RAM) to share] it (transit-gateway-share-with-ram-accounts-or-org), from the [Network Services account] (transit-gateway-network-services-account-ram); each account [must accept the resource share] (transit-gateway-share-accept-in-ram). Link one display per fact; drop the third link if the callout passes 60 words.",
+        "exam_trap": "vpc-connectivity-trap-tgw-one-table-all-talk",
+        "exam_trap_text": "Wrong belief: every VPC on one transit gateway can reach every other, so isolation needs a second transit gateway. Truth: with separate tables, [each isolated router has a single route table], and its attachments [cannot route packets to or receive packets] from another group (transit-gateway-isolated-vpcs-scenario). End with <!-- trap: vpc-connectivity-trap-tgw-one-table-all-talk -->. At most 45 words.",
+        "go_deeper": "Go deeper: inspection and other Regions (at most 80 words). To send traffic through a stateful firewall in an inspection VPC, [enable appliance mode support for the VPC attachment] so that a flow keeps the [same Availability Zone for that VPC attachment] (transit-gateway-appliance-mode-same-az-for-flow); without it, traffic is [kept to the originating Availability Zone] (transit-gateway-appliance-mode-off-stays-in-az). Across Regions you can [peer both intra-Region and inter-Region transit gateways] (transit-gateway-peering-intra-and-inter-region-ipv4-ipv6) with static routes. Bold **appliance mode** and **inspection VPC** (term requests).",
+        "say_it": "The short answer is: one transit gateway, one route table for each group. The thing to watch is what each table learns.",
+        "stop_and_answer": "The production route table has a propagated route for the shared-services VPC, 10.60.0.0/16. An engineer adds a blackhole route for 10.60.5.0/24 to the same table. Where does a packet from production to 10.60.5.10 go? Answer: Nowhere: the table uses [The most specific route for the destination address] (transit-gateway-route-evaluation-most-specific-first), and that blackhole route [drops traffic that matches the route] (transit-gateway-blackhole-route-drops). If the trace already links [drops traffic that matches the route], link [blackhole route] here instead. The CIDR blocks are example text (STARTUP A4 network account)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+      "heading": "An interface endpoint gives the service a private IP address in your subnet",
+      "parent": "how-it-works",
+      "order": 5,
+      "minutes": 4,
+      "bullets": [
+        "1.2.K2",
+        "3.4.K4",
+        "4.4.S3"
+      ],
+      "facts": [
+        "vpc-endpoints-interface-traffic-resolves-to-endpoint-eni",
+        "vpc-endpoints-interface-one-subnet-per-az",
+        "vpc-endpoints-interface-private-dns-hidden-zone",
+        "vpc-endpoints-interface-private-dns-no-app-change",
+        "vpc-endpoints-interface-private-dns-recommended",
+        "privatelink-wp-security-groups-manage-endpoint-access",
+        "vpc-interface-endpoint-security-groups",
+        "vpc-endpoints-gateway-not-extended-past-vpc",
+        "vpc-endpoints-wp-interface-endpoints-reachable-from-onprem",
+        "privatelink-wp-endpoints-reachable-over-peering-tgw-dx",
+        "vpc-endpoints-faq-gateway-endpoint-s3-ddb-route",
+        "vpc-endpoints-wa-cost08-gateway-free-interface-hourly",
+        "vpc-gateway-endpoint-no-onprem-cross-region-tgw",
+        "vpc-endpoints-faq-five-types",
+        "vpc-endpoints-interface-single-az-impairment",
+        "vpc-endpoints-interface-two-azs-for-production",
+        "vpc-endpoints-wp-central-endpoints-cost-reason",
+        "vpc-endpoints-wp-central-endpoints-need-own-private-hosted-zone",
+        "s3-faq-vpce-choose"
+      ],
+      "plan": {
+        "problem": "Instances in private subnets call AWS service APIs, and servers in the data center must call the same APIs over Direct Connect. Neither path may use the internet.",
+        "trace": [
+          "**Create.** The endpoint [establishes connections between the subnets in your VPC] and the service through network interfaces (vpc-endpoints-interface-traffic-resolves-to-endpoint-eni), [one subnet per Availability Zone] (vpc-endpoints-interface-one-subnet-per-az).",
+          "**Resolve.** With private DNS, AWS creates a [hidden, AWS-managed private hosted zone] (vpc-endpoints-interface-private-dns-hidden-zone), so applications that use the [public Regional endpoint] name reach the endpoint [without requiring that you make any changes] (vpc-endpoints-interface-private-dns-no-app-change).",
+          "**Filter.** [VPC Security Groups can be used to manage] access to the endpoint network interfaces (privatelink-wp-security-groups-manage-endpoint-access).",
+          "**Reach from outside.** Interface endpoints are [accessible from on-premises networks over VPN] and Direct Connect, with [Route 53 Resolver inbound endpoints] for the DNS names (vpc-endpoints-wp-interface-endpoints-reachable-from-onprem) (xref chapter 13 resolver endpoints)."
+        ],
+        "trace_note": "Bold **endpoint network interface** and **private DNS** at first use (term requests). The private DNS step needs the VPC settings DNS hostnames and DNS resolution; the display [DNS hostnames and DNS resolution] of the same fact can replace the hidden-zone display if the sentence reads better.",
+        "table": "Where the request starts (columns: Request from | Gateway endpoint | Interface endpoint): the same VPC | yes | yes; a peered VPC or a transit gateway | no: gateway endpoint connections [cannot be extended out of a VPC] (vpc-endpoints-gateway-not-extended-past-vpc) | yes: [access AWS PrivateLink endpoints over VPC peering] (privatelink-wp-endpoints-reachable-over-peering-tgw-dx); the data center over VPN or Direct Connect | no | yes; what it costs | [Gateway VPC endpoints have no hourly charges] | an [hourly fee and per-GB usage cost] (vpc-endpoints-wa-cost08-gateway-free-interface-hourly). Four rows; the 'no' in the data-center row is covered by the extended-out-of-a-VPC link in the row above; if the lint asks, link [gateway endpoints do not allow access from on-premises networks, from peered VPCs in other AWS Regions, or through a transit gateway] (vpc-gateway-endpoint-no-onprem-cross-region-tgw) once instead.",
+        "why": "Why can a data center use one kind and not the other? An interface endpoint is a network interface with a private IP address that a connected network can route to; gateway endpoints [add an entry to the route table] you select (vpc-endpoints-faq-gateway-endpoint-s3-ddb-route), inside one VPC.",
+        "exam_signal": "\"access Amazon S3 privately from the on-premises data center\" points to an interface endpoint for S3; \"from instances in the same Region, at the lowest cost\" points to the gateway endpoint, which AWS recommends because [gateway VPC endpoints as they are not billed] (s3-faq-vpce-choose). Rephrase so that the display reads as part of the sentence, or link the cost display of vpc-endpoints-wa-cost08-gateway-free-interface-hourly if it is not in the table.",
+        "exam_trap": null,
+        "exam_trap_note": "No Exam trap callout here (the trap cap is used). Chapter 10's trap vpc-trap-endpoint-types-alike covers the gateway-or-interface belief; questions cite it.",
+        "body_extras": "One sentence only if words remain: because an interface endpoint has [a cost is incurred for every hour] (vpc-endpoints-wp-central-endpoints-cost-reason), many companies [host the interface endpoints in a centralized VPC] reached through a transit gateway; then the [managed PHZ won’t work] in the spoke VPCs and you associate your own private hosted zone (vpc-endpoints-wp-central-endpoints-need-own-private-hosted-zone). If this sentence does not fit, leave it to question slot 11.",
+        "say_it": "The short answer is: an interface endpoint is a private address for the service in your subnet. The thing to watch is its hourly charge.",
+        "stop_and_answer": "An interface endpoint for Amazon CloudWatch has a network interface in AZ 1 only. AZ 1 fails. Can instances in AZ 2 still reach CloudWatch through the endpoint? Answer: No. In the guide's example, resources in the other zone [lose access to Amazon CloudWatch] when the [single Availability Zone] fails (vpc-endpoints-interface-single-az-impairment); use [at least two Availability Zones per VPC endpoint] (vpc-endpoints-interface-two-azs-for-production). Keep both facts out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+      "heading": "An endpoint policy can narrow access through an endpoint but never grant it",
+      "parent": "how-it-works",
+      "order": 6,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "1.2.K2"
+      ],
+      "facts": [
+        "vpc-endpoints-policy-default-allows-all-concepts",
+        "vpc-endpoints-policy-single-policy-default-if-none",
+        "vpc-endpoints-policy-json-iam-language-principal-required",
+        "vpc-endpoints-policy-gateway-principal-star-use-principalarn",
+        "vpc-endpoints-policy-does-not-override-identity-or-resource-policies",
+        "vpc-endpoints-wp-one-policy-per-endpoint-no-override",
+        "vpc-endpoints-faq-benefit-restrict-users-actions-resources",
+        "s3-bucket-policy-source-vpce-condition",
+        "iam-eval-identity-policy-no-allow-is-implicit-deny",
+        "vpc-endpoints-gateway-s3-no-sourceip-use-vpcsourceip",
+        "vpc-endpoints-policy-not-all-services-full-access-otherwise",
+        "vpc-endpoints-policy-update-takes-minutes"
+      ],
+      "plan": {
+        "problem": "A security team wants instances in a VPC to reach only the company's own S3 buckets through the endpoint, and one bucket to accept requests only from that endpoint.",
+        "trace": [
+          "**Default.** The [default VPC endpoint policy allows all actions] (vpc-endpoints-policy-default-allows-all-concepts) by all principals on all resources.",
+          "**Narrow.** You [attach a single endpoint policy to the endpoint] (vpc-endpoints-policy-single-policy-default-if-none) that names the buckets; it [must contain a Principal element] (vpc-endpoints-policy-json-iam-language-principal-required), and on a gateway endpoint the [Principal element must be set to] `*`, with roles named by [aws:PrincipalArn] (vpc-endpoints-policy-gateway-principal-star-use-principalarn).",
+          "**Combine.** The endpoint policy [does not override or replace identity-based policies] (vpc-endpoints-policy-does-not-override-identity-or-resource-policies): the role and the bucket still decide.",
+          "**Lock the bucket.** A bucket policy with [aws:SourceVpce] denies requests that do not come through the endpoint, which also [disables console access to the specified bucket] (s3-bucket-policy-source-vpce-condition)."
+        ],
+        "trace_note": "Bold **endpoint policy** at first use (term request). The heading has the absolute word 'never': the Combine step's link grounds it (L308).",
+        "table": "Truth table (columns: Endpoint policy | The role's IAM policy | Result through the endpoint): allows the bucket | allows the read | allowed; allows the bucket | allows nothing | denied: [the request is implicitly denied] (iam-eval-identity-policy-no-allow-is-implicit-deny); leaves the bucket out | allows the read | denied: the endpoint policy limits [specific users, actions, and/or resources] (vpc-endpoints-faq-benefit-restrict-users-actions-resources). Three rows; the bucket has no bucket policy in every row (write that in the line before the table), because within one account a bucket policy alone can allow a request.",
+        "why": "Why a separate policy? It limits one path to [specific users, actions, and/or resources] without editing every role. If the table links that display, write the Why in plain words without a link and without absolute words.",
+        "exam_signal": "\"instances can reach only the company's buckets through the endpoint\" points to an endpoint policy; \"the bucket must accept requests only from one VPC endpoint\" points to a bucket policy with [aws:SourceVpce] (s3-bucket-policy-source-vpce-condition). If [aws:SourceVpce] is already linked in the trace, link [only the VPC endpoint ID] here.",
+        "exam_trap": "vpc-connectivity-trap-endpoint-policy-grants",
+        "exam_trap_text": "Wrong belief: an endpoint policy that allows s3:GetObject lets every instance in the VPC read the bucket. Truth: an endpoint policy [does not override or replace IAM user policies] (vpc-endpoints-wp-one-policy-per-endpoint-no-override); the role still needs its own allow. End with <!-- trap: vpc-connectivity-trap-endpoint-policy-grants -->. At most 40 words.",
+        "try_it": "Try it callout for vpc-connectivity-t03 only if the tasks writer ships it (after the Exam trap), ending with its task comment. If vpc-connectivity-t03 is parked, leave the callout out.",
+        "say_it": "The short answer is: the endpoint policy is a filter, not a grant. The thing to watch is the role's own permissions.",
+        "stop_and_answer": "A bucket policy allows requests only when aws:SourceIp is the private CIDR block of the VPC. Instances reach the bucket through a gateway endpoint. Do their requests succeed? Answer: No. You [can't use the `aws:SourceIp` condition] for requests through an endpoint; [use the `aws:VpcSourceIp` condition] (vpc-endpoints-gateway-s3-no-sourceip-use-vpcsourceip). Keep this fact out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections",
+      "heading": "PrivateLink lets consumers reach one service and only consumers start connections",
+      "parent": "how-it-works",
+      "order": 7,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "3.4.K4",
+        "3.4.S1"
+      ],
+      "facts": [
+        "privatelink-guide-private-connect-no-igw-nat",
+        "privatelink-endpoint-service-needs-load-balancer",
+        "privatelink-endpoint-service-not-available-by-default",
+        "privatelink-permissions-and-acceptance-control-access",
+        "privatelink-wp-provider-nlb-consumer-endpoint-steps",
+        "privatelink-consumer-endpoint-only-in-service-azs",
+        "privatelink-wp-only-consumer-initiates",
+        "privatelink-source-ip-is-load-balancer-node",
+        "vpc-peering-wp-full-bidirectional-point-to-point",
+        "privatelink-faq-consumer-initiates-allowlisted-customers",
+        "privatelink-wp-consumer-and-provider-may-overlap",
+        "privatelink-wp-unidirectional-overlapping-ips",
+        "privatelink-saas-access-private-as-if-in-vpc",
+        "privatelink-remove-permission-keeps-existing-connections",
+        "privatelink-provider-enable-two-azs-for-ha",
+        "vpc-endpoints-resource-endpoint-no-load-balancer",
+        "elb-nlb-alb-target-static-ip-privatelink"
+      ],
+      "plan": {
+        "problem": "A company must offer one API to VPCs of other accounts. Some of those VPCs use the same CIDR block as the company, and the other accounts must reach nothing else.",
+        "trace": [
+          "**Front the service.** The **service provider** creates an **endpoint service** and [must specify a load balancer]: a [Network Load Balancer or a Gateway Load Balancer] (privatelink-endpoint-service-needs-load-balancer).",
+          "**Allow.** The service is [not available to service consumers] until you [add permissions that allow specific AWS principals] (privatelink-endpoint-service-not-available-by-default); you can also [manually accept specific connection requests] (privatelink-permissions-and-acceptance-control-access).",
+          "**Connect.** The **service consumer** [creates an interface endpoint to your service] (privatelink-wp-provider-nlb-consumer-endpoint-steps) in the [Availability Zones in which your endpoint service] is available (privatelink-consumer-endpoint-only-in-service-azs).",
+          "**Send.** [only consumer VPCs initiate connections] (privatelink-wp-only-consumer-initiates), and the service sees the [private IP addresses of the load balancer nodes] as the source (privatelink-source-ip-is-load-balancer-node)."
+        ],
+        "trace_note": "Step 4 starts with 'Only': write 'Here, [only consumer VPCs initiate connections]' so that the sentence starts with a capital outside the link. Bold **service provider**, **endpoint service** and **service consumer** at first use (term requests).",
+        "table": "Peering or PrivateLink for one API (columns: Question | VPC peering | PrivateLink): what the other VPC reaches | [full bidirectional connectivity between the VPCs] (vpc-peering-wp-full-bidirectional-point-to-point) | the service behind the endpoint service; who starts connections | either side | the consumer (plain words, no link: the Exam trap links the fact); the same CIDR block on both sides | not possible (link vpc-peering-no-overlap-ipv4-ipv6 if the lint asks, or write 'fails') | works: the VPCs [can have overlapping IP address ranges] (privatelink-wp-consumer-and-provider-may-overlap). Three rows; cells at most 15 words.",
+        "why": "Why do overlapping ranges work? The consumer's endpoint network interfaces sit in its own VPC, so there are [no IP conflicts with the service provider] (privatelink-wp-unidirectional-overlapping-ips).",
+        "exam_signal": "\"expose an application to hundreds of customer VPCs in other accounts\" points to an endpoint service; \"buy a partner's service and reach it privately\" points to PrivateLink SaaS, which lets you [access SaaS products privately] (privatelink-saas-access-private-as-if-in-vpc).",
+        "exam_trap": "vpc-connectivity-trap-privatelink-two-way",
+        "exam_trap_text": "Wrong belief: after a consumer connects, the provider can also open connections into the consumer's VPC, as with peering. Truth: the consumer always starts the connection, so [it is a one-way service] (privatelink-faq-consumer-initiates-allowlisted-customers). For the other direction, the consumer offers its own endpoint service. End with <!-- trap: vpc-connectivity-trap-privatelink-two-way -->. At most 45 words. This is the only place in the subsection that links [it is a one-way service]; the table cell says 'the consumer' in plain words.",
+        "body_extras": "One sentence only if words remain: to keep Application Load Balancer routing behind an endpoint service, the Network Load Balancer can [forward traffic from your Network Load Balancer] to an Application Load Balancer target (elb-nlb-alb-target-static-ip-privatelink). A resource endpoint reaches a single resource such as a database and [don't require a load balancer] (vpc-endpoints-resource-endpoint-no-load-balancer); it is new since December 2024, so never let it decide an answer.",
+        "say_it": "The short answer is: the consumer gets a private door to one service. The thing to watch is the direction of each connection.",
+        "stop_and_answer": "A provider removes a consumer account from the allowed principals of its endpoint service. The consumer's endpoint was accepted last month. Does its traffic stop? Answer: No. Removing permissions [does not affect existing connections] that were accepted before (privatelink-remove-permission-keeps-existing-connections). Keep this fact out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "numbers-that-decide-answers",
+      "heading": "Numbers that decide answers",
+      "role": "numbers",
+      "minutes": 2,
+      "bullets": [
+        "4.4.K6",
+        "4.4.S3",
+        "4.4.S5",
+        "1.2.K2"
+      ],
+      "facts": [
+        "vpc-peering-quota-active-connections-per-vpc",
+        "vpc-peering-wp-full-mesh-4950-connections",
+        "transit-gateway-quota-vpc-attachment-bandwidth",
+        "vpc-endpoints-bandwidth-10-gbps-per-az-scales-to-100",
+        "vpc-peering-cross-az-data-transfer-price",
+        "vpc-peering-quota-request-expiry",
+        "transit-gateway-quota-gateways-per-account",
+        "transit-gateway-quota-attachments-per-gateway",
+        "transit-gateway-quota-route-tables-per-gateway",
+        "transit-gateway-mtu-8500-bytes",
+        "vpc-peering-mtu-same-region-9001",
+        "vpc-endpoints-quota-interface-gwlb-per-vpc",
+        "vpc-endpoints-quota-gateway-endpoints",
+        "vpc-endpoints-quota-policy-characters"
+      ],
+      "plan": {
+        "a_list": [
+          {
+            "fact": "vpc-peering-quota-active-connections-per-vpc",
+            "display": "up to 125",
+            "what": "Active peering connections of one VPC (default [50], same fact)",
+            "why_it_decides": "More peers than this need a hub, such as a transit gateway"
+          },
+          {
+            "fact": "vpc-peering-wp-full-mesh-4950-connections",
+            "display": "4,950 peering connections",
+            "what": "A full mesh of 100 VPCs, by [n(n-1)/2]",
+            "why_it_decides": "The count grows with the square of the VPC count"
+          },
+          {
+            "fact": "transit-gateway-quota-vpc-attachment-bandwidth",
+            "display": "up to 100 Gbps",
+            "what": "One VPC attachment in one Availability Zone, each direction",
+            "why_it_decides": "Sizing questions: more zones carry more traffic"
+          },
+          {
+            "fact": "vpc-endpoints-bandwidth-10-gbps-per-az-scales-to-100",
+            "display": "up to 10 Gbps per Availability Zone",
+            "what": "Default bandwidth of a VPC endpoint; it [automatically scales up to 100 Gbps]",
+            "why_it_decides": "Large endpoint traffic needs no request to AWS in most cases; write this cell in plain words without an absolute word, or drop it"
+          },
+          {
+            "fact": "vpc-peering-cross-az-data-transfer-price",
+            "display": "$0.01/GB in both \"In\" and \"Out\" direction",
+            "what": "Peering traffic between zones; traffic that [stays within an Availability Zone is free]",
+            "why_it_decides": "Heavy peering traffic costs less inside one zone"
+          }
+        ],
+        "b_list": [
+          {
+            "fact": "vpc-peering-quota-request-expiry",
+            "display": "1 week (168 hours)",
+            "what": "Life of an unaccepted peering request"
+          },
+          {
+            "fact": "transit-gateway-quota-gateways-per-account",
+            "display": "5",
+            "what": "Transit gateways per account (default, adjustable)"
+          },
+          {
+            "fact": "transit-gateway-quota-attachments-per-gateway",
+            "display": "5,000",
+            "what": "Attachments per transit gateway (default, adjustable)"
+          },
+          {
+            "fact": "transit-gateway-quota-route-tables-per-gateway",
+            "display": "20",
+            "what": "Route tables per transit gateway (default, adjustable)"
+          },
+          {
+            "fact": "transit-gateway-mtu-8500-bytes",
+            "display": "MTU of 8500 bytes",
+            "what": "Largest packet between VPCs through a transit gateway; peering in one Region allows [9001 bytes] (vpc-peering-mtu-same-region-9001)"
+          },
+          {
+            "fact": "vpc-endpoints-quota-interface-gwlb-per-vpc",
+            "display": "50",
+            "what": "Interface and Gateway Load Balancer endpoints per VPC (default, adjustable)"
+          },
+          {
+            "fact": "vpc-endpoints-quota-gateway-endpoints",
+            "display": "20",
+            "what": "Gateway endpoints per Region (default, adjustable)"
+          },
+          {
+            "fact": "vpc-endpoints-quota-policy-characters",
+            "display": "20,480",
+            "what": "Characters in one endpoint policy"
+          }
+        ],
+        "not_examinable_entry_under_b_list": null,
+        "note": "Every A-list row has one number card (vpc-connectivity-c001 to c005). The 'what' and 'why' cells are strict text: every number with a unit needs its own link. The B-list follows the quotas pages, not the PrivateLink FAQ (source conflicts in notes_for_writers). No not-examinable entry is planned (word budget); the two not-examinable changes appear nowhere. At most 165 words."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "decision-record",
+      "heading": "Decision record",
+      "role": "example",
+      "minutes": 2,
+      "bullets": [
+        "3.4.K4",
+        "3.4.S1",
+        "4.4.S3"
+      ],
+      "facts": [
+        "vpc-peering-no-overlap-ipv4-ipv6",
+        "transit-gateway-faq-identical-cidr-not-routed",
+        "privatelink-wp-consumer-and-provider-may-overlap",
+        "privatelink-faq-consumer-initiates-allowlisted-customers",
+        "privatelink-provider-nlb-billed-hourly-full-hour",
+        "privatelink-faq-billing-interface-gwlb-hourly-per-az",
+        "transit-gateway-network-services-account-ram",
+        "vpc-peering-wp-full-bidirectional-point-to-point"
+      ],
+      "plan": {
+        "context": "From data/startup.json chapters.11 (trigger), at most 80 words: stage 3, month 18. Ostell Bank's own application runs in the bank's VPC, and the bank forbids vendor traffic on the internet. Both VPCs use 10.20.0.0/16. The bank must reach Callvale's API and nothing else. Callvale's own VPCs in seven accounts must also reach each other, and its workloads must call AWS services privately. Embed vpc-connectivity-before after this field.",
+        "requirement": "Exam English: The bank's application must call one API privately and must reach nothing else in the VPC, with the MOST secure design.",
+        "options": [
+          "A VPC peering connection with the bank.",
+          "A transit gateway shared with the bank.",
+          "An AWS PrivateLink endpoint service; the bank creates an interface endpoint in its own VPC."
+        ],
+        "decision": "An endpoint service in front of a Network Load Balancer; the bank creates an interface endpoint in its own VPC. Peering is out: you [cannot create a VPC peering connection] with [matching or overlapping IPv4 or IPv6 CIDR blocks] (vpc-peering-no-overlap-ipv4-ipv6), and it would give [full bidirectional connectivity between the VPCs] (vpc-peering-wp-full-bidirectional-point-to-point). A transit gateway does not route between [identical CIDRs] (transit-gateway-faq-identical-cidr-not-routed). PrivateLink works: the VPCs [can have overlapping IP address ranges] (privatelink-wp-consumer-and-provider-may-overlap). Callvale's own VPCs meet at a transit gateway in the [Network Services account] (transit-gateway-network-services-account-ram), which is the network account. Embed vpc-connectivity-after after this field. Cut the transit gateway sentence first if the fields pass 140 words.",
+        "trade_off": "The bank reaches one service, and [it is a one-way service] (privatelink-faq-consumer-initiates-allowlisted-customers). Each endpoint service needs a Network Load Balancer, billed for [each hour or partial hour] (privatelink-provider-nlb-billed-hourly-full-hour), and the bank's endpoint is billed while it is [provisioned in each Availability Zone] (privatelink-faq-billing-interface-gwlb-hourly-per-az). The STARTUP wording 'fixed cost for each endpoint service' is grounded only through these two hourly charges; do not state who pays the bank's endpoint beyond 'the bank's endpoint is billed'.",
+        "diagrams": [
+          "vpc-connectivity-before",
+          "vpc-connectivity-after"
+        ],
+        "budget": "Fields at most 140 words; each diagram alt at most 35 words and caption at most 20 words."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "faq-quick-fire",
+      "heading": "FAQ quick-fire",
+      "role": "faq",
+      "minutes": 3,
+      "bullets": [
+        "4.4.K6",
+        "3.4.K4",
+        "1.2.K2"
+      ],
+      "facts": [
+        "vpc-peering-faq-not-transitive",
+        "vpc-peering-faq-inter-region-no-sg-reference",
+        "transit-gateway-faq-identical-cidr-not-routed",
+        "privatelink-faq-no-encryption-by-default",
+        "privatelink-faq-over-direct-connect"
+      ],
+      "plan": "Five items (see faq), each a can-or-cannot question, the short answer with a fact link, and an AWS quote block with whole sentences of the evidence quote and the source link. At most 225 words in all; keep each answer line at about 12 words."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "in-the-real-world",
+      "heading": "In the real world",
+      "role": "realworld",
+      "minutes": 1,
+      "bullets": [
+        "3.4.K4"
+      ],
+      "facts": [
+        "privatelink-case-resilience-datasync-no-internet"
+      ],
+      "plan": "See realworld. At most 85 words. Required in this brief (L905 checks every brief section from the edit stage on): if 2-deep.md would pass 2,400 words, cut Go deeper words and table cells first."
+    }
+  ],
+  "traps": [
+    {
+      "id": "vpc-connectivity-trap-peering-transitive",
+      "belief": "If VPC A is peered with VPC B and VPC B with VPC C, then VPC A can reach VPC C through VPC B.",
+      "truth": "VPC peering does not support transitive peering relationships; VPC A and VPC C need their own peering connection, or all three attach to a transit gateway.",
+      "facts": [
+        "vpc-peering-faq-not-transitive",
+        "vpc-peering-no-transitive-example"
+      ],
+      "placed_in": "1-fast.md#signals-and-traps"
+    },
+    {
+      "id": "vpc-connectivity-trap-peering-shares-gateways",
+      "belief": "A peered VPC can send internet traffic through its peer's NAT gateway or internet gateway.",
+      "truth": "Resources in a peered VPC cannot use the internet gateway, NAT device, VPN connection, Direct Connect connection or gateway endpoint of the other VPC.",
+      "facts": [
+        "vpc-peering-edge-no-nat",
+        "vpc-peering-edge-no-igw",
+        "vpc-peering-edge-no-vpn",
+        "vpc-peering-edge-no-gateway-endpoint"
+      ],
+      "placed_in": "1-fast.md#signals-and-traps"
+    },
+    {
+      "id": "vpc-connectivity-trap-overlap-peer-or-tgw",
+      "belief": "Peering or a transit gateway can connect two VPCs with the same CIDR block if the routes are specific enough.",
+      "truth": "You cannot create a peering connection between VPCs with matching or overlapping CIDR blocks, and a transit gateway does not route between VPCs with identical or overlapping CIDRs; PrivateLink allows overlapping ranges.",
+      "facts": [
+        "vpc-peering-no-overlap-ipv4-ipv6",
+        "transit-gateway-faq-identical-cidr-not-routed",
+        "transit-gateway-no-routing-identical-or-overlapping-cidr",
+        "privatelink-wp-consumer-and-provider-may-overlap"
+      ],
+      "placed_in": "1-fast.md#signals-and-traps"
+    },
+    {
+      "id": "vpc-connectivity-trap-tgw-propagates-to-vpc",
+      "belief": "Once a VPC is attached to a transit gateway, the routes to the other VPCs appear in the VPC's subnet route tables.",
+      "truth": "Transit gateway routes are not propagated to VPC route tables; the VPC owner adds a static route to the transit gateway in the subnet route table.",
+      "facts": [
+        "transit-gateway-faq-no-propagation-to-vpc-route-table",
+        "transit-gateway-vpc-route-to-tgw-required"
+      ],
+      "placed_in": "2-deep.md#a-transit-gateway-routes-between-attachments-with-its-own-route-tables (Exam trap callout)"
+    },
+    {
+      "id": "vpc-connectivity-trap-tgw-one-table-all-talk",
+      "belief": "Every VPC attached to one transit gateway can reach every other attached VPC, so isolating groups needs a second transit gateway.",
+      "truth": "Separate transit gateway route tables isolate groups: attachments of one isolated route table cannot route packets to or receive packets from attachments of another, and a shared-services table can serve both.",
+      "facts": [
+        "transit-gateway-isolated-vpcs-scenario",
+        "transit-gateway-faq-route-tables-segment",
+        "transit-gateway-isolated-shared-services-scenario"
+      ],
+      "placed_in": "2-deep.md#separate-route-tables-let-one-transit-gateway-isolate-groups-of-vpcs (Exam trap callout)"
+    },
+    {
+      "id": "vpc-connectivity-trap-endpoint-policy-grants",
+      "belief": "An endpoint policy that allows an action gives every principal in the VPC permission to perform it through the endpoint.",
+      "truth": "An endpoint policy only limits what can pass through the endpoint; it does not override or replace identity-based or resource-based policies, so the principal still needs its own allow.",
+      "facts": [
+        "vpc-endpoints-policy-does-not-override-identity-or-resource-policies",
+        "vpc-endpoints-wp-one-policy-per-endpoint-no-override"
+      ],
+      "placed_in": "2-deep.md#an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it (Exam trap callout)"
+    },
+    {
+      "id": "vpc-connectivity-trap-privatelink-two-way",
+      "belief": "After a consumer connects to an endpoint service, the provider can also open connections into the consumer's VPC, as with peering.",
+      "truth": "PrivateLink is a one-way service: only the clients in the consumer VPC initiate connections; for the other direction, the roles reverse with a second endpoint service.",
+      "facts": [
+        "privatelink-faq-consumer-initiates-allowlisted-customers",
+        "privatelink-wp-only-consumer-initiates"
+      ],
+      "placed_in": "2-deep.md#privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections (Exam trap callout)"
+    }
+  ],
+  "traps_note": "7 traps = brief_traps_max of the medium template (U5): 3 in the fast Traps list, 4 as Exam trap callouts in 2-deep.md (subsections 3, 4, 6, 7). Misconceptions without a trap id of this chapter (questions use a misconception sentence or a trap of another chapter): 'a gateway endpoint serves on-premises or peered networks' (vpc-trap-endpoint-types-alike, chapter 10); 'a VPC can peer with any number of VPCs' (vpc-peering-quota-active-connections-per-vpc); 'the AWS-managed private DNS zone of an interface endpoint works in every VPC that reaches it' (vpc-endpoints-wp-central-endpoints-need-own-private-hosted-zone); 'PrivateLink encrypts the traffic' (privatelink-faq-no-encryption-by-default); 'a bucket policy with aws:SourceIp works through a VPC endpoint' (vpc-endpoints-gateway-s3-no-sourceip-use-vpcsourceip); 'a second transit gateway is needed for high availability' (transit-gateway-ha-by-design-single-per-region).",
+  "traps_from_other_chapters": {
+    "rule": "Question writers can tag a distractor with a trap id of another chapter when the distractor states exactly that trap's belief (lint.traps() knows them). Q205 needs a trap id on at least half of the wrong options; reuse is allowed.",
+    "ids": [
+      "vpc-trap-endpoint-types-alike",
+      "vpc-trap-s3-needs-nat",
+      "vpc-trap-natgw-s3-free",
+      "vpc-trap-sg-deny",
+      "vpc-trap-public-ip-is-enough",
+      "elb-trap-nlb-for-inline-appliances",
+      "s3-trap-security-group-on-bucket",
+      "organizations-trap-ram-shares-outside-org-any-type",
+      "route53-trap-forward-to-vpc-plus-two",
+      "how-the-exam-asks-trap-cheapest-wins",
+      "how-the-exam-asks-trap-works-means-correct",
+      "how-the-exam-asks-trap-keyword-bait",
+      "how-the-exam-asks-trap-newest-feature-wins"
+    ]
+  },
+  "compare_tables": [
+    {
+      "where": "1-fast.md#choose-it-or-not",
+      "h3": "Peering, transit gateway or PrivateLink",
+      "columns": [
+        "Question",
+        "VPC peering",
+        "Transit gateway",
+        "PrivateLink"
+      ],
+      "rows": [
+        "Shape | [Full mesh] (transit-gateway-wp-table-architecture-comparison) | [Attachments-based hub-and-spoke] (transit-gateway-wp-table-architecture-comparison) | one service, one direction: [it is a one-way service] (privatelink-faq-consumer-initiates-allowlisted-customers)",
+        "Reach a third network through it | no: [Transitive peering relationships are not supported] (vpc-peering-faq-not-transitive) | yes: [all attachments can route packets to each other] (transit-gateway-centralized-router-scenario) | no: the consumer reaches one service (no link needed: no absolute word)",
+        "Same CIDR block on both sides | no: you [cannot create a VPC peering connection] (vpc-peering-no-overlap-ipv4-ipv6) | no: it does not route [identical CIDRs] (transit-gateway-faq-identical-cidr-not-routed) | yes: the VPCs [can have overlapping IP address ranges] (privatelink-wp-consumer-and-provider-may-overlap)",
+        "What you pay | [data transfer across peering connections is charged] (vpc-peering-faq-no-creation-charge) | each attachment hour and each GB: [connections that you make to the Transit Gateway] (transit-gateway-pricing-hourly-attachment-and-data-processing) | each endpoint hour [provisioned in each Availability Zone] (privatelink-faq-billing-interface-gwlb-hourly-per-az), and each GB"
+      ],
+      "deciding_question": "Must many networks reach each other, or must one consumer reach one service?"
+    },
+    {
+      "where": "1-fast.md#choose-it-or-not",
+      "h3": "Gateway, interface or Gateway Load Balancer endpoint",
+      "columns": [
+        "Question",
+        "Gateway endpoint",
+        "Interface endpoint",
+        "Gateway Load Balancer endpoint"
+      ],
+      "rows": [
+        "What it reaches | [Amazon S3 and Amazon DynamoDB] (vpc-endpoints-faq-gateway-endpoint-s3-ddb-route) | AWS services, your services and [software as a service (SaaS) solutions] (vpc-endpoints-faq-interface-endpoint-privatelink-services) | a [fleet of network virtual appliances] (vpc-endpoints-gwlb-fleet-of-appliances-service)",
+        "How traffic finds it | a route in the route table | DNS answers [resolved to the private IP addresses] of its interfaces (vpc-endpoints-interface-traffic-resolves-to-endpoint-eni) | a route: you send traffic [using route tables] (vpc-endpoints-gwlb-routed-by-route-table)",
+        "Charge | [Gateway VPC endpoints have no hourly charges] (vpc-endpoints-wa-cost08-gateway-free-interface-hourly) | [hourly fee and per-GB usage cost] (vpc-endpoints-wa-cost08-gateway-free-interface-hourly) | per hour in each zone, like an interface endpoint (link privatelink-faq-billing-interface-gwlb-hourly-per-az only if table 1 does not already use that display; otherwise write the cell without the word 'only')"
+      ],
+      "deciding_question": "Is the target S3 or DynamoDB from inside this VPC, another service API, or an inline appliance?"
+    }
+  ],
+  "signals": [
+    {
+      "stem": "\"connect two VPCs with the lowest latency and cost\"",
+      "think": "a VPC peering connection",
+      "because": "peering has the [lowest overall cost and highest aggregate performance] (vpc-peering-wp-lowest-cost-highest-performance)",
+      "but_not_if": "the VPCs share a CIDR block: a PrivateLink endpoint service for the one service"
+    },
+    {
+      "stem": "\"hundreds of VPCs and on-premises networks must reach each other\"",
+      "think": "a transit gateway",
+      "because": "it can [connect thousands of VPCs] (transit-gateway-regional-resource-thousands-of-vpcs)",
+      "but_not_if": "only two VPCs exchange heavy traffic: a peering connection"
+    },
+    {
+      "stem": "\"offer one service to other accounts whose VPCs use the same CIDR\"",
+      "think": "a PrivateLink endpoint service",
+      "because": "the VPCs [can have overlapping IP address ranges] (privatelink-wp-consumer-and-provider-may-overlap)",
+      "but_not_if": "both sides must start connections to many hosts: renumber, then peering or a transit gateway"
+    },
+    {
+      "stem": "\"private subnets send heavy traffic to Amazon S3 through a NAT gateway\"",
+      "think": "an S3 gateway endpoint",
+      "because": "[Gateway VPC endpoints have no hourly charges] (vpc-endpoints-wa-cost08-gateway-free-interface-hourly)",
+      "but_not_if": "the traffic comes from on premises or another Region: an interface endpoint"
+    },
+    {
+      "stem": "\"call an AWS service API privately from the data center\"",
+      "think": "an interface endpoint",
+      "because": "interface endpoints support [connectivity over AWS Direct Connect and VPN] (vpc-endpoints-faq-interface-endpoint-privatelink-services)",
+      "but_not_if": "the caller is in the VPC and the service is S3 or DynamoDB: a gateway endpoint"
+    },
+    {
+      "stem": "\"keep production VPCs away from development VPCs on one transit gateway\"",
+      "think": "separate transit gateway route tables",
+      "because": "you segment by [creating multiple route tables] (transit-gateway-faq-route-tables-segment)",
+      "but_not_if": "traffic between them must be inspected: an inspection VPC with appliance mode"
+    }
+  ],
+  "fast_traps_text": [
+    "vpc-connectivity-trap-peering-transitive: **Wrong belief:** VPC A reaches VPC C through VPC B when both pairs are peered. **Truth:** [Transitive peering relationships are not supported] (vpc-peering-faq-not-transitive).",
+    "vpc-connectivity-trap-peering-shares-gateways: **Wrong belief:** A peered VPC can use its peer's NAT gateway or internet gateway. **Truth:** resources in VPC B [can't use the NAT device in VPC A] (vpc-peering-edge-no-nat) and [can't use the internet gateway in VPC A] (vpc-peering-edge-no-igw).",
+    "vpc-connectivity-trap-overlap-peer-or-tgw: **Wrong belief:** Peering or a transit gateway connects two VPCs with the same CIDR block if the routes are specific. **Truth:** you [cannot create a VPC peering connection] (vpc-peering-no-overlap-ipv4-ipv6), a transit gateway does not route [identical CIDRs] (transit-gateway-faq-identical-cidr-not-routed); use PrivateLink."
+  ],
+  "words_table": [
+    {
+      "term": "VPC peering connection",
+      "collocation": "**accept** a peering connection",
+      "plain": "A private link between two VPCs, one pair at a time",
+      "not": "transit gateway"
+    },
+    {
+      "term": "transit gateway",
+      "collocation": "**attach** a VPC to a transit gateway",
+      "plain": "A Regional hub that routes between many VPCs and networks",
+      "not": "VPC peering connection"
+    },
+    {
+      "term": "interface endpoint",
+      "collocation": "**create** an interface endpoint in a subnet",
+      "plain": "A network interface with a private IP address for one service",
+      "not": "gateway endpoint"
+    },
+    {
+      "term": "endpoint service",
+      "collocation": "**create** an endpoint service",
+      "plain": "Your service, offered to other VPCs through PrivateLink",
+      "not": "interface endpoint (the consumer side)"
+    }
+  ],
+  "words_table_note": "Rows 1 to 3 use terms that exist in data/terms.json (ids vpc-peering-connection, transit-gateway, interface-endpoint) with collocations of the bank. Row 4 is a term request (term_requests: endpoint service, collocation 'create an endpoint service'); the terms agent adds it before the writers start. If the bank's row 2 collocation lacks a bold-able partner word, bold 'attach'. Cells 3 and 4 are free text.",
+  "changed_recently": {
+    "fast": [
+      {
+        "date": "2025-11-19",
+        "what": "Interface endpoints to AWS services in other Regions.",
+        "now_fact": "privatelink-change-cross-region-aws-services-2025",
+        "old": "interface endpoints supported [connectivity to AWS services in the same Region] (privatelink-change-cross-region-aws-services-2025); the Old line can say 'only' because the link stands in the same sentence",
+        "now": "since [November 19, 2025] (privatelink-change-cross-region-aws-services-2025), an interface endpoint can reach select AWS services in other Regions of the same partition, such as [access Amazon S3, Route53, Elastic Container Registry (ECR)] (privatelink-cross-region-aws-services-named-examples); rephrase around the second display or drop it if the line runs long. The change fact must be the first link of the Now line.",
+        "exam_expects": "an interface endpoint in the Region of the service; older questions reach another Region with peering or a transit gateway. Prefer an option that is right under both.",
+        "status": "examinable"
+      }
+    ],
+    "dropped": "Transit Gateway flexible cost allocation (2025-11-21, transit-gateway-change-fca-sender-pay-to-flexible-2025) was weighed; the 1,000-word cap of the fast file allows one entry, so it is taught in the Go deeper of subsection 3 instead. Network function attachments (2025-06-16), Client VPN attachments (2026-04-23), encryption support (2025-11-20), resource endpoints (2024-12-01) and the peering billing usage type (2025-04-11) are not placed as entries.",
+    "not_examinable_yet": "None placed (word budget of 2-deep.md). Transit Gateway Policy-Based Routing (2026-07-30) and PrivateLink tunnel endpoints (2026-09-18) appear nowhere in the chapter. Because an examinable entry exists, the fast section uses no exempt sentence."
+  },
+  "faq": [
+    {
+      "n": 1,
+      "question": "Can VPC A reach VPC C through VPC B when A and B, and B and C, are peered?",
+      "answer": "No. [Transitive peering relationships are not supported] (vpc-peering-faq-not-transitive); peer A and C or use a transit gateway.",
+      "fact": "vpc-peering-faq-not-transitive",
+      "quote": "Transitive peering relationships are not supported.",
+      "source": "https://aws.amazon.com/vpc/faqs/ (Amazon VPC FAQs)"
+    },
+    {
+      "n": 2,
+      "question": "Can a security group rule reference a group across an inter-Region peering connection?",
+      "answer": "No. [Security groups cannot be referenced] (vpc-peering-faq-inter-region-no-sg-reference) there; use the peer's CIDR block.",
+      "fact": "vpc-peering-faq-inter-region-no-sg-reference",
+      "quote": "Security groups cannot be referenced across an Inter-Region VPC Peering connection.",
+      "source": "https://aws.amazon.com/vpc/faqs/ (Amazon VPC FAQs)"
+    },
+    {
+      "n": 3,
+      "question": "Can a transit gateway route between two VPCs with identical CIDR blocks?",
+      "answer": "No. It does not route between [identical CIDRs] (transit-gateway-faq-identical-cidr-not-routed); use PrivateLink or renumber.",
+      "fact": "transit-gateway-faq-identical-cidr-not-routed",
+      "quote": "AWS Transit Gateway doesn’t support routing between Amazon VPCs with identical CIDRs.",
+      "quote_note": "Copy the curly apostrophe of doesn’t exactly.",
+      "source": "https://aws.amazon.com/transit-gateway/faqs/ (AWS Transit Gateway FAQs)"
+    },
+    {
+      "n": 4,
+      "question": "Does PrivateLink encrypt the data in transit for you?",
+      "answer": "No. It [does not provide any encryption by default] (privatelink-faq-no-encryption-by-default); encrypt in the application, for example with TLS.",
+      "fact": "privatelink-faq-no-encryption-by-default",
+      "quote": "PrivateLink does not provide any encryption by default for data in transit.",
+      "source": "https://aws.amazon.com/privatelink/faqs/ (AWS PrivateLink FAQs)"
+    },
+    {
+      "n": 5,
+      "question": "Can an on-premises application reach an interface endpoint over Direct Connect?",
+      "answer": "Yes. It can use the service [endpoints in Amazon VPC over AWS Direct Connect] (privatelink-faq-over-direct-connect).",
+      "fact": "privatelink-faq-over-direct-connect",
+      "quote": "The application in your on-premises can connect to the service endpoints in Amazon VPC over AWS Direct Connect.",
+      "source": "https://aws.amazon.com/vpc/faqs/ (Amazon VPC FAQs; this fact's evidence is on the VPC FAQ page)"
+    }
+  ],
+  "faq_alternatives": [
+    "vpc-peering-faq-no-internet-gateway (Does peering need an internet gateway? No)",
+    "vpc-endpoints-faq-security-groups-association (Can security groups be associated with VPC endpoints? Yes; do not apply it to gateway endpoints)",
+    "transit-gateway-faq-peering-attachment-static-routes (Do transit gateway peering attachments propagate routes? No)",
+    "vpc-endpoints-faq-sdk-discovers-endpoints-latest (Must I change my code to use VPC endpoints? No, with the latest CLI or SDK)",
+    "vpc-peering-faq-inter-region (Can I peer VPCs in different Regions? Yes)"
+  ],
+  "story": {
+    "trigger": "data/startup.json chapters.11.trigger (stage 3, month 18).",
+    "startup_example_fast": "1-fast.md#in-one-breath: the problem of data/startup.json chapters.11.problem, word for word (43 words).",
+    "chen_question": "Chen asks: 'With a peering connection, the two networks would be joined. How does PrivateLink limit the bank to the API?' It is speak item vpc-connectivity-s01, not prose.",
+    "continuity": "Components that exist before month 18: the custom VPC in three Availability Zones with NAT gateways and the S3 gateway endpoint (chapter 10, stages 1 and 2), the Application Load Balancer and web Auto Scaling group (chapters 14, 17), the public API (chapter 33, month 14), DynamoDB (chapter 28), seven accounts with AWS RAM (chapter 04, month 18). This chapter adds the endpoint service, its Network Load Balancer, interface endpoints and the transit gateway in the network account. Chapter 12 (same month) attaches Site-to-Site VPN and Direct Connect to this transit gateway: show the attachment points only as empty space in vpc-connectivity-after, never teach them here. Chapter 19 (month 20) later points this Network Load Balancer at the upload service."
+  },
+  "decision_record": "See sections[decision-record].plan.",
+  "realworld": {
+    "company_line": "**Resilience, 2023.** (date 2023-04-04 from the AWS customer-references entry of the case page, corpus cases index, tag vpc-privatelink)",
+    "intro": "At most two sentences with a link to the case fact: Resilience moves its lab data [using AWS PrivateLink] (privatelink-case-resilience-datasync-no-internet), so the transfer happens [without exposing data to the internet]. Rephrase around the displays so that they read as part of the sentence.",
+    "quote": "This data is transferred securely using AWS PrivateLink, which establishes connectivity between virtual private clouds and AWS services without exposing data to the internet.",
+    "quote_source": "https://aws.amazon.com/solutions/case-studies/resilience-case-study/",
+    "it_shows": "**It shows:** private paths to AWS services keep regulated data off the internet.",
+    "say_it": "Two sentences: Resilience sends its lab data to AWS over PrivateLink. The data never crosses the internet. (If 'never' needs a link, write 'The data stays off the internet.')",
+    "note": "The quote has 24 words (limit 25). Real company names appear only here. The Carrier Global case (transit-gateway-case-carrier-static-routes-across-regions) was weighed and not used: it is a story of moving to Cloud WAN."
+  },
+  "devices": {
+    "go_deeper": [
+      "subsection 3: what a transit gateway costs and how you review it",
+      "subsection 4: inspection and other Regions"
+    ],
+    "spot_the_bug": "subsection 3 (attachment without a subnet in AZ 3)",
+    "exam_trap_callouts": {
+      "subsection 3": "vpc-connectivity-trap-tgw-propagates-to-vpc",
+      "subsection 4": "vpc-connectivity-trap-tgw-one-table-all-talk",
+      "subsection 6": "vpc-connectivity-trap-endpoint-policy-grants",
+      "subsection 7": "vpc-connectivity-trap-privatelink-two-way"
+    },
+    "try_it": {
+      "subsection 1": "vpc-connectivity-t02",
+      "subsection 6": "vpc-connectivity-t03 (only if shipped)"
+    },
+    "look_first": "vpc-connectivity-t01 in 1-fast.md#look-first",
+    "predict_the_picture": "vpc-connectivity-hero in 1-fast.md#in-one-breath",
+    "pass_route": "subsections 2, 3, 6 and 7 carry <!-- section: route=pass --> (the core questions review them)"
+  },
+  "question_slots": [
+    {
+      "slot": 1,
+      "id": "vpc-connectivity-q001",
+      "bullet": "4.4.K6",
+      "concept": "peering-vs-transit-gateway-by-scale",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-most-cost-effective",
+        "ee-must"
+      ],
+      "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+      "trap": "vpc-connectivity-trap-peering-transitive",
+      "twin": "strict twin A of vpc-connectivity-q005",
+      "plan": "Context shared with q005: a company runs a shared-services VPC that is peered with two application VPCs in the same Region; no CIDR blocks overlap. Changed phrase (the only difference from q005): 'The two application VPCs must now also communicate with each other. The company will not add more VPCs.' Ask: 'Which solution meets these requirements MOST cost-effectively?' Options identical in q001 and q005, in neutral words: (a) create a VPC peering connection between each pair of VPCs that must communicate, and add routes for the peer CIDR blocks <key here: no hourly charge, vpc-peering-faq-no-creation-charge>; (b) create a transit gateway, attach every VPC, and add routes to the transit gateway in each VPC route table <key in q005; here violates-qualifier: transit-gateway-pricing-hourly-attachment-and-data-processing>; (c) in each application VPC, route traffic for the other application VPC to the existing peering connection with the shared-services VPC <trap vpc-connectivity-trap-peering-transitive; vpc-peering-no-transitive-example>; (d) create an endpoint service in each application VPC and an interface endpoint in the other application VPC <different-problem: one service in one direction; privatelink-wp-only-consumer-initiates>. Facts: vpc-peering-faq-no-creation-charge, vpc-peering-no-transitive-example, transit-gateway-pricing-hourly-attachment-and-data-processing."
+    },
+    {
+      "slot": 2,
+      "id": "vpc-connectivity-q002",
+      "bullet": "3.4.K4",
+      "concept": "privatelink-one-service-overlapping-cidr",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-most-secure",
+        "ee-privately",
+        "ee-restrict"
+      ],
+      "section": "2-deep.md#privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections",
+      "trap": "vpc-connectivity-trap-overlap-peer-or-tgw",
+      "plan": "A company offers an order API from its VPC to 30 business partners. Each partner calls the API from its own VPC in another AWS account, and several partner VPCs use the same CIDR block as the company's VPC. Traffic must stay private, and partners must be restricted to the API. Which solution is the MOST secure? Key: put a Network Load Balancer in front of the API, create an endpoint service that allows each partner account, and have each partner create an interface endpoint (privatelink-endpoint-service-needs-load-balancer, privatelink-endpoint-service-not-available-by-default, privatelink-wp-consumer-and-provider-may-overlap, privatelink-wp-only-consumer-initiates). Distractors: a VPC peering connection with each partner VPC and security groups that allow only the API port <trap vpc-connectivity-trap-overlap-peer-or-tgw; vpc-peering-no-overlap-ipv4-ipv6>; a transit gateway shared with the partners through AWS RAM, with one route table for each partner <misconception: no routing between identical CIDRs; transit-gateway-no-routing-identical-or-overlapping-cidr>; an internet-facing Network Load Balancer whose security group allows only the partners' public IP addresses <violates-qualifier: the traffic leaves the private network>. Do not key on resource endpoints or cross-Region access (volatile)."
+    },
+    {
+      "slot": 3,
+      "id": "vpc-connectivity-q003",
+      "bullet": "4.4.K6",
+      "concept": "transit-gateway-vpc-route-table-route",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-centrally-manage"
+      ],
+      "section": "2-deep.md#a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+      "trap": "vpc-connectivity-trap-tgw-propagates-to-vpc",
+      "plan": "Difficulty 1, qualifier none. A company wants to centrally manage routing between three VPCs, so it creates a transit gateway with default route table association and propagation and attaches the VPCs. The transit gateway route table lists the CIDR blocks of all three VPCs. Instances still cannot reach instances in the other VPCs. What should the company do? Key: in each VPC, add a route for the other VPCs' CIDR blocks to the subnet route tables, with the transit gateway as the target (transit-gateway-faq-no-propagation-to-vpc-route-table, transit-gateway-vpc-route-to-tgw-required). Distractors: turn on route propagation from the transit gateway to the VPC route tables <trap vpc-connectivity-trap-tgw-propagates-to-vpc; impossible-feature with transit-gateway-faq-no-propagation-to-vpc-route-table>; turn on appliance mode for each VPC attachment <keyword-bait: transit-gateway-appliance-mode-same-az-for-flow>; create VPC peering connections between the VPCs as a second path <different-problem: the transit gateway path is not broken; how-the-exam-asks-trap-works-means-correct only if the text states that belief>."
+    },
+    {
+      "slot": 4,
+      "id": "vpc-connectivity-q004",
+      "bullet": "1.2.K2",
+      "concept": "s3-endpoint-type-by-source",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-privately",
+        "ee-most-cost-effective",
+        "ee-dedicated-connection"
+      ],
+      "section": "2-deep.md#an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+      "trap": "vpc-trap-endpoint-types-alike",
+      "twin": "strict twin A of vpc-connectivity-q010",
+      "plan": "Context shared with q010: a company uploads several terabytes of files each month to an S3 bucket in us-east-1. It has a VPC in us-east-1 and an AWS Direct Connect dedicated connection between that VPC and its data center. The uploads must use private IP addresses only. Which solution is MOST cost-effective? Changed phrase (the only difference from q010): 'The files come from EC2 instances in private subnets of the VPC.' Options identical in q004 and q010: (a) create a gateway endpoint for Amazon S3 and associate it with the route tables of the private subnets <key here: s3-faq-vpce-choose, vpc-gateway-endpoint-no-hourly-or-processing-charge>; (b) create an interface endpoint for Amazon S3 in the VPC and send the uploads to its endpoint-specific DNS name <key in q010; here violates-qualifier: hourly and per-GB charges; trap vpc-trap-endpoint-types-alike>; (c) route the uploads through a NAT gateway in each Availability Zone to the public S3 endpoint <violates-qualifier and requirement: public endpoint; vpc-trap-natgw-s3-free only if the text states that belief>; (d) create a public virtual interface on the Direct Connect connection and send the uploads to the public S3 endpoint <wrong-configuration: public addresses; direct-connect-design-dxgw-with-tgw-multi-region-public-vif-for-s3>. The twin line quotes the changed phrase of q010."
+    },
+    {
+      "slot": 5,
+      "id": "vpc-connectivity-q005",
+      "bullet": "4.4.K6",
+      "concept": "peering-vs-transit-gateway-by-scale",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-most-cost-effective",
+        "ee-must"
+      ],
+      "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+      "trap": "vpc-connectivity-trap-peering-transitive",
+      "twin_of": "vpc-connectivity-q001",
+      "twin": "strict twin B of vpc-connectivity-q001",
+      "plan": "Same context and same four options as q001. Changed phrase: 'The company will grow to 150 VPCs, and every VPC must communicate with every other VPC.' Key moves to (b), the transit gateway (transit-gateway-regional-resource-thousands-of-vpcs, transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway). Option (a) now carries the misconception 'a VPC can hold a peering connection to every other VPC': one VPC has at most [up to 125] active peering connections (vpc-peering-quota-active-connections-per-vpc), so a full mesh of 150 does not fit; in strict fields write 'more peering connections than the quota allows', not a computed number. Options (c) and (d) keep their tags. The twin line of each question quotes the changed phrase of the other."
+    },
+    {
+      "slot": 6,
+      "id": "vpc-connectivity-q006",
+      "bullet": "1.2.K2",
+      "concept": "endpoint-policy-does-not-grant",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-restrict"
+      ],
+      "section": "2-deep.md#an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+      "trap": "vpc-connectivity-trap-endpoint-policy-grants",
+      "plan": "Difficulty 1, qualifier none. A company restricts S3 access through its gateway endpoint with an endpoint policy that allows s3:GetObject on one bucket for all principals. The bucket has no bucket policy. A new application on EC2 instances gets an access denied error when it reads that bucket through the endpoint. The instance profile role has no S3 permissions. What should the company do? Key: add an identity-based policy that allows s3:GetObject on the bucket to the instance profile role (vpc-endpoints-policy-does-not-override-identity-or-resource-policies, iam-eval-identity-policy-no-allow-is-implicit-deny). Distractors: add s3:* on the bucket to the endpoint policy <trap vpc-connectivity-trap-endpoint-policy-grants>; set the Principal element of the endpoint policy to the ARN of the role <impossible-feature: vpc-endpoints-policy-gateway-principal-star-use-principalarn>; replace the gateway endpoint with an interface endpoint for Amazon S3 <different-problem; vpc-trap-endpoint-types-alike only if the text states that belief>. Do not offer a bucket-policy option: within one account a bucket policy alone can allow the read (iam-eval-same-account-identity-or-resource-allow), which would make two options right."
+    },
+    {
+      "slot": 7,
+      "id": "vpc-connectivity-q007",
+      "bullet": "3.4.S1",
+      "concept": "transit-gateway-segmentation-shared-services",
+      "difficulty": 3,
+      "type": "multi",
+      "layer": "extended",
+      "exam_english": [
+        "ee-select-two",
+        "ee-which-combination",
+        "ee-least-operational-overhead",
+        "ee-isolate"
+      ],
+      "section": "2-deep.md#separate-route-tables-let-one-transit-gateway-isolate-groups-of-vpcs",
+      "trap": "vpc-connectivity-trap-tgw-one-table-all-talk",
+      "plan": "(Select TWO.) A company attaches 20 VPCs to one transit gateway that uses its default route table: 10 production VPCs, 9 development VPCs and 1 shared-services VPC. The company must isolate production from development, and both groups must still reach the shared-services VPC. Which combination of steps meets these requirements with the LEAST operational overhead? Keys: (1) create one transit gateway route table for production attachments and one for development attachments, associate each attachment with its group's table, and propagate the shared-services attachment into both tables (transit-gateway-attachment-one-route-table-association, transit-gateway-propagate-to-multiple-route-tables, transit-gateway-isolated-shared-services-scenario); (2) associate the shared-services attachment with a route table into which both the production and the development attachments propagate (transit-gateway-isolated-shared-services-scenario, transit-gateway-faq-route-tables-segment). Distractors: create a second transit gateway for the development VPCs and peer the two transit gateways <trap vpc-connectivity-trap-tgw-one-table-all-talk; violates-qualifier; transit-gateway-one-per-region-isolate-with-route-tables>; add security group rules in the production VPCs that deny the development CIDR blocks <impossible-feature: vpc-sg-allow-rules-only; vpc-trap-sg-deny>; add network ACL deny rules for the development CIDR blocks to every production subnet <violates-qualifier: per-subnet rules in 10 VPCs>. Five options."
+    },
+    {
+      "slot": 8,
+      "id": "vpc-connectivity-q008",
+      "bullet": "3.4.S1",
+      "concept": "central-egress-not-over-peering",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-centrally-manage",
+        "ee-most-operationally-efficient"
+      ],
+      "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+      "trap": "vpc-connectivity-trap-peering-shares-gateways",
+      "plan": "A company peers eight spoke VPCs with one hub VPC that has NAT gateways. Instances in private subnets of the spoke VPCs must reach the internet for software updates, and the company wants to centrally manage outbound internet access in the hub VPC. Which solution meets these requirements in the MOST operationally efficient way? Key: replace the peering connections with a transit gateway; route 0.0.0.0/0 from the spoke VPCs to the transit gateway and from the transit gateway to the egress VPC with the NAT gateways (vpc-centralized-egress-reduces-natgw-cost, transit-gateway-wp-centralize-shared-services, vpc-peering-edge-no-nat). Distractors: add a 0.0.0.0/0 route in each spoke VPC that points to its peering connection with the hub VPC <trap vpc-connectivity-trap-peering-shares-gateways>; create a NAT gateway in each spoke VPC <violates-qualifier: not central; it works>; give the spoke instances Elastic IP addresses and route 0.0.0.0/0 to the hub VPC's internet gateway <vpc-trap-public-ip-is-enough; vpc-peering-edge-no-igw>."
+    },
+    {
+      "slot": 9,
+      "id": "vpc-connectivity-q009",
+      "bullet": "4.4.S5",
+      "concept": "nat-cost-review-gateway-endpoints",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-most-cost-effective",
+        "ee-monitor"
+      ],
+      "section": "2-deep.md#an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+      "trap": "vpc-trap-endpoint-types-alike",
+      "worked": "worked think-aloud, no wrong path (medium: worked 1, worked_wrong_path 0)",
+      "plan": "A company reviews its network costs. NAT gateway data processing is the largest network charge. VPC flow logs that the company uses to monitor traffic show that most of the NAT gateway traffic goes to Amazon S3 and Amazon DynamoDB in the same Region. Which change reduces cost the MOST? (qualifier MOST cost-effective). Key: create gateway endpoints for Amazon S3 and DynamoDB and associate them with the private subnets' route tables (vpc-endpoints-wa-cost08-nat-gateway-vs-endpoints, vpc-gateway-endpoint-no-hourly-or-processing-charge, vpc-endpoints-faq-gateway-endpoint-s3-ddb-route). Distractors: create interface endpoints for Amazon S3 and DynamoDB in every Availability Zone <violates-qualifier: vpc-endpoints-wa-cost08-gateway-free-interface-hourly; trap vpc-trap-endpoint-types-alike>; move all instances and one NAT gateway into one Availability Zone <violates the availability of the workload; different-problem>; send the S3 and DynamoDB traffic through a transit gateway to a central egress VPC <misconception: adds transit gateway processing; vpc-centralized-egress-tgw-processing-tradeoff>. Worked think-aloud with the six fixed step starters and no wrong path."
+    },
+    {
+      "slot": 10,
+      "id": "vpc-connectivity-q010",
+      "bullet": "1.2.K2",
+      "concept": "s3-endpoint-type-by-source",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-privately",
+        "ee-on-premises",
+        "ee-most-cost-effective"
+      ],
+      "section": "2-deep.md#an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+      "trap": "vpc-trap-endpoint-types-alike",
+      "twin_of": "vpc-connectivity-q004",
+      "twin": "strict twin B of vpc-connectivity-q004",
+      "plan": "Same context and same four options as q004. Changed phrase: 'The files come from on-premises servers in the data center.' Key moves to (b), the interface endpoint (s3-faq-vpce-choose, vpc-endpoints-gateway-not-extended-past-vpc, s3-faq-privatelink-on-prem). Option (a), the gateway endpoint, now carries vpc-trap-endpoint-types-alike (vpc-gateway-endpoint-no-onprem-cross-region-tgw). The stem word 'on-premises' carries ee-on-premises. The twin line of each question quotes the changed phrase of the other."
+    },
+    {
+      "slot": 11,
+      "id": "vpc-connectivity-q011",
+      "bullet": "3.4.K4",
+      "concept": "privatelink-direction-reverse-service",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-privately",
+        "ee-least-operational-overhead",
+        "ee-ensure"
+      ],
+      "section": "2-deep.md#privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections",
+      "trap": "vpc-connectivity-trap-privatelink-two-way",
+      "plan": "A SaaS company serves customers through an endpoint service; each customer reaches it privately through an interface endpoint in its own VPC. Several customer VPCs use the same CIDR block as the company's VPC. A new feature must send status callbacks from the company's VPC to an HTTPS receiver in one customer's VPC, and the company must ensure that the traffic stays private. Which solution meets these requirements with the LEAST operational overhead? Key: the customer creates an endpoint service for its receiver behind a Network Load Balancer and allows the company's account; the company creates an interface endpoint to it (privatelink-wp-only-consumer-initiates, privatelink-faq-consumer-initiates-allowlisted-customers, privatelink-endpoint-service-needs-load-balancer). Distractors: add security group rules so that the company's Network Load Balancer can open connections back through the customer's existing interface endpoint <trap vpc-connectivity-trap-privatelink-two-way>; create a VPC peering connection with the customer's VPC for the callbacks <misconception: overlapping CIDR blocks; vpc-connectivity-trap-overlap-peer-or-tgw may tag it>; send the callbacks to a public endpoint of the receiver over the internet with TLS <violates the private requirement>."
+    },
+    {
+      "slot": 12,
+      "id": "vpc-connectivity-q012",
+      "bullet": "4.4.S3",
+      "concept": "transit-gateway-vs-peering-transfer-cost",
+      "difficulty": 3,
+      "type": "multi",
+      "layer": "extended",
+      "exam_english": [
+        "ee-select-two",
+        "ee-which-combination",
+        "ee-most-cost-effective"
+      ],
+      "section": "2-deep.md#a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+      "trap": "how-the-exam-asks-trap-cheapest-wins",
+      "plan": "(Select TWO.) A company connects 25 VPCs in one Region through a transit gateway. A cost review shows two large items: transit gateway data processing for 40 TB each month between an analytics VPC and a data VPC, and NAT gateway data processing for backups that instances in the data VPC write to Amazon S3. All other VPC traffic is small. Which combination of steps reduces these costs the MOST while keeping the transit gateway for the other VPCs? Keys: (1) create a VPC peering connection between the analytics VPC and the data VPC and route their traffic to it (vpc-peering-faq-no-creation-charge, transit-gateway-pricing-data-processing-per-gb-sent-to-gateway, vpc-peering-specific-routes-longest-prefix); (2) create a gateway endpoint for Amazon S3 in the data VPC (vpc-gateway-endpoint-no-hourly-or-processing-charge). Distractors: create an interface endpoint for Amazon S3 in the data VPC <violates-qualifier: hourly and per-GB charges; vpc-trap-endpoint-types-alike>; replace the transit gateway with VPC peering between all 25 VPCs <how-the-exam-asks-trap-cheapest-wins: cheapest per GB but violates 'keep the transit gateway' and adds 300 connections to manage>; enable appliance mode on the two VPC attachments <keyword-bait: transit-gateway-appliance-mode-same-az-for-flow>. Five options. Do not key on flexible cost allocation (volatile)."
+    }
+  ],
+  "question_plan": {
+    "write": 12,
+    "ship": "10 (core 5, extended 5)",
+    "layer": {
+      "core": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        8
+      ],
+      "extended": [
+        4,
+        7,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "difficulty": {
+      "1": [
+        3,
+        6
+      ],
+      "2": [
+        1,
+        2,
+        4,
+        5,
+        8,
+        9,
+        10
+      ],
+      "3": [
+        7,
+        11,
+        12
+      ]
+    },
+    "multi": [
+      7,
+      12
+    ],
+    "twin_pairs": [
+      "q001 / q005 (strict: 'The two application VPCs must now also communicate with each other. The company will not add more VPCs.' / 'The company will grow to 150 VPCs, and every VPC must communicate with every other VPC.'; same four options; key peering / transit gateway)",
+      "q004 / q010 (strict: 'The files come from EC2 instances in private subnets of the VPC.' / 'The files come from on-premises servers in the data center.'; same four options; key gateway endpoint / interface endpoint)"
+    ],
+    "twin_note": "The template needs 1 twin pair; 2 are planned so that one rejection does not block shipping (orchestrator note). Both pairs are strict (J2) and turn on stable facts (peering quota and pricing; gateway endpoint reach). Twins share their layer; at least 3 questions stand between them (q001 and q005: 3; q004 and q010: 5).",
+    "worked": [
+      "q009 (no wrong path)"
+    ],
+    "slots_on_a_brief_trap": "9 of 12 carry a trap of this brief as the slot trap (q001, q002, q003, q005, q006, q007, q008, q011 and, through distractors, q002 and q011 tag vpc-connectivity-trap-overlap-peer-or-tgw); q004, q009, q010 use chapter 10's vpc-trap-endpoint-types-alike and q012 how-the-exam-asks-trap-cheapest-wins: 12 of 12 slots are built on a trap. Every brief trap is the slot trap of at least one slot.",
+    "bullets_covered": "all 6 bullets of the registry entry: 1.2.K2 q004 q006 q010; 3.4.K4 q002 q011; 3.4.S1 q007 q008; 4.4.K6 q001 q003 q005; 4.4.S3 q012; 4.4.S5 q009.",
+    "q205_rule": "Every wrong option names a trap id where one fits (this brief's 7, or traps_from_other_chapters); at least half of the wrong options carry one. A distractor gets a trap id only when its text states exactly that trap's belief; otherwise it carries a misconception sentence and a distractor_type.",
+    "rule": "Question ids are vpc-connectivity-q001 to vpc-connectivity-q012 in slot order. Protect both strict twin pairs, both multiple-response questions and the worked question when the weakest two are cut. At most 2 questions per concept; a unique (concept, trap) pair per question (twins exempt). At most one impossible-feature distractor per question, with its fact. Never key an answer on resource endpoints, cross-Region PrivateLink, flexible cost allocation, network function attachments, Client VPN attachments, Transit Gateway encryption support or any other volatile fact (notes_for_writers 4). Stems never name Callvale or the bank; they can reuse the situation (two VPCs with 10.20.0.0/16, seven accounts)."
+  },
+  "terms": [
+    "vpc-peering-connection",
+    "transit-gateway",
+    "interface-endpoint",
+    "gateway-endpoint"
+  ],
+  "terms_note": "These bank terms are taught in this chapter too (bold at first use in each hand file, U6). Every term in term_requests is defined in bold in this chapter; the terms agent adds them to data/terms.json right after this brief, and the orchestrator then moves their ids into terms, so no writer needs a needs-term marker.",
+  "term_requests": [
+    {
+      "term": "requester VPC",
+      "where": "2-deep.md subsection 1",
+      "meaning": "The VPC whose owner sends the request to create a peering connection.",
+      "collocations": [
+        "the owner of the requester VPC sends the request"
+      ],
+      "do_not_confuse": [
+        "accepter VPC"
+      ]
+    },
+    {
+      "term": "accepter VPC",
+      "where": "2-deep.md subsection 1",
+      "meaning": "The VPC whose owner accepts or rejects a peering request.",
+      "collocations": [
+        "the owner of the accepter VPC accepts the request"
+      ],
+      "do_not_confuse": [
+        "requester VPC"
+      ]
+    },
+    {
+      "term": "transitive routing",
+      "where": "2-deep.md subsection 2",
+      "meaning": "Traffic that passes through one network to reach a third network.",
+      "collocations": [
+        "peering does not support transitive routing",
+        "transitive routing through a hub"
+      ],
+      "do_not_confuse": [
+        "edge-to-edge routing"
+      ]
+    },
+    {
+      "term": "edge-to-edge routing",
+      "where": "2-deep.md subsection 2",
+      "meaning": "Using a peer VPC's gateway or connection, such as its NAT gateway or VPN, to reach a network beyond it.",
+      "collocations": [
+        "peering does not allow edge-to-edge routing"
+      ],
+      "do_not_confuse": [
+        "transitive routing"
+      ]
+    },
+    {
+      "term": "full mesh",
+      "where": "2-deep.md subsection 2",
+      "meaning": "A design in which every network connects directly to every other network.",
+      "collocations": [
+        "a full mesh of peering connections"
+      ],
+      "do_not_confuse": [
+        "hub-and-spoke"
+      ]
+    },
+    {
+      "term": "hub-and-spoke",
+      "where": "1-fast.md choose table and 2-deep.md subsection 3",
+      "meaning": "A design in which every network connects to one central hub that routes between them.",
+      "collocations": [
+        "a hub-and-spoke network",
+        "each spoke connects to the hub"
+      ],
+      "do_not_confuse": [
+        "full mesh"
+      ]
+    },
+    {
+      "term": "transit gateway attachment",
+      "where": "2-deep.md subsection 3",
+      "meaning": "The connection of one VPC, VPN, Direct Connect gateway or peer transit gateway to a transit gateway.",
+      "collocations": [
+        "create a VPC attachment",
+        "an attachment subnet in each Availability Zone"
+      ],
+      "do_not_confuse": [
+        "transit gateway route table"
+      ]
+    },
+    {
+      "term": "transit gateway route table",
+      "where": "2-deep.md subsection 3",
+      "meaning": "A route table inside a transit gateway that decides which attachment receives each packet.",
+      "collocations": [
+        "associate an attachment with a route table",
+        "propagate routes to a route table"
+      ],
+      "do_not_confuse": [
+        "route table (of a subnet)"
+      ]
+    },
+    {
+      "term": "association (transit gateway)",
+      "where": "2-deep.md subsection 3",
+      "meaning": "The link between an attachment and the one transit gateway route table that routes its traffic.",
+      "collocations": [
+        "associate an attachment with a route table"
+      ],
+      "do_not_confuse": [
+        "route propagation"
+      ]
+    },
+    {
+      "term": "route propagation",
+      "where": "2-deep.md subsection 3",
+      "meaning": "Automatic adding of an attachment's routes to a transit gateway route table.",
+      "collocations": [
+        "turn on route propagation",
+        "the attachment propagates its routes"
+      ],
+      "do_not_confuse": [
+        "association (transit gateway)",
+        "static route"
+      ]
+    },
+    {
+      "term": "static route",
+      "where": "2-deep.md subsection 3",
+      "meaning": "A route that you add by hand; it does not change when the network changes.",
+      "collocations": [
+        "add a static route",
+        "a static route to the transit gateway"
+      ],
+      "do_not_confuse": [
+        "route propagation"
+      ]
+    },
+    {
+      "term": "blackhole route",
+      "where": "2-deep.md subsection 4",
+      "meaning": "A route that drops the traffic that matches it.",
+      "collocations": [
+        "add a blackhole route",
+        "the route is a blackhole"
+      ],
+      "do_not_confuse": [
+        "a missing route"
+      ]
+    },
+    {
+      "term": "appliance mode",
+      "where": "2-deep.md subsection 4 (Go deeper)",
+      "meaning": "A VPC attachment setting that keeps both directions of a flow in one Availability Zone of the appliance VPC.",
+      "collocations": [
+        "enable appliance mode on the attachment"
+      ],
+      "do_not_confuse": [
+        "Gateway Load Balancer"
+      ]
+    },
+    {
+      "term": "inspection VPC",
+      "where": "2-deep.md subsection 4 (Go deeper)",
+      "meaning": "A VPC with firewalls or appliances that inspect traffic between other networks.",
+      "collocations": [
+        "route traffic through an inspection VPC"
+      ],
+      "do_not_confuse": [
+        "egress VPC"
+      ]
+    },
+    {
+      "term": "data processing charge",
+      "where": "2-deep.md subsections 2, 3 and 5",
+      "meaning": "A charge for each gigabyte that a NAT gateway, transit gateway or VPC endpoint handles.",
+      "collocations": [
+        "pay a data processing charge",
+        "avoid the data processing charge"
+      ],
+      "do_not_confuse": [
+        "data transfer charge"
+      ]
+    },
+    {
+      "term": "endpoint network interface",
+      "where": "2-deep.md subsection 5",
+      "meaning": "The network interface with a private IP address that an interface endpoint places in a subnet.",
+      "collocations": [
+        "an endpoint network interface in each subnet"
+      ],
+      "do_not_confuse": [
+        "elastic network interface of an instance"
+      ]
+    },
+    {
+      "term": "private DNS (interface endpoint)",
+      "where": "2-deep.md subsection 5",
+      "meaning": "An endpoint setting that makes the service's default DNS name resolve to the endpoint's private IP addresses.",
+      "collocations": [
+        "enable private DNS on the endpoint"
+      ],
+      "do_not_confuse": [
+        "private hosted zone"
+      ]
+    },
+    {
+      "term": "endpoint policy",
+      "where": "2-deep.md subsection 6",
+      "meaning": "A resource-based policy on a VPC endpoint that limits which principals, actions and resources can use it.",
+      "collocations": [
+        "attach an endpoint policy",
+        "the endpoint policy limits access"
+      ],
+      "do_not_confuse": [
+        "bucket policy",
+        "identity-based policy"
+      ]
+    },
+    {
+      "term": "endpoint service",
+      "where": "1-fast.md words table and 2-deep.md subsection 7",
+      "meaning": "A service that a provider offers to other VPCs through PrivateLink, behind a load balancer.",
+      "collocations": [
+        "create an endpoint service",
+        "allow principals on the endpoint service"
+      ],
+      "do_not_confuse": [
+        "interface endpoint"
+      ]
+    },
+    {
+      "term": "service provider (PrivateLink)",
+      "where": "2-deep.md subsection 7",
+      "meaning": "The account that owns an endpoint service and decides who can connect.",
+      "collocations": [
+        "the service provider allows the consumer"
+      ],
+      "do_not_confuse": [
+        "service consumer"
+      ]
+    },
+    {
+      "term": "service consumer (PrivateLink)",
+      "where": "2-deep.md subsection 7",
+      "meaning": "The account that creates an interface endpoint to use an endpoint service.",
+      "collocations": [
+        "the service consumer creates an interface endpoint"
+      ],
+      "do_not_confuse": [
+        "consumer (of a queue)",
+        "service provider"
+      ]
+    },
+    {
+      "term": "resource endpoint",
+      "where": "2-deep.md subsection 7 (body extra, only if it fits)",
+      "meaning": "A VPC endpoint that reaches one resource, such as a database, in another VPC without a load balancer.",
+      "collocations": [
+        "create a resource endpoint"
+      ],
+      "do_not_confuse": [
+        "interface endpoint"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "vpc-connectivity-t01",
+      "type": "look",
+      "title": "List the services you can reach through VPC endpoints",
+      "section": "1-fast.md#look-first",
+      "kills": "\"Only Amazon S3 and DynamoDB can be reached privately from a VPC.\"",
+      "trap": null,
+      "pass_route": false,
+      "minutes": 3,
+      "plan": "In AWS CloudShell, read-only, $0. Step 1: aws ec2 describe-vpc-endpoint-services with a --query that prints the service name and the service type (Gateway or Interface) of each service in us-east-1. Expect many services of type Interface, and s3 and dynamodb also of type Gateway. Explain: gateway endpoints are for [Amazon S3 and Amazon DynamoDB] (vpc-endpoints-faq-gateway-endpoint-s3-ddb-route), while many [AWS services integrate with AWS PrivateLink] (vpc-endpoints-aws-services-integrating-list). Step 2 (optional): the same command with a --filters Name=service-type,Values=Gateway to show the two gateway services. Creates nothing. Confirm the command, the filter name and the --query paths with tasks check-cli --reference; if a path is not in the reference page, drop that part of the query.",
+      "facts": [
+        "vpc-endpoints-aws-services-integrating-list",
+        "vpc-endpoints-faq-gateway-endpoint-s3-ddb-route",
+        "vpc-endpoints-gateway-not-privatelink-concepts"
+      ]
+    },
+    {
+      "id": "vpc-connectivity-t02",
+      "type": "try",
+      "title": "Peer two VPCs and watch a route wait for the accept",
+      "section": "2-deep.md#a-peering-connection-works-only-after-both-owners-add-routes",
+      "kills": "\"A peering connection works as soon as you request it and add a route.\"",
+      "trap": null,
+      "pass_route": true,
+      "minutes": 10,
+      "plan": "In AWS CloudShell, about 10 minutes, $0 (no instances; [no charge for creating VPC peering connections], vpc-peering-faq-no-creation-charge; ground the free VPC in the cost line with a chapter 10 fact or the VPC pricing page, or write the cost line as the tasks writer of chapter 10 did). Step 1: aws ec2 create-vpc --cidr-block 10.0.0.0/16 with --tag-specifications for book=saa and task=vpc-connectivity-t02 (capture VPC_A). Step 2: the same for 10.1.0.0/16 (capture VPC_B). Step 3: aws ec2 create-vpc-peering-connection --vpc-id $VPC_A --peer-vpc-id $VPC_B with the two tags (capture PCX); describe it: expect status pending-acceptance. Step 4, break it: predict whether a route works now; find the main route table of VPC A (capture RTB_A) and aws ec2 create-route --route-table-id $RTB_A --destination-cidr-block 10.1.0.0/16 --vpc-peering-connection-id $PCX; describe-route-tables: expect the route state blackhole; explain: the route [has no effect until] the connection is active (vpc-peering-route-pending-blackhole). Step 5, the fix: aws ec2 accept-vpc-peering-connection --vpc-peering-connection-id $PCX; describe the route again: expect state active. Step 6: add the return route in VPC B's main route table (capture RTB_B), because each owner [must manually add a route] (vpc-peering-step-routes-manual). Cleanup in reverse order: delete-route in RTB_B, delete-route in RTB_A, delete-vpc-peering-connection, delete-vpc B, delete-vpc A. Verify by tag: aws ec2 describe-vpcs --filters Name=tag:task,Values=vpc-connectivity-t02, expect an empty list (a deleted peering connection stays visible for a while: vpc-peering-deleted-connection-visibility, so do not verify on the peering connection). Commands from the EC2 CLI reference pages in the corpus (tasks check-cli --reference).",
+      "facts": [
+        "vpc-peering-route-pending-blackhole",
+        "vpc-peering-step-routes-manual",
+        "vpc-peering-step-accept",
+        "vpc-peering-faq-no-creation-charge",
+        "vpc-peering-deleted-connection-visibility"
+      ]
+    },
+    {
+      "id": "vpc-connectivity-t03",
+      "type": "try",
+      "title": "Limit a gateway endpoint to one bucket with an endpoint policy",
+      "section": "2-deep.md#an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+      "kills": "\"An endpoint policy is written like an identity-based policy, without a Principal.\"",
+      "trap": "vpc-connectivity-trap-endpoint-policy-grants",
+      "pass_route": false,
+      "minutes": 10,
+      "status": "optional: write it only if every command and the expected error can be grounded in a CLI reference page of the corpus; the template needs at least 1 Try, which vpc-connectivity-t02 covers",
+      "plan": "In AWS CloudShell, about 10 minutes, $0 ([There are no data processing or hourly charges for using Gateway Type VPC endpoints], vpc-gateway-endpoint-no-hourly-or-processing-charge). Step 1: create a VPC 10.2.0.0/16 with the two tags (capture VPC_ID) and read its main route table (capture RTB). Step 2: aws ec2 create-vpc-endpoint --vpc-id $VPC_ID --service-name com.amazonaws.us-east-1.s3 --route-table-ids $RTB with a one-line --policy-document that allows s3:GetObject on arn:aws:s3:::saa-vpc-connectivity-t03-<ACCOUNT_ID>/* for Principal * and the two tags (capture VPCE). Step 3: aws ec2 describe-vpc-endpoints --vpc-endpoint-ids $VPCE --query the PolicyDocument; expect the one bucket. Step 4, break it: predict; aws ec2 modify-vpc-endpoint with a policy document that has no Principal element; expect an error; explain: an endpoint policy [must contain a Principal element] (vpc-endpoints-policy-json-iam-language-principal-required). Step 5: read the route that the endpoint added (a prefix list target). Cleanup: delete-vpc-endpoints, then delete-vpc. Verify by tag: describe-vpcs with the task tag filter, expect an empty list. No bucket is created (the policy names a bucket that need not exist). If the error of step 4 cannot be grounded without an AWS fact in 'expect', park the task.",
+      "facts": [
+        "vpc-endpoints-policy-json-iam-language-principal-required",
+        "vpc-endpoints-policy-gateway-principal-star-use-principalarn",
+        "vpc-gateway-endpoint-no-hourly-or-processing-charge",
+        "vpc-endpoints-faq-gateway-endpoint-s3-ddb-route"
+      ]
+    }
+  ],
+  "speak": [
+    {
+      "id": "vpc-connectivity-s01",
+      "kind": "explain",
+      "persona": "Chen, security lead of Callvale",
+      "prompt": "With a peering connection, the two networks would be joined. How does PrivateLink limit the bank to the API?",
+      "section": "2-deep.md#privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections",
+      "layer": "core",
+      "pass_route": true,
+      "plan": {
+        "ten_second": "The short answer is: the bank reaches one service, our API, through an endpoint in its own VPC. And only the bank can start a connection.",
+        "key_points_must": [
+          "Peering would give full bidirectional connectivity, and it cannot be created between our two identical CIDR blocks (vpc-peering-wp-full-bidirectional-point-to-point, vpc-peering-no-overlap-ipv4-ipv6).",
+          "The bank creates an interface endpoint to our endpoint service, which sits behind a Network Load Balancer in front of the API (privatelink-wp-provider-nlb-consumer-endpoint-steps, privatelink-endpoint-service-needs-load-balancer).",
+          "Only consumer VPCs initiate connections; it is a one-way service (privatelink-wp-only-consumer-initiates, privatelink-faq-consumer-initiates-allowlisted-customers).",
+          "Nobody connects until we allow the bank's account, and we can accept each request by hand (privatelink-endpoint-service-not-available-by-default, privatelink-permissions-and-acceptance-control-access)."
+        ],
+        "key_points_nice": [
+          "The same CIDR block on both sides is fine with PrivateLink (privatelink-wp-consumer-and-provider-may-overlap).",
+          "The load balancer's security group can allow only the bank's client addresses (privatelink-nlb-security-group-must-allow-clients)."
+        ],
+        "must_not_say": [
+          "error: 'PrivateLink encrypts the bank's traffic for us.' correct: PrivateLink does not provide any encryption by default; the API keeps TLS (privatelink-faq-no-encryption-by-default).",
+          "error: 'The bank's endpoint is reachable from the internet, but only the bank knows its name.' correct: the endpoint's DNS names resolve to private IP addresses in the bank's VPC (privatelink-faq-endpoint-dns-resolves-to-local-ip)."
+        ],
+        "follow_ups": [
+          "If we remove the bank's account from the allowed principals, does its traffic stop? No: removing permissions does not affect existing connections that we already accepted (privatelink-remove-permission-keeps-existing-connections).",
+          "Can the bank call the API from its data center too? Yes: its on-premises application can reach the endpoint in its VPC over Direct Connect (privatelink-faq-over-direct-connect)."
+        ],
+        "in_your_case": "One endpoint service for the API now; any other service is a new decision. Check-back question: 'Which other Callvale services must the bank call, besides the API?'"
+      }
+    },
+    {
+      "id": "vpc-connectivity-s02",
+      "kind": "compare",
+      "persona": "a startup CTO in office hours",
+      "prompt": "We have twelve VPCs in five accounts, and next year we will have about forty. Should we peer them or use a transit gateway?",
+      "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+      "layer": "extended",
+      "pass_route": false,
+      "plan": {
+        "ten_second": "Both connect VPCs privately. Peering links two VPCs at the lowest cost, but it is not transitive; a transit gateway is one hub for all of them.",
+        "key_points_must": [
+          "Peering is one to one and not transitive, so every pair needs its own connection (vpc-peering-one-to-one-relationship, vpc-peering-no-transitive-example).",
+          "A full mesh grows fast, and each VPC holds a limited number of active peering connections; use the spoken form 'adjustable up to one hundred twenty-five' (vpc-peering-wp-full-mesh-4950-connections, vpc-peering-quota-active-connections-per-vpc).",
+          "With a transit gateway each spoke VPC connects once, and route tables keep groups apart (transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway, transit-gateway-faq-route-tables-segment).",
+          "A transit gateway charges per attachment hour and per gigabyte; peering charges only data transfer (transit-gateway-pricing-hourly-attachment-and-data-processing, vpc-peering-faq-no-creation-charge)."
+        ],
+        "key_points_nice": [
+          "AWS suggests peering when fewer than ten VPCs must connect (vpc-peering-wp-best-for-few-controlled-vpcs).",
+          "Designs often mix both: peering for a busy pair, the transit gateway for the rest (privatelink-wp-mix-of-technologies)."
+        ],
+        "must_not_say": [
+          "error: 'Peer every VPC with one hub VPC and route through the hub.' correct: VPC peering does not support transitive peering relationships (vpc-peering-no-transitive-example).",
+          "error: 'A transit gateway is free; you pay only for traffic.' correct: it is charged for the connections you make to it each hour and for the traffic (transit-gateway-pricing-hourly-attachment-and-data-processing)."
+        ],
+        "follow_ups": [
+          "Can our other accounts use one transit gateway? Yes: share it with AWS RAM, and each account accepts the resource share (transit-gateway-share-with-ram-accounts-or-org, transit-gateway-share-accept-in-ram).",
+          "Can we keep development away from production? Yes: give each group its own route table on the transit gateway (transit-gateway-isolated-vpcs-scenario)."
+        ],
+        "in_your_case": "Forty VPCs that must reach each other: a transit gateway in a network account. Check-back question: 'Which two VPCs send the most data to each other?'"
+      }
+    }
+  ],
+  "cards": [
+    {
+      "id": "vpc-connectivity-c001",
+      "type": "number",
+      "deck": "core",
+      "front": "In Amazon VPC, the active peering connections of one VPC can be raised {{c1::up to 125}} (default 50).",
+      "back": "up to 125",
+      "facts": [
+        "vpc-peering-quota-active-connections-per-vpc"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "vpc-connectivity-c002",
+      "type": "number",
+      "deck": "extended",
+      "front": "In VPC peering, a full mesh of 100 VPCs needs {{c1::4,950 peering connections}}.",
+      "back": "4,950 peering connections",
+      "facts": [
+        "vpc-peering-wp-full-mesh-4950-connections"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "vpc-connectivity-c003",
+      "type": "number",
+      "deck": "extended",
+      "front": "In AWS Transit Gateway, one VPC attachment carries {{c1::up to 100 Gbps}} in each Availability Zone, each direction.",
+      "back": "up to 100 Gbps",
+      "facts": [
+        "transit-gateway-quota-vpc-attachment-bandwidth"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "vpc-connectivity-c004",
+      "type": "number",
+      "deck": "extended",
+      "front": "In AWS PrivateLink, a VPC endpoint supports {{c1::up to 10 Gbps per Availability Zone}} by default and then scales.",
+      "back": "up to 10 Gbps per Availability Zone",
+      "facts": [
+        "vpc-endpoints-bandwidth-10-gbps-per-az-scales-to-100"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "vpc-connectivity-c005",
+      "type": "number",
+      "deck": "extended",
+      "front": "In VPC peering, data that crosses Availability Zones in one Region costs {{c1::$0.01/GB in both \"In\" and \"Out\" direction}}.",
+      "back": "$0.01/GB in both \"In\" and \"Out\" direction",
+      "facts": [
+        "vpc-peering-cross-az-data-transfer-price"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "vpc-connectivity-c006",
+      "type": "cannot",
+      "deck": "core",
+      "front": "In VPC peering, can instances in VPC B reach the internet through the NAT gateway of peered VPC A?",
+      "back": "No",
+      "extra": "Peering does not allow edge-to-edge routing: no use of the peer's NAT device, internet gateway, VPN or gateway endpoint.",
+      "facts": [
+        "vpc-peering-edge-no-nat"
+      ],
+      "trap": "vpc-connectivity-trap-peering-shares-gateways",
+      "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh"
+    },
+    {
+      "id": "vpc-connectivity-c007",
+      "type": "cannot",
+      "deck": "core",
+      "front": "In Amazon VPC, can you peer two VPCs whose IPv4 CIDR blocks overlap?",
+      "back": "No",
+      "extra": "The peering connection cannot be created; PrivateLink allows overlapping ranges for one service.",
+      "facts": [
+        "vpc-peering-no-overlap-ipv4-ipv6"
+      ],
+      "trap": "vpc-connectivity-trap-overlap-peer-or-tgw",
+      "section": "2-deep.md#a-peering-connection-works-only-after-both-owners-add-routes"
+    },
+    {
+      "id": "vpc-connectivity-c008",
+      "type": "differ",
+      "deck": "core",
+      "front": "VPC peering or a transit gateway: which one lets VPC A reach VPC C through a third point?",
+      "back": "A transit gateway",
+      "extra": "Peering is not transitive; on a transit gateway all attachments can route to each other through the hub.",
+      "facts": [
+        "vpc-peering-faq-not-transitive",
+        "transit-gateway-centralized-router-scenario"
+      ],
+      "trap": "vpc-connectivity-trap-peering-transitive",
+      "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh"
+    },
+    {
+      "id": "vpc-connectivity-c009",
+      "type": "decide",
+      "deck": "extended",
+      "front": "Another company's VPC with the same CIDR block must call one of your APIs privately: which service?",
+      "back": "An AWS PrivateLink endpoint service",
+      "extra": "The consumer creates an interface endpoint; consumer and provider VPCs can have overlapping IP address ranges.",
+      "facts": [
+        "privatelink-wp-consumer-and-provider-may-overlap",
+        "privatelink-wp-provider-nlb-consumer-endpoint-steps"
+      ],
+      "section": "2-deep.md#privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections"
+    },
+    {
+      "id": "vpc-connectivity-c010",
+      "type": "differ",
+      "deck": "extended",
+      "front": "In Amazon VPC, endpoint policy or IAM policy: which one can grant an application permission to read a bucket?",
+      "back": "The IAM policy (or a bucket policy)",
+      "extra": "An endpoint policy only limits what passes through the endpoint; it does not override or replace identity-based policies.",
+      "facts": [
+        "vpc-endpoints-policy-does-not-override-identity-or-resource-policies"
+      ],
+      "trap": "vpc-connectivity-trap-endpoint-policy-grants",
+      "section": "2-deep.md#an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it"
+    },
+    {
+      "id": "vpc-connectivity-c011",
+      "type": "decide",
+      "deck": "extended",
+      "front": "In AWS Transit Gateway, a VPC is attached and the hub's route table is complete, but instances cannot reach other VPCs: what is missing?",
+      "back": "A static route to the transit gateway in the VPC's subnet route tables",
+      "extra": "Transit gateway routes are not propagated to VPC route tables.",
+      "facts": [
+        "transit-gateway-faq-no-propagation-to-vpc-route-table"
+      ],
+      "trap": "vpc-connectivity-trap-tgw-propagates-to-vpc",
+      "section": "2-deep.md#a-transit-gateway-routes-between-attachments-with-its-own-route-tables"
+    },
+    {
+      "id": "vpc-connectivity-c012",
+      "type": "decide",
+      "deck": "extended",
+      "front": "Servers in a data center must reach Amazon S3 privately over Direct Connect: which endpoint type?",
+      "back": "An interface endpoint for Amazon S3",
+      "extra": "Gateway endpoint connections cannot be extended out of a VPC.",
+      "facts": [
+        "vpc-endpoints-gateway-not-extended-past-vpc",
+        "s3-faq-vpce-choose"
+      ],
+      "section": "2-deep.md#an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet"
+    }
+  ],
+  "card_plan": {
+    "core": 4,
+    "extended": 8,
+    "core_ids": [
+      "vpc-connectivity-c001",
+      "vpc-connectivity-c006",
+      "vpc-connectivity-c007",
+      "vpc-connectivity-c008"
+    ],
+    "number_cards_equal_a_list_rows": 5,
+    "rule": "Fronts and backs above are drafts for the card writer: one fact per card (c008, c009 and c012 name two facts of one rule; keep both or split), a back of at most 12 words, a display of a fact for any number with a unit (the cloze texts are the A-list displays; the '50' and '100' on fronts c001 and c002 are a quota and the fact's own example: link or reword if the card lint asks), and the context named at the start of the front. The cloze syntax and the front of a number card follow the exemplar cards.json; change a front so that it does not hold the answer outside the cloze."
+  },
+  "diagrams": [
+    {
+      "id": "vpc-connectivity-hero",
+      "kind": "arch",
+      "placement": "1-fast.md#in-one-breath (behind 'Predict the picture.': 'Five VPCs must all reach each other. Does each VPC send traffic straight to the other VPC, or to one hub?')",
+      "title": "Four ways to leave a VPC privately",
+      "claim": "A peering connection joins two VPCs, a transit gateway joins many, and endpoints reach one service privately.",
+      "alt": "VPC A and VPC B joined by one peering connection. Three spoke VPCs attached to a transit gateway. A spoke VPC with a gateway endpoint to Amazon S3 and an interface endpoint to a service in a provider VPC.",
+      "say": [
+        "VPC A and VPC B route traffic via private IP addresses over one peering connection.",
+        "Each spoke VPC only needs to connect to the transit gateway to reach the other attached VPCs.",
+        "A gateway endpoint will add an entry to your route table you selected for Amazon S3.",
+        "An interface endpoint reaches one endpoint service, and it is a one-way service."
+      ],
+      "facts_for_steps": [
+        "vpc-peering-faq-definition",
+        "transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway",
+        "vpc-faq-endpoint-types-gateway-interface",
+        "privatelink-faq-consumer-initiates-allowlisted-customers"
+      ],
+      "note": "Size m. Nodes left to right: VPC A and VPC B with a peering edge (left); a transit gateway (transit-gateway icon) with three spoke VPCs (middle); in one spoke, a gateway endpoint edge to Amazon S3 (s3 icon) and an interface endpoint edge to a provider VPC with a Network Load Balancer (elb icon) (right). Numbered steps 1 to 4 on the edges in the order of 'say'. In the Markdown steps link step 1 [route traffic via private IP addresses] (vpc-peering-faq-definition), step 2 [Each spoke VPC only needs to connect] (transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway), step 3 [add an entry to your route table you selected] (vpc-faq-endpoint-types-gateway-interface), step 4 [it is a one-way service] (privatelink-faq-consumer-initiates-allowlisted-customers); rephrase a step only so that the verbatim display fits, and keep spec say and Markdown steps equal (L703). Step 2 holds 'only' inside the link text: the link grounds it (L705). The caption (the claim) states no absolute word and no number. No AWS number in labels or steps."
+    },
+    {
+      "id": "vpc-connectivity-before",
+      "kind": "arch",
+      "placement": "2-deep.md#decision-record (after Context)",
+      "title": "Callvale before: the bank calls the public API",
+      "claim": "The bank's application calls Callvale's public API over the internet, and both VPCs use 10.20.0.0/16.",
+      "alt": "Before: the bank's application in the bank's VPC, 10.20.0.0/16, calls Callvale's public API over the internet. Callvale's production VPC also uses 10.20.0.0/16. Callvale's other VPCs are not connected.",
+      "say": [],
+      "note": "Story picture, no steps (word budget of the Decision record). STARTUP A7 rule 13: the bank's site on the left (as a customer site), the internet as the edge, Callvale's production VPC in the middle, the dev and staging VPCs below it, data on the right. Keep each component in the same grid cell as in vpc-connectivity-after. The claim is story text: no AWS fact; the CIDR blocks come from data/startup.json."
+    },
+    {
+      "id": "vpc-connectivity-after",
+      "kind": "arch",
+      "placement": "2-deep.md#decision-record (after Decision)",
+      "title": "Callvale after: an endpoint service for the bank, a transit gateway for Callvale",
+      "claim": "The bank's interface endpoint reaches Callvale's API through an endpoint service and a Network Load Balancer, and Callvale's own VPCs meet at a transit gateway.",
+      "alt": "After: an interface endpoint in the bank's VPC connects to Callvale's endpoint service and Network Load Balancer in front of the API. Callvale's production, development and staging VPCs attach to a transit gateway in the network account. Gateway and interface endpoints reach AWS services.",
+      "say": [],
+      "note": "Story picture, no steps. Same grid cells as vpc-connectivity-before. The internet path of the bank is gone. Show a gateway endpoint (S3 and DynamoDB) and an interface endpoint (other AWS services) in the production VPC. Chapter 12 adds VPN and Direct Connect attachments to this transit gateway later in the same month: leave space on the left of the transit gateway, but draw nothing there. The alt text stays at most 45 words; cut the endpoint sentence first."
+    }
+  ],
+  "fact_requests": [],
+  "fact_requests_note": "No planned sentence lacks a verified fact, so no request was filed. Gaps that the plan avoids instead of filling (brief.v0): the attachment-type list of the what-is page (d11-023, list lines; the route-table sentence covers seven types); network ACL rules for different-subnet attachments (d11-052; only keep-open and same-subnet rules are verified); which Availability Zones an AWS service supports for its interface endpoint (d11-071); that Transit Gateway replaces a transit VPC (d11-091); Cost Explorer usage types as review steps (d11-095); stronger isolation claims for PrivateLink than 'the consumer reaches the service behind the endpoint service' (d11-098); the hourly price of an interface endpoint (d11-067); who pays for the provider's Network Load Balancer (d11-087).",
+  "notes_for_orchestrator": [
+    "1. Terms: 22 term requests (term_requests, with meanings, collocations and do-not-confuse lists). The words table uses the existing terms vpc-peering-connection, transit-gateway and interface-endpoint, and the requested term endpoint service with the collocation 'create an endpoint service'. After the terms agent adds them, move their ids into brief.json terms (B11 checks only existing ids; terms now holds vpc-peering-connection, transit-gateway, interface-endpoint, gateway-endpoint).",
+    "2. No fact request is open for this chapter.",
+    "3. Traps: 7, equal to brief_traps_max (medium). Every brief trap has a home in a hand file (3 in the fast Traps list, 4 Exam trap callouts in 2-deep.md), so L905 is satisfiable.",
+    "4. Twin pairs: 2 strict pairs (q001/q005, q004/q010), one more than the template needs (orchestrator note).",
+    "5. In the real world is planned as required (Resilience, 2023; the year comes from the AWS customer-references entry dated 2023-04-04 in the vpc-privatelink case index). The 2-deep.md budget leaves about 45 words of margin under the 2,400-word file limit; if a writer cannot fit it, the orchestrator removes the section from the brief before the edit stage (L905).",
+    "6. Volatile topics kept out of question keys: resource and service-network endpoints (2024-12-01), cross-Region PrivateLink (2024-11-26, 2025-11-19), Transit Gateway flexible cost allocation (2025-11-21), network function attachments (2025-06-16), Client VPN attachments (2026-04), Transit Gateway encryption support (2025-11-20). Not examinable yet and absent: Policy-Based Routing (2026-07-30), tunnel endpoints (2026-09-18).",
+    "7. vpc-connectivity-t03 is optional (CLI grounding of the break-it error); vpc-connectivity-t02 is the required Try (pass_route true).",
+    "8. Story bible: STARTUP chapter 11 accepts 'fixed cost for each endpoint service'. No saved page states a fixed charge of an endpoint service itself; the brief grounds the trade-off in the hourly billing of the Network Load Balancer (privatelink-provider-nlb-billed-hourly-full-hour) and of the bank's interface endpoint (privatelink-faq-billing-interface-gwlb-hourly-per-az). Consider rewording the story text to 'hourly cost for the load balancer and the endpoint'."
+  ]
+}

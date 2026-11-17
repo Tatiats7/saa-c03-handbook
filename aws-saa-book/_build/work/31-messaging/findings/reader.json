@@ -1,0 +1,238 @@
+{
+ "lens": "reader",
+ "chapter": "31",
+ "reviewer": "review-31-reader",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "31-messaging/3-do.md",
+   "section": "3-do.md, 4-say.md, 1-fast.md Look first (task region messaging-t01), 2-deep.md Try it callouts",
+   "quote": "Nothing here yet.",
+   "type": "missing-content",
+   "severity": "blocking",
+   "evidence": "Rule TOOLS-items.md section on sync: 'Only items with `status: ready` are printed ... A file with no item still gets its H1 and the line `Nothing here yet.`' All 3 tasks (data/31-messaging/tasks.json), all 4 speak items (speak.json) and all 32 cards (cards.json) are still `status: candidate`, although the tasks, speak and cards stages passed; TOOLS-rules.md R5: 'A reviewer sets cards, speak items and tasks to `ready` in the stage of that kind, after the item lint is clean.' Result for the reader: 3-do.md and 4-say.md are empty, the Look first task region in 1-fast.md has no commands, and both 'Try it ... See 3-do.md' callouts in 2-deep.md lead to an empty page. Compare 18-lambda/3-do.md (15,906 bytes) and 28-dynamodb/4-say.md (10,360 bytes). Fix: run the item lints, then `tasks|speak|cards set-status --chapter 31 --status ready ...`, then `sync 31`.",
+   "status": "fixed",
+   "resolution": "fix-31: same as claims-01: all cards, speak items and tasks set to ready after clean item lints; sync 31 wrote 3-do.md, 4-say.md and the Look first task region."
+  },
+  {
+   "id": "reader-02",
+   "file": "31-messaging/2-deep.md",
+   "section": "A standard queue can deliver a message twice so consumers must be idempotent",
+   "quote": "Why copies? They keep the queue fast: it supports a [nearly unlimited number of API calls per second](../facts/sqs.md#sqs-standard-throughput-nearly-unlimited).",
+   "type": "wrong-cause",
+   "severity": "blocking",
+   "evidence": "Fact sqs-copies-on-multiple-servers-cause-duplicates, verbatim: 'Amazon SQS stores copies of your messages on multiple servers for redundancy and high availability.' The copies exist for redundancy and availability, not speed; the book links a true throughput fact to a false cause. She will repeat this to a customer. Rewrite: 'Why copies? SQS keeps copies on several servers for redundancy and high availability, and a server that is down at delete time keeps its copy.'",
+   "status": "fixed",
+   "resolution": "fix-31: same as claims-06: 'Why copies? SQS keeps copies on several servers for redundancy and high availability.' Step 1 already explains the copy on a server that is down at delete time."
+  },
+  {
+   "id": "reader-03",
+   "file": "31-messaging/1-fast.md",
+   "section": "In one breath, Say it",
+   "quote": "Amazon SQS holds messages until a consumer pulls them.",
+   "type": "gist-wrong",
+   "severity": "should",
+   "evidence": "Facts sqs-receive-keeps-message-hidden ('it remains in the queue') and sqs-decision-keeps-until-processed ('until successfully processed or expired'). The one sentence she will memorize and say out loud states the chapter's first trap (messaging-trap-receive-deletes: 'Receiving a message removes it from the queue'). Rewrite: 'Amazon SQS holds each message until a consumer processes and deletes it.'",
+   "status": "fixed",
+   "resolution": "fix-31: Say it now 'Amazon SQS holds messages until a consumer deletes them.' (the suggested wording put the callout over its 25-word limit, L202)."
+  },
+  {
+   "id": "reader-04",
+   "file": "31-messaging/2-deep.md",
+   "section": "An SNS topic pushes each published message to all its subscribers, steps 1 and 3",
+   "quote": "1. **Store.** SNS keeps copies in [multiple Availability Zones before acknowledging receipt]... 3. **Forget.** [Messages are not persisted]",
+   "type": "contradiction-unexplained",
+   "severity": "should",
+   "evidence": "Facts sns-faq-durable-storage-multiple-copies-multiple-azs ('stores multiple copies (to disk) of the message across multiple Availability Zones before acknowledging receipt') and sns-decision-no-persistence. Read one after the other, 'Store' then 'Not persisted' contradict each other, and the table in 1-fast.md says SNS keeps 'Nothing'. Add one sentence of cause and effect: SNS stores a message durably only while it delivers and retries it; no subscriber can read it later, so a subscriber that is down needs its own queue.",
+   "status": "fixed",
+   "resolution": "fix-31: step 3 now 'In a standard topic, messages are not persisted, and a sent message cannot be recalled. The copies serve delivery and retries, not later reads.'; the fan-out subsection right after gives the queue per subscriber."
+  },
+  {
+   "id": "reader-05",
+   "file": "31-messaging/2-deep.md",
+   "section": "Resource-based policies decide which accounts and services may send to a queue",
+   "quote": "Why the resource's policy? The [queue owner pays](../facts/sqs.md#sqs-faq-queue-owner-pays-for-shared-access) for shared access, so the owner decides.",
+   "type": "wrong-cause",
+   "severity": "should",
+   "evidence": "Fact sqs-faq-queue-owner-pays-for-shared-access says only 'The message queue owner pays for shared message queue access.' It gives no reason for resource-based policies. The reason the chapter needs is in fact iam-eval-cross-account-needs-both-policies (used in Question 18): a cross-account request is allowed only if both the identity policy and the resource policy allow it, so the owning account controls access through its resource's policy. The billing link invents a cause, which is ungrounded reasoning she could repeat to a customer.",
+   "status": "fixed",
+   "resolution": "fix-31: same as claims-15; the reason now links iam-eval-cross-account-needs-both-policies."
+  },
+  {
+   "id": "reader-06",
+   "file": "31-messaging/2-deep.md",
+   "section": "After too many failed receives SQS moves a message to a dead-letter queue, Exam trap",
+   "quote": "In a standard queue, a moved message keeps its age: [the enqueue timestamp is unchanged](...). Set the dead-letter queue's retention [longer than the retention period](...) of the source.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "Facts sqs-dlq-standard-enqueue-timestamp-unchanged and sqs-dlq-retention-longer-than-source-queue. The text gives two facts and a rule, but not the effect that links them: retention is counted from the first send, so with equal retention periods a message can expire in the dead-letter queue soon after it arrives. Question 12 tests exactly this effect. Add: 'Retention counts from the first send, so a dead-letter queue with the same retention can delete a moved message almost at once.'",
+   "status": "fixed",
+   "resolution": "fix-31: exam trap now 'In a standard queue, [the enqueue timestamp is unchanged], so with equal retention a moved message can expire soon after the move. Set the dead-letter queue's retention [longer than the retention period] of the source.'"
+  },
+  {
+   "id": "reader-07",
+   "file": "31-messaging/1-fast.md",
+   "section": "Check 3 answer, Predict 3",
+   "quote": "**Predict 3:** Only for the retries, by default [24 hours](...). Then [the event is dropped](...), unless a dead-letter queue catches it.",
+   "type": "answer-unclear",
+   "severity": "should",
+   "evidence": "Predict 3 asks: 'The target of an event rule is down for an hour. Does the event wait for it?' Fact eventbridge-retry-default-24h-185-attempts: retries last 24 hours by default, so a one-hour outage is covered and the event is delivered. 'Only for the retries' reads as 'no' to a reader who skims. Answer the question first: 'Yes, for a one-hour outage: EventBridge retries for 24 hours by default. After that the event is dropped unless a dead-letter queue catches it.' Also, this Predict answer is under Check 3, which is about SNS, so two services share one answer block (see reader-20).",
+   "status": "fixed",
+   "resolution": "fix-31: Predict 3 now answers first: 'Yes: EventBridge retries for [24 hours] by default. Then [the event is dropped], unless a dead-letter queue catches it.'"
+  },
+  {
+   "id": "reader-08",
+   "file": "31-messaging/2-deep.md",
+   "section": "Stop and answer of: A received message stays hidden...; An SNS topic pushes...; Resource-based policies decide...",
+   "quote": "**Stop and answer.** A worker's instance is terminated before DeleteMessage. When can another consumer get the message?",
+   "type": "skim-answerable",
+   "severity": "should",
+   "evidence": "READER.md: 'questions must test what the gist misses.' Skim test: the heading 'A received message stays hidden until it is deleted or the timeout ends' answers this prompt. The same holds for 'Does its email subscriber still get each message?' (heading: 'pushes each published message to all its subscribers') and 'Which policy in account B changes?' (heading: 'Resource-based policies decide which accounts and services may send to a queue'). Replace them with prompts that need the body, for example: the timeout is 30 seconds and the job takes 2 minutes, so how many workers process the message?",
+   "status": "fixed",
+   "resolution": "fix-31: the SNS prompt is replaced: 'A topic's Lambda subscriber is deleted and created again a week later. Did it miss that week's messages?' (the answer needs the client-side-error rule from the body). The other two prompts are kept: 2-deep is at its 4,500-word limit, and both answers need the body (when the timeout ends; that the queue policy names the topic)."
+  },
+  {
+   "id": "reader-09",
+   "file": "31-messaging/1-fast.md",
+   "section": "Words that go together, row message group ID; 2-deep.md FIFO subsection",
+   "quote": "| message group ID | **set** a message group ID | Puts a FIFO message in a group that keeps its order | message deduplication ID |",
+   "type": "term-undefined",
+   "severity": "should",
+   "evidence": "The table tells her not to confuse the term with 'message deduplication ID', but neither file defines the deduplication ID or content-based deduplication (lint W901 also reports the term). Question 7 has an option with 'content-based deduplication', and spoken item s03 says 'Messages with the same deduplication ID'. Fact sqs-fifo-deduplication-interval-5-minutes is already linked in step 3 of the FIFO subsection. Add one sentence there that defines both, with that fact.",
+   "status": "fixed",
+   "resolution": "fix-31: FIFO step 3 now defines the **message deduplication ID** (a message with the same ID inside the 5 minute interval is dropped) and **content-based deduplication** (makes the ID [by hashing the message body], sqs-fifo-generated-dedup-id-from-body-hash)."
+  },
+  {
+   "id": "reader-10",
+   "file": "31-messaging/2-deep.md",
+   "section": "Lambda polls the queue for you and the queue decides the retries, step 2",
+   "quote": "A failed batch returns by the queue's [visibility timeout and redrive policy](../facts/lambda.md#lambda-queue-esm-retry-set-on-queue).",
+   "type": "unclear-sentence",
+   "severity": "should",
+   "evidence": "STYLE plain English, rule 8 of RULINGS. 'returns by' is not idiomatic and hides the mechanism. Say: 'When a batch fails, its messages become visible again after the visibility timeout, and the redrive policy moves a message that fails too often to the dead-letter queue.'",
+   "status": "fixed",
+   "resolution": "fix-31: step 2 now 'The queue's [visibility timeout and redrive policy] decide what happens to a failed batch.' (the longer suggested sentence broke the 30-word sentence limit and the file word limit; the visibility and dead-letter subsections above give the mechanism)."
+  },
+  {
+   "id": "reader-11",
+   "file": "31-messaging/2-deep.md",
+   "section": "After too many failed receives SQS moves a message to a dead-letter queue, table",
+   "quote": "| A few receives | Glitches retry; a poison-pill message leaves soon |",
+   "type": "idiom",
+   "severity": "note",
+   "evidence": "RULINGS hard rule 8 (no idioms, plain English). 'Glitches' is informal and opaque for a second-language reader. Say 'Short failures get another try; a message that always fails moves out soon.'",
+   "status": "fixed",
+   "resolution": "fix-31: cell now 'Short failures retry; a message that fails every time leaves soon' (no absolute word, no idiom)."
+  },
+  {
+   "id": "reader-12",
+   "file": "31-messaging/2-deep.md",
+   "section": "Workers scale on the backlog per instance and not on queue length, Exam trap and Say it",
+   "quote": "... the [oldest unprocessed message in the queue](...). <!-- trap: messaging-trap-in-flight-is-backlog -->\n> **Say it:** The short answer is: scale on messages per worker.",
+   "type": "formatting",
+   "severity": "should",
+   "evidence": "No blank line between the Exam trap blockquote and the Say it blockquote, so Markdown renders them as one callout. The trap's last line and the Say it sentence merge, and the reader loses the cue to say the sentence. Every other subsection has the blank line.",
+   "status": "fixed",
+   "resolution": "fix-31: blank line added between the Exam trap and the Say it callouts."
+  },
+  {
+   "id": "reader-13",
+   "file": "31-messaging/1-fast.md",
+   "section": "Choose it or not, SQS SNS or EventBridge, Exam trap",
+   "quote": "> **Exam trap:** You write no code that polls AWS for changes.",
+   "type": "unclear-sentence",
+   "severity": "should",
+   "evidence": "It reads as a statement about her, not as a trap. A trap callout must state the wrong belief. The trap id messaging-trap-build-own-change-detection means 'do not build a poller to detect AWS changes'. Say: 'Do not build a function that polls AWS for changes: the default event bus already receives events from AWS services.' The callout also carries a second, unrelated trap (SaaS events), which makes it two ideas in one box.",
+   "status": "fixed",
+   "resolution": "fix-31: the callout now opens 'Do not build a function that polls AWS for changes.' The SaaS sentence stays in the same callout: both trap ids are anchored there by the brief, and a second Exam trap callout would not fit the fast file's word limit."
+  },
+  {
+   "id": "reader-14",
+   "file": "31-messaging/2-deep.md",
+   "section": "Decision record",
+   "quote": "**Decision.** Queues between the stages, a topic that fans out results, and EventBridge for AWS events and schedules.",
+   "type": "padding-and-mismatch",
+   "severity": "should",
+   "evidence": "SPEC.json templates.deep 2-deep.md decision words max 280; lint W201 reports 386. The section repeats the 1-fast startup example ('1,900 uploads failed') and has two figures with five-step lists. The decision also names EventBridge, but the after figure and its five steps show no EventBridge part, so the reader cannot see where it fits. Cut the before-figure step list, and either show the EventBridge rule in the after figure or remove it from the decision.",
+   "status": "fixed",
+   "resolution": "fix-31: EventBridge removed from the Decision; Context, Requirement and Trade-off shortened; lint no longer reports W201 for the Decision record. The before-figure step list stays: L703 needs one step per numbered step of the spec."
+  },
+  {
+   "id": "reader-15",
+   "file": "31-messaging/5-quiz.md",
+   "section": "Question 9 (messaging-q007), stem and Why",
+   "quote": "The order service, the shipping service and the analytics service must each process every order. Each service must process every order, even after it has been offline for a few hours. ... each can be offline for hours.Each order published",
+   "type": "typo-and-redundancy",
+   "severity": "should",
+   "evidence": "Missing space in 'hours.Each' (explanation in data/31-messaging/questions.json messaging-q007). The stem says 'must each process every order' twice in two sentences. Merge: 'The order service, the shipping service and the analytics service must each process every order, even after a service has been offline for a few hours.' (A stem edit needs q add --replace and a new blind round; fix the typo at least.)",
+   "status": "fixed",
+   "resolution": "fix-31: explanation typo fixed in data/31-messaging/questions.json ('hours. Each'; explanation only, stem, options and key byte-identical). The stem repetition is not changed: a stem edit resets verification (R5)."
+  },
+  {
+   "id": "reader-16",
+   "file": "data/31-messaging/speak.json",
+   "section": "messaging-s04 sixty_second line 8",
+   "quote": "By default, a message waits in the queue for four days at most.",
+   "type": "ambiguous-speech",
+   "severity": "should",
+   "evidence": "Fact sqs-message-retention-default (4 days) is about retention: after 4 days an unprocessed message is deleted. Said to a CEO, 'waits ... four days at most' sounds like the longest time a customer waits for a transcript. Say: 'If no worker processes a message, the queue deletes it after four days by default, so we watch the oldest message.'",
+   "status": "fixed",
+   "resolution": "fix-31: s04 line 8 now 'If no worker processes a message, the queue deletes it after four days by default.'; kp5 accept updated to match."
+  },
+  {
+   "id": "reader-17",
+   "file": "31-messaging/2-deep.md",
+   "section": "An EventBridge rule matches event content and sends each match to its targets",
+   "quote": "An **EventBridge rule** on the bus holds an **event pattern** that events must match",
+   "type": "depth",
+   "severity": "should",
+   "evidence": "Fact eventbridge-pattern-matches-metadata-data-content: 'Event patterns for event buses can match against the event source, event metadata, and/or event detail values.' The subsection never shows what an event pattern matches or looks like, so she cannot explain 'route by content' to a founder or tell it apart from an SNS filter policy. Add a short pattern (source aws.ec2, detail-type, one detail field) and one sentence on what each part matches, grounded in that fact.",
+   "status": "fixed",
+   "resolution": "fix-31: intro adds 'A pattern can match the source, such as `aws.ec2`, and [event metadata, and/or event detail values](eventbridge-pattern-matches-metadata-data-content).' A full JSON pattern did not fit the 4,500-word file limit."
+  },
+  {
+   "id": "reader-18",
+   "file": "31-messaging/2-deep.md",
+   "section": "FAQ quick-fire, FAQ 3",
+   "quote": "Rarely: a [previously-deleted message a second time](...).",
+   "type": "grammar",
+   "severity": "note",
+   "evidence": "The answer is a fragment with no verb. Say: 'Yes, rarely: you might receive a previously-deleted message a second time.'",
+   "status": "fixed",
+   "resolution": "fix-31: FAQ 3 answer rewritten as suggested."
+  },
+  {
+   "id": "reader-19",
+   "file": "31-messaging/2-deep.md",
+   "section": "An SNS topic pushes each published message to all its subscribers, Stop and answer",
+   "quote": "A topic's Lambda subscriber is deleted for a week.",
+   "type": "unclear-sentence",
+   "severity": "note",
+   "evidence": "A deleted function is not 'deleted for a week'. Say: 'A topic's Lambda subscriber is deleted, and it is created again a week later.'",
+   "status": "fixed",
+   "resolution": "fix-31: prompt now 'A topic's Lambda subscriber is deleted and created again a week later. Did it miss that week's messages?' (see claims-07)."
+  },
+  {
+   "id": "reader-20",
+   "file": "31-messaging/1-fast.md",
+   "section": "Check answers",
+   "quote": "**Predict 3:** Only for the retries, by default [24 hours](../facts/eventbridge.md#eventbridge-retry-default-24h-185-attempts).",
+   "type": "layout",
+   "severity": "note",
+   "evidence": "Each Predict answer is in the answer block of a Check about another case: Predict 3 (EventBridge) is under Check 3 (SNS). A reader who opens one answer block gets two services mixed. Give the Predict answers their own labelled line, or match each Check to its Predict topic.",
+   "status": "rejected",
+   "resolution": "fix-31: kept. Each Predict answer already has its own bold label ('Predict 3:') inside the reveal, and the Predict section says the answers are in the Check section; Check sections hold exactly 3 prompts, so a separate answer block would add a fourth reveal and push Check (now 150 words, its cap) over its limit. Predict 3 now answers 'Yes' first (reader-07)."
+  },
+  {
+   "id": "reader-21",
+   "file": "31-messaging/2-deep.md",
+   "section": "Failed deliveries are retried and then dropped unless a dead-letter queue catches them",
+   "quote": "Why drop? A push service that kept every message would be a queue.",
+   "type": "mechanism-not-explained",
+   "severity": "note",
+   "evidence": "This is a slogan, not cause and effect. Facts sns-decision-no-persistence and eventbridge-retry-exhausted-event-dropped support a plainer reason: the service delivers and retries, but has no place where a consumer can read a message later. That is why the dead-letter queue exists.",
+   "status": "fixed",
+   "resolution": "fix-31: now 'Why drop? A push service has no store where a consumer can read later.'"
+  }
+ ]
+}

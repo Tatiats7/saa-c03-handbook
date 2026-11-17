@@ -1,0 +1,283 @@
+{
+ "v": 1,
+ "chapter": "organizations",
+ "items": [
+  {
+   "id": "organizations-t01",
+   "type": "try",
+   "title": "Share a subnet with AWS RAM and read the permission it uses",
+   "kills": "\"Sharing a resource with AWS RAM copies the resource into the other account.\"",
+   "trap": null,
+   "section": "2-deep.md#aws-ram-shares-one-resource-with-other-accounts-instead-of-copying-it",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0: a VPC, a subnet and a resource share have no charge of their own.",
+   "cost_if_forgotten": "$0 a day. Delete them anyway, so that no unused share stays in the account.",
+   "cost_facts": [
+    "vpc-faq-no-charge-for-vpc-itself",
+    "ram-faq-no-additional-cost"
+   ],
+   "permissions": [
+    "ec2:CreateVpc",
+    "ec2:CreateSubnet",
+    "ec2:CreateTags",
+    "ec2:DescribeSubnets",
+    "ec2:DescribeVpcs",
+    "ram:CreateResourceShare",
+    "ram:AssociateResourceShare",
+    "ram:TagResource",
+    "ram:ListResources",
+    "ram:ListResourceSharePermissions",
+    "ram:GetPermission",
+    "ram:GetResourceShares",
+    "ram:DeleteResourceShare",
+    "ec2:DeleteSubnet",
+    "ec2:DeleteVpc"
+   ],
+   "read_only_alternative": "These commands change nothing. List the managed permissions for subnets: aws ram list-permissions --resource-type ec2:Subnet --query \"permissions[].[name,isResourceTypeDefault]\" Then read the actions of the default one: aws ram get-permission --permission-arn arn:aws:ram::aws:permission/AWSRAMDefaultPermissionSubnet --query \"permission.permission\" Expect Allow with ec2:RunInstances, ec2:CreateNetworkInterface and ec2:DescribeSubnets: other accounts act on the owner's subnet. To see subnets that other accounts share with you: aws ram list-resources --resource-owner OTHER-ACCOUNTS --resource-type ec2:Subnet",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a small test VPC with the two book tags. Keep its ID.",
+     "command": "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-organizations-t01},{Key=book,Value=saa},{Key=task,Value=organizations-t01}]'",
+     "capture": {
+      "name": "VPC_ID",
+      "query": "Vpc.VpcId"
+     },
+     "expect": "No output. VPC_ID now holds the ID of the new VPC.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create one subnet in the test VPC, with the same tags. Default subnets are not shareable, so you make a new one.",
+     "command": "aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=saa-organizations-t01},{Key=book,Value=saa},{Key=task,Value=organizations-t01}]'",
+     "capture": {
+      "name": "SUBNET_ID",
+      "query": "Subnet.SubnetId"
+     },
+     "expect": "No output. SUBNET_ID now holds the ID of the new subnet.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Keep the ARN of the subnet. AWS RAM names every resource in a share by its ARN.",
+     "command": "aws ec2 describe-subnets --subnet-ids $SUBNET_ID",
+     "capture": {
+      "name": "SUBNET_ARN",
+      "query": "Subnets[0].SubnetArn"
+     },
+     "expect": "No output. SUBNET_ARN now holds the ARN of the subnet.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a resource share that holds the subnet. Allow only principals in your organization, and add no principal, so that no other account gets access.",
+     "command": "aws ram create-resource-share --name saa-organizations-t01 --resource-arns $SUBNET_ARN --no-allow-external-principals --tags key=book,value=saa key=task,value=organizations-t01",
+     "capture": {
+      "name": "SHARE_ARN",
+      "query": "resourceShare.resourceShareArn"
+     },
+     "expect": "No output. SHARE_ARN now holds the ARN of the new resource share.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the resources in the share. Compare the ARN with the subnet you created. If the list is empty, wait a few seconds and run it again.",
+     "command": "aws ram list-resources --resource-owner SELF --resource-share-arns $SHARE_ARN --query \"resources[].[arn,type]\"",
+     "expect": "One row: the ARN of your subnet, with your account ID and your Region in it, and the type ec2:Subnet. The share points to your subnet. It holds no copy.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read which managed permission AWS RAM attached for the subnet type. You did not choose one.",
+     "command": "aws ram list-resource-share-permissions --resource-share-arn $SHARE_ARN --query \"permissions[].[arn,resourceType]\"",
+     "expect": "One row: arn:aws:ram::aws:permission/AWSRAMDefaultPermissionSubnet and ec2:Subnet. AWS RAM attached the default permission of the type.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the actions that this permission allows. AWS RAM turns them into a resource-based policy on the subnet itself.",
+     "command": "aws ram get-permission --permission-arn arn:aws:ram::aws:permission/AWSRAMDefaultPermissionSubnet --query \"permission.permission\"",
+     "expect": "A JSON text with Effect Allow and the actions ec2:RunInstances, ec2:CreateNetworkInterface and ec2:DescribeSubnets. Another account would launch instances into your subnet, not into a copy.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the resource share. This stops the sharing. It does not delete the subnet.",
+     "command": "aws ram delete-resource-share --resource-share-arn $SHARE_ARN"
+    },
+    {
+     "text": "Delete the subnet. If the delete fails, wait one minute and run it again.",
+     "command": "aws ec2 delete-subnet --subnet-id $SUBNET_ID"
+    },
+    {
+     "text": "Delete the test VPC.",
+     "command": "aws ec2 delete-vpc --vpc-id $VPC_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ram get-resource-shares --resource-owner SELF --resource-share-status ACTIVE --tag-filters tagKey=task,tagValues=organizations-t01 --query \"resourceShares[].resourceShareArn\"",
+    "expect": "An empty list: no active share of this task is left. The VPC check in the next list also returns an empty list."
+   },
+   "still_costs": [
+    "Nothing: there are no additional charges for the VPC itself, and AWS RAM has no additional cost. Delete everything anyway.",
+    "Check that the VPC is gone too: aws ec2 describe-vpcs --filters Name=tag:task,Values=organizations-t01 --query \"Vpcs[].VpcId\" must return an empty list.",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the IDs again with aws ec2 describe-vpcs --filters Name=tag:task,Values=organizations-t01 and aws ram get-resource-shares --resource-owner SELF --name saa-organizations-t01."
+   ],
+   "facts": [
+    "vpc-faq-no-charge-for-vpc-itself",
+    "ram-faq-no-additional-cost",
+    "ram-faq-aws-managed-permission-default-per-type",
+    "ram-managed-permission-generates-resource-policy",
+    "ram-managed-permissions-aws-and-customer",
+    "ram-regional-resources-used-in-their-region",
+    "ram-reduces-overhead-no-duplicate-resources",
+    "ram-faq-resource-share-steps",
+    "ram-share-subnets-only-within-organization",
+    "ram-sharing-does-not-change-owner-quotas"
+   ],
+   "sources": [
+    {
+     "title": "Sharing your AWS resources (create a resource share with the AWS CLI)",
+     "url": "https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html"
+    },
+    {
+     "title": "Update a resource share in AWS RAM (subnet example, list-permissions for ec2:Subnet)",
+     "url": "https://docs.aws.amazon.com/ram/latest/userguide/working-with-sharing-update.html"
+    },
+    {
+     "title": "Managing permissions in AWS RAM (default permission AWSRAMDefaultPermissionSubnet and its actions)",
+     "url": "https://docs.aws.amazon.com/ram/latest/userguide/security-ram-permissions.html"
+    },
+    {
+     "title": "Shareable AWS resources (subnets)",
+     "url": "https://docs.aws.amazon.com/ram/latest/userguide/shareable.html"
+    },
+    {
+     "title": "AWS RAM examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_ram_code_examples.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-resource-share",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ram/create-resource-share.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-resources",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ram/list-resources.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-resource-share-permissions",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ram/list-resource-share-permissions.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-permission",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ram/get-permission.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-resource-shares",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ram/get-resource-shares.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-resource-share",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ram/delete-resource-share.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-vpc",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-subnet",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-subnet.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-subnets",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-subnet",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-subnet.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-vpc",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-vpcs",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpcs.html"
+    }
+   ],
+   "chapter": "organizations",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-12"
+  },
+  {
+   "id": "organizations-t02",
+   "type": "look",
+   "title": "Find the management account of your organization",
+   "kills": "\"An SCP attached to the organization root limits every account, the management account too.\"",
+   "trap": "organizations-trap-scp-on-management-account",
+   "section": "2-deep.md#scps-do-not-limit-the-management-account-or-principals-outside-the-organization",
+   "pass_route": false,
+   "minutes": 3,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "sts:GetCallerIdentity",
+    "organizations:DescribeOrganization"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Ask AWS STS which account signs your commands.",
+     "command": "aws sts get-caller-identity --query Account",
+     "expect": "Your account ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the organization that your account belongs to: its ID, the ID of its management account and its feature set. Any account in the organization can read this.",
+     "command": "aws organizations describe-organization --query \"Organization.[Id,MasterAccountId,FeatureSet]\"",
+     "expect": "An ID that starts with o-, the ID of the management account, and ALL or CONSOLIDATED_BILLING. If AWS answers that your account is not in an organization, stop here: SCPs affect only member accounts, and yours is in no organization.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Compare the two IDs. Equal: the management account, where SCPs limit no user or role. Different: a member account, where SCPs can limit you if the feature set is ALL and SCPs are enabled on the root.",
+     "command": null,
+     "expect": "Equal or different. Note which case is yours before you read about SCPs.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "organizations-scp-no-effect-on-management-account",
+    "organizations-keep-resources-out-of-management-account",
+    "organizations-policies-need-all-features",
+    "organizations-member-account-one-organization-at-a-time",
+    "organizations-scp-disable-type-detaches-all"
+   ],
+   "sources": [
+    {
+     "title": "AWS CLI Command Reference: describe-organization",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/organizations/describe-organization.html"
+    },
+    {
+     "title": "Organizations examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_organizations_code_examples.html"
+    }
+   ],
+   "chapter": "organizations",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-12"
+  }
+ ]
+}

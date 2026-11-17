@@ -1,0 +1,306 @@
+[
+ {
+  "id": "elb-q001",
+  "section": "2-deep.md#listener-rules-are-checked-in-priority-order-and-the-default-rule-comes-last",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": ["4.4.K3"],
+  "topics": ["cost", "networking"],
+  "services": ["elb"],
+  "concept": "consolidate-with-host-rules",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs six small web applications in one AWS Region. Each application has its own domain name, its own Amazon EC2 instances and its own Application Load Balancer. Each load balancer has an HTTPS listener on port 443 with an AWS Certificate Manager (ACM) certificate for its domain. Traffic to every application is low, but the load balancers run all day. Users must keep reaching each application at its current URL. Which solution will meet these requirements MOST cost-effectively?",
+  "keywords": ["six small web applications", "its own Application Load Balancer", "keep reaching each application at its current URL", "MOST cost-effectively"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Keep one Application Load Balancer for each application, and lower the idle timeout of each load balancer so that unused connections close sooner.",
+    "correct": false,
+    "why": "Each load balancer is billed for [each hour or partial hour](../facts/elb.md#elb-partial-hour-billed-as-full-hour) that it runs, so six hourly charges stay; the idle timeout changes none of them.",
+    "concept": "one-lb-per-application",
+    "trap": "elb-trap-one-lb-per-service",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Replace the six load balancers with one Network Load Balancer that has six TLS listeners, one listener on a different port for each application.",
+    "correct": false,
+    "why": "A Network Load Balancer works at [Layer 4](../facts/elb.md#elb-compare-layer-per-type) and does not read host names, so each application needs its own port, and the URLs change.",
+    "concept": "nlb-port-per-application",
+    "trap": null,
+    "misconception": "expects one port per application to keep the current URLs",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Keep one Application Load Balancer for each application, and turn off cross-zone load balancing on each target group to avoid data transfer charges.",
+    "correct": false,
+    "why": "With an Application Load Balancer, [you are not charged](../facts/elb.md#elb-alb-cross-zone-no-data-transfer-charge) for regional data transfer of cross-zone traffic, so this saves nothing.",
+    "concept": "alb-cross-zone-cost",
+    "trap": null,
+    "misconception": "believes that cross-zone traffic of an Application Load Balancer adds data transfer charges",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Use one Application Load Balancer with one HTTPS listener that holds all six certificates, and add host-header rules that forward to six target groups.",
+    "correct": true,
+    "why": "Host conditions [route requests to multiple domains](../facts/elb.md#elb-alb-host-conditions-many-domains-one-lb) on one load balancer, and the certificate list lets one listener [support multiple domains on the same port](../facts/elb.md#elb-alb-sni-certificate-list-multiple-domains).",
+    "concept": "host-rules-and-certificate-list",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Each load balancer is billed for [each hour or partial hour](../facts/elb.md#elb-partial-hour-billed-as-full-hour) that it runs, so six load balancers bring six hourly charges. One Application Load Balancer can [route requests to multiple domains](../facts/elb.md#elb-alb-host-conditions-many-domains-one-lb) with host conditions. Its HTTPS listener can [provide a different certificate for each domain](../facts/elb.md#elb-alb-sni-certificate-list-multiple-domains) through a certificate list. Users keep their URLs, and five of the six hourly charges go away.",
+  "takeaway": "Several HTTPS domains can share one Application Load Balancer through host rules and a certificate list.",
+  "twin": "If the stem said \"the applications accept raw TCP connections on their own ports\" instead: one Network Load Balancer with a listener per port, because it works at [Layer 4](../facts/elb.md#elb-compare-layer-per-type).",
+  "say": "One ALB with host rules and a certificate list replaces six load balancers, so the company pays one hourly charge instead of six.",
+  "facts": [
+   "elb-partial-hour-billed-as-full-hour",
+   "elb-alb-host-conditions-many-domains-one-lb",
+   "elb-alb-sni-certificate-list-multiple-domains",
+   "elb-alb-cross-zone-no-data-transfer-charge",
+   "elb-compare-layer-per-type"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-cost-effective", "ee-must"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q003",
+  "section": "2-deep.md#each-load-balancer-type-reads-a-different-layer-of-the-traffic",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K9"],
+  "topics": ["compute", "networking"],
+  "services": ["elb", "lambda"],
+  "concept": "alb-lambda-target",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances behind an Application Load Balancer. A team builds a new feature that answers requests for the path /convert. The team wants a serverless solution, so that no instances need to be managed for this feature. The requests and the responses are small JSON documents. The rest of the application must stay unchanged. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["serverless solution", "no instances need to be managed", "requests for the path /convert", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a Network Load Balancer with a target group of type lambda, register the AWS Lambda function, and send the requests for the path to it.",
+    "correct": false,
+    "why": "Network Load Balancers cannot hold this target group, because Application Load Balancers are [the only load balancers that support](../facts/elb.md#elb-lambda-target-alb-only) the lambda target type.",
+    "concept": "nlb-lambda-target",
+    "trap": null,
+    "misconception": "believes that every load balancer type can invoke a Lambda function",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Launch an Amazon EC2 instance that receives the requests for the path from the load balancer and invokes the AWS Lambda function for each request.",
+    "correct": false,
+    "why": "It works, but the proxy is one more instance to patch, scale and pay for, which the serverless requirement wanted to avoid.",
+    "concept": "proxy-instance-for-lambda",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Create a target group of type lambda, register the AWS Lambda function in it, and add a listener rule that forwards the path to the target group.",
+    "correct": true,
+    "why": "[The target is a Lambda function](../facts/elb.md#elb-alb-target-types-instance-ip-lambda) in a target group of type lambda, and a listener rule sends the path there with no instance to manage.",
+    "concept": "lambda-target-group",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a Gateway Load Balancer in front of the AWS Lambda function, and route the requests for the path through a Gateway Load Balancer endpoint.",
+    "correct": false,
+    "why": "A Gateway Load Balancer is for [deploying inline virtual appliances](../facts/elb.md#elb-gwlb-faq-when-inline-appliances) such as firewalls, not for running application code behind a path.",
+    "concept": "gwlb-for-functions",
+    "trap": null,
+    "misconception": "uses the load balancer for inline appliances to call a function",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Application Load Balancers are [the only load balancers that support](../facts/elb.md#elb-lambda-target-alb-only) the lambda target type. [The target is a Lambda function](../facts/elb.md#elb-alb-target-types-instance-ip-lambda) when the target group has the type lambda, and a listener rule for /convert forwards the requests to it. The function runs with no instances, and the other listener rules stay unchanged.",
+  "takeaway": "A path of an Application Load Balancer can run a Lambda function through a target group of type lambda.",
+  "twin": "If the stem said \"each request uploads a video of several hundred megabytes\" instead: keep the path on instances or containers, because a Lambda target takes a request body of at most [1 MB](../facts/elb.md#elb-lambda-target-body-max-1-mb).",
+  "say": "Point an ALB rule at a lambda target group; the function answers the path, and nobody manages instances for it.",
+  "facts": [
+   "elb-lambda-target-alb-only",
+   "elb-alb-target-types-instance-ip-lambda",
+   "elb-gwlb-faq-when-inline-appliances",
+   "elb-lambda-target-body-max-1-mb"
+  ],
+  "sources": [],
+  "exam_english": ["ee-serverless", "ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q007",
+  "section": "2-deep.md#targets-can-stay-private-and-accept-traffic-only-from-the-load-balancer",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K10"],
+  "topics": ["security", "networking"],
+  "services": ["elb", "waf"],
+  "concept": "targets-only-via-lb",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a web application on Amazon EC2 instances behind an internet-facing Application Load Balancer that has its own security group. A security audit finds that the instances are in public subnets with public IP addresses. Their security group allows HTTP on port 80 from 0.0.0.0/0. The company must stop all direct access to the instances from the internet. Which combination of steps will meet these requirements in the MOST secure way? (Select TWO.)",
+  "keywords": ["public subnets with public IP addresses", "allows HTTP on port 80 from 0.0.0.0/0", "stop all direct access to the instances from the internet", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a network ACL for the instance subnets that allows inbound HTTP only from the current IP addresses of the load balancer, found with a DNS lookup.",
+    "correct": false,
+    "why": "Elastic Load Balancing updates its DNS entry so that [IP addresses can be remapped quickly](../facts/elb.md#elb-dns-ttl-60-seconds-remap), so today's address list stops matching.",
+    "concept": "nacl-with-lb-addresses",
+    "trap": "elb-trap-alb-static-ip",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Move the instances to private subnets, launch them without public IP addresses, and keep them registered in the target group of the load balancer.",
+    "correct": true,
+    "why": "Load balancers reach targets [using private IP addresses](../facts/elb.md#elb-targets-need-no-public-ip), so the instances need no public address, and the internet has no path to them.",
+    "concept": "private-subnet-targets",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Associate an AWS WAF web ACL with each EC2 instance, and add a rule that blocks every request that does not come from the load balancer.",
+    "correct": false,
+    "why": "A web ACL protects resources such as [Amazon CloudFront, Amazon API Gateway, Application Load Balancer](../facts/waf.md#waf-protected-resource-types), and an EC2 instance is not one of them.",
+    "concept": "waf-on-instance",
+    "trap": "edge-protection-trap-waf-on-any-resource",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Keep the instances in public subnets with public IP addresses, and allow HTTP in their security group only from the CIDR block of the VPC.",
+    "correct": false,
+    "why": "It stops internet access, but every resource in the VPC can still reach the instances, and targets [do not need public IP addresses](../facts/elb.md#elb-targets-need-no-public-ip).",
+    "concept": "vpc-cidr-rule",
+    "trap": "elb-trap-targets-need-public-ip",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Change the security group of the instances so that it allows HTTP only from the security group of the load balancer, and remove the 0.0.0.0/0 rule.",
+    "correct": true,
+    "why": "With [the load balancer's security group as the source](../facts/elb.md#elb-target-sg-reference-lb-sg), the instances accept requests from the load balancer and from nothing else.",
+    "concept": "sg-reference",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Two controls work together. Load balancers send requests to targets [using private IP addresses](../facts/elb.md#elb-targets-need-no-public-ip), so the instances can sit in private subnets. A rule with [the load balancer's security group as the source](../facts/elb.md#elb-target-sg-reference-lb-sg) admits the load balancer and nothing else, even when its node addresses change.",
+  "takeaway": "Targets belong in private subnets, with a security group rule that names the load balancer's security group.",
+  "twin": "If the stem said \"the application serves employees on the corporate network through AWS Direct Connect\" instead: an internal load balancer, because its nodes [have only private IP addresses](../facts/elb.md#elb-internal-nodes-private-ips-only).",
+  "say": "Put the instances in private subnets, and let their security group trust the load balancer's security group, not an address range.",
+  "facts": [
+   "elb-dns-ttl-60-seconds-remap",
+   "elb-targets-need-no-public-ip",
+   "waf-protected-resource-types",
+   "elb-target-sg-reference-lb-sg",
+   "elb-internal-nodes-private-ips-only"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-secure", "ee-select-two", "ee-internet-facing", "ee-must"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q011",
+  "section": "2-deep.md#health-checks-decide-which-registered-targets-receive-requests",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.K8"],
+  "topics": ["resilience", "compute"],
+  "services": ["elb", "ec2-auto-scaling"],
+  "concept": "asg-replaces-unhealthy",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer. Sometimes the application process on an instance hangs. The EC2 status checks of that instance still pass, and the load balancer marks the target as unhealthy. The instance stays in service for days until an engineer terminates it by hand. The company wants to automate the replacement of these instances. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["EC2 status checks of that instance still pass", "the load balancer marks the target as unhealthy", "automate the replacement", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Lower the unhealthy threshold of the target group health check, so that the load balancer terminates and replaces the hung instances sooner.",
+    "correct": false,
+    "why": "On a failed check, [Elastic Load Balancing stops sending traffic to it](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace); the load balancer itself terminates and launches nothing.",
+    "concept": "lb-threshold-replace",
+    "trap": "elb-trap-lb-replaces-instance",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Create an Amazon EventBridge rule that runs an AWS Lambda function every minute to terminate the instances that the load balancer reports as unhealthy.",
+    "correct": false,
+    "why": "It works, but the team writes and maintains code for a check that the Auto Scaling group performs after one setting change.",
+    "concept": "custom-replacement-code",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Increase the deregistration delay of the target group, so that in-flight requests finish before the load balancer removes the hung instances.",
+    "correct": false,
+    "why": "The delay waits so that in-flight requests can finish when a target leaves; it detects no hung process and launches no instance.",
+    "concept": "deregistration-delay-confusion",
+    "trap": null,
+    "misconception": "confuses the draining of in-flight requests with the replacement of an instance",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Turn on Elastic Load Balancing health checks for the Auto Scaling group, so that instances that fail the load balancer health check are replaced.",
+    "correct": true,
+    "why": "With the ELB health check type on the group, [Amazon EC2 Auto Scaling replaces the unhealthy instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace) without any code.",
+    "concept": "elb-health-check-type",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "By default, Amazon EC2 Auto Scaling [ignores the results of the Elastic Load Balancing](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-health-checks-ignored-by-default) health checks, so a hung instance with passing EC2 status checks stays in service. For the ELB health check type, [you must turn it on](../facts/ec2-auto-scaling.md#ec2-auto-scaling-health-elb-check-must-be-turned-on) for the group. After that, [Elastic Load Balancing stops sending traffic to it](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace), and [Amazon EC2 Auto Scaling replaces the unhealthy instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace).",
+  "takeaway": "The load balancer routes around an unhealthy target; an Auto Scaling group with ELB health checks replaces it.",
+  "twin": "If the stem said \"the instances are not in an Auto Scaling group\" instead: nothing replaces them, because on a failed check [it stops routing traffic to that target](../facts/elb.md#elb-unhealthy-target-stop-resume) and launches nothing.",
+  "say": "Turn on ELB health checks for the Auto Scaling group; then Auto Scaling replaces what the load balancer marks unhealthy.",
+  "facts": [
+   "ec2-auto-scaling-elb-checks-reroute-and-replace",
+   "ec2-auto-scaling-elb-health-checks-ignored-by-default",
+   "ec2-auto-scaling-health-elb-check-must-be-turned-on",
+   "elb-unhealthy-target-stop-resume"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-automate"],
+  "twin_of": null
+ }
+]

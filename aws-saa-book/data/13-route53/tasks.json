@@ -1,0 +1,512 @@
+{
+ "v": 1,
+ "chapter": "route53",
+ "items": [
+  {
+   "id": "route53-t01",
+   "type": "look",
+   "title": "Read the health checker IP ranges and your Route 53 quotas",
+   "kills": "\"Route 53 health checks run inside my VPC, so they can test private addresses.\"",
+   "trap": "route53-trap-health-check-private-ip",
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "route53:GetAccountLimit",
+    "route53:ListHostedZones",
+    "route53:ListHealthChecks"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read the first five IP address ranges that Route 53 health checkers send their requests from. Route 53 is a global service, so the Region of CloudShell does not matter here.",
+     "command": "aws route53 get-checker-ip-ranges --query \"CheckerIpRanges[0:5]\"",
+     "expect": "Five ranges in CIDR notation. Each one is a range of public internet addresses, not a private range such as 10.0.0.0/8 or 192.168.0.0/16. The checkers send their requests over the internet, from outside your VPCs.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read how many health checks this account can have, and how many it has now.",
+     "command": "aws route53 get-account-limit --type MAX_HEALTH_CHECKS_BY_OWNER --query \"[Limit.Value,Count]\"",
+     "expect": "Two numbers. The first is the quota: 200 active health checks, unless someone raised it for this account. The second is the number of health checks that exist now, often 0.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the same two numbers for hosted zones.",
+     "command": "aws route53 get-account-limit --type MAX_HOSTED_ZONES_BY_OWNER --query \"[Limit.Value,Count]\"",
+     "expect": "The quota of 500 hosted zones, unless someone raised it for this account, and the number of hosted zones that exist now.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the hosted zones of the account and whether each one is private.",
+     "command": "aws route53 list-hosted-zones --query \"HostedZones[].[Name,Config.PrivateZone]\"",
+     "expect": "Often an empty list in a learning account. Otherwise one row for each zone: its name, which ends with a dot, and true for a private hosted zone or false for a public hosted zone.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the type and the IP address of every health check in the account.",
+     "command": "aws route53 list-health-checks --query \"HealthChecks[].[HealthCheckConfig.Type,HealthCheckConfig.IPAddress]\"",
+     "expect": "Often an empty list. Every IP address in the output is a public address: Route 53 cannot check an endpoint whose address is in a private range. A row with null checks a domain name, or it is a calculated health check.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "route53-hc-global-service-no-region-for-health-checks",
+    "route53-hc-endpoint-automated-requests-over-internet",
+    "route53-hc-checkers-outside-vpc-need-public-ip",
+    "route53-hc-cannot-check-private-ip-ranges",
+    "route53-quota-health-checks-per-account",
+    "route53-quota-hosted-zones-per-account"
+   ],
+   "sources": [
+    {
+     "title": "get-checker-ip-ranges (AWS CLI Command Reference: the IP ranges of the Route 53 health checkers)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/get-checker-ip-ranges.html"
+    },
+    {
+     "title": "get-account-limit (AWS CLI Command Reference: MAX_HEALTH_CHECKS_BY_OWNER and MAX_HOSTED_ZONES_BY_OWNER)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/get-account-limit.html"
+    },
+    {
+     "title": "list-hosted-zones (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/list-hosted-zones.html"
+    },
+    {
+     "title": "list-health-checks (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/list-health-checks.html"
+    },
+    {
+     "title": "Quotas (Amazon Route 53 Developer Guide: health checks and hosted zones per account)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html"
+    },
+    {
+     "title": "Types of Amazon Route 53 health checks (requests over the internet)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/health-checks-types.html"
+    },
+    {
+     "title": "Values that you specify when you create or update health checks (no private IP ranges)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/health-checks-creating-values.html"
+    },
+    {
+     "title": "Configuring failover in a private hosted zone (health checkers are outside the VPC)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-private-hosted-zones.html"
+    }
+   ],
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-14"
+  },
+  {
+   "id": "route53-t02",
+   "type": "try",
+   "title": "Point the zone apex at another record after a CNAME record is refused",
+   "kills": "\"A CNAME record can point the bare domain to another name.\"",
+   "trap": "route53-trap-cname-at-apex",
+   "section": "2-deep.md#an-alias-record-can-answer-at-the-zone-apex-where-a-cname-record-cannot",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0 for the hosted zone: Route 53 does not charge for a hosted zone that you delete within 12 hours of creation, and the cleanup does that. Queries on a public hosted zone are still billed at the standard query rate, so the test queries can add a small query charge.",
+   "cost_if_forgotten": "More than $0: after 12 hours, the hosted zone is billed its full monthly fee at once, because the monthly price is not prorated. The fee comes again on the first day of each month until you delete the zone.",
+   "cost_facts": [
+    "route53-pricing-hosted-zone-deleted-in-12-hours-free",
+    "route53-faq-hosted-zone-12-hour-grace-period",
+    "route53-pricing-hosted-zone-monthly-not-prorated",
+    "route53-faq-hosted-zone-billed-at-creation-and-monthly",
+    "route53-pricing-alias-to-record-in-zone-standard-rate"
+   ],
+   "permissions": [
+    "route53:CreateHostedZone",
+    "route53:GetHostedZone",
+    "route53:ChangeTagsForResource",
+    "route53:ChangeResourceRecordSets",
+    "route53:TestDNSAnswer",
+    "route53:DeleteHostedZone",
+    "route53:ListHostedZonesByName"
+   ],
+   "read_only_alternative": "These commands create nothing. List the hosted zones of the account: aws route53 list-hosted-zones --query \"HostedZones[].[Id,Name,Config.PrivateZone]\" Copy the ID of a public zone, the part after /hostedzone/, as <ZONE_ID>, and list its records: aws route53 list-resource-record-sets --hosted-zone-id <ZONE_ID> --query \"ResourceRecordSets[].[Name,Type,AliasTarget.DNSName]\" The apex holds the NS and SOA records, often an alias record of type A, and never a CNAME record. If the account has no public hosted zone, answer the predict question of step 5 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a public hosted zone for the lab name saa-route53-t02.example. No registrar points to it, so no resolver on the internet sends it queries. If you repeat the task, change the caller reference.",
+     "command": "aws route53 create-hosted-zone --name saa-route53-t02.example --caller-reference saa-route53-t02-1",
+     "capture": {
+      "name": "ZONE_ID",
+      "query": "HostedZone.Id"
+     },
+     "expect": "No output. ZONE_ID now holds the path of the new zone: /hostedzone/ and the zone ID. If Route 53 refuses the name, use a subdomain of a domain that you administer in every command of this task.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the zone path and the name servers that Route 53 gave the zone. Two later commands need the short zone ID, the part after /hostedzone/: write it where they show <ZONE_ID>.",
+     "command": "aws route53 get-hosted-zone --id $ZONE_ID --query \"[HostedZone.Id,DelegationSet.NameServers]\"",
+     "expect": "The path /hostedzone/ followed by the zone ID, and a list of four name servers. By default, Route 53 gives each new hosted zone its own set of four name servers.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Tag the zone. The command that creates a hosted zone takes no tags, so the tags come in this step.",
+     "command": "aws route53 change-tags-for-resource --resource-type hostedzone --resource-id <ZONE_ID> --add-tags Key=book,Value=saa Key=task,Value=route53-t02",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create an A record for www with the documentation address 192.0.2.10 and a TTL of 300 seconds.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=CREATE,ResourceRecordSet={Name=www.saa-route53-t02.example,Type=A,TTL=300,ResourceRecords=[{Value=192.0.2.10}]}}]\" --query \"ChangeInfo.Status\"",
+     "expect": "\"PENDING\". The status becomes INSYNC when every Route 53 DNS server has the change, generally within 60 seconds.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Break it on purpose: give the zone apex, saa-route53-t02.example, a CNAME record that points to www.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=CREATE,ResourceRecordSet={Name=saa-route53-t02.example,Type=CNAME,TTL=300,ResourceRecords=[{Value=www.saa-route53-t02.example}]}}]\"",
+     "expect": "An InvalidChangeBatch error that names the CNAME record and the apex of the zone. Route 53 makes all the changes of a change batch or none of them, so the zone does not change.",
+     "break_it": true,
+     "predict": "The bare name should answer like www. Can the zone apex hold a CNAME record that points to www?",
+     "explain": "The [DNS protocol does not allow you to create](../facts/route53.md#route53-cname-dns-protocol-forbids-zone-apex) a CNAME record for the zone apex, so Route 53 refuses the change. An alias record is different: [you can create an alias record](../facts/route53.md#route53-alias-allowed-at-zone-apex) at the zone apex, and an alias can route traffic from [one record in a hosted zone to another](../facts/route53.md#route53-alias-extension-targets)."
+    },
+    {
+     "text": "Fix it: at the apex, create an alias record of type A whose target is the www record. An alias to a record in the same zone names that zone by its short ID.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=CREATE,ResourceRecordSet={Name=saa-route53-t02.example,Type=A,AliasTarget={HostedZoneId=<ZONE_ID>,DNSName=www.saa-route53-t02.example,EvaluateTargetHealth=false}}}]\" --query \"ChangeInfo.Status\"",
+     "expect": "\"PENDING\". Route 53 accepts an alias record at the apex. The alias has no TTL of its own: it uses the TTL of the www record.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Ask Route 53 what it answers for an A query on the bare name.",
+     "command": "aws route53 test-dns-answer --hosted-zone-id $ZONE_ID --record-name saa-route53-t02.example --record-type A --query \"[ResponseCode,RecordData]\"",
+     "expect": "NOERROR and [\"192.0.2.10\"]: the apex now answers with the address of the www record. If the list is empty, wait one minute and run the command again.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the alias record at the apex. A delete names the same values as the create.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=DELETE,ResourceRecordSet={Name=saa-route53-t02.example,Type=A,AliasTarget={HostedZoneId=<ZONE_ID>,DNSName=www.saa-route53-t02.example,EvaluateTargetHealth=false}}}]\""
+    },
+    {
+     "text": "Delete the www record.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=DELETE,ResourceRecordSet={Name=www.saa-route53-t02.example,Type=A,TTL=300,ResourceRecords=[{Value=192.0.2.10}]}}]\""
+    },
+    {
+     "text": "Delete the hosted zone. Route 53 deletes a zone only when it holds no records other than its NS and SOA records.",
+     "command": "aws route53 delete-hosted-zone --id $ZONE_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws route53 list-hosted-zones-by-name --dns-name saa-route53-t02.example --query \"HostedZones[?Name=='saa-route53-t02.example.'].Id\"",
+    "expect": "An empty list: no zone with this name is left in the account. If you used another zone name in step 1, put that name in this command."
+   },
+   "still_costs": [
+    "The hosted zone, if it stays longer than 12 hours: Route 53 then bills its full monthly fee.",
+    "If the CloudShell session ended before the cleanup, ZONE_ID is empty. Run the verify command without --query to see the zone path, write that path in place of $ZONE_ID, and run the cleanup again."
+   ],
+   "facts": [
+    "route53-cname-dns-protocol-forbids-zone-apex",
+    "route53-cname-not-allowed-at-zone-apex",
+    "route53-alias-allowed-at-zone-apex",
+    "route53-alias-extension-targets",
+    "route53-alias-target-another-record-all-types-except-ns-soa",
+    "route53-alias-to-record-in-zone-uses-target-ttl",
+    "route53-default-unique-delegation-set-per-zone",
+    "route53-public-zone-creates-ns-and-soa",
+    "route53-faq-insync-means-all-servers",
+    "route53-changes-propagate-within-60-seconds",
+    "route53-migrate-hosted-zone-only-for-domain-you-administer",
+    "route53-pricing-hosted-zone-deleted-in-12-hours-free",
+    "route53-faq-hosted-zone-12-hour-grace-period",
+    "route53-pricing-hosted-zone-monthly-not-prorated",
+    "route53-faq-hosted-zone-billed-at-creation-and-monthly",
+    "route53-pricing-alias-to-record-in-zone-standard-rate"
+   ],
+   "sources": [
+    {
+     "title": "Migrating a hosted zone to a different AWS account (CLI: create-hosted-zone and change-resource-record-sets; alias records after their targets)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-migrating.html"
+    },
+    {
+     "title": "create-hosted-zone (AWS CLI Command Reference: a unique caller reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/create-hosted-zone.html"
+    },
+    {
+     "title": "get-hosted-zone (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/get-hosted-zone.html"
+    },
+    {
+     "title": "change-tags-for-resource (AWS CLI Command Reference: resource type hostedzone)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/change-tags-for-resource.html"
+    },
+    {
+     "title": "change-resource-record-sets (AWS CLI Command Reference: basic and alias syntax, alias to another record, delete with the same values, all or none)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/change-resource-record-sets.html"
+    },
+    {
+     "title": "ChangeResourceRecordSets (Amazon Route 53 API Reference: the InvalidChangeBatch error)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html"
+    },
+    {
+     "title": "test-dns-answer (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/test-dns-answer.html"
+    },
+    {
+     "title": "TestDNSAnswer (Amazon Route 53 API Reference: the value that Route 53 returns, public hosted zones only)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/APIReference/API_TestDNSAnswer.html"
+    },
+    {
+     "title": "delete-hosted-zone (AWS CLI Command Reference: only the NS and SOA records left)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/delete-hosted-zone.html"
+    },
+    {
+     "title": "list-hosted-zones-by-name (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/list-hosted-zones-by-name.html"
+    },
+    {
+     "title": "Supported DNS record types (no CNAME record at the zone apex)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html"
+    },
+    {
+     "title": "Choosing between alias and non-alias records",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html"
+    },
+    {
+     "title": "Amazon Route 53 pricing (hosted zones deleted within 12 hours, monthly fee not prorated)",
+     "url": "https://aws.amazon.com/route53/pricing/"
+    }
+   ],
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-14"
+  },
+  {
+   "id": "route53-t03",
+   "type": "try",
+   "title": "Watch failover records answer while the primary health check fails",
+   "kills": "\"When every record fails its health check, Route 53 returns no answer.\"",
+   "trap": "route53-trap-all-unhealthy-no-answer",
+   "section": "2-deep.md#failover-records-answer-with-the-secondary-only-while-the-primary-is-unhealthy",
+   "pass_route": false,
+   "minutes": 15,
+   "cost": "$0 for the hosted zone: Route 53 does not charge for a hosted zone that you delete within 12 hours of creation. $0 for the calculated health check while the account has no more than 50 health checks for AWS endpoints. The test queries can add a small query charge.",
+   "cost_if_forgotten": "More than $0: after 12 hours, the hosted zone is billed its full monthly fee at once, because the monthly price is not prorated. The health check adds a monthly charge only when the account has more than 50 health checks for AWS endpoints.",
+   "cost_facts": [
+    "route53-pricing-hosted-zone-deleted-in-12-hours-free",
+    "route53-faq-hosted-zone-12-hour-grace-period",
+    "route53-pricing-hosted-zone-monthly-not-prorated",
+    "route53-pricing-health-check-aws-vs-non-aws-endpoints",
+    "route53-pricing-health-checks-first-50-aws-endpoints-free"
+   ],
+   "permissions": [
+    "route53:CreateHostedZone",
+    "route53:GetHostedZone",
+    "route53:ChangeTagsForResource",
+    "route53:CreateHealthCheck",
+    "route53:ChangeResourceRecordSets",
+    "route53:TestDNSAnswer",
+    "route53:DeleteHealthCheck",
+    "route53:DeleteHostedZone",
+    "route53:ListHostedZonesByName",
+    "route53:ListHealthChecks"
+   ],
+   "read_only_alternative": "These commands create nothing. List the health checks of the account: aws route53 list-health-checks --query \"HealthChecks[].[Id,HealthCheckConfig.Type]\" Then copy the short ID of a hosted zone, the part after /hostedzone/, as <ZONE_ID>, and list its failover records: aws route53 list-resource-record-sets --hosted-zone-id <ZONE_ID> --query \"ResourceRecordSets[?Failover].[Name,Failover,HealthCheckId]\" A secondary record without a health check answers whenever the primary is unhealthy. If the account has no failover records, answer the predict question of step 7 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a public hosted zone for the lab name saa-route53-t03.example. No registrar points to it, so no resolver on the internet sends it queries. If you repeat the task, change the caller reference.",
+     "command": "aws route53 create-hosted-zone --name saa-route53-t03.example --caller-reference saa-route53-t03-1",
+     "capture": {
+      "name": "ZONE_ID",
+      "query": "HostedZone.Id"
+     },
+     "expect": "No output. ZONE_ID now holds the path of the new zone: /hostedzone/ and the zone ID. If Route 53 refuses the name, use a subdomain of a domain that you administer in every command of this task.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the zone path. The tag command needs the short zone ID, the part after /hostedzone/: write it where the command shows <ZONE_ID>.",
+     "command": "aws route53 get-hosted-zone --id $ZONE_ID --query \"HostedZone.Id\"",
+     "expect": "The path /hostedzone/ followed by the zone ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Tag the zone. The command that creates a hosted zone takes no tags.",
+     "command": "aws route53 change-tags-for-resource --resource-type hostedzone --resource-id <ZONE_ID> --add-tags Key=book,Value=saa Key=task,Value=route53-t03",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a calculated health check that needs 1 healthy child health check but has no children. Route 53 considers it unhealthy all the time, so no endpoint is needed. If you repeat the task, change the caller reference.",
+     "command": "aws route53 create-health-check --caller-reference saa-route53-t03-hc-1 --health-check-config Type=CALCULATED,HealthThreshold=1",
+     "capture": {
+      "name": "HC_ID",
+      "query": "HealthCheck.Id"
+     },
+     "expect": "No output. HC_ID now holds the ID of the health check. The docs do not show a calculated health check without children; if Route 53 refuses it, answer the predict question of step 7 on paper and run the cleanup.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Tag the health check. The command that creates a health check takes no tags either.",
+     "command": "aws route53 change-tags-for-resource --resource-type healthcheck --resource-id $HC_ID --add-tags Key=book,Value=saa Key=task,Value=route53-t03",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create two failover records for www: the primary with 192.0.2.10 and the secondary with 198.51.100.10. Both use the health check that is always unhealthy.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=CREATE,ResourceRecordSet={Name=www.saa-route53-t03.example,Type=A,SetIdentifier=primary,Failover=PRIMARY,TTL=60,ResourceRecords=[{Value=192.0.2.10}],HealthCheckId=$HC_ID}},{Action=CREATE,ResourceRecordSet={Name=www.saa-route53-t03.example,Type=A,SetIdentifier=secondary,Failover=SECONDARY,TTL=60,ResourceRecords=[{Value=198.51.100.10}],HealthCheckId=$HC_ID}}]\" --query \"ChangeInfo.Status\"",
+     "expect": "\"PENDING\". Wait one minute, so that every Route 53 DNS server has both records.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Break it on purpose: every record of www now fails its health check. Ask Route 53 what it answers for www.",
+     "command": "aws route53 test-dns-answer --hosted-zone-id $ZONE_ID --record-name www.saa-route53-t03.example --record-type A --query \"[ResponseCode,RecordData]\"",
+     "expect": "From the documented failover rules: NOERROR and [\"192.0.2.10\"], the address of the primary record. The docs do not say that this test command applies health checks; if it shows another answer, trust the explain text below.",
+     "break_it": true,
+     "predict": "Both failover records are unhealthy. Does Route 53 return no answer, the primary address or the secondary address?",
+     "explain": "When Route 53 considers [both the primary and secondary records unhealthy](../facts/route53.md#route53-failover-both-unhealthy-returns-primary), it returns the primary record. Failover routing has [a mode of last resort](../facts/route53.md#route53-last-resort-mode-all-unhealthy-returns-answer): it treats every record as healthy again and returns an answer."
+    },
+    {
+     "text": "Fix it: replace the secondary record with one that has no health check. Then run the command of step 7 again.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=UPSERT,ResourceRecordSet={Name=www.saa-route53-t03.example,Type=A,SetIdentifier=secondary,Failover=SECONDARY,TTL=60,ResourceRecords=[{Value=198.51.100.10}]}}]\" --query \"ChangeInfo.Status\"",
+     "expect": "\"PENDING\". From the documented failover rules, after one minute step 7 returns [\"198.51.100.10\"]: the primary is unhealthy, and the secondary record, which has no health check, answers in its place.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the secondary record. A delete names the same values that the record has now.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=DELETE,ResourceRecordSet={Name=www.saa-route53-t03.example,Type=A,SetIdentifier=secondary,Failover=SECONDARY,TTL=60,ResourceRecords=[{Value=198.51.100.10}]}}]\""
+    },
+    {
+     "text": "Delete the primary record, with its health check ID.",
+     "command": "aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID --change-batch \"Changes=[{Action=DELETE,ResourceRecordSet={Name=www.saa-route53-t03.example,Type=A,SetIdentifier=primary,Failover=PRIMARY,TTL=60,ResourceRecords=[{Value=192.0.2.10}],HealthCheckId=$HC_ID}}]\""
+    },
+    {
+     "text": "Delete the health check. No record uses it now.",
+     "command": "aws route53 delete-health-check --health-check-id $HC_ID"
+    },
+    {
+     "text": "Delete the hosted zone. Route 53 deletes a zone only when it holds no records other than its NS and SOA records.",
+     "command": "aws route53 delete-hosted-zone --id $ZONE_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws route53 list-hosted-zones-by-name --dns-name saa-route53-t03.example --query \"HostedZones[?Name=='saa-route53-t03.example.'].Id\"",
+    "expect": "An empty list: no zone with this name is left in the account. If you used another zone name in step 1, put that name in this command. Then run the list-health-checks command under still costs: it must also return an empty list."
+   },
+   "still_costs": [
+    "The hosted zone, if it stays longer than 12 hours: Route 53 then bills its full monthly fee.",
+    "The health check, if the account has more than 50 health checks for AWS endpoints. Check that it is gone: aws route53 list-health-checks --query \"HealthChecks[?CallerReference=='saa-route53-t03-hc-1'].Id\" returns an empty list after the cleanup.",
+    "If step 8 did not run, the secondary record still has the health check: add HealthCheckId=$HC_ID to the first cleanup command.",
+    "If the CloudShell session ended before the cleanup, ZONE_ID and HC_ID are empty. Read the zone path with the verify command without --query, and the health check ID with the list-health-checks command above, then run the cleanup with those values."
+   ],
+   "facts": [
+    "route53-hc-calculated-healthy-count-compare",
+    "route53-hc-calculated-threshold-above-children-unhealthy",
+    "route53-failover-needs-one-primary-one-secondary",
+    "route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy",
+    "route53-failover-both-unhealthy-returns-primary",
+    "route53-last-resort-mode-all-unhealthy-returns-answer",
+    "route53-failover-secondary-health-check-optional",
+    "route53-record-without-health-check-always-healthy",
+    "route53-rel10-failover-records-short-ttl",
+    "route53-changes-propagate-within-60-seconds",
+    "route53-migrate-hosted-zone-only-for-domain-you-administer",
+    "route53-pricing-hosted-zone-deleted-in-12-hours-free",
+    "route53-faq-hosted-zone-12-hour-grace-period",
+    "route53-pricing-hosted-zone-monthly-not-prorated",
+    "route53-pricing-health-check-aws-vs-non-aws-endpoints",
+    "route53-pricing-health-checks-first-50-aws-endpoints-free"
+   ],
+   "sources": [
+    {
+     "title": "create-hosted-zone (AWS CLI Command Reference: a unique caller reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/create-hosted-zone.html"
+    },
+    {
+     "title": "get-hosted-zone (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/get-hosted-zone.html"
+    },
+    {
+     "title": "change-tags-for-resource (AWS CLI Command Reference: resource types hostedzone and healthcheck)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/change-tags-for-resource.html"
+    },
+    {
+     "title": "create-health-check (AWS CLI Command Reference: type CALCULATED, caller reference of a deleted health check)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/create-health-check.html"
+    },
+    {
+     "title": "HealthCheckConfig (Amazon Route 53 API Reference: HealthThreshold greater than the number of child health checks)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/APIReference/API_HealthCheckConfig.html"
+    },
+    {
+     "title": "change-resource-record-sets (AWS CLI Command Reference: failover syntax, HealthCheckId, UPSERT and DELETE)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/change-resource-record-sets.html"
+    },
+    {
+     "title": "test-dns-answer (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/test-dns-answer.html"
+    },
+    {
+     "title": "TestDNSAnswer (Amazon Route 53 API Reference: the value that Route 53 returns, public hosted zones only)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/APIReference/API_TestDNSAnswer.html"
+    },
+    {
+     "title": "delete-health-check (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/delete-health-check.html"
+    },
+    {
+     "title": "delete-hosted-zone (AWS CLI Command Reference: only the NS and SOA records left)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/delete-hosted-zone.html"
+    },
+    {
+     "title": "list-hosted-zones-by-name (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/list-hosted-zones-by-name.html"
+    },
+    {
+     "title": "list-health-checks (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/route53/list-health-checks.html"
+    },
+    {
+     "title": "How Amazon Route 53 chooses records when health checking is configured (both failover records unhealthy, secondary without a health check)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/health-checks-how-route-53-chooses-records.html"
+    },
+    {
+     "title": "Values that you specify when you create or update health checks (calculated health checks)",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/health-checks-creating-values.html"
+    },
+    {
+     "title": "Active-active and active-passive failover",
+     "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-types.html"
+    },
+    {
+     "title": "Amazon Route 53 pricing (hosted zones deleted within 12 hours, health checks for AWS endpoints)",
+     "url": "https://aws.amazon.com/route53/pricing/"
+    }
+   ],
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-14"
+  }
+ ]
+}

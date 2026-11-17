@@ -1,0 +1,3449 @@
+{
+ "chapter": "15",
+ "title": "CloudFront and Global Accelerator",
+ "template": "deep",
+ "services": [
+  "cloudfront",
+  "global-accelerator"
+ ],
+ "written_by": "plan-15",
+ "sources_fetched": 155,
+ "fetch_failures": [],
+ "unusable_pages": [
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/atlassian-aws-global-accelerator/",
+   "reason": "status 200 but the snapshot is the generic customer-stories listing (no Atlassian text); do not quote it"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/skyscanner-case-study/",
+   "reason": "status 200 but the snapshot is the generic customer-stories listing; do not quote it (use skyscanner-cloudfront-case-study instead)"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/lever-case-study/",
+   "reason": "status 200 but the snapshot is the generic customer-stories listing; do not quote it"
+  },
+  {
+   "url": "https://docs.aws.amazon.com/whitepapers/latest/secure-content-delivery-amazon-cloudfront/secure-content-delivery-amazon-cloudfront.html",
+   "reason": "redirects to the CloudFront guide page SecurityAndPrivateContent (a short overview); the whitepaper itself is retired. Quote the guide pages instead"
+  },
+  {
+   "url": "https://docs.aws.amazon.com/whitepapers/latest/secure-content-delivery-amazon-cloudfront/using-https.html",
+   "reason": "redirects to the same SecurityAndPrivateContent overview; use docs/AmazonCloudFront/latest/DeveloperGuide/using-https and the using-https-* pages"
+  },
+  {
+   "url": "https://docs.aws.amazon.com/whitepapers/latest/aws-best-practices-ddos-resiliency/aws-best-practices-ddos-resiliency.html",
+   "reason": "abstract only (1.9 KB); the edge content is in the five sub-pages fetched in urls-5.txt"
+  }
+ ],
+ "feeds": {
+  "faq": "_build/corpus/faq/cloudfront.jsonl (208 questions; list in _build/work/15-cloudfront/faq-list-cloudfront.txt) and _build/corpus/faq/global-accelerator.jsonl (32 questions; list in faq-list-ga.txt)",
+  "changes": "_build/corpus/changes/cloudfront.jsonl (150 rows since 2022-07-01; list in changes-cloudfront.txt) and _build/corpus/changes/global-accelerator.jsonl (40 rows; list in changes-ga.txt)",
+  "cases": "cases-cloudfront.txt (CloudFront tag) and cases-ga.txt (Global Accelerator tag); usable snapshots: www/solutions/case-studies/ladipage-case-study, doping-hafiza-case-study-amazon-cloudfront, skyscanner-cloudfront-case-study, supercell-edge-services-case-study, deriv-aws-global-accelerator"
+ },
+ "note": "Demand list for the facts phase. Hypotheses come from memory and research notes (FREQUENCY, FRESHNESS, STARTUP); they are questions to check, never evidence. Lens names: numbers | behavior | decisions+changes | faq. look_in entries are full snapshot source ids. Facts owned by other chapters are listed under link_existing: link them, do not duplicate. Fact namespaces: cloudfront (ids cloudfront-...) and global-accelerator (ids global-accelerator-...).",
+ "demand": [
+  {
+   "id": "d001",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "How many distributions can one AWS account create by default, and can the quota be raised?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-distributions-per-account"
+   ],
+   "hypothesis": "200 per account, adjustable",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Quota page: 500 distributions per AWS account, adjustable (hypothesis 200 is outdated). Looked in cloudfront-limits table 1 and the FAQ (the FAQ points to the quotas page). adjudicate-15: status set after adjudication.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d002",
+   "bullet": "2.1.K7",
+   "lens": "numbers",
+   "question": "How many cache behaviors, origins and origin groups can one distribution have?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-cache-behaviors-per-distribution",
+    "cloudfront-quota-origins-per-distribution",
+    "cloudfront-quota-origin-groups-per-distribution"
+   ],
+   "hypothesis": "25 cache behaviors, 25 origins, 10 origin groups (adjustable)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits"
+   ],
+   "registered_by": "register-15",
+   "note": "Quota page: 75 cache behaviors, 100 origins, 10 origin groups per distribution, all adjustable. Hypothesis (25 / 25 / 10) is outdated except origin groups. adjudicate-15: status set after adjudication.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d003",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What is the maximum size of one file (one response) that CloudFront delivers?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-max-cacheable-file-size",
+    "cloudfront-quota-max-request-body-size"
+   ],
+   "hypothesis": "30 GB per HTTP GET response (older material says 20 GB)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Two statements disagree: quotas page says maximum cacheable file size per HTTP GET response is 50 GB (request body 64 GB); the FAQ (older text) says 30 GB for a single file. Both recorded; adjudicator should keep both with scope or prefer the quotas page. register-15: teach 50 GB cacheable per GET response (cloudfront-quota-max-cacheable-file-size); the FAQ 30 GB fact is reference only adjudicate-15: status set after adjudication; removed rejected cloudfront-faq-max-single-file-30-gb.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d004",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What are the per-distribution quotas on requests per second and data transfer rate, and what does the FAQ say for peaks above 150 Gbps or 250,000 RPS?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-data-transfer-rate-per-distribution",
+    "cloudfront-quota-requests-per-second-per-distribution",
+    "cloudfront-faq-higher-limits-two-business-days"
+   ],
+   "hypothesis": "250,000 RPS and 150 Gbps per distribution, adjustable; contact AWS for higher peaks",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "150 Gbps and 250,000 requests per second per distribution, adjustable, not applied to flat-rate plans. FAQ: request higher limits, capacity added within two business days. Hypothesis confirmed. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d005",
+   "bullet": "1.3.S3",
+   "lens": "numbers",
+   "question": "How many alternate domain names (CNAMEs) can one distribution have?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-cnames-per-distribution"
+   ],
+   "hypothesis": "100, adjustable",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/CreatingCNAME"
+   ],
+   "registered_by": "register-15",
+   "note": "100 alternate domain names per distribution, adjustable. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d006",
+   "bullet": "2.1.K7",
+   "lens": "numbers",
+   "question": "What are the default and allowed values of the origin response timeout, origin keep-alive timeout, connection attempts and connection timeout?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-connection-attempts-per-origin",
+    "cloudfront-quota-connection-timeout-per-origin",
+    "cloudfront-quota-response-timeout-per-origin",
+    "cloudfront-quota-keepalive-timeout-per-origin",
+    "cloudfront-default-connection-attempts",
+    "cloudfront-default-connection-timeout",
+    "cloudfront-default-response-timeout",
+    "cloudfront-default-keepalive-timeout",
+    "cloudfront-default-connect-wait-before-failover"
+   ],
+   "hypothesis": "response timeout 30 s default (1 to 120, more by quota); keep-alive 5 s default (1 to 120); 3 attempts; 10 s connection timeout",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesOrigin",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/http-504-gateway-timeout"
+   ],
+   "registered_by": "register-15",
+   "note": "Response timeout 1-120 s (default 30), connection attempts 1-3 (default 3), connection timeout 1-10 s (default 10), keep-alive default 5 s confirmed. Keep-alive range is 1-300 s on the quotas page (hypothesis said 1-120). Origin ports: 80, 443, 1024-65535, defaults 80 and 443. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-default-connect-wait-before-failover.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d007",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What are the default values of minimum TTL, default TTL and maximum TTL, and how do Cache-Control max-age and s-maxage interact with them?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-default-ttl-default-value",
+    "cloudfront-default-max-ttl-default-value",
+    "cloudfront-default-ttl-follows-min-ttl",
+    "cloudfront-default-max-ttl-follows-larger-ttl",
+    "cloudfront-min-ttl-above-zero-overrides-no-cache",
+    "cloudfront-ttl-all-zero-disables-caching"
+   ],
+   "hypothesis": "minimum 0 s, default 86,400 s (24 hours), maximum 31,536,000 s (one year); headers win between min and max",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Expiration",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cache-key-understand-cache-policy",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesCacheBehavior"
+   ],
+   "registered_by": "register-15",
+   "note": "Default TTL 86400 s (one day), Maximum TTL 31536000 s (one year). The saved pages do not state a default Minimum TTL of 0; 0 appears only in managed cache policy settings (using-managed-cache-policies), not as a default. The max-age and s-maxage interplay is in the table of Expiration (mined by the behavior lens). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d008",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "How many invalidation paths are free each month, how is a wildcard path counted, and how many file and wildcard invalidations can be in progress at one time?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-invalidation-first-1000-paths-free",
+    "cloudfront-invalidation-wildcard-counts-one-path",
+    "cloudfront-invalidation-free-allowance-per-account",
+    "cloudfront-invalidation-tag-paths-share-free-allowance",
+    "cloudfront-quota-invalidation-paths-or-tags-per-second",
+    "cloudfront-quota-wildcard-invalidations-per-second",
+    "cloudfront-price-invalidation-rate"
+   ],
+   "hypothesis": "first 1,000 paths a month free per account; a wildcard path counts as one path; 3,000 file paths or 15 wildcard paths in progress",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/PayingForInvalidation",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/invalidation-specifying-objects",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "First 1,000 paths a month free and wildcard counts as one path confirmed. In-progress limits (3,000 objects, 15 wildcard paths) are only in the FAQ; the current quotas page lists 150 paths or tags per second and 1 wildcard invalidation per second instead. Both recorded. Price after the free paths: $0.005 per path. register-15: teach the quotas-page rates; the FAQ in-progress figures (3,000 objects, 15 wildcard paths) are reference only adjudicate-15: status set after adjudication; removed rejected cloudfront-faq-invalidation-individual-objects-in-progress.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d009",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "For how long does CloudFront cache an error response from the origin by default (error caching minimum TTL)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-error-caching-default-ttl"
+   ],
+   "hypothesis": "10 seconds by default",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesErrorPages",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/GeneratingCustomErrorResponses"
+   ],
+   "registered_by": "register-15",
+   "note": "Default error caching minimum TTL is 10 seconds (georestrictions page; DownloadDistValuesErrorPages states no number). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d010",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "How many key groups per distribution and public keys per key group are allowed for signed URLs and signed cookies?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-key-groups-per-cache-behavior",
+    "cloudfront-quota-public-keys-per-key-group",
+    "cloudfront-quota-key-groups-per-account"
+   ],
+   "hypothesis": "4 key groups per cache behavior, 5 public keys per key group",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers"
+   ],
+   "registered_by": "register-15",
+   "note": "4 key groups per cache behavior, 5 public keys per key group, 10 key groups per account; all adjustable. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d011",
+   "bullet": "2.1.K7",
+   "lens": "numbers",
+   "question": "What are the limits of CloudFront Functions: maximum function size, memory, execution time model, and functions per account?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-function-max-size",
+    "cloudfront-quota-function-max-memory",
+    "cloudfront-quota-functions-per-account",
+    "cloudfront-edge-compare-duration",
+    "cloudfront-edge-compare-scale",
+    "cloudfront-function-logs-truncated-10kb"
+   ],
+   "hypothesis": "10 KB code, 2 MB memory, sub-millisecond execution; 100 functions per account",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-function-restrictions",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/edge-functions-choosing",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits"
+   ],
+   "registered_by": "register-15",
+   "note": "10 KB code (not adjustable), 2 MB memory, 100 functions per account, submillisecond duration. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d012",
+   "bullet": "2.1.K7",
+   "lens": "numbers",
+   "question": "What are the Lambda@Edge limits for viewer events versus origin events: timeout, memory, package size and response size?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-lambda-edge-timeout",
+    "cloudfront-edge-compare-memory",
+    "cloudfront-edge-compare-duration",
+    "cloudfront-edge-compare-code-size",
+    "cloudfront-quota-lambda-edge-package-size",
+    "cloudfront-quota-lambda-edge-response-size"
+   ],
+   "hypothesis": "viewer events 5 s and 128 MB, 1 MB package; origin events 30 s and up to 10,240 MB, 50 MB package",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/lambda-at-edge-function-restrictions",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/edge-functions-choosing"
+   ],
+   "link_existing": [
+    "lambda-edge-network-access-row",
+    "lambda-edge-event-sources-row"
+   ],
+   "registered_by": "register-15",
+   "note": "Current pages: Lambda@Edge timeout 30 s for all four event types, memory 128 MB for viewer events and 10,240 MB for origin events, code 50 MB for both, generated response 40 KB (viewer) and 1 MB (origin). Hypothesis (viewer 5 s, 1 MB package) is outdated. adjudicate-15: status set after adjudication; removed rejected cloudfront-quota-lambda-edge-requests-per-second.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d013",
+   "bullet": "2.1.K7",
+   "lens": "numbers",
+   "question": "How large can a CloudFront KeyValueStore be, and what are the key and value size limits?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-kvs-max-store-size",
+    "cloudfront-quota-kvs-max-key-size",
+    "cloudfront-quota-kvs-max-value-size",
+    "cloudfront-quota-kvs-max-update-per-request",
+    "cloudfront-quota-kvs-stores-per-account"
+   ],
+   "hypothesis": "5 MB per store; key 512 bytes; value 1 KB",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/kvs-with-functions"
+   ],
+   "registered_by": "register-15",
+   "note": "5 MB per store, key 512 Bytes, value 1 KB. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d014",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "How many headers, cookies and query strings can a cache policy or origin request policy name, and how many custom policies per account?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-query-strings-per-cache-policy",
+    "cloudfront-quota-headers-per-cache-policy",
+    "cloudfront-quota-cookies-per-cache-policy",
+    "cloudfront-quota-custom-cache-policies-per-account",
+    "cloudfront-quota-name-length-per-cache-policy"
+   ],
+   "hypothesis": "10 each per policy; 20 cache policies per account",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cache-key-understand-cache-policy"
+   ],
+   "registered_by": "register-15",
+   "note": "10 each per cache policy and per origin request policy (all adjustable), 20 custom cache policies per account. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d015",
+   "bullet": "1.3.S3",
+   "lens": "numbers",
+   "question": "What quotas apply to SSL/TLS certificates with CloudFront: custom certificates per account, dedicated-IP certificates per account, certificates per distribution?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-ssl-certificates-per-distribution",
+    "cloudfront-quota-dedicated-ip-ssl-certs-per-account"
+   ],
+   "hypothesis": "one certificate per distribution; dedicated IP certificates 2 per account by default; certificates per account adjustable",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits"
+   ],
+   "link_existing": [
+    "acm-cloudfront-one-cert-per-distribution"
+   ],
+   "registered_by": "register-15",
+   "note": "1 certificate per distribution; 2 dedicated-IP SSL certificates per account by default, adjustable, no quota with SNI. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d016",
+   "bullet": "1.3.S3",
+   "lens": "numbers",
+   "question": "Which certificate key types and maximum RSA key sizes does CloudFront accept for viewer certificates, and what key size for ACM certificates?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cert-rsa-key-sizes-supported",
+    "cloudfront-cert-rsa-max-key-length-4096",
+    "cloudfront-cert-acm-rsa-up-to-2048",
+    "cloudfront-cert-ecdsa-key-sizes-supported"
+   ],
+   "hypothesis": "RSA 1024, 2048, 3072, 4096 bits; ECDSA 256 and 384; ACM RSA 2048",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements"
+   ],
+   "registered_by": "register-15",
+   "note": "RSA 1024/2048/3072/4096 bits, max 4096; ECDSA 256 and 384; ACM issues RSA up to 2048 bits. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-cert-ecdsa-key-sizes-supported.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d017",
+   "bullet": "1.3.S3",
+   "lens": "numbers",
+   "question": "How many fields can a field-level encryption profile encrypt, and what other field-level encryption quotas exist (request body size)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-fle-fields-per-profile",
+    "cloudfront-quota-fle-max-fields-in-request-body",
+    "cloudfront-quota-fle-max-request-body-length",
+    "cloudfront-quota-fle-max-field-length",
+    "cloudfront-quota-fle-profiles-per-account",
+    "cloudfront-quota-fle-configs-per-account"
+   ],
+   "hypothesis": "up to 10 data fields; profiles per account; maximum length of a field",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/field-level-encryption",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits"
+   ],
+   "registered_by": "register-15",
+   "note": "10 fields per profile, 10 fields in a request body, request body 1 MB, field 16 KB, 10 profiles and 10 configurations per account. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d018",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "How many IP addresses does a CloudFront Anycast static IP list provide, and what price class does it require?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-anycast-ip-count-allow-listing-21",
+    "cloudfront-faq-anycast-ip-count-apex-3",
+    "cloudfront-anycast-requires-price-class-all",
+    "cloudfront-anycast-request-review-two-days",
+    "cloudfront-price-anycast-ipv4-hourly",
+    "cloudfront-quota-distributions-per-anycast-static-ip-list"
+   ],
+   "hypothesis": "21 IPv4 addresses; price class All (use all edge locations)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/request-static-ips",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "21 addresses for allow-listing, 3 for apex domains (the dual-stack counts are in the FAQ facts); requires price class All (Use all edge locations). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d019",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What sampling rate range do real-time logs accept, where are they delivered, and how fast are they delivered?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-realtime-logs-sampling-rate-range",
+    "cloudfront-real-time-logs-kinesis-data-streams",
+    "cloudfront-realtime-logs-best-effort-delivery",
+    "cloudfront-faq-kinesis-shard-capacity",
+    "cloudfront-price-real-time-log-rate"
+   ],
+   "hypothesis": "sampling 1 to 100 percent; Kinesis Data Streams; within seconds",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/real-time-logs"
+   ],
+   "registered_by": "register-15",
+   "note": "Sampling rate: whole number 1 to 100; delivered to Kinesis Data Streams within seconds, best effort. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d020",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "Which destinations do standard logs (v2) support, are standard logs free, and how quickly are log files delivered?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-standard-logs-destinations-and-charge",
+    "cloudfront-price-standard-logs-no-extra-charge",
+    "cloudfront-price-standard-logs-cwl-750-bytes-free"
+   ],
+   "hypothesis": "Amazon S3, CloudWatch Logs, Amazon Data Firehose; standard logs free (destination charges apply); delivered within minutes to an hour (best effort)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/standard-logging",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/AccessLogs",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Destinations and no extra charge for enabling standard logs are in facts of other lenses. NOT FOUND: how quickly standard log files are delivered; AccessLogs, standard-logging and the FAQ give no delivery time for v2 logs. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d021",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What are the price classes, which is the default, and what do they trade off?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-price-class-all",
+    "cloudfront-price-class-200",
+    "cloudfront-price-class-100",
+    "cloudfront-price-price-class-default-all-edge-locations"
+   ],
+   "hypothesis": "All edge locations (default), Price Class 200, Price Class 100; cheaper classes exclude the most expensive Regions, higher latency for some viewers",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesGeneral",
+    "www/cloudfront/faqs",
+    "www/cloudfront/pricing/pay-as-you-go"
+   ],
+   "registered_by": "register-15",
+   "note": "Price Class All (default), 200, 100 from the pay-as-you-go price class table. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d022",
+   "bullet": "4.4.S3",
+   "lens": "numbers",
+   "question": "What are the pay-as-you-go pricing dimensions of CloudFront (data transfer out, requests, invalidation paths, real-time logs, functions, Origin Shield, dedicated IP SSL, field-level encryption), and is data transfer from AWS origins to CloudFront charged?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-price-dto-first-1tb-free",
+    "cloudfront-price-dto-next-9tb-us",
+    "cloudfront-price-dt-to-origin-us",
+    "cloudfront-price-invalidation-rate",
+    "cloudfront-price-real-time-log-rate",
+    "cloudfront-price-fle-rate",
+    "cloudfront-price-functions-invocation-rate",
+    "cloudfront-price-lambda-edge-request-rate",
+    "cloudfront-price-kvs-read-rate",
+    "cloudfront-price-origin-to-cloudfront-always-free-aws-origins"
+   ],
+   "hypothesis": "billed for data transfer out to the internet and HTTP/HTTPS requests by Region; origin fetch from AWS origins free; dedicated IP custom SSL has a monthly fee",
+   "look_in": [
+    "www/cloudfront/pricing/pay-as-you-go",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Introduction",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/reports-billing",
+    "www/cloudfront/faqs"
+   ],
+   "link_existing": [
+    "s3-pricing-data-transfer-to-cloudfront-free"
+   ],
+   "registered_by": "register-15",
+   "note": "Dimensions and unit prices from the pay-as-you-go page. NOT FOUND in a quotable line: the unit of request pricing (per 10,000 requests appears only in a heading), so the HTTP and HTTPS request prices were rejected by M5 and not stored. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d023",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What does the CloudFront always-free tier include each month (data transfer out, requests, CloudFront Functions invocations)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-free-tier-monthly-usage",
+    "cloudfront-faq-free-tier-one-per-organization"
+   ],
+   "hypothesis": "1 TB data out, 10 million HTTP/HTTPS requests, 2 million CloudFront Functions invocations each month",
+   "look_in": [
+    "www/cloudfront/pricing/pay-as-you-go",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "1 TB data transfer out, 10,000,000 requests, 2,000,000 CloudFront Functions invocations a month (FAQ sentence). Mined mainly by another lens. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d024",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "What are the CloudFront flat-rate plans (Free, Pro, Business, Premium): monthly price per distribution, request and data allowances, overage charges, and what they include?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-price-flat-rate-monthly-per-distribution",
+    "cloudfront-price-flat-rate-request-allowance",
+    "cloudfront-price-flat-rate-data-transfer-allowance",
+    "cloudfront-price-flat-rate-waf-rules-per-plan",
+    "cloudfront-price-flat-rate-included-s3-storage",
+    "cloudfront-quota-free-plans-per-account",
+    "cloudfront-quota-pricing-plans-per-account"
+   ],
+   "hypothesis": "$0, $15, $200, $1,000 per month per distribution; no overage charges; include WAF, DDoS protection, Route 53 DNS, TLS certificate, S3 credits (volatile; GA 2025-11-18)",
+   "look_in": [
+    "www/cloudfront/pricing",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/flat-rate-pricing-plan",
+    "www/cloudfront/faqs"
+   ],
+   "link_existing": [
+    "waf-cloudfront-flat-rate-includes-waf",
+    "waf-cloudfront-flat-rate-keeps-web-acl"
+   ],
+   "registered_by": "register-15",
+   "note": "$0, $15, $200, $1,000 a month per distribution, no overage charges; allowances 1M/10M/125M/500M requests. Volatile. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d025",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "What monthly uptime percentage does the CloudFront SLA commit to?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-sla-monthly-uptime-commitment",
+    "cloudfront-sla-credit-10-percent",
+    "cloudfront-sla-credit-100-percent"
+   ],
+   "hypothesis": "99.9 percent",
+   "look_in": [
+    "www/cloudfront/sla",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "At least 99.9% monthly uptime; credits 10%, 25%, 100%. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-sla-credit-10-percent, cloudfront-sla-credit-100-percent.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d026",
+   "bullet": "4.4.S4",
+   "lens": "numbers",
+   "question": "Which objects does CloudFront compress automatically: file size range, compression formats, and what the request must include?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-compression-file-size-range",
+    "cloudfront-compression-only-for-status-codes",
+    "cloudfront-compression-needs-accept-encoding",
+    "cloudfront-compression-needs-content-length",
+    "cloudfront-compression-brotli-preferred"
+   ],
+   "hypothesis": "1,000 to 10,000,000 bytes; Gzip and Brotli; Accept-Encoding header; Content-Length present",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/ServingCompressedFiles"
+   ],
+   "registered_by": "register-15",
+   "note": "1,000 to 10,000,000 bytes; status 200, 403 or 404; Accept-Encoding with gzip or br; Content-Length required. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d027",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "What are the Global Accelerator quotas: accelerators per account, listeners per accelerator, port ranges per listener, endpoint groups per listener, endpoints per endpoint group?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-quota-standard-accelerators-per-account",
+    "global-accelerator-quota-listeners-per-accelerator",
+    "global-accelerator-quota-port-ranges-per-listener",
+    "global-accelerator-quota-endpoint-groups-per-accelerator",
+    "global-accelerator-quota-endpoints-mixed-type-group",
+    "global-accelerator-one-endpoint-group-per-region-per-listener"
+   ],
+   "hypothesis": "20 accelerators; 10 listeners; 10 port ranges; one endpoint group per Region; 10 endpoints per endpoint group",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/limits-global-accelerator"
+   ],
+   "registered_by": "register-15",
+   "note": "20 standard accelerators, 10 listeners, 10 port ranges, 42 endpoint groups per accelerator, 10 endpoints per endpoint group; one endpoint group per Region per listener. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d028",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "How many static IP addresses does a standard accelerator get for IPv4 and for dual-stack, and how long do they stay assigned?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-dual-stack-four-static-ips",
+    "global-accelerator-static-ips-kept-until-delete",
+    "global-accelerator-ipv6-from-two-64-prefixes"
+   ],
+   "hypothesis": "two static IPv4 addresses; dual-stack two IPv4 and two IPv6; kept while the accelerator exists, even when disabled; lost on delete",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/what-is-global-accelerator",
+    "docs/global-accelerator/latest/dg/introduction-components",
+    "docs/global-accelerator/latest/dg/about-accelerators",
+    "docs/global-accelerator/latest/dg/introduction-benefits-of-migrating"
+   ],
+   "registered_by": "register-15",
+   "note": "Two static IPv4; dual-stack four (two IPv4, two IPv6); kept while the accelerator exists, even when disabled; lost on delete. adjudicate-15: status set after adjudication. close-facts-15: global-accelerator-dec-static-ips-deleted-with-accelerator was rejected; keep and delete behavior rests on global-accelerator-static-ips-kept-until-delete; status stays filled.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d029",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "What range and default does a Global Accelerator traffic dial have?",
+   "status": "partial",
+   "facts": [
+    "global-accelerator-faq-traffic-dial-default-100-percent",
+    "global-accelerator-dec-traffic-dial-zero-cuts-off-region"
+   ],
+   "hypothesis": "0 to 100 percent; default 100",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-endpoint-groups-traffic-dial"
+   ],
+   "registered_by": "register-15",
+   "note": "Range 0 to 100, default 100 (CreateEndpointGroup API reference). adjudicate-15: status set after adjudication; removed rejected global-accelerator-traffic-dial-range-0-to-100, global-accelerator-traffic-dial-api-default-100. Default 100% is verified in the FAQ fact and setting the dial to 0 in the guide fact; the 0 to 100 range is not found as a quotable sentence (do not state it).",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d030",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "What range and default does a Global Accelerator endpoint weight have?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-endpoint-weight-range-0-to-255",
+    "global-accelerator-endpoint-weight-default-128",
+    "global-accelerator-weight-zero-stops-traffic"
+   ],
+   "hypothesis": "0 to 255; default 128",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-endpoints-endpoint-weights"
+   ],
+   "registered_by": "register-15",
+   "note": "Range 0 to 255, default 128. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-endpoint-weight-range-0-to-255.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d031",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "What are the Global Accelerator health check settings (interval choices, threshold count) for EC2 and Elastic IP endpoints?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-health-check-interval-10-or-30-default-30",
+    "global-accelerator-health-check-threshold-count-default-3",
+    "global-accelerator-health-check-protocol-default-tcp",
+    "global-accelerator-health-check-port-default-listener-port"
+   ],
+   "hypothesis": "interval 10 or 30 seconds (default 30); threshold count 3",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-endpoint-groups",
+    "docs/global-accelerator/latest/dg/about-endpoint-groups-health-check-options",
+    "docs/global-accelerator/latest/dg/about-endpoints-endpoint-weights.unhealthy-endpoints"
+   ],
+   "registered_by": "register-15",
+   "note": "Interval 10 or 30 s (default 30); threshold count default 3 (range 1-10). Source is the CreateEndpointGroup API reference (fetched by this agent); the developer guide pages give no numbers. Options apply to EC2 and Elastic IP endpoints only. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d032",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "How fast does Global Accelerator fail over between Regions, and why is it faster than DNS-based failover?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-failover-detect-under-one-minute",
+    "global-accelerator-recovery-routing-about-30-seconds",
+    "global-accelerator-fails-open-after-three-closest-groups"
+   ],
+   "hypothesis": "within seconds (FAQ: 'in less than 1 minute' or similar); no dependence on DNS TTL or client caching",
+   "look_in": [
+    "www/global-accelerator/faqs",
+    "docs/global-accelerator/latest/dg/introduction-how-it-works"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ: unhealthy endpoint detected and taken out of service in less than one minute. Recovery to regular routing about 30 seconds. The DNS comparison is in facts of the decisions lens. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-recovery-routing-about-30-seconds.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d033",
+   "bullet": "4.4.S3",
+   "lens": "numbers",
+   "question": "What are the Global Accelerator pricing dimensions: fixed hourly fee per accelerator, Data Transfer-Premium in the dominant direction, public IPv4 charges?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-price-fixed-fee-per-hour",
+    "global-accelerator-price-fixed-fee-enabled-or-disabled",
+    "global-accelerator-price-dt-premium-dominant-direction",
+    "global-accelerator-price-public-ipv4-charges"
+   ],
+   "hypothesis": "$0.025 per hour per accelerator (enabled or disabled); DT-Premium per GB in the dominant direction, on top of EC2 data transfer out",
+   "look_in": [
+    "www/global-accelerator/pricing",
+    "docs/global-accelerator/latest/dg/introduction-pricing"
+   ],
+   "registered_by": "register-15",
+   "note": "$0.025 per hour per accelerator, enabled or disabled; DT-Premium in the dominant direction, on top of EC2 data transfer out; public IPv4 charges. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d034",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "What idle timeouts does Global Accelerator apply to TCP and UDP flows?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-idle-timeout-tcp-340-seconds",
+    "global-accelerator-idle-timeout-udp-30-seconds",
+    "global-accelerator-idle-timeout-keepalive-not-supported"
+   ],
+   "hypothesis": "TCP 340 seconds; UDP 30 seconds",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/introduction-how-it-works"
+   ],
+   "registered_by": "register-15",
+   "note": "TCP 340 s, UDP 30 s, not customizable. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d035",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "How many destinations can a custom routing accelerator address, and which endpoints does it support?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-custom-routing-ec2-only-ipv4-only",
+    "global-accelerator-custom-routing-subnet-size-28-to-17",
+    "global-accelerator-custom-routing-listener-port-range-min-16",
+    "global-accelerator-quota-custom-routing-accelerators-per-account"
+   ],
+   "hypothesis": "VPC subnet endpoints only (EC2 instances); up to 64,000 destinations per ... with ways to go beyond",
+   "look_in": [
+    "www/global-accelerator/faqs",
+    "docs/global-accelerator/latest/dg/about-custom-routing-guidelines",
+    "docs/global-accelerator/latest/dg/limits-global-accelerator"
+   ],
+   "registered_by": "register-15",
+   "note": "VPC subnet endpoints with EC2 instances only; subnet /28 to /17. NOT FOUND: the figure 64,000 destinations appears only inside an FAQ question heading, not in an answer or a quotable sentence. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d036",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "What is the most specific prefix and how many address ranges can be brought to Global Accelerator with BYOIP?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-byoip-max-two-ranges",
+    "global-accelerator-faq-byoip-most-specific-prefix-24",
+    "global-accelerator-byoip-one-address-per-range-per-accelerator",
+    "global-accelerator-accelerator-ip-addresses-cannot-be-updated"
+   ],
+   "hypothesis": "/24 IPv4; up to 2 ranges per account",
+   "look_in": [
+    "www/global-accelerator/faqs",
+    "docs/global-accelerator/latest/dg/using-byoip"
+   ],
+   "registered_by": "register-15",
+   "note": "At most two ranges, most specific prefix /24 (FAQ facts by another lens). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d037",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "What monthly uptime percentage does the Global Accelerator SLA commit to?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-sla-multi-az-credit-10-percent",
+    "global-accelerator-sla-single-az-credit-10-percent"
+   ],
+   "hypothesis": "99.99 percent",
+   "look_in": [
+    "www/global-accelerator/sla"
+   ],
+   "registered_by": "register-15",
+   "note": "There are two commitments: Multi-AZ accelerators (credit tiers start below 99.99%) and Single-AZ accelerators (credit tiers start below 99.5%). The SLA page states the thresholds in tables, not as one sentence. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-sla-multi-az-credit-10-percent.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d038",
+   "bullet": "3.2.K2",
+   "lens": "numbers",
+   "question": "How many CloudFront points of presence, regional edge caches and countries/cities does AWS state today, and how many Global Accelerator edge locations?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-pops-130-in-95-cities",
+    "cloudfront-edge-locations-750-plus-flat-rate-docs"
+   ],
+   "hypothesis": "600+ POPs and 13 regional edge caches (volatile); state as 'AWS states, as of <date>'",
+   "look_in": [
+    "www/cloudfront/features",
+    "www/global-accelerator/features",
+    "www/about-aws/global-infrastructure",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers"
+   ],
+   "registered_by": "register-15",
+   "note": "GA: 130 Points of Presence in 95 cities across 53 countries (features page). CloudFront: only '750+ global edge locations' in the flat-rate plan table. NOT FOUND: 600+ POPs and 13 regional edge caches; the saved CloudFront features, FAQ and Introduction pages list locations but give no totals. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d039",
+   "bullet": "1.3.S3",
+   "lens": "numbers",
+   "question": "What expiration and validity options does a signed URL have with a canned policy versus a custom policy (start time, IP range, wildcards), and which hash algorithms are supported?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-signed-url-policy-reuse-needs-custom",
+    "cloudfront-signed-policy-canned-only-expiry",
+    "cloudfront-signed-url-hash-algorithm-default-sha1",
+    "cloudfront-signed-url-key-signature-algorithms"
+   ],
+   "hypothesis": "canned: expiry only, one file; custom: start date, end date, IP range, wildcard in resource; SHA-1 and SHA-256 (2026-04-01)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-creating-signed-url-canned-policy",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-creating-signed-url-custom-policy"
+   ],
+   "registered_by": "register-15",
+   "note": "Canned: expiry only, no start time, no IP range, no reuse; custom: optional start time and IP range, reusable with wildcards. Hash-Algorithm values SHA1 and SHA256, default SHA1 on the current pages; the 2026-04-01 SHA-256 What's New item belongs to the changes lens. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-signed-url-hash-algorithm-default-sha1.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d040",
+   "bullet": "3.4.K1",
+   "lens": "numbers",
+   "question": "How long is the WebSocket connection allowed through CloudFront, and is there a WebSocket quota?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-quota-websocket-idle-timeout"
+   ],
+   "hypothesis": "quota table 12 'Quotas on WebSocket connections'",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/distribution-working-with.websockets"
+   ],
+   "registered_by": "register-15",
+   "note": "Quota table 12: origin response timeout (idle timeout) for WebSocket is 10 minutes. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d050",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What is CloudFront, in AWS's own words, and how does a request reach the edge location that serves it (lowest latency)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cache-hit-returns-from-edge",
+    "cloudfront-cache-miss-forwards-to-origin",
+    "cloudfront-config-sent-to-edge-not-content",
+    "cloudfront-dns-routes-to-pop",
+    "cloudfront-first-byte-forwarded-and-cached",
+    "cloudfront-request-routed-lowest-latency-edge",
+    "cloudfront-what-is-web-service-cdn"
+   ],
+   "hypothesis": "web service that speeds up distribution of static and dynamic content through a worldwide network of edge locations; DNS routes the request to the POP with the lowest latency",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Introduction",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/HowCloudFrontWorks"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d051",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "What do regional edge caches do, which requests skip them (proxy methods, dynamic requests, same-Region S3), and are they enabled by default?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-rec-any-origin-skipped-in-origin-regions",
+    "cloudfront-faq-regional-edge-cache-default-on-no-charge",
+    "cloudfront-faq-regional-edge-cache-larger-cache-width",
+    "cloudfront-rec-between-pop-and-origin",
+    "cloudfront-rec-dynamic-requests-skip",
+    "cloudfront-rec-feature-parity-invalidation",
+    "cloudfront-rec-larger-cache-than-pop",
+    "cloudfront-rec-proxy-methods-skip",
+    "cloudfront-rec-shared-cache-persistent-connections",
+    "cloudfront-rec-skipped-same-region-s3"
+   ],
+   "hypothesis": "mid-tier cache between POPs and origin; PUT/POST/PATCH/OPTIONS/DELETE and dynamic requests go directly to origin; S3 in same Region skips the REC; enabled by default, no extra charge",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/HowCloudFrontWorks",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d052",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Which origin types can a distribution use (S3 bucket, S3 website endpoint as custom origin, MediaStore and MediaPackage, ALB, NLB, EC2, Lambda function URL, API Gateway, any HTTP server outside AWS)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-content-types-http-websocket",
+    "cloudfront-faq-custom-origin-any-server-no-charge",
+    "cloudfront-origin-custom-definition",
+    "cloudfront-origin-custom-no-private-content",
+    "cloudfront-origin-kinds",
+    "cloudfront-origin-s3-any-storage-class",
+    "cloudfront-origin-s3-website-is-custom-origin"
+   ],
+   "hypothesis": "all of these; non-AWS origins allowed",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistS3AndCustomOrigins",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-content-types-http-websocket.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d053",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "How do cache behaviors with path patterns route requests to different origins, in what order are they evaluated, and what is the default cache behavior?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-behavior-default-last",
+    "cloudfront-behavior-default-path-pattern-fixed",
+    "cloudfront-behavior-first-match-wins",
+    "cloudfront-behavior-one-origin-each",
+    "cloudfront-behavior-path-pattern-ignores-query-cookies",
+    "cloudfront-default-root-object-avoids-exposing-contents"
+   ],
+   "hypothesis": "path patterns such as /images/*.jpg; evaluated in the listed order; default (*) behavior always last and cannot be deleted",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesCacheBehavior"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d054",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "What viewer protocol policy options exist (HTTP and HTTPS, Redirect HTTP to HTTPS, HTTPS only) and what does each do?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-https-only-returns-403",
+    "cloudfront-https-redirect-301-get-head",
+    "cloudfront-https-redirect-307-other-methods",
+    "cloudfront-https-redirect-charges-both-requests",
+    "cloudfront-vpp-https-only",
+    "cloudfront-vpp-redirect-http-to-https"
+   ],
+   "hypothesis": "redirect returns 301 to HTTPS; HTTPS only returns 403 for HTTP",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesCacheBehavior",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-https-viewers-to-cloudfront"
+   ],
+   "registered_by": "register-15",
+   "note": "Redirect returns 301 for GET/HEAD and 307 for other methods on HTTP 1.1 or above (using-https-viewers-to-cloudfront). The S3-origin page (using-https-cloudfront-to-s3-origin) says other methods get 403 under Redirect HTTP to HTTPS; the two pages differ and both are recorded in their scope. HTTPS Only returns 403. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d055",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "What origin protocol policy options exist (HTTP only, HTTPS only, Match viewer), and can CloudFront use HTTPS to an S3 website endpoint origin?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-https-s3-provides-certificate",
+    "cloudfront-https-s3-rest-follows-viewer-protocol",
+    "cloudfront-https-s3-website-no-https-to-origin",
+    "cloudfront-origin-protocol-custom-origins-only",
+    "cloudfront-origin-protocol-https-only",
+    "cloudfront-origin-protocol-match-viewer",
+    "cloudfront-origin-protocol-s3-website-default-http-only",
+    "cloudfront-origin-s3-website-is-custom-origin",
+    "cloudfront-origin-s3-website-redirects-error-docs"
+   ],
+   "hypothesis": "S3 website endpoints do not support HTTPS, so CloudFront uses HTTP to them; S3 REST endpoint supports HTTPS",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesOrigin",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-https-cloudfront-to-s3-origin",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-https-cloudfront-to-custom-origin"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d056",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "Which certificate requirements apply to an alternate domain name on CloudFront: the ACM certificate Region, the certificate must cover the domain name, the default *.cloudfront.net certificate?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cert-acm-managed-renewal",
+    "cloudfront-cert-alternate-domain-covered-by-san",
+    "cloudfront-cert-key-types-rsa-ecdsa",
+    "cloudfront-cert-own-domain-needs-acm-or-imported"
+   ],
+   "hypothesis": "ACM certificate must be requested or imported in US East (N. Virginia); a certificate that covers the alternate domain name is required to add it",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/CreatingCNAME",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-https-viewers-to-cloudfront"
+   ],
+   "link_existing": [
+    "acm-cloudfront-us-east-1",
+    "acm-faq-cloudfront-us-east-1",
+    "acm-cloudfront-same-cert-many-distributions",
+    "acm-cloudfront-managed-certificates"
+   ],
+   "registered_by": "register-15",
+   "note": "ACM Region and covering-certificate rules are filled; the ACM region facts are owned by ch 14 (link_existing). Default *.cloudfront.net certificate: only the security-policy default (TLSv1) and the no-SSLv3 sentence were found. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-cert-alternate-domain-covered-by-san.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d057",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "How do SNI and dedicated IP custom SSL differ (cost, client support)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-dedicated-ip-legacy-clients-extra-charge",
+    "cloudfront-dedicated-ip-works-every-client",
+    "cloudfront-faq-dedicated-ip-custom-ssl-non-sni-clients",
+    "cloudfront-sni-associates-domain-with-edge-ip",
+    "cloudfront-sni-no-domain-drops-connection",
+    "cloudfront-sni-recommended-modern-clients"
+   ],
+   "hypothesis": "SNI no extra charge, works with modern clients; dedicated IP serves legacy clients that lack SNI, monthly charge",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cnames-https-dedicated-ip-or-sni",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesGeneral",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d058",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "What does the viewer security policy control (minimum TLS version and ciphers), which policy is recommended, and which protocols (TLS 1.3, HTTP/2, HTTP/3) are supported?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-default-cert-no-sslv3",
+    "cloudfront-faq-http2-only-over-tls",
+    "cloudfront-faq-http3-requires-tls13-only",
+    "cloudfront-faq-http3-turn-on-per-distribution",
+    "cloudfront-faq-http3-viewer-side-only",
+    "cloudfront-http2-http3-viewer-requirements",
+    "cloudfront-http3-connection-migration",
+    "cloudfront-security-policy-two-settings"
+   ],
+   "hypothesis": "TLSv1.2_2021 recommended; TLS 1.3 supported; HTTP/3 over QUIC opt-in",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/secure-connections-supported-viewer-protocols-ciphers",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesGeneral",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Partly filled: security policy meaning, HTTP/2 and HTTP/3 needs, HTTP/3 needs TLSv1.3. NOT FOUND in the saved pages: a statement that TLSv1.2_2021 is the recommended security policy (looked in secure-connections-supported-viewer-protocols-ciphers, DownloadDistValuesGeneral, www/cloudfront/faqs). The hypothesis stays unproven. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-http3-turn-on-per-distribution.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d059",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "How do you get end-to-end HTTPS (viewer to CloudFront and CloudFront to custom origin), and what must the origin certificate be (trusted CA, matching domain, not self-signed)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-504-origin-blocked-or-not-reachable",
+    "cloudfront-api-endpoints-https-only",
+    "cloudfront-https-end-to-end-origin-always-https",
+    "cloudfront-https-no-ssl-renegotiation",
+    "cloudfront-https-origin-bad-certificate-502",
+    "cloudfront-https-origin-domain-must-match",
+    "cloudfront-https-origin-trusted-ca-no-self-signed",
+    "cloudfront-https-viewer-origin-protocol-independent"
+   ],
+   "hypothesis": "origin certificate must be signed by a trusted CA; self-signed certificates fail; domain must match origin domain or Host header",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-https-cloudfront-to-custom-origin",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-https",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/http-502-bad-gateway",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/data-protection-summary"
+   ],
+   "link_existing": [
+    "acm-cloudfront-origin-certificate-any-region"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d060",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "What does field-level encryption do (encrypts selected POST fields at the edge with a public key so only the application with the private key can read them)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-fle-asymmetric-public-key",
+    "cloudfront-fle-encrypts-at-edge",
+    "cloudfront-fle-layer-on-https-selected-fields",
+    "cloudfront-fle-post-fields-origin-chunked"
+   ],
+   "hypothesis": "adds a layer on top of HTTPS; sensitive data stays encrypted through the application stack",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/field-level-encryption",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-fle-layer-on-https-selected-fields.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d061",
+   "bullet": "1.3.S3",
+   "lens": "behavior",
+   "question": "What are viewer mutual TLS and origin mutual TLS on CloudFront, and when would you use them?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cloudwatch-metrics-sent-to-us-east-1",
+    "cloudfront-faq-origin-mtls-origin-verifies-cloudfront",
+    "cloudfront-faq-origin-mtls-per-distribution-or-origin",
+    "cloudfront-faq-origin-mtls-replaces-allowlists-headers",
+    "cloudfront-faq-viewer-mtls-trust-store-bidirectional",
+    "cloudfront-mtls-only-trusted-clients",
+    "cloudfront-mtls-optional-mode",
+    "cloudfront-mtls-passthrough-mode",
+    "cloudfront-mtls-required-mode-default",
+    "cloudfront-mtls-validated-at-edge",
+    "cloudfront-real-time-logs-kinesis-data-streams",
+    "cloudfront-standard-logging-v2-destinations-legacy-s3-only"
+   ],
+   "hypothesis": "viewer mTLS verifies client certificates against a trust store (2025-11-24); origin mTLS presents a client certificate to the origin (2026-02-02)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/mtls-authentication",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Viewer mTLS (modes, edge validation) and origin mTLS (FAQ) filled. The guide page for origin mTLS is not in the corpus; the dates 2025-11-24 and 2026-02-02 belong to the changes lens. The FAQ says a trust store is mandatory for viewer mTLS while the guide says passthrough mode needs none; only the guide wording was mined. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-origin-mtls-per-distribution-or-origin.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d062",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What is origin access control (OAC), how does the S3 bucket policy allow it (service principal cloudfront.amazonaws.com with an AWS:SourceArn condition on the distribution), and why does the bucket stay private?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-oac-always-https-when-signing",
+    "cloudfront-oac-bucket-policy-cloudfront-service-principal",
+    "cloudfront-oac-never-sign-needs-public-bucket",
+    "cloudfront-oac-no-override-authorization-header",
+    "cloudfront-oac-oai-two-ways-oac-recommended",
+    "cloudfront-oac-object-ownership-bucket-owner-enforced",
+    "cloudfront-oac-signing-always-recommended",
+    "cloudfront-origin-restrict-aws-origin-only-via-distribution"
+   ],
+   "hypothesis": "OAC signs requests with SigV4; bucket policy grants s3:GetObject to the CloudFront service principal for that distribution only; Block Public Access stays on",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-origin"
+   ],
+   "link_existing": [
+    "s3-war-avoid-public-buckets-use-cloudfront"
+   ],
+   "registered_by": "register-15",
+   "note": "OAC, bucket policy service principal cloudfront.amazonaws.com, Condition on the distribution, HTTPS when signing, signing behaviors filled. The AWS:SourceArn key appears only in policy JSON (not quotable); Block Public Access is not stated on the OAC page. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-oac-never-sign-needs-public-bucket.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d063",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What does AWS say about origin access identity (OAI): legacy and not recommended; which features OAI lacks (SSE-KMS, all Regions, dynamic PUT/POST)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-oac-oai-two-ways-oac-recommended",
+    "cloudfront-oac-supports-all-regions-dynamic-requests",
+    "cloudfront-oai-legacy-not-for-all-scenarios",
+    "cloudfront-oai-migrate-allow-both-in-bucket-policy"
+   ],
+   "hypothesis": "OAI does not support SSE-KMS, Regions launched after December 2022, or dynamic requests to S3; recommend migrating to OAC",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistS3AndCustomOrigins"
+   ],
+   "link_existing": [
+    "s3-cloudfront-oai-bucket-policy",
+    "s3-website-sse-kms-needs-cloudfront-oac"
+   ],
+   "registered_by": "register-15",
+   "note": "Contradicted in part: the OAC list says OAC supports opt-in Regions launched after December 2022, while the OAI list says OAI does not support new Regions launched after January 2023. SSE-KMS appears only as a link-bearing bullet, owned by s3-website-sse-kms-needs-cloudfront-oac. Both statements are recorded. register-15: OAC lists opt-in Regions launched after December 2022; OAI lacks them. Both kept with their own scope (cloudfront-oac-supports-all-regions-dynamic-requests, cloudfront-oai-legacy-not-for-all-scenarios) adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-oai-legacy-not-for-all-scenarios.",
+   "hypothesis_contradicted": true,
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d064",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Can OAC be used with an S3 static website endpoint origin; if not, how do you restrict it (custom header such as Referer, bucket must be public)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-oac-lambda-edge-origin-redirect-unsupported",
+    "cloudfront-oac-s3-website-endpoint-not-supported",
+    "cloudfront-origin-custom-no-private-content",
+    "cloudfront-origin-s3-website-is-custom-origin"
+   ],
+   "hypothesis": "No: OAC/OAI work only with the S3 REST endpoint; a website endpoint is a custom origin",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistS3AndCustomOrigins",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/add-origin-custom-headers"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d065",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Which other origins does OAC support (Lambda function URLs, MediaStore, MediaPackage v2, S3 Multi-Region Access Points)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-oac-lambda-function-url",
+    "cloudfront-oac-lambda-put-post-payload-hash"
+   ],
+   "hypothesis": "Lambda function URL 2024-04-11; MediaStore 2023-02; MediaPackage 2024-04; S3 MRAP 2026-08-20 (not examinable yet)",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-lambda",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-origin",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3-mrap"
+   ],
+   "registered_by": "register-15",
+   "note": "Lambda function URL OAC filled. MediaStore, MediaPackage and S3 Multi-Region Access Point OAC are only named in the list of the restrict-access-to-origin page; their own pages are not in the corpus and the MRAP date (2026-08-20, not examinable yet) belongs to the changes lens. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d066",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What are CloudFront VPC origins: which resources (ALB, NLB, EC2) in private subnets, no public IP or internet-facing load balancer needed, cross-account sharing?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-origin-private-subnet-vpc-origin",
+    "cloudfront-vpc-origin-cloudfront-single-entry-point",
+    "cloudfront-vpc-origin-gwlb-and-nlb-tls-not-allowed",
+    "cloudfront-vpc-origin-needs-internet-gateway",
+    "cloudfront-vpc-origin-no-lambda-edge-origin-triggers",
+    "cloudfront-vpc-origin-private-subnet-ipv4-eni",
+    "cloudfront-vpc-origin-share-across-accounts"
+   ],
+   "hypothesis": "VPC origins let CloudFront reach private-subnet ALB, NLB or EC2; the only entry point is CloudFront; shared across accounts via AWS RAM since 2025-11",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/sharing-resources",
+    "www/cloudfront/faqs"
+   ],
+   "link_existing": [
+    "elb-cloudfront-vpc-origins-alb-nlb-private-subnets",
+    "elb-cloudfront-vpc-origins-nlb-restrictions",
+    "elb-change-cloudfront-vpc-origins-2024-11"
+   ],
+   "registered_by": "register-15",
+   "note": "Filled from private-content-vpc-origins and sharing-resources; the elb-* facts cover the ELB side. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-vpc-origin-no-lambda-edge-origin-triggers, cloudfront-vpc-origin-private-subnet-ipv4-eni.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d067",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How do you make a public ALB accept only CloudFront traffic (origin-facing managed prefix list in the security group plus a secret custom header checked by a listener rule)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-alb-internal-needs-vpc-origins",
+    "cloudfront-alb-restrict-custom-header-and-https",
+    "cloudfront-custom-headers-origin-custom-and-s3",
+    "cloudfront-custom-origin-custom-headers-restrict-direct",
+    "cloudfront-prefix-list-origin-facing-servers"
+   ],
+   "hypothesis": "prefix list com.amazonaws.global.cloudfront.origin-facing; custom header with a secret value; ALB rule forwards only with the header",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/restrict-access-to-load-balancer",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/add-origin-custom-headers"
+   ],
+   "link_existing": [
+    "elb-alb-cloudfront-prefix-list-sg",
+    "waf-alb-behind-cloudfront-token-cookie"
+   ],
+   "registered_by": "register-15",
+   "note": "Filled (custom header plus forward-only rule, HTTPS, managed prefix list). The prefix list name com.amazonaws.global.cloudfront.origin-facing is not stated in the saved page text; the existing elb-alb-cloudfront-prefix-list-sg covers it. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-prefix-list-origin-facing-servers.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d068",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "When should you use signed URLs and when signed cookies (individual file vs many files, clients that do not support cookies, keeping URLs unchanged)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-signed-cookies-policy-canned-vs-custom",
+    "cloudfront-signed-cookies-when-multiple-files-or-keep-urls",
+    "cloudfront-signed-policy-canned-only-expiry",
+    "cloudfront-signed-policy-custom-longer-url",
+    "cloudfront-dec-signed-url-expiry-restrictions",
+    "cloudfront-signed-url-takes-precedence-over-cookies",
+    "cloudfront-signed-url-when-individual-files-or-no-cookies",
+    "cloudfront-signer-added-requires-signed-access"
+   ],
+   "hypothesis": "signed URLs for individual files or clients without cookies; signed cookies for many restricted files (for example HLS segments) or when you do not want to change URLs",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-choosing-signed-urls-cookies",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-overview",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-cookies"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-signed-cookies-policy-canned-vs-custom, cloudfront-dec-signed-url-expiry-restrictions.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d069",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Who can sign: trusted key groups (recommended) versus a CloudFront key pair that only the root user can create?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-signer-added-requires-signed-access",
+    "cloudfront-signer-key-group-no-root-user-api-automation",
+    "cloudfront-signer-key-group-recommended",
+    "cloudfront-signer-root-key-pair-console-only"
+   ],
+   "hypothesis": "AWS recommends trusted key groups; key pairs need the root user and cannot be managed with IAM",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d070",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How does CloudFront private content combine with OAC so that users cannot bypass CloudFront with a direct S3 URL; how is that different from an S3 presigned URL?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-custom-origin-custom-headers-restrict-direct",
+    "cloudfront-origin-restrict-aws-origin-only-via-distribution",
+    "cloudfront-private-s3-oac-plus-signed-urls",
+    "cloudfront-signed-policy-canned-only-expiry"
+   ],
+   "hypothesis": "restrict the origin with OAC and require signed URLs or cookies on the cache behavior; an S3 presigned URL goes to S3 directly, not through CloudFront",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-overview",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d071",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How does geographic restriction work (allow list or block list of countries, 403 response, third-party geolocation for finer control)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-geo-restriction-403",
+    "cloudfront-geo-restriction-allowlist-denylist",
+    "cloudfront-geo-restriction-country-level-whole-distribution",
+    "cloudfront-geo-restriction-returns-403",
+    "cloudfront-geo-restriction-unknown-location-served"
+   ],
+   "hypothesis": "country-level allow/block list; viewers in blocked countries get 403; applies to the whole distribution",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/georestrictions",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesEnableGeoRestriction",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-geo-restriction-country-level-whole-distribution.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d072",
+   "bullet": "4.4.S4",
+   "lens": "behavior",
+   "question": "What is the cache key, what do cache policies and origin request policies control, and what do the managed policies CachingOptimized and CachingDisabled do?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cache-key-values-forwarded-to-origin",
+    "cloudfront-cache-policy-controls-cache-key",
+    "cloudfront-managed-policy-caching-disabled",
+    "cloudfront-managed-policy-caching-optimized",
+    "cloudfront-origin-request-default-not-forwarded",
+    "cloudfront-origin-request-policy-needs-cache-policy"
+   ],
+   "hypothesis": "cache policy = values in cache key and TTLs; origin request policy = extra values forwarded without changing the cache key; values in the cache key are always forwarded",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cache-key-understand-cache-policy",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/controlling-origin-requests",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/understanding-how-origin-request-policies-and-cache-policies-work-together"
+   ],
+   "registered_by": "register-15",
+   "note": "Cache policy, origin request policy, CachingDisabled and CachingOptimized filled. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-origin-request-default-not-forwarded.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d073",
+   "bullet": "4.4.S4",
+   "lens": "behavior",
+   "question": "How does CloudFront decide how long to cache an object (Cache-Control max-age and s-maxage, Expires, no-cache/no-store/private, stale-while-revalidate, stale-if-error)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-expiration-304-not-modified-revalidation",
+    "cloudfront-expiration-cache-control-over-expires",
+    "cloudfront-expiration-edge-may-evict-early",
+    "cloudfront-expiration-viewer-cache-control-ignored",
+    "cloudfront-stale-directives-supported",
+    "cloudfront-stale-if-error-behavior",
+    "cloudfront-stale-while-revalidate-behavior",
+    "cloudfront-ttl-all-zero-disables-caching",
+    "cloudfront-ttl-default-ttl-only-without-headers",
+    "cloudfront-ttl-max-ttl-only-with-headers",
+    "cloudfront-min-ttl-above-zero-overrides-no-cache"
+   ],
+   "hypothesis": "headers honored within min/max TTL; stale-while-revalidate and stale-if-error supported since 2023-05",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Expiration"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-expiration-304-not-modified-revalidation.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d074",
+   "bullet": "4.4.S4",
+   "lens": "behavior",
+   "question": "Which practices raise the cache hit ratio (include only needed values in the cache key, Origin Shield, longer TTLs, normalized headers, serving compressed objects)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cache-hit-ratio-definition",
+    "cloudfront-cache-hit-ratio-forward-only-needed-values",
+    "cloudfront-cache-hit-ratio-longer-cache-duration",
+    "cloudfront-cache-hit-ratio-origin-shield-layer"
+   ],
+   "hypothesis": "the cache-hit-ratio page lists these",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cache-hit-ratio",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/ConfiguringCaching"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-cache-hit-ratio-forward-only-needed-values, cloudfront-cache-hit-ratio-longer-cache-duration.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d075",
+   "bullet": "4.4.S4",
+   "lens": "behavior",
+   "question": "Invalidation or versioned file names: which does AWS recommend for frequent updates and why (cost, control, logs, browser caches)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-invalidate-only-unexpected-use-versioning",
+    "cloudfront-invalidate-removes-from-edge-caches",
+    "cloudfront-invalidation-all-cached-versions-cookies",
+    "cloudfront-invalidation-by-cache-tags",
+    "cloudfront-invalidation-include-query-strings",
+    "cloudfront-invalidation-paths-case-sensitive",
+    "cloudfront-invalidation-prefer-versioning-for-frequent-updates",
+    "cloudfront-rec-feature-parity-invalidation",
+    "cloudfront-removed-origin-file-stays-until-expiry",
+    "cloudfront-versioned-file-names-recommended",
+    "cloudfront-versioning-not-s3-versioning"
+   ],
+   "hypothesis": "AWS recommends versioned file names; invalidation removes objects from edge caches before expiry; invalidation by cache tag added 2026-04-29",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/UpdatingExistingObjects",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Invalidation",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/invalidation-specifying-objects",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Versioning recommended, invalidation behaviors and cache-tag invalidation capability filled; the 2026-04-29 date belongs to the changes lens. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-invalidation-include-query-strings.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d076",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "How does origin failover work (origin group, primary and secondary origin, failover status codes and connection failures, which HTTP methods fail over)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-failover-lambda-edge-triggered-twice",
+    "cloudfront-failover-needs-two-origins",
+    "cloudfront-failover-only-get-head-options",
+    "cloudfront-failover-primary-first-every-request",
+    "cloudfront-failover-status-codes-you-choose",
+    "cloudfront-failover-switches-to-secondary",
+    "cloudfront-faq-origin-failover-backup-origin"
+   ],
+   "hypothesis": "fails over on chosen 4xx/5xx codes or timeouts; only GET, HEAD and OPTIONS requests fail over",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/high_availability_origin_failover",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-failover-lambda-edge-triggered-twice, cloudfront-failover-needs-two-origins.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d077",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "What can custom error responses do (custom error page, change the response code, error caching TTL), for example a static maintenance page when the origin fails?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-custom-error-page-billed-as-error-page",
+    "cloudfront-custom-error-page-different-origin-behavior",
+    "cloudfront-custom-error-page-missing-returns-origin-status",
+    "cloudfront-custom-error-pages-s3-or-custom-origin-4xx-5xx",
+    "cloudfront-custom-error-response-instead-of-default"
+   ],
+   "hypothesis": "custom error pages can be stored on another origin such as S3",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/GeneratingCustomErrorResponses",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesErrorPages",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-custom-error-page-different-origin-behavior.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d078",
+   "bullet": "4.4.S4",
+   "lens": "behavior",
+   "question": "What is Origin Shield, when should you use it, how do you choose its Region, and what does it cost?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-cache-hit-ratio-origin-shield-layer",
+    "cloudfront-origin-shield-choose-lowest-latency-region",
+    "cloudfront-origin-shield-consolidates-requests",
+    "cloudfront-origin-shield-extra-charges",
+    "cloudfront-origin-shield-extra-layer",
+    "cloudfront-origin-shield-poor-fit-cases",
+    "cloudfront-origin-shield-same-region-bypass"
+   ],
+   "hypothesis": "an extra centralized caching layer that reduces origin load; choose the Region closest to the origin; charged per request that goes to Origin Shield",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/origin-shield",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d079",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "Which HTTP methods does CloudFront cache and forward (GET, HEAD, optional OPTIONS cached; POST, PUT, PATCH, DELETE forwarded, never cached), and are POST responses cached?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-methods-cached",
+    "cloudfront-s3-origin-always-caches-get-head",
+    "cloudfront-s3-origin-get-with-body-403",
+    "cloudfront-s3-origin-ignores-cookies"
+   ],
+   "hypothesis": "only GET and HEAD (and optionally OPTIONS) responses are cached; POST responses are not cached",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesCacheBehavior",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorCustomOrigin",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-s3-origin-ignores-cookies.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d080",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "How does CloudFront speed up dynamic, uncacheable content (TLS termination near the viewer, persistent origin connections, AWS backbone network, request collapsing)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-ddos-cache-hierarchy-protects-origin",
+    "cloudfront-faq-cost-collapse-requests",
+    "cloudfront-faq-performance-edge-cache-persistent-connections",
+    "cloudfront-persistent-connections-to-origin",
+    "cloudfront-pricing-page-dynamic-acceleration-mechanisms",
+    "cloudfront-rec-shared-cache-persistent-connections",
+    "cloudfront-request-collapsing",
+    "cloudfront-request-collapsing-disabled-by-caching-disabled"
+   ],
+   "hypothesis": "pricing page FAQ and the guide state these mechanisms",
+   "look_in": [
+    "www/cloudfront/pricing",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Introduction",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/IntroductionUseCases",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Mechanisms filled from the FAQ and the pricing page (persistent connections, TLS near viewers, request collapsing, private network, TCP window). adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-pricing-page-dynamic-acceleration-mechanisms, cloudfront-request-collapsing.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d081",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Does CloudFront support WebSockets and gRPC, and what are the conditions (gRPC bypasses regional edge caches, needs HTTP/2)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-content-types-http-websocket",
+    "cloudfront-grpc-bypasses-regional-edge-cache",
+    "cloudfront-grpc-requires-http2-post-https",
+    "cloudfront-grpc-supported-http2-proxied-no-cache",
+    "cloudfront-lambda-edge-not-with-grpc",
+    "cloudfront-methods-grpc-needs-all-methods",
+    "cloudfront-origin-shield-not-with-grpc",
+    "cloudfront-websocket-enabled-by-default",
+    "cloudfront-websocket-tcp-long-lived-bidirectional"
+   ],
+   "hypothesis": "WebSocket supported by default on HTTP/HTTPS; gRPC since 2024-11, POST, HTTP/2",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/distribution-working-with.websockets",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/distribution-using-grpc",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-content-types-http-websocket, cloudfront-websocket-enabled-by-default.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d082",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How does AWS WAF attach to CloudFront (one web ACL per distribution, web ACL in the global scope), and does Shield Standard protect CloudFront automatically?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-ddos-always-on-layer3-4-mitigation",
+    "cloudfront-ddos-cache-hierarchy-protects-origin",
+    "cloudfront-ddos-closes-slow-connections-rapid-reset",
+    "cloudfront-ddos-waf-capacity-scales-with-pop",
+    "cloudfront-waf-one-click-protection-set"
+   ],
+   "hypothesis": "web ACL for CloudFront is global (us-east-1); Shield Standard on by default",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/distribution-web-awswaf",
+    "www/cloudfront/faqs",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/cloudfront"
+   ],
+   "link_existing": [
+    "waf-cloudfront-web-acl-us-east-1",
+    "waf-cloudfront-standard-distribution-one-web-acl",
+    "waf-cloudfront-rules-run-at-edge",
+    "shield-standard-every-region-edge",
+    "shield-standard-best-on-edge-resources",
+    "shield-protect-sites-outside-aws-via-cloudfront"
+   ],
+   "registered_by": "register-15",
+   "note": "WAF one-click and DDoS edge facts filled; WAF attachment rules (one web ACL per distribution, us-east-1) stay with the waf-cloudfront-* facts and Shield Standard with the shield-* facts (link_existing). adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-waf-one-click-protection-set.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d083",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "How do CloudFront Functions and Lambda@Edge differ: runtimes, trigger events (viewer only vs viewer and origin), execution time, network and body access, scale, cost, where you create them?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-functions-geolocation-device-data",
+    "cloudfront-functions-lightweight-javascript-native",
+    "cloudfront-functions-no-network-no-body-fs-access",
+    "cloudfront-edge-compare-languages",
+    "cloudfront-functions-use-cases",
+    "cloudfront-lambda-edge-author-in-us-east-1",
+    "cloudfront-lambda-edge-network-calls-allowed",
+    "cloudfront-lambda-edge-use-cases"
+   ],
+   "hypothesis": "CloudFront Functions: JavaScript, viewer request/response only, sub-millisecond, no network or body access, millions of requests per second, cheaper; Lambda@Edge: Node.js and Python, all four events, network access, body access, created in us-east-1",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/edge-functions-choosing",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/edge-functions",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/lambda-at-the-edge",
+    "www/cloudfront/faqs"
+   ],
+   "link_existing": [
+    "lambda-faq-edge-when",
+    "lambda-faq-edge-runtimes"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d084",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "Which four CloudFront events can trigger Lambda@Edge, when does each run (cache hit vs miss), and what are typical uses (A/B tests, auth, header rewrites, dynamic origin selection)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-lambda-edge-four-triggers-per-behavior",
+    "cloudfront-lambda-edge-function-must-finish-adds-latency",
+    "cloudfront-lambda-edge-network-calls-allowed",
+    "cloudfront-lambda-edge-origin-request-only-on-miss",
+    "cloudfront-lambda-edge-origin-response-before-caching",
+    "cloudfront-lambda-edge-viewer-request-before-cache",
+    "cloudfront-lambda-edge-viewer-response-always-runs",
+    "cloudfront-lambda-edge-ways-ab-testing-device-auth"
+   ],
+   "hypothesis": "viewer request, origin request, origin response, viewer response; origin events only on cache miss",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/lambda-cloudfront-trigger-events",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/lambda-edge-ways-to-use",
+    "www/cloudfront/faqs"
+   ],
+   "link_existing": [
+    "lambda-faq-edge-cloudfront-triggers",
+    "lambda-faq-edge-function-version",
+    "lambda-faq-edge-existing-functions"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-lambda-edge-four-triggers-per-behavior, cloudfront-lambda-edge-function-must-finish-adds-latency, cloudfront-lambda-edge-ways-ab-testing-device-auth.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d085",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "Which restrictions apply to all edge functions and to Lambda@Edge specifically (us-east-1 creation, numbered version, no VPC access, environment variables, Lambda layers)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-edge-functions-one-per-event-no-viewer-mix",
+    "cloudfront-edge-functions-same-account",
+    "cloudfront-edge-functions-viewer-response-skipped-on-origin-error",
+    "cloudfront-lambda-edge-author-in-us-east-1",
+    "cloudfront-lambda-edge-dns-before-origin-request",
+    "cloudfront-lambda-edge-no-vpc-env-vars-arm64",
+    "cloudfront-lambda-edge-numbered-version-only",
+    "cloudfront-lambda-edge-region-must-be-us-east-1",
+    "cloudfront-lambda-edge-role-trust-principals",
+    "cloudfront-lambda-edge-viewer-response-no-status-change"
+   ],
+   "hypothesis": "function must be in us-east-1; must use a numbered version, not $LATEST or alias; no VPC; no environment variables",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/lambda-at-edge-function-restrictions",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/edge-function-restrictions-all"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-edge-functions-one-per-event-no-viewer-mix.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d086",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "What is CloudFront KeyValueStore and what is it used for with CloudFront Functions?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-functions-kvs-support-only",
+    "cloudfront-kvs-global-low-latency-read-from-functions",
+    "cloudfront-kvs-needs-javascript-runtime-2",
+    "cloudfront-kvs-update-data-independent-of-code"
+   ],
+   "hypothesis": "global low-latency key value store read by CloudFront Functions (redirect maps, A/B config); since 2023-11",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/kvs-with-functions",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-functions-kvs-support-only.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d087",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "What are edge locations, points of presence, regional edge caches and embedded POPs, and how do they relate to AWS Regions?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-embedded-pops-isp-networks"
+   ],
+   "hypothesis": "edge locations are outside Regions and connected to them by the AWS backbone",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/HowCloudFrontWorks",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers",
+    "www/about-aws/global-infrastructure",
+    "www/cloudfront/faqs"
+   ],
+   "link_existing": [
+    "global-infrastructure-edge-locations-connected-to-regions-by-backbone",
+    "global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator",
+    "global-infrastructure-edge-location-services"
+   ],
+   "registered_by": "register-15",
+   "note": "POP, edge location, regional edge cache and embedded POP filled; global-infrastructure-* facts cover the backbone link. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-embedded-pops-isp-networks.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d088",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "Where is the CloudFront control plane, and does the CloudFront data plane keep serving content when the control plane is impaired (global service guidance)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-control-plane-impairment-failover-continues",
+    "cloudfront-control-plane-us-east-1-data-plane-pops",
+    "cloudfront-static-stability-use-origin-failover-not-manual"
+   ],
+   "hypothesis": "control plane in us-east-1; data plane at edge keeps serving; avoid control-plane dependencies in recovery paths",
+   "look_in": [
+    "docs/whitepapers/latest/aws-fault-isolation-boundaries/appendix-b---edge-network-global-service-guidance",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/disaster-recovery-resiliency"
+   ],
+   "link_existing": [
+    "global-infrastructure-cloudfront-content-served-during-control-plane-impairment",
+    "global-infrastructure-edge-network-global-services-route53-example"
+   ],
+   "registered_by": "register-15",
+   "note": "Filled from the fault isolation whitepaper appendix B; global-infrastructure-cloudfront-content-served-during-control-plane-impairment already exists. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d089",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What are CloudFront Anycast static IPs for (allowlisting by network operators, zero-rating, apex domains), and how do they differ from Global Accelerator static IPs?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-anycast-static-ips-apex-domain",
+    "cloudfront-anycast-requires-price-class-all",
+    "cloudfront-anycast-static-ips-purpose-account-dedicated",
+    "cloudfront-faq-anycast-static-ips-what",
+    "cloudfront-faq-anycast-not-for-single-geographic-region",
+    "cloudfront-faq-anycast-multiple-distributions-same-account",
+    "cloudfront-faq-anycast-static-ips-three-exceptions",
+    "cloudfront-price-class-default-all-regions"
+   ],
+   "hypothesis": "a list of static anycast IPs for a distribution, for allowlisting; still HTTP(S) CDN, not TCP/UDP routing",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/request-static-ips",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-anycast-static-ips-three-exceptions.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d090",
+   "bullet": "4.4.S4",
+   "lens": "behavior",
+   "question": "What does continuous deployment do (staging distribution, weight-based or header-based traffic, promote)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-continuous-deployment-staging-subset-traffic"
+   ],
+   "hypothesis": "test configuration changes on a share of live traffic; since 2022-11",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/continuous-deployment",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d091",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What are multi-tenant distributions and distribution tenants (CloudFront SaaS Manager), and when do they fit?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-multi-tenant-distribution-template-not-routable",
+    "cloudfront-multi-tenant-tenant-inherits-settings"
+   ],
+   "hypothesis": "one template distribution shared by many tenant domains; SaaS providers; since 2025-04-28",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/distribution-config-options",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-multi-tenant-distribution-template-not-routable.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d092",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How does CloudFront deliver video on demand and live streaming (HLS, DASH, MediaPackage, signed cookies for segments)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-content-types-http-websocket",
+    "cloudfront-streaming-any-http-origin-encoder-segments",
+    "cloudfront-dec-use-case-streaming-vod-and-live"
+   ],
+   "hypothesis": "segments cached at the edge; MediaPackage and MediaStore origins",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/on-demand-streaming-video",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-content-types-http-websocket, cloudfront-streaming-any-http-origin-encoder-segments.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d093",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "Can you point a zone apex (example.com) at a CloudFront distribution, and how (Route 53 alias record)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-alias-record-apex-no-route53-query-charge",
+    "cloudfront-anycast-static-ips-apex-domain",
+    "cloudfront-ipv6-viewer-requests-option"
+   ],
+   "hypothesis": "yes, with a Route 53 alias record; no charge for alias queries to CloudFront",
+   "look_in": [
+    "www/cloudfront/faqs",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/CreatingCNAME"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d094",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What is Global Accelerator, in AWS's own words: static anycast IPs, AWS global network, endpoints in one or more Regions, traffic to the optimal healthy endpoint?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-existing-security-groups-waf-keep-working",
+    "global-accelerator-global-service-multi-region-endpoints",
+    "global-accelerator-icmp-pings-answered-at-edge",
+    "global-accelerator-standard-routes-optimal-endpoint",
+    "global-accelerator-standard-vs-custom-routing",
+    "global-accelerator-static-ips-anycast-from-edge",
+    "global-accelerator-static-ips-kept-until-delete",
+    "global-accelerator-udp-fragments-forwarded-tcp-dropped",
+    "global-accelerator-use-case-protect-origins-shield",
+    "global-accelerator-dec-allow-list-addresses-once",
+    "global-accelerator-what-is"
+   ],
+   "hypothesis": "networking service that improves availability and performance of applications for local and global users",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/what-is-global-accelerator",
+    "docs/global-accelerator/latest/dg/introduction-how-it-works",
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d095",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What are the components of a standard accelerator: accelerator, listener (TCP or UDP port ranges), endpoint group (one Region), endpoint (ALB, NLB, EC2 instance, Elastic IP address)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-endpoint-group-one-region",
+    "global-accelerator-listener-endpoint-group-per-region",
+    "global-accelerator-listener-tcp-udp-ports",
+    "global-accelerator-port-override-endpoint-port"
+   ],
+   "hypothesis": "listeners support TCP and UDP; one endpoint group per Region per listener",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/introduction-components",
+    "docs/global-accelerator/latest/dg/about-listeners",
+    "docs/global-accelerator/latest/dg/about-endpoint-groups",
+    "docs/global-accelerator/latest/dg/about-endpoints"
+   ],
+   "link_existing": [
+    "global-accelerator-standard-endpoint-types"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d096",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "How does Global Accelerator health-check endpoints and fail over: ELB health checks for load balancers, own health checks for EC2 and Elastic IPs, failover to another endpoint group when all endpoints in a Region are unhealthy?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-alb-healthy-every-target-group",
+    "global-accelerator-elb-health-checks-configured-in-elb",
+    "global-accelerator-established-connections-until-idle-timeout",
+    "global-accelerator-failover-to-another-endpoint-group-ignores-dial",
+    "global-accelerator-fails-open-after-three-closest-groups",
+    "global-accelerator-health-checks-route53-health-checkers",
+    "global-accelerator-health-checks-standard-failover-new-connections",
+    "global-accelerator-idle-timeout-keepalive-not-supported",
+    "global-accelerator-new-endpoint-must-pass-health-check-fail-open",
+    "global-accelerator-reacts-instantly-to-health-changes",
+    "global-accelerator-recovery-existing-connections-not-moved",
+    "global-accelerator-udp-listener-tcp-health-check",
+    "global-accelerator-use-case-disaster-recovery-reroute"
+   ],
+   "hypothesis": "routes only to healthy endpoints; failover to the next closest healthy Region",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-endpoint-groups-health-check-options",
+    "docs/global-accelerator/latest/dg/about-endpoints-endpoint-weights.unhealthy-endpoints",
+    "docs/global-accelerator/latest/dg/introduction-how-it-works"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-elb-health-checks-configured-in-elb, global-accelerator-udp-listener-tcp-health-check.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d097",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "How do traffic dials and endpoint weights support blue/green deployments, Region maintenance and gradual shifts?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-dials-for-groups-weights-for-endpoints",
+    "global-accelerator-failover-to-another-endpoint-group-ignores-dial",
+    "global-accelerator-overrides-weights-to-keep-availability",
+    "global-accelerator-static-stability-health-checks-not-dials",
+    "global-accelerator-traffic-dial-blue-green-regional-maintenance",
+    "global-accelerator-traffic-dial-new-connections-only",
+    "global-accelerator-traffic-dial-percent-of-directed-traffic",
+    "global-accelerator-dec-allow-list-addresses-once",
+    "global-accelerator-weight-zero-stops-traffic",
+    "global-accelerator-weights-proportion-within-endpoint-group"
+   ],
+   "hypothesis": "traffic dial per endpoint group (percentage of traffic to a Region); weights per endpoint",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-endpoint-groups-traffic-dial",
+    "docs/global-accelerator/latest/dg/about-endpoints-endpoint-weights"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d098",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Which endpoints preserve the client IP address through Global Accelerator, and what are the requirements and exceptions (Elastic IP endpoints, NLB with security groups, internal ALB)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-client-ip-custom-routing-always-standard-option",
+    "global-accelerator-client-ip-preservation-always-internal-alb-ec2",
+    "global-accelerator-client-ip-preservation-bypasses-gwlb-firewall",
+    "global-accelerator-client-ip-preservation-creates-enis-per-subnet",
+    "global-accelerator-client-ip-preservation-defaults",
+    "global-accelerator-client-ip-preservation-nlb-tcp-udp-not-tls",
+    "global-accelerator-client-ip-preservation-not-for-eip-nlb-without-sg",
+    "global-accelerator-client-ip-preservation-three-endpoint-types",
+    "global-accelerator-connection-collision-scenarios"
+   ],
+   "hypothesis": "ALB and EC2 preserve the client IP; NLB supported since 2023-08; Elastic IP endpoints do not",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/preserve-client-ip-address",
+    "docs/global-accelerator/latest/dg/preserve-client-ip-address.how-to-enable-preservation",
+    "docs/global-accelerator/latest/dg/about-endpoints.sipp-caveats",
+    "docs/global-accelerator/latest/dg/best-practices-aga"
+   ],
+   "registered_by": "register-15",
+   "note": "Filled. The pages disagree on NACLs for preserved-client-IP traffic (how-to-enable says NACLs are not evaluated, best-practices-aga says traffic still respects NACLs, about-endpoints.sipp-caveats says NACLs apply only to egress), so no NACL fact was written. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d099",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How does client affinity work in Global Accelerator (NONE uses the 5-tuple, SOURCE_IP uses the 2-tuple) and when do you need it (stateful applications)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-client-affinity-default-none",
+    "global-accelerator-client-affinity-for-stateful-apps",
+    "global-accelerator-client-affinity-none-uses-5-tuple",
+    "global-accelerator-client-affinity-not-guaranteed-on-edge-shift",
+    "global-accelerator-client-affinity-source-ip-uses-2-tuple"
+   ],
+   "hypothesis": "default NONE; SOURCE_IP sends the same client to the same endpoint",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-listeners-client-affinity"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-client-affinity-not-guaranteed-on-edge-shift, global-accelerator-client-affinity-source-ip-uses-2-tuple.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d100",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "What is a custom routing accelerator, how does it differ from a standard accelerator, and what is it for (map users to a specific EC2 instance and port, for example game sessions)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-custom-routing-destinations-denied-by-default",
+    "global-accelerator-custom-routing-ec2-only-ipv4-only",
+    "global-accelerator-custom-routing-maps-ports-deterministically",
+    "global-accelerator-custom-routing-matchmaking-uses-api-mapping",
+    "global-accelerator-custom-routing-no-health-checks-no-failover",
+    "global-accelerator-custom-routing-static-port-mapping",
+    "global-accelerator-custom-routing-use-cases-gaming-voip",
+    "global-accelerator-custom-routing-vpc-subnet-endpoints-only",
+    "global-accelerator-standard-vs-custom-routing"
+   ],
+   "hypothesis": "deterministic mapping to VPC subnet endpoints; no health checks or load balancing",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/work-with-custom-routing-accelerators",
+    "docs/global-accelerator/latest/dg/about-custom-routing-how-it-works",
+    "docs/global-accelerator/latest/dg/about-custom-routing-guidelines",
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d101",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "How is Global Accelerator built for resilience (network zones, each static IP from a different zone, independent infrastructure)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-network-zone-isolated-static-ips",
+    "global-accelerator-resilience-continuous-health-monitoring"
+   ],
+   "hypothesis": "two IPs served from independent network zones, so one zone failure does not cut access",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/disaster-recovery-resiliency",
+    "docs/global-accelerator/latest/dg/introduction-components",
+    "docs/global-accelerator/latest/dg/introduction-how-it-works"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d102",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How do you use a custom domain with an accelerator (DNS name per accelerator, Route 53 alias or A records to the static IPs) and does Global Accelerator support IPv6 (dual-stack)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-default-dns-name-points-to-static-ips",
+    "global-accelerator-dual-stack-endpoint-needs-client-ip-preservation",
+    "global-accelerator-dual-stack-ipv6-support"
+   ],
+   "hypothesis": "each accelerator has a default DNS name; dual-stack since 2022-07",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/dns-addressing-custom-domains.dns-addressing",
+    "docs/global-accelerator/latest/dg/dns-addressing-custom-domains.mapping-your-custom-domain",
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Default DNS name, dual-stack DNS, IPv6 support filled. Route 53 alias to the accelerator is owned by route53-global-accelerator-alias-record. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-default-dns-name-points-to-static-ips, global-accelerator-dual-stack-ipv6-support.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d103",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Can Global Accelerator front internal (private) Application Load Balancers or private EC2 instances, and what VPC requirement applies (internet gateway)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-vpc-origin-needs-internet-gateway",
+    "global-accelerator-endpoint-types-alb-internal-or-public",
+    "global-accelerator-private-subnet-endpoints-need-internet-gateway",
+    "global-accelerator-private-subnet-endpoints-supported",
+    "global-accelerator-use-case-private-vpc-peering-connection",
+    "global-accelerator-use-private-subnets-traffic-only-via-ga"
+   ],
+   "hypothesis": "yes, internal ALB and private EC2 supported; the VPC needs an internet gateway attached",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-endpoints-caveats",
+    "docs/global-accelerator/latest/dg/secure-vpc-connections",
+    "docs/global-accelerator/latest/dg/about-endpoints"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d104",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How is a global static IP from Global Accelerator different from a Regional Elastic IP address?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-eip-regional-vs-global-static-ips"
+   ],
+   "hypothesis": "Elastic IP is Regional and tied to one resource; GA IPs are anycast globally and front endpoints in many Regions",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-accelerators.eip-accelerator",
+    "www/global-accelerator/faqs"
+   ],
+   "link_existing": [
+    "elb-alb-global-accelerator-static-ips"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d105",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How does Global Accelerator integrate with Elastic Load Balancing (add an accelerator when creating an ALB; ALB has no static IPs of its own)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-add-accelerator-when-creating-elb",
+    "global-accelerator-elb-accelerator-requires-dns-update"
+   ],
+   "hypothesis": "console option at load balancer creation; DNS must be updated to the accelerator",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/about-accelerators.alb-accelerator",
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d106",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "Can Global Accelerator use endpoints in other accounts (cross-account attachments) and bring your own IP addresses (BYOIP)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-byoip-ipv4-only-you-own-ranges",
+    "global-accelerator-byoip-only-for-global-accelerator",
+    "global-accelerator-byoip-one-address-per-range-per-accelerator",
+    "global-accelerator-cross-account-fixed-entry-point",
+    "global-accelerator-same-account-endpoints-unless-cross-account"
+   ],
+   "hypothesis": "cross-account since 2023-11; BYOIP cross-account 2024-03",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/cross-account-resources",
+    "docs/global-accelerator/latest/dg/using-byoip",
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-cross-account-fixed-entry-point.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d107",
+   "bullet": "3.4.K1",
+   "lens": "behavior",
+   "question": "How do you monitor Global Accelerator (flow logs to S3, CloudWatch metrics)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-cloudwatch-metrics-only-with-traffic",
+    "global-accelerator-cloudwatch-metrics-us-west-2",
+    "global-accelerator-flow-logs-to-s3"
+   ],
+   "hypothesis": "flow logs published to Amazon S3",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/monitoring-global-accelerator.flow-logs",
+    "docs/global-accelerator/latest/dg/cloudwatch-monitoring"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d108",
+   "bullet": "2.1.K7",
+   "lens": "behavior",
+   "question": "Why does Global Accelerator improve performance (anycast to the nearest edge location, then the AWS global network instead of the public internet, TCP termination at the edge)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-anycast-nearest-edge-then-closest-endpoint",
+    "global-accelerator-edge-location-then-global-network",
+    "global-accelerator-speed-comparison-tool",
+    "global-accelerator-terminates-tcp-at-edge",
+    "global-accelerator-traffic-on-aws-network-congestion-free"
+   ],
+   "hypothesis": "reduces internet latency and jitter; FAQ claims up to 60% improvement",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/introduction-how-it-works",
+    "docs/global-accelerator/latest/dg/introduction-benefits-of-migrating",
+    "www/global-accelerator/faqs",
+    "www/global-accelerator/features"
+   ],
+   "registered_by": "register-15",
+   "note": "adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-edge-location-then-global-network, global-accelerator-speed-comparison-tool.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d109",
+   "bullet": "3.2.K2",
+   "lens": "behavior",
+   "question": "Which Regions can host Global Accelerator endpoints, and where is the Global Accelerator control plane (us-west-2)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-cli-region-us-west-2",
+    "global-accelerator-control-plane-impairment-routing-continues",
+    "global-accelerator-control-plane-us-west-2-data-plane",
+    "global-accelerator-global-service-multi-region-endpoints",
+    "global-accelerator-no-endpoints-in-local-zones",
+    "global-accelerator-static-stability-health-checks-not-dials"
+   ],
+   "hypothesis": "control plane in US West (Oregon); endpoints in most commercial Regions",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/preserve-client-ip-address.regions",
+    "docs/whitepapers/latest/aws-fault-isolation-boundaries/appendix-b---edge-network-global-service-guidance"
+   ],
+   "registered_by": "register-15",
+   "note": "Control plane in us-west-2 and the --region us-west-2 rule filled. The Region availability table (endpoints in most commercial Regions, no Local Zones) was not mined except the Local Zone restriction. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-no-endpoints-in-local-zones.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d120",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "What does the AWS networking decision guide say CloudFront and Global Accelerator are each for, and how does it separate them from Route 53 and ELB?",
+   "status": "partial",
+   "facts": [
+    "global-accelerator-dec-guide-reliability-security-latency",
+    "global-accelerator-decision-guide-gaming-iot-voip",
+    "global-accelerator-dec-guide-edge-category-route53-elb"
+   ],
+   "hypothesis": "CloudFront: CDN for low-latency content delivery; GA: improve availability and performance with static IPs over the AWS network",
+   "look_in": [
+    "docs/decision-guides/latest/decision-guides/choosing-networking-and-content-delivery-service"
+   ],
+   "link_existing": [
+    "global-accelerator-decision-guide-gaming-iot-voip"
+   ],
+   "registered_by": "register-15",
+   "note": "The decision guide names CloudFront for lowest latency to web users and Global Accelerator for reliability, security, latency, gaming, IoT and VoIP. Route 53 and ELB are separated only by guide category (edge networking vs application networking); no sentence compares them, so none is quoted. register-15: the guide separates the services by category and purpose (new fact global-accelerator-dec-guide-edge-category-route53-elb); no sentence compares Route 53 or ELB with CloudFront head to head adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d121",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "CloudFront vs Global Accelerator: which fits HTTP caching at the edge versus TCP/UDP non-HTTP traffic (gaming, IoT, VoIP), static IPs and deterministic fast Regional failover? (FAQ 'How is AWS Global Accelerator different from Amazon CloudFront?')",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-vs-cloudfront-content-types",
+    "global-accelerator-faq-good-fit-non-http-static-ip-fast-failover",
+    "global-accelerator-dec-ddos-wp-unsupported-protocols-or-static-ip",
+    "global-accelerator-anycast-nearest-edge-then-closest-endpoint",
+    "global-accelerator-eip-regional-vs-global-static-ips"
+   ],
+   "hypothesis": "CloudFront caches cacheable and dynamic HTTP content at the edge; GA proxies TCP/UDP to Regional endpoints, no caching",
+   "look_in": [
+    "www/global-accelerator/faqs",
+    "docs/global-accelerator/latest/dg/introduction-benefits-of-migrating",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/protect-network-traffic-further-from-your-origin-using-aws-global-accelerator-bp1"
+   ],
+   "registered_by": "register-15",
+   "note": "My own FAQ-based facts were rejected as duplicates of the faq lens facts (ids listed in duplicates_rejected). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d122",
+   "bullet": "3.2.K2",
+   "lens": "decisions+changes",
+   "question": "Global Accelerator vs DNS-based traffic management (Route 53 failover/latency): what is different (no client DNS caching, instant changes, static entry points)? (FAQ item)",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-no-dns-cache-dependency-seconds",
+    "global-accelerator-faq-move-endpoints-without-dns-change"
+   ],
+   "hypothesis": "GA does not depend on DNS TTLs",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Facts come from the faq lens; mine were duplicates. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-faq-no-dns-cache-dependency-seconds.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d123",
+   "bullet": "2.1.K7",
+   "lens": "decisions+changes",
+   "question": "S3 Transfer Acceleration vs CloudFront for uploads and downloads: what does each do, and when is each the answer? (link chapter 21 facts; add CloudFront-side facts if needed)",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-http-methods-supported",
+    "cloudfront-faq-post-put-delete-patch-not-cached",
+    "cloudfront-dec-use-case-static-content-delivery"
+   ],
+   "hypothesis": "Transfer Acceleration speeds long-distance uploads to one bucket over edge locations; CloudFront caches downloads and accelerates uploads with PUT/POST",
+   "look_in": [
+    "www/cloudfront/faqs",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/IntroductionUseCases"
+   ],
+   "link_existing": [
+    "s3-faq-ta-vs-cloudfront",
+    "s3-transfer-acceleration-vs-cloudfront-small-objects",
+    "s3-faq-ta-edge-locations",
+    "s3-transfer-acceleration-no-data-at-edge"
+   ],
+   "registered_by": "register-15",
+   "note": "Link the S3 side from chapter 21: s3-faq-ta-vs-cloudfront, s3-transfer-acceleration-vs-cloudfront-small-objects. CloudFront FAQ lists PUT and POST among supported methods and says PUT/POST/PATCH/DELETE responses are not cached (proxied to the origin). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d124",
+   "bullet": "4.4.S3",
+   "lens": "decisions+changes",
+   "question": "Which network routes cost less: origin fetch from AWS origins to CloudFront (free), CloudFront data transfer out versus serving directly from EC2/S3, Global Accelerator DT-Premium on top of data transfer out? Which statements does AWS make verbatim?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-price-origin-to-cloudfront-always-free-aws-origins",
+    "cloudfront-price-payg-origin-fetch-free-incl-vpc-origins",
+    "cloudfront-price-payg-cacheable-aws-transfer-no-charge",
+    "cloudfront-price-dimensions-transfer-out-and-requests",
+    "cloudfront-price-flat-rate-origin-transfer-waived",
+    "global-accelerator-price-fixed-hourly-fee-plus-dt-premium",
+    "global-accelerator-price-dt-premium-dominant-direction",
+    "global-accelerator-price-dt-premium-dominant-direction-only",
+    "global-accelerator-price-dt-premium-rate-depends-on-region-and-edge",
+    "cloudfront-dec-ddos-wp-s3-bucket-benefits"
+   ],
+   "hypothesis": "data transfer from AWS origins to CloudFront is free; GA adds DT-Premium",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Introduction",
+    "www/cloudfront/pricing",
+    "www/cloudfront/pricing/pay-as-you-go",
+    "www/global-accelerator/pricing",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/flat-rate-pricing-plan"
+   ],
+   "link_existing": [
+    "s3-pricing-data-transfer-to-cloudfront-free"
+   ],
+   "registered_by": "register-15",
+   "note": "Hypothesis confirmed: origin fetch from AWS origins is free; GA adds DT-Premium on top of EC2 data transfer out. Dollar amounts of GA (hourly fee, DT-Premium table) are on the pricing page without a Region statement for the fixed fee, so no GA dollar amount was stored. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-dec-ddos-wp-s3-bucket-benefits.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d125",
+   "bullet": "4.4.S4",
+   "lens": "decisions+changes",
+   "question": "When does a CDN make strategic sense (global users, static share of traffic, offloading origin, DDoS absorption), and when does it add little (single-Region users, uncacheable personalized API)? Ground in IntroductionUseCases and the DDoS whitepaper.",
+   "status": "filled",
+   "facts": [
+    "cloudfront-dec-consider-for-any-public-web-application",
+    "cloudfront-dec-dynamic-uncacheable-still-faster",
+    "cloudfront-origin-shield-poor-fit-cases",
+    "cloudfront-dec-origin-shield-use-cases",
+    "cloudfront-dec-use-case-static-content-delivery",
+    "cloudfront-dec-use-case-streaming-vod-and-live",
+    "cloudfront-dec-ddos-wp-entire-website-persistent-connections",
+    "cloudfront-dec-ddos-wp-edge-locations-for-scale",
+    "cloudfront-dec-ddos-wp-content-is-cacheable-misconception",
+    "cloudfront-price-price-class-excludes-expensive-locations",
+    "global-accelerator-faq-single-region-static-ip-benefits"
+   ],
+   "hypothesis": "use cases page lists static website acceleration, video, encrypting fields, customizing at edge, serving private content",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/IntroductionUseCases",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/web-application-delivery-at-the-edge-bp1",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/use-aws-edge-locations-for-scale-bp1-bp3"
+   ],
+   "registered_by": "register-15",
+   "note": "'When a CDN adds little': AWS does not say a CDN is useless for uncacheable APIs; it says CloudFront still shortens connection setup for dynamic uncacheable workloads. The weak fits that AWS names are Origin Shield for low-cacheability content and, for Global Accelerator versus a regional load balancer, a single-Region audience (faq lens fact). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d126",
+   "bullet": "3.2.K2",
+   "lens": "decisions+changes",
+   "question": "What does the DDoS resiliency whitepaper recommend at the edge: CloudFront for web apps (BP1), Global Accelerator for non-HTTP or static-IP apps (BP1), protecting the origin (BP5)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-dec-ddos-wp-only-well-formed-connections",
+    "cloudfront-ddos-always-on-layer3-4-mitigation",
+    "cloudfront-dec-ddos-wp-protects-any-origin",
+    "cloudfront-dec-ddos-wp-vpc-origins-newest-recommended",
+    "cloudfront-dec-ddos-wp-oac-for-s3-elemental-lambda-url",
+    "global-accelerator-dec-ddos-wp-unsupported-protocols-or-static-ip",
+    "global-accelerator-use-case-protect-origins-shield",
+    "global-accelerator-use-case-private-vpc-peering-connection"
+   ],
+   "hypothesis": "use edge locations for scale; restrict origin to CloudFront",
+   "look_in": [
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/use-aws-edge-locations-for-scale-bp1-bp3",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/web-application-delivery-at-the-edge-bp1",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/protect-network-traffic-further-from-your-origin-using-aws-global-accelerator-bp1",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/protecting-your-origin-bp1-bp5",
+    "docs/whitepapers/latest/aws-best-practices-ddos-resiliency/cloudfront"
+   ],
+   "registered_by": "register-15",
+   "note": "DDoS whitepaper pages BP1 (CloudFront, Global Accelerator), BP5 (protect the origin). Whitepaper words VPC origins as the 'newest and recommended' solution. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d127",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Changed recently: origin access control replaced origin access identity (launch 2022-08-25); what is the date and what may older practice questions assume?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-oac-s3-origins-2022-08",
+    "cloudfront-oac-oai-two-ways-oac-recommended",
+    "cloudfront-oac-supports-all-regions-dynamic-requests",
+    "cloudfront-change-oac-mediapackage-lambda-url-2024-04"
+   ],
+   "hypothesis": "OAC launch 2022-08 (history row 2022-08-24); OAI now legacy; old questions say 'use an OAI'",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3"
+   ],
+   "registered_by": "register-15",
+   "note": "Documentation history row is 2022-08-24; the What's New post is 2022-08-25 (post not fetchable: robots.txt). Older questions say 'use an OAI'; the page now recommends OAC. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-change-oac-mediapackage-lambda-url-2024-04.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d128",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Changed recently: CloudFront VPC origins (2024-11-20) and cross-account sharing (2025-11-05) replace the public ALB plus secret header pattern as the best answer; dates from history rows.",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-vpc-origins-2024-11",
+    "cloudfront-change-cross-account-vpc-origins-2025-11",
+    "cloudfront-dec-ddos-wp-vpc-origins-newest-recommended",
+    "cloudfront-alb-internal-needs-vpc-origins",
+    "cloudfront-custom-origin-custom-headers-restrict-direct",
+    "cloudfront-price-vpc-origins-no-additional-cost"
+   ],
+   "hypothesis": "dates 2024-11-20 and 2025-11-05",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins"
+   ],
+   "link_existing": [
+    "elb-change-cloudfront-vpc-origins-2024-11"
+   ],
+   "registered_by": "register-15",
+   "note": "VPC origins 2024-11-20 confirmed (history row). Cross-account: history row 2025-11-05, What's New post 2025-11-06 (brief said 2025-11-05). The ALB page keeps the custom-header steps as the pattern for internet-facing ALBs. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d129",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Changed recently: CloudFront Anycast static IPs (2024-11-20; apex domains 2025-04; IPv6 2025-11-05). Does this change 'static IP' answers (CloudFront vs Global Accelerator)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-anycast-static-ips-2024-11",
+    "cloudfront-change-anycast-apex-domains-3-ips-2025-04",
+    "cloudfront-change-anycast-ipv6-2025-11",
+    "cloudfront-change-byoip-ipam-2025-11",
+    "cloudfront-change-grpc-support-2024-11",
+    "cloudfront-change-standard-logging-v2-2024-11",
+    "global-accelerator-faq-good-fit-non-http-static-ip-fast-failover"
+   ],
+   "hypothesis": "static IPs no longer exclusive to GA for HTTP apps; GA still the answer for TCP/UDP and Regional failover",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/request-static-ips"
+   ],
+   "registered_by": "register-15",
+   "note": "Hypothesis confirmed. Apex domain support: history row 2025-04-04, What's New post 2025-04-16 (3 addresses instead of the previous 21). Static IPs for HTTP apps are no longer exclusive to Global Accelerator; GA stays the answer for non-HTTP TCP/UDP and fast Regional failover. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d130",
+   "bullet": "4.4.S4",
+   "lens": "decisions+changes",
+   "question": "Changed recently: flat-rate pricing plans (2025-11-18) next to pay-as-you-go; what changes for cost answers?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-flat-rate-plans-2025-11",
+    "cloudfront-price-flat-rate-no-overage-bundle",
+    "cloudfront-price-flat-rate-tiers-no-annual-commitment",
+    "cloudfront-price-flat-rate-blocked-traffic-not-counted",
+    "cloudfront-faq-flat-rate-one-distribution-per-plan",
+    "cloudfront-price-payg-better-when-control-or-predictable-spikes",
+    "cloudfront-dec-usage-allowances-not-hard-limits",
+    "cloudfront-price-flat-rate-free-plan-0-dollars",
+    "cloudfront-price-flat-rate-pro-plan-15-dollars",
+    "cloudfront-price-flat-rate-business-plan-200-dollars",
+    "cloudfront-price-flat-rate-premium-plan-1000-dollars",
+    "cloudfront-change-premium-plan-configurable-2026-05"
+   ],
+   "hypothesis": "optional monthly plan with no overage; pay-as-you-go still available",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/flat-rate-pricing-plan"
+   ],
+   "registered_by": "register-15",
+   "note": "Contradicts the memory 'no overage at all': usage allowances are not hard limits, and traffic delivery might be adjusted if usage stays far above the allowance. Plan prices stored with the FAQ answer that plan prices do not vary by Region. Premium usage levels became configurable on 2026-05-12. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d131",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Changed recently: multi-tenant distributions / SaaS Manager (2025-04-28) and HTTP validation of ACM certificates for CloudFront (2025-04-28).",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-multi-tenant-distributions-2025-04",
+    "cloudfront-change-saas-manager-2025-04"
+   ],
+   "hypothesis": "dates from history rows",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/distribution-config-options"
+   ],
+   "link_existing": [
+    "acm-change-http-validation-cloudfront-2025",
+    "acm-http-validation-cloudfront-only"
+   ],
+   "registered_by": "register-15",
+   "note": "History row and post both 2025-04-28. HTTP validation facts are owned by the ACM chapter. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d132",
+   "bullet": "1.3.S3",
+   "lens": "decisions+changes",
+   "question": "Changed recently: viewer mutual TLS (2025-11-24), origin mutual TLS (2026-02-02), TLS 1.3 to origins (2025-11-20), post-quantum TLS policy (2025-09), SHA-256 for signed URLs (2026-04-01).",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-viewer-mtls-2025-11",
+    "cloudfront-change-origin-mtls-2026-02",
+    "cloudfront-change-tls13-to-origins-2025-11",
+    "cloudfront-change-pqc-and-tls13-only-policy-2025-09",
+    "cloudfront-change-tls13-only-policy-2025-08",
+    "cloudfront-change-signed-urls-sha256-2026-04",
+    "cloudfront-change-ecdsa-signed-urls-2025-09"
+   ],
+   "hypothesis": "dates from history rows and What's New; all before 2026-07-15 so examinable but unlikely",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/mtls-authentication",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls"
+   ],
+   "registered_by": "register-15",
+   "note": "All dates before 2026-07-15 (examinable but unlikely). Post-quantum: history row 2025-09-04, post 2025-09-05. Origin mTLS post is dated 2026-02-02 (URL path says 2026/01). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d133",
+   "bullet": "4.4.S4",
+   "lens": "decisions+changes",
+   "question": "Changed recently: invalidation by cache tag (2026-04-29), stale-while-revalidate and stale-if-error (2023-05), managed cache policies for web applications (2024-07), requests blocked by AWS WAF no longer charged (2024-11-06).",
+   "status": "partial",
+   "facts": [
+    "cloudfront-change-cache-tag-invalidation-2026-04",
+    "cloudfront-change-stale-directives-2023-05",
+    "cloudfront-change-managed-cache-policies-origin-headers-2024-05",
+    "cloudfront-invalidation-first-1000-paths-free",
+    "cloudfront-price-flat-rate-blocked-traffic-not-counted",
+    "cloudfront-change-waf-blocked-requests-free-2024-10"
+   ],
+   "hypothesis": "dates from feeds; quote the current behavior from guide pages",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/invalidation-specifying-objects",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Expiration",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "Cache tag 2026-04-29 confirmed (each tag priced as one path). Stale directives: history row 2023-05-15 (post 2023-05-17). Managed cache policies: the history row gives 2024-05-24 for UseOriginCacheControlHeaders; the 2024-07-08 'for web applications' post cannot be fetched (robots.txt). 'Requests blocked by AWS WAF no longer charged' (2024-11-06): no fetchable page states the pay-as-you-go change; only flat-rate plan pages say blocked requests never count against the allowance. Treat 2024-11-06 as a feed date only. register-15: WAF-blocked requests free since 2024-10-25 added from the What's New feed snapshot (cloudfront-change-waf-blocked-requests-free-2024-10); the 2024-07 'managed cache policies for web applications' post is not fetchable (robots.txt), only the 2024-05-24 history row is quoted adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-change-waf-blocked-requests-free-2024-10.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d134",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Not examinable yet (GA after 2026-07-15): OAC for S3 Multi-Region Access Points (2026-08-20), flat-rate plan API (2026-09-03), Dynamic Image Transformation features (2026-09-08). Record dates only.",
+   "status": "filled",
+   "facts": [
+    "cloudfront-change-oac-s3-mrap-2026-08",
+    "cloudfront-change-flat-rate-plan-api-2026-09",
+    "cloudfront-change-dit-four-features-2026-09"
+   ],
+   "hypothesis": "label 'not examinable yet'",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3-mrap"
+   ],
+   "registered_by": "register-15",
+   "note": "All three are labelled not examinable yet (GA after 2026-07-15). The Functions access-log change (2026-07-14) is one day before the cut: cloudfront-change-functions-log-custom-data-2026-07. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d135",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Changed recently for Global Accelerator: dual-stack IPv6 (2022-07), client IP preservation for NLB endpoints (2023-08-22), cross-account endpoints (2023-11), cross-account BYOIP (2024-03-25). Otherwise stable.",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-change-dual-stack-2022-07",
+    "global-accelerator-change-client-ip-preservation-nlb-2023-08",
+    "global-accelerator-change-cross-account-resources-2023-11",
+    "global-accelerator-change-cross-account-byoip-2024-03",
+    "global-accelerator-change-dual-stack-nlb-2023-11",
+    "global-accelerator-change-ipv6-ec2-endpoints-2023-08",
+    "global-accelerator-change-add-remove-endpoints-api-2022-10"
+   ],
+   "hypothesis": "dates from the GA document history",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/WhatsNew"
+   ],
+   "registered_by": "register-15",
+   "note": "All dates match the brief: dual-stack 2022-07 (row 2022-07-27), NLB client IP preservation 2023-08-22, cross-account 2023-11 (row 2023-11-01), cross-account BYOIP 2024-03-25. Newest history row is 2024-04-17; later What's New items only add endpoint Regions and edge locations. adjudicate-15: status set after adjudication; global-accelerator-change-latest-doc-history-row-2024-04 rejected in the second round and removed; the demand stays filled by the other seven change facts.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d136",
+   "bullet": "4.4.S4",
+   "lens": "decisions+changes",
+   "question": "Callvale decision (month 11): with 70% static requests and 20% users outside the US, what facts support 'CloudFront in front of everything, private S3 origins with OAC, signed URLs' and its accepted cost (cached files can be old after a release: TTL and invalidation)? Answer Ana: does the bucket have to be public?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-private-s3-oac-plus-signed-urls",
+    "cloudfront-dec-signed-url-expiry-restrictions",
+    "cloudfront-signed-cookies-when-multiple-files-or-keep-urls",
+    "cloudfront-versioned-file-names-recommended",
+    "cloudfront-removed-origin-file-stays-until-expiry",
+    "cloudfront-dec-ddos-wp-versioned-static-assets-long-ttl",
+    "cloudfront-faq-invalidate-only-unexpected-use-versioning"
+   ],
+   "hypothesis": "No: OAC keeps the bucket private; signed URL expiry for 5-minute playback links; versioned names or invalidation after release",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-signed-urls",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/UpdatingExistingObjects",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/Expiration"
+   ],
+   "registered_by": "register-15",
+   "note": "Answer to Ana: no, the bucket does not have to be public; the page says content can be reached through the CloudFront distribution but not directly with S3 URLs. Accepted cost of caching (old files after a release): versioned names or invalidation. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-dec-signed-url-expiry-restrictions.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d137",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Callvale stage 4 (Callvale Live): which facts justify Global Accelerator for live audio (TCP/UDP, static entry IPs, fast failover from us-east-1 to us-west-2 with traffic dials)?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-dec-traffic-dial-zero-cuts-off-region",
+    "global-accelerator-traffic-dial-new-connections-only",
+    "global-accelerator-dec-traffic-dial-weights-active-active-standby",
+    "global-accelerator-use-case-disaster-recovery-reroute",
+    "global-accelerator-dec-allow-list-addresses-once",
+    "global-accelerator-faq-protocols-tcp-and-udp",
+    "global-accelerator-faq-failover-detect-under-one-minute",
+    "global-accelerator-faq-two-static-ipv4-independent-network-zones"
+   ],
+   "hypothesis": "GA listeners TCP/UDP; endpoint groups per Region; traffic dial for the standby Region",
+   "look_in": [
+    "docs/global-accelerator/latest/dg/introduction-benefits-of-migrating",
+    "docs/global-accelerator/latest/dg/about-endpoint-groups-traffic-dial",
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "TCP and UDP listeners, two static IPs, traffic dial 0 to drain a Region, unhealthy endpoint out in under one minute (FAQ). CloudFront serves HTTP streaming only, so live two-way audio is the Global Accelerator case. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d138",
+   "bullet": "2.1.K7",
+   "lens": "decisions+changes",
+   "question": "In the real world: one or two quotable customer outcomes for CloudFront (LadiPage, Doping Hafiza, Skyscanner) and Global Accelerator (Deriv, Supercell edge services).",
+   "status": "filled",
+   "facts": [
+    "cloudfront-case-ladipage-availability-99-6",
+    "cloudfront-case-ladipage-multi-cdn-routing-savings",
+    "cloudfront-case-doping-hafiza-delivery-speed-5x",
+    "cloudfront-case-doping-hafiza-cost-30-percent",
+    "cloudfront-case-skyscanner-cache-hit-and-cdn-cost",
+    "global-accelerator-case-deriv-latency-500-ms",
+    "global-accelerator-case-deriv-uptime-99-97"
+   ],
+   "hypothesis": "short verbatim quotes with the company name and number",
+   "look_in": [
+    "www/solutions/case-studies/ladipage-case-study",
+    "www/solutions/case-studies/doping-hafiza-case-study-amazon-cloudfront",
+    "www/solutions/case-studies/skyscanner-cloudfront-case-study",
+    "www/solutions/case-studies/supercell-edge-services-case-study",
+    "www/solutions/case-studies/deriv-aws-global-accelerator"
+   ],
+   "registered_by": "register-15",
+   "note": "Supercell edge-services page: only 'exploring' Global Accelerator, so no Global Accelerator quote; its CloudFront claims have no numbers. The Skyscanner Global Accelerator numbers in the GA FAQ are FAQ quotes. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d139",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Lambda@Edge vs CloudFront Functions decision: which to choose for header/URL rewrites, redirects, cache-key normalization, token validation versus network calls, body access, longer logic? Does AWS say CloudFront Functions replaces Lambda@Edge?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-functions-complement-lambda-edge",
+    "cloudfront-faq-lambda-edge-for-heavy-computation",
+    "cloudfront-dec-functions-use-cache-key-normalization",
+    "cloudfront-dec-functions-use-header-manipulation",
+    "cloudfront-dec-functions-use-redirects-rewrites",
+    "cloudfront-dec-functions-use-token-validation",
+    "cloudfront-dec-lambda-edge-third-party-libraries-network",
+    "cloudfront-functions-no-network-no-body-fs-access",
+    "cloudfront-functions-kvs-support-only",
+    "cloudfront-functions-geolocation-device-data",
+    "cloudfront-dec-functions-cheaper-than-lambda-edge",
+    "cloudfront-dec-lambda-edge-runs-in-regional-edge-cache"
+   ],
+   "hypothesis": "FAQ: not a replacement; choose by use case",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/edge-functions-choosing",
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ: CloudFront Functions is meant to complement Lambda@Edge, not replace it. Confirmed by the comparison table. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-functions-kvs-support-only.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d140",
+   "bullet": "3.4.K1",
+   "lens": "decisions+changes",
+   "question": "Restricting access to content: OAC vs signed URLs vs signed cookies vs geographic restriction vs AWS WAF; which control answers which stem ('bucket only via CloudFront', 'paid subscribers only', 'block a country', 'block bad IPs')?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-dec-security-overview-options",
+    "cloudfront-private-s3-oac-plus-signed-urls",
+    "cloudfront-oac-oai-two-ways-oac-recommended",
+    "cloudfront-signed-cookies-when-multiple-files-or-keep-urls",
+    "cloudfront-signed-url-when-individual-files-or-no-cookies",
+    "cloudfront-dec-signed-urls-cookies-for-paying-users",
+    "cloudfront-geo-restriction-country-level-whole-distribution",
+    "cloudfront-dec-geo-applies-to-entire-distribution",
+    "cloudfront-dec-waf-web-acl-ip-and-query-conditions",
+    "cloudfront-fle-layer-on-https-selected-fields",
+    "cloudfront-oac-always-https-when-signing",
+    "cloudfront-oac-object-ownership-bucket-owner-enforced",
+    "cloudfront-oac-lambda-edge-origin-redirect-unsupported",
+    "cloudfront-alb-restrict-custom-header-and-https"
+   ],
+   "hypothesis": "SecurityAndPrivateContent overview lists the options",
+   "look_in": [
+    "docs/AmazonCloudFront/latest/DeveloperGuide/SecurityAndPrivateContent",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/private-content-overview",
+    "docs/AmazonCloudFront/latest/DeveloperGuide/georestrictions"
+   ],
+   "registered_by": "register-15",
+   "note": "Mapping: bucket only via CloudFront = OAC; paid subscribers only = signed URLs (single files) or signed cookies (many files); block a country = geographic restriction (whole distribution, country level); block bad IPs = AWS WAF web ACL. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-dec-security-overview-options, cloudfront-geo-restriction-country-level-whole-distribution, cloudfront-fle-layer-on-https-selected-fields.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d150",
+   "bullet": "2.1.K7",
+   "lens": "faq",
+   "question": "FAQ: How does CloudFront provide higher performance, and how does it lower costs to distribute content?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-performance-edge-cache-persistent-connections",
+    "cloudfront-faq-cost-collapse-requests",
+    "cloudfront-faq-no-charge-aws-origin-transfer-out"
+   ],
+   "hypothesis": "FAQ items 5 and 6",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 5 and 6. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d151",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "FAQ: How is CloudFront different from Amazon S3, and does it work with non-AWS origins?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-good-for-static-edge-content",
+    "cloudfront-faq-custom-origin-any-server-no-charge"
+   ],
+   "hypothesis": "FAQ items 8 and 11",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ item 8: the answer under 'How is CloudFront different from Amazon S3?' is one sentence (frequently accessed static content that benefits from edge delivery); it does not describe S3 itself. Item 11 for non-AWS origins. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d152",
+   "bullet": "3.2.K2",
+   "lens": "faq",
+   "question": "FAQ: How does CloudFront enable origin redundancy?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-origin-failover-backup-origin"
+   ],
+   "hypothesis": "FAQ item 12: origin failover with origin groups",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ item 12. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d153",
+   "bullet": "4.4.S4",
+   "lens": "faq",
+   "question": "FAQ: How long does CloudFront keep files at edge locations, how do I remove an item, and is there a limit on invalidation requests?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-default-expiration-24h",
+    "cloudfront-faq-expiration-zero-seconds-revalidates",
+    "cloudfront-faq-remove-item-delete-origin-or-invalidate",
+    "cloudfront-faq-versioning-over-frequent-invalidation"
+   ],
+   "hypothesis": "FAQ items 40 to 42",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 40 to 42. The invalidation limits in item 42 differ from the user guide quota table (see discrepancies). adjudicate-15: status set after adjudication; removed rejected cloudfront-faq-invalidation-individual-objects-in-progress, cloudfront-faq-invalidation-wildcard-paths-in-progress.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d154",
+   "bullet": "3.2.K2",
+   "lens": "faq",
+   "question": "FAQ: Is the regional edge cache enabled by default, and does it cost extra?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-regional-edge-cache-default-on-no-charge",
+    "cloudfront-faq-regional-edge-cache-larger-cache-width"
+   ],
+   "hypothesis": "FAQ item 35",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 34 and 35. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d155",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "FAQ: Can I serve or not serve content to specified countries, and how accurate is the GeoIP database?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-geo-restriction-403",
+    "cloudfront-faq-geoip-accuracy"
+   ],
+   "hypothesis": "FAQ items 37 and 38",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 37 and 38. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d156",
+   "bullet": "1.3.S3",
+   "lens": "faq",
+   "question": "FAQ: SNI Custom SSL vs Dedicated IP Custom SSL; does CloudFront integrate with ACM; can I use my own domain over HTTPS?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-dedicated-ip-custom-ssl-non-sni-clients",
+    "cloudfront-faq-sni-custom-ssl-modern-browsers-no-extra-cost",
+    "cloudfront-faq-dedicated-ip-custom-ssl-price-600-month",
+    "cloudfront-faq-https-own-domain-custom-ssl",
+    "cloudfront-faq-acm-certificates-no-additional-charge",
+    "cloudfront-faq-third-party-certificate-iam-store"
+   ],
+   "hypothesis": "FAQ items 86, 89, 91",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 86, 89, 91. Link also the ACM chapter facts acm-faq-cloudfront-us-east-1 and acm-cloudfront-us-east-1 for the Region rule, which the FAQ answer does not state. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d157",
+   "bullet": "1.3.S3",
+   "lens": "faq",
+   "question": "FAQ: What is field-level encryption, and do I still need it if I already use SSL/TLS?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-field-level-encryption-what",
+    "cloudfront-faq-field-level-encryption-private-keys-decrypt"
+   ],
+   "hypothesis": "FAQ items 87 and 88",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 87 and 88. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d158",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "FAQ: Does CloudFront support access controls for paid or private content; how should I secure my origins?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-private-content-signed-requests",
+    "cloudfront-faq-secure-origin-oac-supported-origins",
+    "cloudfront-faq-secure-origin-vpc-origins-private-subnet",
+    "cloudfront-faq-secure-origin-header-and-ip-allowlist-alternatives",
+    "cloudfront-faq-custom-origin-headers-no-additional-charge"
+   ],
+   "hypothesis": "FAQ items 92 and 95",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 92, 95, 114. The FAQ names OAC and VPC origins as the two fully managed ways to protect origins; it does not mention OAI. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-secure-origin-header-and-ip-allowlist-alternatives, cloudfront-faq-custom-origin-headers-no-additional-charge.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d159",
+   "bullet": "3.2.K2",
+   "lens": "faq",
+   "question": "FAQ: How can I safeguard applications delivered through CloudFront from DDoS attacks?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-ddos-shield-standard-no-additional-cost",
+    "cloudfront-faq-ddos-waf-antiddos-managed-rule",
+    "cloudfront-faq-waf-rules-allow-block-count"
+   ],
+   "hypothesis": "FAQ item 93: Shield Standard, WAF, Shield Advanced",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 93 and 94. The FAQ answer 93 names Shield Standard and WAF (with the AntiDDoS AMR); Shield Advanced is NOT named in the answer text, contrary to the brief hypothesis. Link the shield-* and waf-cloudfront-* facts. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d160",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "FAQ: Why use VPC origins, and which resources are supported?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-vpc-origins-no-secret-headers-free-private-ipv4",
+    "cloudfront-faq-vpc-origins-supported-resources",
+    "cloudfront-faq-vpc-origins-no-ipv6-private-ipv4",
+    "cloudfront-faq-vpc-origins-cross-account-ram",
+    "cloudfront-faq-vpc-origins-versus-origin-mtls"
+   ],
+   "hypothesis": "FAQ items 108 and 111",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 107, 108, 111, 112, 113. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d161",
+   "bullet": "4.4.S4",
+   "lens": "faq",
+   "question": "FAQ: What is Origin Shield and when should I use it?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-origin-shield-central-cache-layer",
+    "cloudfront-faq-origin-shield-collapses-requests-across-regions",
+    "cloudfront-faq-origin-shield-when-to-use",
+    "cloudfront-faq-origin-shield-region-lowest-latency",
+    "cloudfront-faq-origin-shield-secondary-location-failover"
+   ],
+   "hypothesis": "FAQ items 128 and 129",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 128 to 131. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d162",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "FAQ: What are Anycast Static IPs and how many IP addresses do I receive?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-anycast-static-ips-what",
+    "cloudfront-faq-anycast-ip-count-allow-listing-21",
+    "cloudfront-faq-anycast-ip-count-apex-3",
+    "cloudfront-faq-anycast-multiple-distributions-same-account",
+    "cloudfront-faq-anycast-not-for-single-geographic-region",
+    "cloudfront-faq-zone-apex-anycast-static-ip"
+   ],
+   "hypothesis": "FAQ items 133 and 135",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 133 to 141. The number of addresses depends on the use case: 21 for allow-listing, 3 for the apex domain (contradicts a single-number hypothesis). cf-0590 is the queued pair; close with --both (different use cases). The user guide request-static-ips page is the tier 1 check (numbers lens). adjudicate-15: status set after adjudication; removed rejected cloudfront-faq-byoip-anycast-three-24-blocks-via-ipam.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d163",
+   "bullet": "2.1.K7",
+   "lens": "faq",
+   "question": "FAQ: Does CloudFront cache POST responses; what HTTP request types are supported?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-http-methods-supported",
+    "cloudfront-faq-post-put-delete-patch-not-cached"
+   ],
+   "hypothesis": "FAQ items 56 and 57",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 56 and 57. The FAQ says CloudFront does not cache POST, PUT, DELETE and PATCH responses and that OPTIONS caching can be enabled; it does not name GET and HEAD caching. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d164",
+   "bullet": "2.1.K7",
+   "lens": "faq",
+   "question": "FAQ: Is CloudFront Functions replacing Lambda@Edge; should I use CloudFront Functions or Lambda@Edge?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-functions-complement-lambda-edge",
+    "cloudfront-faq-lambda-edge-for-heavy-computation",
+    "cloudfront-faq-keyvaluestore-global-key-value-for-functions",
+    "cloudfront-faq-lambda-edge-four-trigger-events"
+   ],
+   "hypothesis": "FAQ items 161 and 162",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 159, 161, 162, 168. The CloudFront Functions numeric limits are not in the FAQ (numbers lens, cloudfront-function-restrictions). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d165",
+   "bullet": "4.4.S4",
+   "lens": "faq",
+   "question": "FAQ: Can I choose to serve content only from less expensive CloudFront Regions (price classes)?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-price-classes-exclude-expensive-locations",
+    "cloudfront-faq-price-classes-higher-latency-and-billing"
+   ],
+   "hypothesis": "FAQ item 196",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ item 196. The FAQ does not list which locations are in each price class (it links to a list). adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-price-classes-higher-latency-and-billing.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d166",
+   "bullet": "4.4.S4",
+   "lens": "faq",
+   "question": "FAQ: What usage is in the CloudFront free tier; what is the CloudFront Security Savings Bundle?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-free-tier-monthly-usage",
+    "cloudfront-faq-free-tier-excluded-usage-types",
+    "cloudfront-faq-free-tier-one-per-organization",
+    "cloudfront-faq-security-savings-bundle-30-percent-1-year",
+    "cloudfront-faq-security-savings-bundle-waf-included-10-percent",
+    "cloudfront-faq-security-savings-bundle-not-for-flat-rate",
+    "cloudfront-faq-security-savings-bundle-expiry-standard-charges"
+   ],
+   "hypothesis": "FAQ items 187 and 197: savings bundle 1-year term, up to 30% savings, includes WAF credit",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 187, 188, 197, 198, 200, 205. Items 27 and 189 also state 1 TB and 10 million requests as the free tier; item 187 adds 2,000,000 CloudFront Functions invocations. The savings bundle is 'up to 30%' for a 1 year term with WAF credit up to 10% of the commitment. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-security-savings-bundle-expiry-standard-charges.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d167",
+   "bullet": "4.4.S4",
+   "lens": "faq",
+   "question": "FAQ: Flat-rate plans: are there overage charges, do DDoS attacks count against the allowance, how do they compare with pay-as-you-go?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-flat-rate-no-overage-charges",
+    "cloudfront-faq-flat-rate-attack-traffic-not-counted",
+    "cloudfront-faq-flat-rate-vs-pay-as-you-go-when",
+    "cloudfront-faq-flat-rate-one-distribution-per-plan",
+    "cloudfront-faq-flat-rate-monthly-renewal-no-annual-commitment",
+    "cloudfront-quota-free-plans-per-account"
+   ],
+   "hypothesis": "FAQ items 17, 18, 25",
+   "look_in": [
+    "www/cloudfront/faqs",
+    "www/cloudfront/pricing"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 17, 18, 22, 24, 25, 28, 29. Plan prices and allowances are not in this lens (www/cloudfront/pricing, flat-rate-pricing-plan; numbers lens). www/cloudfront/pricing was not read for this lens beyond the FAQ. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:cloudfront-faq-flat-rate-monthly-renewal-no-annual-commitment.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d168",
+   "bullet": "3.2.K2",
+   "lens": "faq",
+   "question": "FAQ: Can I point my zone apex at a CloudFront distribution; does CloudFront offer an SLA?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-zone-apex-route53-alias",
+    "cloudfront-faq-zone-apex-anycast-static-ip",
+    "cloudfront-faq-sla-service-credit"
+   ],
+   "hypothesis": "FAQ items 13 and 16",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 13 and 16. The SLA uptime percentage is not in the FAQ; it is on www/cloudfront/sla (numbers lens: cloudfront-sla-credit-*). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d169",
+   "bullet": "4.4.S4",
+   "lens": "faq",
+   "question": "FAQ: What logging capabilities and destinations does CloudFront offer; are standard logs charged; real-time monitoring options?",
+   "status": "filled",
+   "facts": [
+    "cloudfront-faq-standard-logs-destinations-and-charge",
+    "cloudfront-faq-real-time-logs-kinesis-data-streams-charged",
+    "cloudfront-faq-real-time-logs-sampling-rate",
+    "cloudfront-faq-cloudwatch-six-metrics-one-minute",
+    "cloudfront-faq-cloudtrail-api-call-history",
+    "cloudfront-faq-cost-allocation-tags-on-distributions"
+   ],
+   "hypothesis": "FAQ items 145 to 148 and 152",
+   "look_in": [
+    "www/cloudfront/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "FAQ items 145, 146, 148, 150, 151, 152. The CloudWatch metric count of six may differ in the user guide (monitoring-using-cloudwatch); the behavior lens should compare. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d170",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "GA FAQ: What is AWS Global Accelerator, what can I do with it, and what performance improvement does it provide?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-what-it-is-static-entry-point",
+    "global-accelerator-faq-performance-p90-tcp-improvements",
+    "global-accelerator-faq-anycast-ips-onboard-near-users"
+   ],
+   "hypothesis": "FAQ items 1 to 3",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "GA FAQ items 1 to 3. The p90 figures are measured and volatile. adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d171",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "GA FAQ: How does Global Accelerator work with Elastic Load Balancing; can I use it for on-premises services; for S3?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-elb-within-region-ga-across-regions",
+    "global-accelerator-faq-relies-on-elb-for-l7-and-prewarming",
+    "global-accelerator-faq-on-premises-via-nlb"
+   ],
+   "hypothesis": "FAQ items 5, 7, 9",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "link_existing": [
+    "s3-faq-mrap-global-accelerator"
+   ],
+   "registered_by": "register-15",
+   "note": "GA FAQ items 5, 7 and 9. S3: existing fact s3-faq-mrap-global-accelerator (linked, not duplicated). adjudicate-15: status set after adjudication.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d172",
+   "bullet": "3.2.K2",
+   "lens": "faq",
+   "question": "GA FAQ: How does Global Accelerator support multi-Region failover and how fast does it fail over; do I benefit with a single Region?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-multi-region-failover-redirects-traffic",
+    "global-accelerator-faq-failover-detect-under-one-minute",
+    "global-accelerator-faq-single-region-static-ip-benefits",
+    "global-accelerator-faq-health-checks-route-only-to-healthy-endpoints",
+    "global-accelerator-faq-no-dns-cache-dependency-seconds"
+   ],
+   "hypothesis": "FAQ items 11, 13, 14",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "GA FAQ items 10 to 14 and 31. The answer to item 14 is 'less than one minute' to detect and take an unhealthy endpoint out of service. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-faq-no-dns-cache-dependency-seconds.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d173",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "GA FAQ: What protocols and IP versions does Global Accelerator support?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-protocols-tcp-and-udp",
+    "global-accelerator-change-dual-stack-2022-07",
+    "global-accelerator-change-ipv6-ec2-endpoints-2023-08",
+    "global-accelerator-change-dual-stack-nlb-2023-11",
+    "global-accelerator-dual-stack-ipv6-support"
+   ],
+   "hypothesis": "FAQ items 29 and 30: TCP and UDP; IPv4 and IPv6 (dual-stack)",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "GA FAQ items 29 and 30: TCP and UDP are confirmed. The brief hypothesis 'IPv4 and IPv6 (dual-stack)' is only partly what the FAQ says: IPv4 towards all endpoints, IPv6 only towards Application Load Balancer endpoints. The user guide document history (WhatsNew) adds dual-stack Network Load Balancers and EC2 instances, so the FAQ is out of date (see discrepancies). register-15: the FAQ IPv6 sentence (ALB only) was rejected as out of date; current IP versions come from the dual-stack facts and the document history adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-dual-stack-ipv6-support.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d174",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "GA FAQ: How are Global Accelerator static IP addresses different from Elastic IP addresses; can I bring my own IPs?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-vs-elastic-ip-scope-and-advertisement",
+    "global-accelerator-faq-ips-client-generated-connections-only",
+    "global-accelerator-faq-byoip-own-ranges-as-entry-point",
+    "global-accelerator-faq-byoip-max-two-ranges",
+    "global-accelerator-faq-byoip-most-specific-prefix-24",
+    "global-accelerator-faq-byoip-own-ranges-only-one-service"
+   ],
+   "hypothesis": "FAQ items 16 and 18",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "GA FAQ items 16 to 22. The FAQ also lists ARIN, RIPE and APNIC prefixes (item 21); that sentence was not added as a fact. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-faq-vs-elastic-ip-scope-and-advertisement.",
+   "adjudicated_by": "adjudicate-15"
+  },
+  {
+   "id": "d175",
+   "bullet": "3.4.K1",
+   "lens": "faq",
+   "question": "GA FAQ: What is a custom routing accelerator and how is it different from a standard accelerator?",
+   "status": "filled",
+   "facts": [
+    "global-accelerator-faq-custom-routing-deterministic-ec2-destination",
+    "global-accelerator-faq-custom-routing-vs-standard-endpoints",
+    "global-accelerator-faq-custom-routing-static-port-mapping",
+    "global-accelerator-faq-custom-routing-no-external-health-checks",
+    "global-accelerator-faq-custom-routing-vpc-subnet-max-size-17"
+   ],
+   "hypothesis": "FAQ items 23 and 24",
+   "look_in": [
+    "www/global-accelerator/faqs"
+   ],
+   "registered_by": "register-15",
+   "note": "GA FAQ items 8, 23 to 28. Item 28 names 64,000 destinations only in its question heading, not in the answer, so the 64,000 limit is not a FAQ fact; the numbers lens should find it in about-custom-routing-guidelines or limits-global-accelerator. adjudicate-15: status set after adjudication; close-facts-15: verified in the second vote round:global-accelerator-faq-custom-routing-deterministic-ec2-destination, global-accelerator-faq-custom-routing-vs-standard-endpoints, global-accelerator-faq-custom-routing-static-port-mapping.",
+   "adjudicated_by": "adjudicate-15"
+  }
+ ]
+}

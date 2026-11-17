@@ -1,0 +1,27 @@
+{
+ "by": "tasks-13",
+ "date": "2026-10-14",
+ "file": "data/13-route53/tasks.json",
+ "tasks": ["route53-t01 look", "route53-t02 try (pass_route)", "route53-t03 try"],
+ "blocking_contract_gap": {
+  "finding": "T106 fails on route53-t02 steps[0] (create-hosted-zone) and route53-t03 steps[0] (create-hosted-zone) and steps[3] (create-health-check). Neither operation has a tag option: the CLI reference pages (saved 2026-10-13) list none, and `tasks check-cli 13` reports T118 for both ('has no tag option in the CLI model and is not in untaggable_operations'). Route 53 tags a hosted zone or a health check only with change-tags-for-resource, which each task runs as a later step with Key=book,Value=saa Key=task,Value=<task id>.",
+  "fix_for_the_orchestrator": "Add \"create-hosted-zone\" and \"create-health-check\" to SPEC.json tasks.untaggable_operations (the list is a seed; untaggable_rule). Not done by this agent: SPEC.json is the orchestrator's contract and its hash is an input of every gate record.",
+  "proof": "With the two operations added in memory only (scratch script, nothing written), `lab.lint_chapter(13)` returns ok with 0 errors and 0 warnings: 3 tasks, 1 look, 2 try, 2 break-it steps, 1 try with pass_route. The --ship form then fails only T201, because all three tasks are still candidates (a reviewer sets them ready).",
+  "after_the_fix": "python3 aws-saa-book/tools/saa.py stage end 13 tasks --counts tasks=3"
+ },
+ "changes_from_brief": [
+  "route53-t01: one step added (list-health-checks with type and IP address) so the Look shows that health check addresses are public; 5 steps, 4 minutes.",
+  "route53-t02 and route53-t03: a get-hosted-zone step follows create-hosted-zone. create-hosted-zone returns the zone as the path /hostedzone/<id>. The AWS CLI strips that path for top-level hosted zone parameters (ResourceId shapes: --id, --hosted-zone-id), so those commands use the captured $ZONE_ID; but change-tags-for-resource (shape TagResourceId) and AliasTarget.HostedZoneId inside the change batch (nested; max 32 characters) need the short ID, so those two commands use the placeholder <ZONE_ID>, which the reader copies in that step.",
+  "route53-t02: the zone name is saa-route53-t02.example as planned; the step 1 expect gives the fallback (a subdomain of a domain she administers) because no saved AWS page says whether Route 53 accepts a .example name.",
+  "route53-t03: redesigned within the brief's trap and section. The calculated health check (HealthThreshold 1, no children, always unhealthy) goes on both failover records from the start, so the break-it step (step 7) observes the both-unhealthy answer (the primary) directly. The fix (step 8) replaces the secondary with a record without a health check, and re-running step 7 shows the secondary. This fits the 8-step maximum of a Try. The planned threshold-0 and invert facts are not used; the explain also links route53-last-resort-mode-all-unhealthy-returns-answer. The title stays as in the brief.",
+  "route53-t03: the HealthCheck caller reference is saa-route53-t03-hc-1; the CLI reference says a caller reference of a deleted health check returns HealthCheckAlreadyExists, so the step text tells her to change it on a repeat.",
+  "Change batches use AWS CLI shorthand syntax in double quotes, so $HC_ID expands in CloudShell; check-cli parsed all 28 commands (awscli 1.46.1, --reference also passed)."
+ ],
+ "verify_choice": "fr-0078 (does the Resource Groups Tagging API list route53 hosted zones and health checks) is still open, so both Try tasks verify through the T108 by-name exception: list-hosted-zones-by-name --dns-name saa-route53-t0N.example with a query on the exact zone name, expect an empty list. route53-t03 also lists a health check check in still_costs (list-health-checks filtered by its caller reference). If fr-0078 is filled, the verify can move to get-resources --tag-filters Key=task,Values=<task id>; otherwise fr-0078 can be closed as not needed by the tasks.",
+ "open_points_for_review": [
+  "test-dns-answer: the API reference says it gets the value that Route 53 returns for a DNS request (public hosted zones only); no saved page says in words that it applies health check status. route53-t03 relies on that; the claims reviewer may want to confirm.",
+  "create-health-check with Type=CALCULATED and no ChildHealthChecks: the API reference marks ChildHealthChecks as not required and says a threshold above the number of children makes the check always unhealthy; no example shows zero children.",
+  "The InvalidChangeBatch wording in route53-t02 step 5 expect is general on purpose (the exact message text is not on a saved page)."
+ ],
+ "checks": "tasks lint 13: 3 errors, all T106 of the contract gap above; tasks check-cli 13 and --reference: 28 commands ok, 3 T118 warnings (the same gap)."
+}

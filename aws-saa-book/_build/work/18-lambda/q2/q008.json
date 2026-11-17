@@ -1,0 +1,88 @@
+[
+ {
+  "id": "lambda-q008",
+  "section": "2-deep.md#a-synchronous-caller-handles-errors-itself-but-lambda-retries-asynchronous-events",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K5"],
+  "topics": ["integration", "resilience", "compute"],
+  "services": ["lambda", "s3", "sqs", "sns", "dynamodb"],
+  "concept": "async-failure-destination",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company stores customer uploads in an Amazon S3 bucket. Amazon S3 invokes an AWS Lambda function for each new object. Some uploads are malformed, and the function fails on every attempt to process them. Today, these failed events are retried and then lost. The operations team must keep each failed event together with its error details and must receive each failed event as soon as possible after the first failure. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": ["together with its error details", "as soon as possible after the first failure", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Configure an on-failure destination for asynchronous invocations of the function, and choose an Amazon SQS standard queue as the destination.",
+    "correct": true,
+    "why": "A failed event goes to [a standard SQS queue](../facts/lambda.md#lambda-async-destination-targets) as a record with details about the response, which a dead-letter queue lacks.",
+    "concept": "on-failure-destination-sqs",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Set the maximum retry attempts in the asynchronous invocation configuration of the function to 0, so that a failed event is not retried.",
+    "correct": true,
+    "why": "The retry count can be set [between 0 and 2](../facts/lambda.md#lambda-async-retry-attempts-0-to-2); at 0, the first failure goes to the destination at once.",
+    "concept": "async-retry-attempts-zero",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Configure an Amazon SQS standard queue as the dead-letter queue of the function, and read the failed events from that queue.",
+    "correct": false,
+    "why": "A dead-letter queue keeps the event but not the error, because Lambda [only sends the content of the event](../facts/lambda.md#lambda-dlq-content-only-vs-destinations).",
+    "concept": "function-dead-letter-queue",
+    "trap": "lambda-trap-dlq-keeps-details",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Configure an on-failure destination for asynchronous invocations of the function, and choose an Amazon SNS FIFO topic as the destination.",
+    "correct": false,
+    "why": "A FIFO topic is an [unsupported destination type](../facts/lambda.md#lambda-destination-fifo-unsupported) for asynchronous invocation records, so no record arrives.",
+    "concept": "fifo-destination",
+    "trap": null,
+    "misconception": "believes that any Amazon SNS topic can receive invocation records",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "e",
+    "text": "Add error handling code to the function that writes each failed event and its error message to an Amazon DynamoDB table.",
+    "correct": false,
+    "why": "It works, but custom error code in the function is more to build and maintain than two settings in the asynchronous invocation configuration.",
+    "concept": "custom-error-table",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Amazon S3 invokes the function asynchronously. After a failure, Lambda tries [two more times](../facts/lambda.md#lambda-async-default-two-retries), and then [Lambda discards it](../facts/lambda.md#lambda-async-discard-then-destination) unless a destination keeps it. An on-failure destination keeps a record with the error details, and a retry count of 0 sends the record after the first failure.",
+  "takeaway": "Failed asynchronous events with their error details go to an on-failure destination; 0 retries sends them at once.",
+  "twin": "If the stem said \"must keep only the content of each failed event\" instead: a dead-letter queue also fits, because Lambda [only sends the content of the event](../facts/lambda.md#lambda-dlq-content-only-vs-destinations).",
+  "say": "An on-failure destination keeps the event and the error, and zero retries sends it right after the first failure.",
+  "facts": [
+   "lambda-async-destination-targets",
+   "lambda-async-retry-attempts-0-to-2",
+   "lambda-dlq-content-only-vs-destinations",
+   "lambda-destination-fifo-unsupported",
+   "lambda-async-default-two-retries",
+   "lambda-async-discard-then-destination",
+   "lambda-trigger-s3-async"
+  ],
+  "sources": [],
+  "exam_english": ["ee-select-two", "ee-as-soon-as-possible", "ee-which-combination", "ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ }
+]

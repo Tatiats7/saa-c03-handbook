@@ -1,0 +1,3386 @@
+{
+ "chapter": "12",
+ "slug": "hybrid-networking",
+ "title": "Site-to-Site VPN, Direct Connect and Client VPN",
+ "template": "medium",
+ "written_by": "plan-12",
+ "written_at": "2026-10-13",
+ "sources_fetched": 183,
+ "fetch_failures": [
+  {
+   "url": "https://aws.amazon.com/vpn/sla/",
+   "reason": "HTTP 404 (exit 1). Not a registry source. Site-to-Site VPN availability claims come from the Direct Connect SLA page (www/directconnect/sla), the hybrid-connectivity whitepaper page service-level-agreement-sla and the VPN guide page disaster-recovery-resiliency."
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/07/aws-direct-connect-native-400-gbps-dedicated-connections-select-locations",
+   "reason": "robots.txt of aws.amazon.com disallows this path (exit 4). Use the Direct Connect document-history row 'Support for 400G' (2024-07-18) in docs/directconnect/latest/UserGuide/AboutThisGuide and the speed list in dedicated_connection."
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/04/aws-direct-connect-gbps-hosted-connection-capacities/",
+   "reason": "robots.txt disallows (exit 4). Use the speed list in docs/directconnect/latest/UserGuide/hosted_connection and connection_options; the change date stays a feed date (changes for direct-connect --find hosted)."
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/the-rane-group-case-study/",
+   "reason": "fetched with status 200 but the page redirects to the generic case-study directory (title 'Customer Success Stories'); not usable as evidence."
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/dallara-case-study/",
+   "reason": "fetched with status 200 but the page redirects to the generic case-study directory; not usable as evidence."
+  }
+ ],
+ "notes": [
+  "Research input only: FREQUENCY.md (rank 26 of 42, 'moderate', 2 first-hand reports; sub-topics Direct Connect vs VPN provisioning time and performance, VPN over Direct Connect for encryption, Direct Connect resilience with two locations, bandwidth choice; pairs Site-to-Site VPN vs Direct Connect and Client VPN vs Site-to-Site VPN; stem signals 'consistent network performance', 'dedicated connection', 'within days', 'encrypt traffic over Direct Connect', 'remote employees', 'MOST resilient') and FRESHNESS.md section 'Direct Connect, Site-to-Site VPN, Client VPN' are hypotheses. Every value must come from a saved AWS page.",
+  "The hybrid-connectivity whitepaper pages carry the banner 'This whitepaper is for historical reference only. Some content might be outdated'. Quote it for decision reasoning (time to deploy, security, reliability, cost, performance), never for a current number when a guide page states that number.",
+  "Ownership: chapter 11 owns AWS Transit Gateway, VPC peering, PrivateLink and endpoints (here only the sentences that say a VPN or a Direct Connect gateway attaches to a transit gateway); chapter 10 owns the VPC, route tables and the virtual private gateway as a VPC object (reuse vpc-route-propagation-from-vgw, vpc-connect-site-to-site-vpn-two-tunnels, vpc-faq-site-to-site-vpn-ipsec, vpc-faq-vpn-connection-hour-billing, vpc-faq-def-virtual-private-gateway, vpc-faq-privatelink-over-direct-connect, privatelink-faq-over-direct-connect, network-firewall-faq-direct-connect-vpn-via-tgw when they fit); chapter 13 owns Route 53 Resolver endpoints (here one sentence of the hybrid DNS whitepaper); chapter 25 owns DataSync, Storage Gateway and the 80 TB bank archive (here only Direct Connect speed facts); chapter 15 owns Global Accelerator (here only 'Accelerated Site-to-Site VPN uses Global Accelerator'); chapter 05 owns IAM Identity Center and SAML.",
+  "Fact namespaces: site-to-site-vpn-*, direct-connect-*, client-vpn-*. Change facts: <service>-change-*. FAQ facts: <service>-faq-* (the VPN FAQ www/vpn/faqs serves both Site-to-Site VPN and Client VPN; file each FAQ fact under the service its question is about). Comparison facts sit with the service they decide for (for example direct-connect-vs-vpn-* under direct-connect).",
+  "Not examinable yet (GA after 2026-07-15): Direct Connect flat-rate billing for dedicated connections (2026-09-15); Direct Connect inbound prefix controls and higher prefix scale (2026-08-20; the old value was a fixed 100 routes per BGP session on a private or transit virtual interface); Direct Connect BGP route visibility (2026-07-30); AWS VPN Client v6 with CLI and administration controls (2026-08-13); AWS Interconnect - multicloud with Azure (preview, 2026-08-31). Hypothesis to check: Client VPN device posture (date not in the feeds; check docs/vpn/latest/clientvpn-admin/WhatsNew and device-posture). Examinable but very recent (label 'Changed recently'): Direct Connect VIF Rate Limiters (2026-06-01); Site-to-Site VPN tunnel bandwidth modification on existing connections (2026-05-06); Client VPN native Transit Gateway integration (2026-04-20 history, 2026-04-23 What's New); AWS Interconnect - multicloud and last mile GA (2026-04-14, 2026-04-13); Site-to-Site VPN 5 Gbps large bandwidth tunnels (2025-09-25 history, 2025-11-12 What's New); VPN Concentrator (2025-11-15/19).",
+  "Quota trap for the writer: the routes-per-BGP-session row of the Direct Connect quotas page now says 'Default of 100 each for IPv4 and IPv6. Can be increased using prefix controls up to 1,000'. Prefix controls are not examinable yet, so the examinable answer is 100 and the 1,000 belongs in a 'Changed recently' note.",
+  "Change inputs: changes-site-to-site-vpn.txt (17 items since 2022-07-01), changes-direct-connect.txt (74; most are new-location announcements to skip), changes-client-vpn.txt (22). What's New posts from 2025 and 2026 are in the corpus (urls-f-whatsnew.txt); 2024 posts are blocked by robots.txt (see fetch_failures).",
+  "FAQ indexes parsed 2026-10-13: corpus/faq/vpn.jsonl (120 questions; item 120 '[] NA' is page noise) and corpus/faq/directconnect.jsonl (193; item 193 '[] NA' is page noise). Lists in faq-vpn.txt and faq-directconnect.txt in this folder.",
+  "Case studies in the corpus: www/solutions/case-studies/nium (Direct Connect with CloudHSM to clearing systems), discover-case-study (Direct Connect to move transactions into Amazon S3), q2-presidio (Direct Connect named only in the services list), migros-case-study. Other candidates in cases-directconnect.txt are fetched on demand.",
+  "Callvale (STARTUP.md, chapter 12, stage 3, month 18): the bank's recorder runs in a data center in New Jersey and starts in 3 weeks; an encrypted connection must be ready in 3 weeks; within 6 months the bank requires a private connection with consistent throughput; engineers need access to a private admin tool. Decision: VPN in 5 days, Direct Connect after 10 weeks, VPN kept for backup; the connections end on the transit gateway; AWS Client VPN for engineers. Accepts two connections to operate and a fixed monthly cost. Chen asks: 'The bank says that Direct Connect is private. Does private mean encrypted?' Stage 4 adds a second VPN, to Peldon. The bank allows 500 Mbps on the Direct Connect connection (chapter 25 story). Demand items tagged 'callvale' hold the facts behind these reasons; if the canon has no sentence for a stated reason, the miner reports not-found and the writer changes the reason. Question stems never name Callvale.",
+  "Lens names in the demand items: numbers, changes (lens numbers+changes); behavior, decisions (lens behavior+decisions); faq (lens faq). See mine-plan.json."
+ ],
+ "demand": [
+  {
+   "id": "d12-001",
+   "bullet": "3.4.K4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-concept-customer-gateway-is-aws-resource",
+    "site-to-site-vpn-concept-vpn-tunnel-encrypted-link",
+    "site-to-site-vpn-definition-ipsec-vpc-to-on-premises",
+    "site-to-site-vpn-target-gateway-generic-term",
+    "site-to-site-vpn-vgw-amazon-side-asn-default-64512-not-changeable"
+   ],
+   "question": "What is AWS Site-to-Site VPN in one sentence (an IPsec connection between your network and a VPC or transit gateway)? Quote the guide's definitions of the VPN connection, the VPN tunnel, the customer gateway, the customer gateway device and the target gateway.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/VPC_VPN",
+    "docs/vpn/latest/s2svpn/how_it_works"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-concept-customer-gateway-is-aws-resource",
+    "site-to-site-vpn-concept-vpn-tunnel-encrypted-link",
+    "site-to-site-vpn-definition-ipsec-vpc-to-on-premises",
+    "site-to-site-vpn-target-gateway-generic-term",
+    "site-to-site-vpn-vgw-amazon-side-asn-default-64512-not-changeable"
+   ]
+  },
+  {
+   "id": "d12-002",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-endpoint-replacement-interrupts-tunnel",
+    "site-to-site-vpn-endpoint-update-one-tunnel-at-a-time",
+    "site-to-site-vpn-two-tunnels-different-availability-zones",
+    "site-to-site-vpn-two-tunnels-unique-public-ip-configure-both"
+   ],
+   "question": "Does each Site-to-Site VPN connection have two tunnels, and why (redundancy; each tunnel uses a unique public IP address)? What does AWS recommend (configure both tunnels), and what can happen to one tunnel during AWS maintenance or an endpoint replacement?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/VPNTunnels",
+    "docs/vpn/latest/s2svpn/how_it_works",
+    "docs/vpn/latest/s2svpn/endpoint-replacements",
+    "docs/vpn/latest/s2svpn/disaster-recovery-resiliency"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-endpoint-replacement-interrupts-tunnel",
+    "site-to-site-vpn-endpoint-update-one-tunnel-at-a-time",
+    "site-to-site-vpn-two-tunnels-different-availability-zones",
+    "site-to-site-vpn-two-tunnels-unique-public-ip-configure-both"
+   ]
+  },
+  {
+   "id": "d12-003",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-dh-groups-phase1-phase2",
+    "site-to-site-vpn-ipsec-aes-sha-dh-pfs",
+    "site-to-site-vpn-use-ikev2-recommended",
+    "site-to-site-vpn-vpn-over-internet-inconsistent-performance"
+   ],
+   "question": "How does Site-to-Site VPN protect data in transit: IPsec, which IKE versions, which encryption and integrity algorithms and Diffie-Hellman groups can a tunnel use? Does the VPN traffic travel over the internet?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/data-protection",
+    "docs/vpn/latest/s2svpn/VPNTunnels",
+    "docs/vpn/latest/s2svpn/infrastructure-security",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-dh-groups-phase1-phase2",
+    "site-to-site-vpn-ipsec-aes-sha-dh-pfs",
+    "site-to-site-vpn-use-ikev2-recommended",
+    "site-to-site-vpn-vpn-over-internet-inconsistent-performance"
+   ]
+  },
+  {
+   "id": "d12-004",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-certificate-auth-private-ca",
+    "site-to-site-vpn-change-secrets-manager-psk",
+    "site-to-site-vpn-psk-default-authentication",
+    "site-to-site-vpn-psk-store-in-secrets-manager"
+   ],
+   "question": "Which tunnel authentication options exist (pre-shared keys, a private certificate from AWS Private Certificate Authority)? Can the pre-shared key be stored in AWS Secrets Manager, and since when (document-history row 2025-05-27)?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-tunnel-authentication-options",
+    "docs/vpn/latest/s2svpn/enhanced-security",
+    "docs/vpn/latest/s2svpn/WhatsNew",
+    "www/about-aws/whats-new/2025/06/aws-site-to-site-vpn-three-capabilities-enhanced-security"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-certificate-auth-private-ca",
+    "site-to-site-vpn-change-secrets-manager-psk",
+    "site-to-site-vpn-psk-default-authentication",
+    "site-to-site-vpn-psk-store-in-secrets-manager"
+   ]
+  },
+  {
+   "id": "d12-005",
+   "bullet": "1.2.S4",
+   "kind": "default",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-aws-initiated-ike-needs-cgw-public-ip-and-ikev2",
+    "site-to-site-vpn-cgw-initiates-ike-by-default",
+    "site-to-site-vpn-dpd-timeout-action-default-stops-ike",
+    "site-to-site-vpn-dpd-timeout-default-40-seconds"
+   ],
+   "question": "Which side initiates the IKE negotiation by default (the customer gateway device), and can AWS initiate it instead? What is the dead peer detection (DPD) timeout default and the default DPD timeout action?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/initiate-vpn-tunnels",
+    "docs/vpn/latest/s2svpn/VPNTunnels",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-aws-initiated-ike-needs-cgw-public-ip-and-ikev2",
+    "site-to-site-vpn-cgw-initiates-ike-by-default",
+    "site-to-site-vpn-dpd-timeout-action-default-stops-ike",
+    "site-to-site-vpn-dpd-timeout-default-40-seconds"
+   ]
+  },
+  {
+   "id": "d12-006",
+   "bullet": "3.4.S1",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-target-gateway-can-change-vgw-to-tgw",
+    "site-to-site-vpn-tgw-vpn-counts-against-attachment-limit",
+    "site-to-site-vpn-vgw-attaches-to-single-vpc"
+   ],
+   "question": "A virtual private gateway attaches to one VPC at a time: quote it. To connect the same VPN to several VPCs, what does AWS recommend (a transit gateway)? Do VPN connections on a transit gateway count against the transit gateway attachment quota?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-limits",
+    "docs/vpn/latest/s2svpn/how_it_works",
+    "docs/vpc/latest/tgw/tgw-vpn-attachments"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-target-gateway-can-change-vgw-to-tgw",
+    "site-to-site-vpn-tgw-vpn-counts-against-attachment-limit",
+    "site-to-site-vpn-vgw-attaches-to-single-vpc"
+   ]
+  },
+  {
+   "id": "d12-007",
+   "bullet": "4.4.K5",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-cgw-asn-ranges-private-16-and-32-bit",
+    "site-to-site-vpn-cgw-behind-nat-use-nat-public-ip",
+    "site-to-site-vpn-cgw-resource-does-not-configure-device",
+    "site-to-site-vpn-dynamic-routing-device-needs-bgp-and-dpd",
+    "site-to-site-vpn-nat-device-needs-idr-identity",
+    "site-to-site-vpn-nat-t-udp-4500-if-not-disabled",
+    "site-to-site-vpn-policy-based-device-limit-single-sa"
+   ],
+   "question": "What does the customer gateway device need (an internet-routable IP address, or a private IP address for a private IP VPN; IKE, IPsec, BGP for dynamic routing)? Can the customer gateway sit behind a NAT device (NAT traversal)?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/CGRequirements",
+    "docs/vpn/latest/s2svpn/cgw-options",
+    "docs/vpn/latest/s2svpn/your-cgw",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-cgw-asn-ranges-private-16-and-32-bit",
+    "site-to-site-vpn-cgw-behind-nat-use-nat-public-ip",
+    "site-to-site-vpn-cgw-resource-does-not-configure-device",
+    "site-to-site-vpn-dynamic-routing-device-needs-bgp-and-dpd",
+    "site-to-site-vpn-nat-device-needs-idr-identity",
+    "site-to-site-vpn-nat-t-udp-4500-if-not-disabled",
+    "site-to-site-vpn-policy-based-device-limit-single-sa"
+   ]
+  },
+  {
+   "id": "d12-008",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-capability-concentrator-suitable-sites",
+    "site-to-site-vpn-concentrator-aggregate-5-gbps-site-100-mbps",
+    "site-to-site-vpn-ecmp-needs-dynamic-routing-not-static",
+    "site-to-site-vpn-faq-vgw-aggregate-throughput",
+    "site-to-site-vpn-limit-bandwidth-concentrator-tunnel",
+    "site-to-site-vpn-limit-bandwidth-large-tunnel",
+    "site-to-site-vpn-limit-bandwidth-standard-tunnel",
+    "site-to-site-vpn-limit-ecmp-20-gbps-example",
+    "site-to-site-vpn-limit-ipv6-same-as-ipv4",
+    "site-to-site-vpn-limit-pps-concentrator-tunnel",
+    "site-to-site-vpn-limit-pps-large-tunnel",
+    "site-to-site-vpn-limit-pps-standard-tunnel"
+   ],
+   "question": "Maximum bandwidth and packets per second per tunnel: standard tunnel (up to 1.25 Gbps, 140,000 PPS), large bandwidth tunnel (up to 5 Gbps, 400,000 PPS), VPN Concentrator tunnel (up to 100 Mbps, 10,000 PPS). Quote each row of the 'Bandwidth and throughput' table with its header; also the sentence that IPv6 VPNs have the same throughput as IPv4.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-capability-concentrator-suitable-sites",
+    "site-to-site-vpn-concentrator-aggregate-5-gbps-site-100-mbps",
+    "site-to-site-vpn-ecmp-needs-dynamic-routing-not-static",
+    "site-to-site-vpn-faq-vgw-aggregate-throughput",
+    "site-to-site-vpn-limit-bandwidth-concentrator-tunnel",
+    "site-to-site-vpn-limit-bandwidth-large-tunnel",
+    "site-to-site-vpn-limit-bandwidth-standard-tunnel",
+    "site-to-site-vpn-limit-ecmp-20-gbps-example",
+    "site-to-site-vpn-limit-ipv6-same-as-ipv4",
+    "site-to-site-vpn-limit-pps-concentrator-tunnel",
+    "site-to-site-vpn-limit-pps-large-tunnel",
+    "site-to-site-vpn-limit-pps-standard-tunnel"
+   ]
+  },
+  {
+   "id": "d12-009",
+   "bullet": "4.4.S7",
+   "kind": "restriction",
+   "lens": "numbers",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-capability-modify-tunnel-bandwidth",
+    "site-to-site-vpn-change-modify-tunnel-bandwidth",
+    "site-to-site-vpn-restriction-lbt-gateways",
+    "site-to-site-vpn-restriction-lbt-no-accelerated",
+    "site-to-site-vpn-restriction-lbt-same-bandwidth-both-tunnels"
+   ],
+   "question": "Large bandwidth tunnels: which target gateways support them (transit gateway, AWS Cloud WAN; is a virtual private gateway excluded)? Can the tunnel bandwidth of an existing VPN connection be changed (2026-05-06)? Is an accelerated VPN compatible with a large bandwidth tunnel?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/VPNTunnels",
+    "docs/vpn/latest/s2svpn/tunnel-configure",
+    "docs/vpn/latest/s2svpn/create-vpn-connection",
+    "www/about-aws/whats-new/2025/11/aws-site-to-site-vpn-5-gbps-bandwidth-tunnels",
+    "www/about-aws/whats-new/2026/05/aws-site-to-site-vpn-modify-bandwidth"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-capability-modify-tunnel-bandwidth",
+    "site-to-site-vpn-change-modify-tunnel-bandwidth",
+    "site-to-site-vpn-restriction-lbt-gateways",
+    "site-to-site-vpn-restriction-lbt-no-accelerated",
+    "site-to-site-vpn-restriction-lbt-same-bandwidth-both-tunnels"
+   ]
+  },
+  {
+   "id": "d12-010",
+   "bullet": "4.4.S7",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-ecmp-needs-dynamic-routing-not-static",
+    "site-to-site-vpn-ecmp-not-on-vgw-supported-on-tgw",
+    "site-to-site-vpn-tgw-vpn-ecmp-requires-dynamic-routing-whitepaper"
+   ],
+   "question": "How do you get more VPN bandwidth than one tunnel gives: ECMP across several VPN tunnels on a transit gateway. Quote that ECMP needs dynamic (BGP) routing and is not supported with static routing. Does a virtual private gateway support ECMP across tunnels?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-limits",
+    "docs/vpn/latest/s2svpn/VPNRoutingTypes",
+    "docs/vpn/latest/s2svpn/Examples",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-transit-gateway-vpn",
+    "docs/whitepapers/latest/hybrid-connectivity/scalability"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-ecmp-needs-dynamic-routing-not-static",
+    "site-to-site-vpn-ecmp-not-on-vgw-supported-on-tgw",
+    "site-to-site-vpn-tgw-vpn-ecmp-requires-dynamic-routing-whitepaper"
+   ]
+  },
+  {
+   "id": "d12-011",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "site-to-site-vpn",
+   "status": "partial-verified",
+   "facts": [
+    "site-to-site-vpn-change-vpn-concentrator",
+    "site-to-site-vpn-concentrator-bgp-only-no-static",
+    "site-to-site-vpn-limit-accelerated-unassociated-count-toward-total",
+    "site-to-site-vpn-quota-accelerated-connections",
+    "site-to-site-vpn-quota-concentrators-per-region",
+    "site-to-site-vpn-quota-concentrators-per-tgw",
+    "site-to-site-vpn-quota-connections-per-region",
+    "site-to-site-vpn-quota-connections-per-vgw",
+    "site-to-site-vpn-quota-customer-gateways",
+    "site-to-site-vpn-quota-large-bandwidth-tunnel-connections",
+    "site-to-site-vpn-quota-remote-sites-per-concentrator",
+    "site-to-site-vpn-quota-unassociated-connections",
+    "site-to-site-vpn-quota-virtual-private-gateways",
+    "site-to-site-vpn-restriction-concentrator-transit-gateway-only",
+    "site-to-site-vpn-vgw-attaches-to-single-vpc"
+   ],
+   "question": "Site-to-Site VPN resource quotas, each row with header and adjustable flag: customer gateways per Region (50), virtual private gateways per Region (5), VPN connections per Region (50), VPN connections per virtual private gateway (10), accelerated VPN connections per Region (10), large bandwidth tunnel connections per Region, VPN Concentrators per Region and per transit gateway, remote sites per VPN Concentrator.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-concentrator-bgp-only-no-static",
+    "site-to-site-vpn-limit-accelerated-unassociated-count-toward-total",
+    "site-to-site-vpn-quota-accelerated-connections",
+    "site-to-site-vpn-quota-concentrators-per-region",
+    "site-to-site-vpn-quota-concentrators-per-tgw",
+    "site-to-site-vpn-quota-connections-per-region",
+    "site-to-site-vpn-quota-connections-per-vgw",
+    "site-to-site-vpn-quota-customer-gateways",
+    "site-to-site-vpn-quota-large-bandwidth-tunnel-connections",
+    "site-to-site-vpn-quota-remote-sites-per-concentrator",
+    "site-to-site-vpn-quota-unassociated-connections",
+    "site-to-site-vpn-quota-virtual-private-gateways",
+    "site-to-site-vpn-restriction-concentrator-transit-gateway-only",
+    "site-to-site-vpn-vgw-attaches-to-single-vpc"
+   ],
+   "gap": "close-facts-12: named facts not verified: site-to-site-vpn-change-vpn-concentrator (rejected)"
+  },
+  {
+   "id": "d12-012",
+   "bullet": "3.4.S1",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-faq-bgp-resets-over-route-max",
+    "site-to-site-vpn-limit-concentrator-routes-per-site",
+    "site-to-site-vpn-limit-private-ip-vpn-route-scale",
+    "site-to-site-vpn-limit-routes-cgw-to-tgw-dynamic",
+    "site-to-site-vpn-limit-routes-cgw-to-vgw-dynamic",
+    "site-to-site-vpn-limit-routes-tgw-to-cgw",
+    "site-to-site-vpn-limit-routes-vgw-to-cgw",
+    "site-to-site-vpn-limit-static-routes-cgw-to-vgw"
+   ],
+   "question": "Route quotas: dynamic routes from a customer gateway to a VPN on a virtual private gateway (100) and on a transit gateway (1,000); routes advertised to the customer gateway from a virtual private gateway (1,000) and from a transit gateway (5,000); static routes (100). Each row with its header.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-limits",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-faq-bgp-resets-over-route-max",
+    "site-to-site-vpn-limit-concentrator-routes-per-site",
+    "site-to-site-vpn-limit-private-ip-vpn-route-scale",
+    "site-to-site-vpn-limit-routes-cgw-to-tgw-dynamic",
+    "site-to-site-vpn-limit-routes-cgw-to-vgw-dynamic",
+    "site-to-site-vpn-limit-routes-tgw-to-cgw",
+    "site-to-site-vpn-limit-routes-vgw-to-cgw",
+    "site-to-site-vpn-limit-static-routes-cgw-to-vgw"
+   ]
+  },
+  {
+   "id": "d12-013",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-limit-mtu-mss",
+    "site-to-site-vpn-restriction-no-jumbo-frames",
+    "site-to-site-vpn-restriction-no-path-mtu-discovery"
+   ],
+   "question": "Maximum transmission unit of a Site-to-Site VPN (1446 bytes; MSS 1406 bytes). Are jumbo frames supported? Is Path MTU Discovery supported?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-limits",
+    "docs/vpn/latest/s2svpn/cgw-best-practice"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-limit-mtu-mss",
+    "site-to-site-vpn-restriction-no-jumbo-frames",
+    "site-to-site-vpn-restriction-no-path-mtu-discovery"
+   ]
+  },
+  {
+   "id": "d12-014",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-bgp-recommended-liveness-failover",
+    "site-to-site-vpn-routing-bgp-if-device-supports-else-static",
+    "site-to-site-vpn-static-routes-device-without-bgp-enter-prefixes"
+   ],
+   "question": "Static routing vs dynamic routing (BGP): what each means, which one AWS recommends when the device supports BGP, and what BGP adds (failover between tunnels, route advertisement).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/VPNRoutingTypes",
+    "docs/vpn/latest/s2svpn/vpn-static-dynamic"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-bgp-recommended-liveness-failover",
+    "site-to-site-vpn-routing-bgp-if-device-supports-else-static",
+    "site-to-site-vpn-static-routes-device-without-bgp-enter-prefixes"
+   ]
+  },
+  {
+   "id": "d12-015",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-local-route-preferred-over-propagated",
+    "site-to-site-vpn-longest-prefix-match-most-specific-route",
+    "site-to-site-vpn-route-priority-dx-bgp-before-vpn-static-before-vpn-bgp",
+    "site-to-site-vpn-route-priority-shortest-as-path",
+    "site-to-site-vpn-static-route-beats-propagated-same-cidr",
+    "site-to-site-vpn-tunnel-health-precedes-other-routing-attributes"
+   ],
+   "question": "Route priority: when the same prefix is learned over Direct Connect and over a Site-to-Site VPN on a virtual private gateway (or a transit gateway), which path wins? Quote the ordered list (longest prefix first; then static vs propagated; Direct Connect BGP routes before VPN static routes before VPN BGP routes; AS_PATH for BGP).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-route-priority",
+    "docs/vpc/latest/tgw/tgw-vpn-attachments"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-local-route-preferred-over-propagated",
+    "site-to-site-vpn-longest-prefix-match-most-specific-route",
+    "site-to-site-vpn-route-priority-dx-bgp-before-vpn-static-before-vpn-bgp",
+    "site-to-site-vpn-route-priority-shortest-as-path",
+    "site-to-site-vpn-static-route-beats-propagated-same-cidr",
+    "site-to-site-vpn-tunnel-health-precedes-other-routing-attributes"
+   ]
+  },
+  {
+   "id": "d12-016",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-vpc-route-table-route-to-vgw-and-propagation"
+   ],
+   "question": "How do VPN routes reach the VPC route table (route propagation from the virtual private gateway, or a static route to the virtual private gateway)? Reuse vpc-route-propagation-from-vgw if it fits; add the VPN guide sentence.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-route-priority",
+    "docs/vpn/latest/s2svpn/SetUpVPNConnections",
+    "docs/vpn/latest/s2svpn/vpn-limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-vpc-route-table-route-to-vgw-and-propagation"
+   ]
+  },
+  {
+   "id": "d12-017",
+   "bullet": "4.4.S2",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-accelerated-cannot-toggle-on-existing",
+    "site-to-site-vpn-accelerated-disabled-by-default",
+    "site-to-site-vpn-accelerated-nat-t-required-ike-from-cgw",
+    "site-to-site-vpn-accelerated-no-public-dx-vif",
+    "site-to-site-vpn-accelerated-transit-gateway-only",
+    "site-to-site-vpn-accelerated-two-accelerators-managed-by-aws",
+    "site-to-site-vpn-accelerated-uses-global-accelerator-nearest-edge",
+    "site-to-site-vpn-accelerated-why-consistent-experience",
+    "site-to-site-vpn-billing-public-ipv4-per-connection",
+    "site-to-site-vpn-pricing-accelerated-extra-charges"
+   ],
+   "question": "Accelerated Site-to-Site VPN: what it does (AWS Global Accelerator routes traffic from the on-premises network to the nearest AWS edge location), which target gateway it requires (transit gateway only, not a virtual private gateway), whether an existing VPN can be converted, and whether it works over a public Direct Connect virtual interface.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/accelerated-vpn",
+    "www/vpn/faqs",
+    "docs/whitepapers/latest/hybrid-connectivity/aws-accelerated-site-to-site-vpn-aws-transit-gateway-single-aws-region"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-accelerated-cannot-toggle-on-existing",
+    "site-to-site-vpn-accelerated-disabled-by-default",
+    "site-to-site-vpn-accelerated-nat-t-required-ike-from-cgw",
+    "site-to-site-vpn-accelerated-no-public-dx-vif",
+    "site-to-site-vpn-accelerated-transit-gateway-only",
+    "site-to-site-vpn-accelerated-two-accelerators-managed-by-aws",
+    "site-to-site-vpn-accelerated-uses-global-accelerator-nearest-edge",
+    "site-to-site-vpn-accelerated-why-consistent-experience",
+    "site-to-site-vpn-billing-public-ipv4-per-connection",
+    "site-to-site-vpn-pricing-accelerated-extra-charges"
+   ]
+  },
+  {
+   "id": "d12-018",
+   "bullet": "3.4.S1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-cloudhub-hub-and-spoke-between-sites",
+    "site-to-site-vpn-cloudhub-over-internet-existing-connections",
+    "site-to-site-vpn-cloudhub-unique-asn-per-customer-gateway"
+   ],
+   "question": "AWS VPN CloudHub: what it is (hub-and-spoke between several remote sites through one virtual private gateway), what it requires (BGP, a unique ASN per site, non-overlapping ranges), and whether it uses the internet.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/VPN_CloudHub",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-vpn-cloudhub"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-cloudhub-hub-and-spoke-between-sites",
+    "site-to-site-vpn-cloudhub-over-internet-existing-connections",
+    "site-to-site-vpn-cloudhub-unique-asn-per-customer-gateway"
+   ]
+  },
+  {
+   "id": "d12-019",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-redundant-second-vpn-second-cgw-device"
+   ],
+   "question": "Redundant VPN connections: how to protect against the loss of the customer gateway device (a second customer gateway device and a second VPN connection; dynamic routing for automatic failover).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-redundant-connection",
+    "docs/vpn/latest/s2svpn/Examples",
+    "docs/vpn/latest/s2svpn/site-site-architectures"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-redundant-second-vpn-second-cgw-device"
+   ]
+  },
+  {
+   "id": "d12-020",
+   "bullet": "1.2.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-private-ip-vpn-ipsec-over-dx-no-public-ip",
+    "site-to-site-vpn-private-ip-vpn-needs-dx-transit-vif-dx-gateway-tgw",
+    "site-to-site-vpn-private-ip-vpn-needs-transit-gateway-and-dx-attachment",
+    "site-to-site-vpn-private-ip-vpn-transit-vif-instead-of-public-vif"
+   ],
+   "question": "Private IP VPN over Direct Connect: what it is (IPsec VPN with private IP addresses over a Direct Connect transit virtual interface), what it requires (a transit gateway and a Direct Connect gateway), and why use it (encrypt Direct Connect traffic without public IP addresses).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/private-ip-dx",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-private-ip-vpn-ipsec-over-dx-no-public-ip",
+    "site-to-site-vpn-private-ip-vpn-needs-dx-transit-vif-dx-gateway-tgw",
+    "site-to-site-vpn-private-ip-vpn-needs-transit-gateway-and-dx-attachment",
+    "site-to-site-vpn-private-ip-vpn-transit-vif-instead-of-public-vif"
+   ]
+  },
+  {
+   "id": "d12-021",
+   "bullet": "3.4.S1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-capability-concentrator-suitable-sites",
+    "site-to-site-vpn-concentrator-aggregate-5-gbps-site-100-mbps",
+    "site-to-site-vpn-concentrator-bgp-only-no-static",
+    "site-to-site-vpn-pricing-concentrator-hours"
+   ],
+   "question": "VPN Concentrator: what it is (many small remote sites on one attachment of a transit gateway or Cloud WAN), its tunnel bandwidth and remote-site quota, and when it became available (2025-11-15 history, 2025-11-19 What's New).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/vpn-concentrator",
+    "docs/vpn/latest/s2svpn/vpn-limits",
+    "www/about-aws/whats-new/2025/11/aws-site-to-site-vpn-concentrator"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-capability-concentrator-suitable-sites",
+    "site-to-site-vpn-concentrator-aggregate-5-gbps-site-100-mbps",
+    "site-to-site-vpn-concentrator-bgp-only-no-static",
+    "site-to-site-vpn-pricing-concentrator-hours"
+   ]
+  },
+  {
+   "id": "d12-022",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-cloudwatch-metrics-statistics-15-months",
+    "site-to-site-vpn-elc-aws-health-notifications",
+    "site-to-site-vpn-logs-tunnel-activity-to-cloudwatch-logs",
+    "site-to-site-vpn-metric-tunnel-data-in-counted-after-decryption",
+    "site-to-site-vpn-metric-tunnel-data-out-counted-before-encryption",
+    "site-to-site-vpn-metric-tunnel-state-values"
+   ],
+   "question": "Monitoring: which CloudWatch metrics show tunnel state and data (TunnelState, TunnelDataIn, TunnelDataOut); which logs exist (tunnel activity logs, BGP logs) and where they go (CloudWatch Logs); how AWS Health reports tunnel endpoint replacements.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/monitoring-overview-vpn",
+    "docs/vpn/latest/s2svpn/monitoring-cloudwatch-vpn",
+    "docs/vpn/latest/s2svpn/monitoring-logs",
+    "www/about-aws/whats-new/2025/11/site-to-site-vpn-bgp-logging-vpn-tunnels"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-cloudwatch-metrics-statistics-15-months",
+    "site-to-site-vpn-elc-aws-health-notifications",
+    "site-to-site-vpn-logs-tunnel-activity-to-cloudwatch-logs",
+    "site-to-site-vpn-metric-tunnel-data-in-counted-after-decryption",
+    "site-to-site-vpn-metric-tunnel-data-out-counted-before-encryption",
+    "site-to-site-vpn-metric-tunnel-state-values"
+   ]
+  },
+  {
+   "id": "d12-023",
+   "bullet": "3.4.S1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-ipv4-inside-tunnel-by-default",
+    "site-to-site-vpn-ipv6-not-on-virtual-private-gateway",
+    "site-to-site-vpn-ipv6-one-ip-version-per-connection-no-convert"
+   ],
+   "question": "IPv6: can a VPN carry IPv6 traffic inside the tunnels, and on which target gateways? Can the outer tunnel IP addresses be IPv6 (2025-07-01)?",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/ipv4-ipv6",
+    "www/vpn/faqs",
+    "docs/vpn/latest/s2svpn/WhatsNew"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-ipv4-inside-tunnel-by-default",
+    "site-to-site-vpn-ipv6-not-on-virtual-private-gateway",
+    "site-to-site-vpn-ipv6-one-ip-version-per-connection-no-convert"
+   ]
+  },
+  {
+   "id": "d12-024",
+   "bullet": "3.4.K4",
+   "kind": "behavior",
+   "lens": "decisions",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-aws-managed-vpn-endpoint-automated-redundancy",
+    "site-to-site-vpn-software-vpn-ec2-you-manage-appliance-single-point-of-failure",
+    "direct-connect-sdwan-or-software-vpn-only-as-reliable-as-transport"
+   ],
+   "question": "Software VPN on Amazon EC2 (customer-managed) vs AWS Site-to-Site VPN: who manages high availability and the appliance, and when the whitepaper suggests a software VPN.",
+   "look_in": [
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/software-vpn",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-site-to-site-vpn",
+    "docs/whitepapers/latest/hybrid-connectivity/customer-managed-vpn-and-sd-wan"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-aws-managed-vpn-endpoint-automated-redundancy",
+    "site-to-site-vpn-software-vpn-ec2-you-manage-appliance-single-point-of-failure",
+    "direct-connect-sdwan-or-software-vpn-only-as-reliable-as-transport"
+   ]
+  },
+  {
+   "id": "d12-025",
+   "bullet": "4.4.S2",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-billing-public-ipv4-per-connection",
+    "site-to-site-vpn-pricing-5gbps-connection-hour",
+    "site-to-site-vpn-pricing-accelerated-extra-charges",
+    "site-to-site-vpn-pricing-concentrator-hours",
+    "site-to-site-vpn-pricing-data-transfer-out-ec2-rates",
+    "site-to-site-vpn-pricing-logs-no-extra-charge",
+    "site-to-site-vpn-pricing-transit-gateway-attachment-hourly"
+   ],
+   "question": "Site-to-Site VPN pricing dimensions (no dollar amounts): VPN connection-hour, data transfer out; what an accelerated VPN adds (Global Accelerator fees); whether large bandwidth tunnels and VPN Concentrators have their own hourly charge. What defines a billable connection-hour (reuse vpc-faq-vpn-connection-hour-billing if it fits).",
+   "look_in": [
+    "www/vpn/pricing",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-billing-public-ipv4-per-connection",
+    "site-to-site-vpn-pricing-5gbps-connection-hour",
+    "site-to-site-vpn-pricing-accelerated-extra-charges",
+    "site-to-site-vpn-pricing-concentrator-hours",
+    "site-to-site-vpn-pricing-data-transfer-out-ec2-rates",
+    "site-to-site-vpn-pricing-logs-no-extra-charge",
+    "site-to-site-vpn-pricing-transit-gateway-attachment-hourly"
+   ]
+  },
+  {
+   "id": "d12-026",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-elc-control-schedule-of-endpoint-replacements"
+   ],
+   "question": "Tunnel endpoint lifecycle control: what it lets you do (schedule AWS maintenance updates of tunnel endpoints). Recognition only.",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/tunnel-endpoint-lifecycle",
+    "docs/vpn/latest/s2svpn/endpoint-replacements"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-elc-control-schedule-of-endpoint-replacements"
+   ]
+  },
+  {
+   "id": "d12-030",
+   "bullet": "3.4.K4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-components-connection-and-virtual-interface",
+    "direct-connect-definition-fiber-cable-bypass-isp"
+   ],
+   "question": "What is AWS Direct Connect in one sentence (links your internal network to a Direct Connect location over a standard Ethernet fiber-optic cable)? Quote the guide's components: connections, virtual interfaces, and the statement that traffic bypasses internet service providers.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/Welcome",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-components-connection-and-virtual-interface",
+    "direct-connect-definition-fiber-cable-bypass-isp"
+   ]
+  },
+  {
+   "id": "d12-031",
+   "bullet": "4.4.K5",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-aws-is-not-first-or-last-mile-provider",
+    "direct-connect-partners-extend-network-to-location",
+    "direct-connect-requirement-802-1q-vlan-whole-path",
+    "direct-connect-requirement-bgp-and-md5-on-your-device",
+    "direct-connect-requirement-single-mode-fiber-transceivers"
+   ],
+   "question": "Network requirements: single-mode fiber with the named transceivers, 802.1Q VLAN encapsulation, BGP and BGP MD5 authentication, optional BFD. Where must your router be (at the Direct Connect location, or reached through a partner or network provider)? Does AWS provide the 'last mile' circuit?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/Welcome",
+    "docs/directconnect/latest/UserGuide/connection_options",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-aws-is-not-first-or-last-mile-provider",
+    "direct-connect-partners-extend-network-to-location",
+    "direct-connect-requirement-802-1q-vlan-whole-path",
+    "direct-connect-requirement-bgp-and-md5-on-your-device",
+    "direct-connect-requirement-single-mode-fiber-transceivers"
+   ]
+  },
+  {
+   "id": "d12-032",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dedicated-port-speed-fixed-after-request",
+    "direct-connect-hosted-connection-speed-changed-only-by-partner",
+    "direct-connect-limit-dedicated-port-speeds",
+    "direct-connect-limit-hosted-port-speeds",
+    "direct-connect-restriction-hosted-25g-needs-100g-location",
+    "direct-connect-restriction-hosted-high-speeds-select-partners"
+   ],
+   "question": "Port speeds: dedicated connections (1, 10, 100, 400 Gbps); hosted connections (50 Mbps up to 25 Gbps, list each value). Which hosted speeds only some partners offer (1 Gbps and above).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/connection_options",
+    "docs/directconnect/latest/UserGuide/dedicated_connection",
+    "docs/directconnect/latest/UserGuide/hosted_connection",
+    "docs/directconnect/latest/UserGuide/limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dedicated-port-speed-fixed-after-request",
+    "direct-connect-hosted-connection-speed-changed-only-by-partner",
+    "direct-connect-limit-dedicated-port-speeds",
+    "direct-connect-limit-hosted-port-speeds",
+    "direct-connect-restriction-hosted-25g-needs-100g-location",
+    "direct-connect-restriction-hosted-high-speeds-select-partners"
+   ]
+  },
+  {
+   "id": "d12-033",
+   "bullet": "4.4.K5",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-behavior-hosted-traffic-policing",
+    "direct-connect-dedicated-connection-physical-port-single-customer",
+    "direct-connect-hosted-connection-not-orderable-in-console-must-accept",
+    "direct-connect-hosted-connection-provisioned-by-partner",
+    "direct-connect-hosted-connection-speed-changed-only-by-partner"
+   ],
+   "question": "Dedicated connection vs hosted connection: a dedicated connection is a physical Ethernet port for one customer, requested from AWS; a hosted connection is provisioned by a Direct Connect Partner. Quote both definitions.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/WorkingWithConnections",
+    "docs/directconnect/latest/UserGuide/dedicated_connection",
+    "docs/directconnect/latest/UserGuide/hosted_connection",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-behavior-hosted-traffic-policing",
+    "direct-connect-dedicated-connection-physical-port-single-customer",
+    "direct-connect-hosted-connection-not-orderable-in-console-must-accept",
+    "direct-connect-hosted-connection-provisioned-by-partner",
+    "direct-connect-hosted-connection-speed-changed-only-by-partner"
+   ]
+  },
+  {
+   "id": "d12-034",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-quota-active-connections-per-location",
+    "direct-connect-quota-transit-vifs-per-dedicated",
+    "direct-connect-quota-vifs-per-hosted-connection",
+    "direct-connect-quota-vifs-private-public-per-dedicated",
+    "direct-connect-quota-vifs-total-per-dedicated"
+   ],
+   "question": "Virtual interface quotas: private or public virtual interfaces per dedicated connection (50), transit virtual interfaces per dedicated connection (4), total per dedicated connection (51), virtual interfaces per hosted connection (1), active connections per location per Region per account (10). Each row with header and comment ('cannot be increased').",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/limits",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-quota-active-connections-per-location",
+    "direct-connect-quota-transit-vifs-per-dedicated",
+    "direct-connect-quota-vifs-per-hosted-connection",
+    "direct-connect-quota-vifs-private-public-per-dedicated",
+    "direct-connect-quota-vifs-total-per-dedicated"
+   ]
+  },
+  {
+   "id": "d12-035",
+   "bullet": "4.4.K5",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dedicated-billing-starts-port-active-or-90-days-after-loa",
+    "direct-connect-dedicated-info-request-respond-within-7-days",
+    "direct-connect-dedicated-port-speed-fixed-after-request",
+    "direct-connect-loa-cfa-authorization-needed-for-cross-connect"
+   ],
+   "question": "Ordering a dedicated connection: request, then the Letter of Authorization and Connecting Facility Assignment (LOA-CFA), then the cross connect. How long is an LOA-CFA valid? When do port-hour charges start (connection up, or a fixed number of days after creation)?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/dedicated_connection",
+    "docs/directconnect/latest/UserGuide/download-loa-cfa",
+    "docs/directconnect/latest/UserGuide/Colocation",
+    "www/directconnect/faqs",
+    "www/directconnect/pricing/pay-as-you-go"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dedicated-billing-starts-port-active-or-90-days-after-loa",
+    "direct-connect-dedicated-info-request-respond-within-7-days",
+    "direct-connect-dedicated-port-speed-fixed-after-request",
+    "direct-connect-loa-cfa-authorization-needed-for-cross-connect"
+   ]
+  },
+  {
+   "id": "d12-036",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-not-encrypted-by-default-use-service-encryption"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Is Direct Connect traffic encrypted by default? Quote 'does not encrypt your traffic that is in transit by default' with its next sentence, and the options the guide names (Site-to-Site VPN over Direct Connect for IPsec, MACsec, the encryption of each service).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/encryption-in-transit",
+    "docs/directconnect/latest/UserGuide/MACsec",
+    "docs/whitepapers/latest/hybrid-connectivity/security"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-not-encrypted-by-default-use-service-encryption"
+   ]
+  },
+  {
+   "id": "d12-037",
+   "bullet": "1.2.S4",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-macsec-cipher-suites",
+    "direct-connect-macsec-encrypts-to-direct-connect-location",
+    "direct-connect-macsec-layer2-over-cross-connect",
+    "direct-connect-macsec-layer2-point-to-point-not-end-to-end",
+    "direct-connect-macsec-new-connections-default-should-encrypt",
+    "direct-connect-macsec-no-extra-charge",
+    "direct-connect-macsec-not-a-replacement-for-other-encryption",
+    "direct-connect-macsec-not-on-1gbps-or-hosted",
+    "direct-connect-macsec-supported-dedicated-10-100-400-gbps"
+   ],
+   "question": "MACsec: what it protects (layer 2, from your router to the Direct Connect location, not end to end), which connections support it (dedicated 10, 100, 400 Gbps at selected locations; not hosted connections), cipher suites, and whether it replaces other encryption (FAQ).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/MACsec",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-macsec-cipher-suites",
+    "direct-connect-macsec-encrypts-to-direct-connect-location",
+    "direct-connect-macsec-layer2-over-cross-connect",
+    "direct-connect-macsec-layer2-point-to-point-not-end-to-end",
+    "direct-connect-macsec-new-connections-default-should-encrypt",
+    "direct-connect-macsec-no-extra-charge",
+    "direct-connect-macsec-not-a-replacement-for-other-encryption",
+    "direct-connect-macsec-not-on-1gbps-or-hosted",
+    "direct-connect-macsec-supported-dedicated-10-100-400-gbps"
+   ]
+  },
+  {
+   "id": "d12-038",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "partial-verified",
+   "facts": [
+    "direct-connect-traffic-stays-on-aws-global-network-backbone"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Privacy of the path: does Direct Connect traffic stay off the public internet? Quote the guide's 'Internetwork traffic privacy' page and the whitepaper security page.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/encryption-at-rest",
+    "docs/directconnect/latest/UserGuide/infrastructure-security",
+    "docs/whitepapers/latest/hybrid-connectivity/security",
+    "www/directconnect/features"
+   ],
+   "note": "partial: no sentence on the 'Internetwork traffic privacy' page says the path avoids the internet; the FAQ ('bypasses the internet') and remote_regions ('remains on the AWS global network backbone') facts are used instead.",
+   "status_found": "partial",
+   "verified_facts": [
+    "direct-connect-traffic-stays-on-aws-global-network-backbone"
+   ]
+  },
+  {
+   "id": "d12-039",
+   "bullet": "3.4.K4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-private-vif-single-vpc-or-dxgw-many-regions",
+    "direct-connect-transit-vif-attaches-only-to-dxgw",
+    "direct-connect-vif-private-access-vpc-private-ips",
+    "direct-connect-vif-public-access-aws-public-services",
+    "direct-connect-vif-transit-access-transit-gateways-any-speed"
+   ],
+   "question": "The three virtual interface types: private (a VPC through a virtual private gateway or Direct Connect gateway), public (AWS public services by public IP addresses), transit (transit gateways through a Direct Connect gateway). Quote each definition.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces",
+    "docs/directconnect/latest/UserGuide/create-vif",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-private-vif-single-vpc-or-dxgw-many-regions",
+    "direct-connect-transit-vif-attaches-only-to-dxgw",
+    "direct-connect-vif-private-access-vpc-private-ips",
+    "direct-connect-vif-public-access-aws-public-services",
+    "direct-connect-vif-transit-access-transit-gateways-any-speed"
+   ]
+  },
+  {
+   "id": "d12-040",
+   "bullet": "4.4.S2",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dto-does-not-include-internet-transfers",
+    "direct-connect-public-vif-prefixes-not-readvertised-outside-aws",
+    "direct-connect-public-vif-reaches-amazon-prefixes-not-non-amazon"
+   ],
+   "question": "Public virtual interface: what it reaches (all AWS public prefixes, for example Amazon S3, in all public Regions), what it does not reach (non-Amazon prefixes, the internet), and whether Direct Connect data transfer out includes transfers to the internet (FAQ).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces",
+    "docs/directconnect/latest/UserGuide/remote_regions",
+    "docs/directconnect/latest/UserGuide/routing-and-bgp",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dto-does-not-include-internet-transfers",
+    "direct-connect-public-vif-prefixes-not-readvertised-outside-aws",
+    "direct-connect-public-vif-reaches-amazon-prefixes-not-non-amazon"
+   ]
+  },
+  {
+   "id": "d12-041",
+   "bullet": "3.4.S1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dxgw-associates-with-tgw-for-many-vpcs",
+    "direct-connect-dxgw-data-does-not-pass-through-only-routing-information",
+    "direct-connect-dxgw-global-resource-any-region-not-china",
+    "direct-connect-dxgw-multi-account-association-proposal",
+    "direct-connect-dxgw-no-direct-traffic-between-attached-vifs",
+    "direct-connect-dxgw-no-traffic-between-associated-gateways-with-supernet-exception",
+    "direct-connect-dxgw-not-between-vpn-and-vif",
+    "direct-connect-dxgw-route-reflectors-no-single-point-of-failure",
+    "direct-connect-private-vif-one-dxgw-or-one-vgw"
+   ],
+   "question": "Direct Connect gateway: a globally available resource; one private virtual interface reaches VPCs in many Regions through it; associates with virtual private gateways or transit gateways; may belong to another account. Can traffic go from one associated VPC to another through it (no)? Can it carry traffic between on-premises sites?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/direct-connect-gateways-intro",
+    "docs/directconnect/latest/UserGuide/virtualgateways",
+    "docs/directconnect/latest/UserGuide/direct-connect-transit-gateways",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dxgw-associates-with-tgw-for-many-vpcs",
+    "direct-connect-dxgw-data-does-not-pass-through-only-routing-information",
+    "direct-connect-dxgw-global-resource-any-region-not-china",
+    "direct-connect-dxgw-multi-account-association-proposal",
+    "direct-connect-dxgw-no-direct-traffic-between-attached-vifs",
+    "direct-connect-dxgw-no-traffic-between-associated-gateways-with-supernet-exception",
+    "direct-connect-dxgw-not-between-vpn-and-vif",
+    "direct-connect-dxgw-route-reflectors-no-single-point-of-failure",
+    "direct-connect-private-vif-one-dxgw-or-one-vgw"
+   ]
+  },
+  {
+   "id": "d12-042",
+   "bullet": "3.4.S1",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dxgw-tgw-association-takes-up-to-40-minutes",
+    "direct-connect-quota-cloud-wan-advertised-prefixes",
+    "direct-connect-quota-dxgws-per-tgw",
+    "direct-connect-quota-gateways-per-account",
+    "direct-connect-quota-prefixes-per-tgw-to-onprem",
+    "direct-connect-quota-tgws-per-dxgw",
+    "direct-connect-quota-vgws-per-dxgw",
+    "direct-connect-quota-vifs-per-dxgw",
+    "direct-connect-quota-vifs-per-vgw-no-limit"
+   ],
+   "question": "Direct Connect gateway quotas: gateways per account (200), virtual private gateways per Direct Connect gateway (20), transit gateways per Direct Connect gateway (6), private or transit virtual interfaces per Direct Connect gateway (30), Direct Connect gateways per transit gateway (20), prefixes from a transit gateway to on-premises on a transit virtual interface (200). Each row with header and comment.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/limits",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dxgw-tgw-association-takes-up-to-40-minutes",
+    "direct-connect-quota-cloud-wan-advertised-prefixes",
+    "direct-connect-quota-dxgws-per-tgw",
+    "direct-connect-quota-gateways-per-account",
+    "direct-connect-quota-prefixes-per-tgw-to-onprem",
+    "direct-connect-quota-tgws-per-dxgw",
+    "direct-connect-quota-vgws-per-dxgw",
+    "direct-connect-quota-vifs-per-dxgw",
+    "direct-connect-quota-vifs-per-vgw-no-limit"
+   ]
+  },
+  {
+   "id": "d12-043",
+   "bullet": "3.4.S1",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-limit-private-ip-vpn-route-scale",
+    "direct-connect-limit-prefix-controls-public-vif-1000",
+    "direct-connect-quota-routes-per-bgp-session-private-transit",
+    "direct-connect-quota-routes-per-bgp-session-public",
+    "direct-connect-quota-sitelink-prefix-limit"
+   ],
+   "question": "Routes per BGP session: from on-premises to AWS on a private or transit virtual interface (examinable value 100; the current row adds prefix controls up to 1,000, not examinable yet), on a public virtual interface (1,000). What happens when you advertise more (the BGP session goes idle or down)?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/limits",
+    "docs/directconnect/latest/UserGuide/prefix-controls",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-limit-private-ip-vpn-route-scale",
+    "direct-connect-limit-prefix-controls-public-vif-1000",
+    "direct-connect-quota-routes-per-bgp-session-private-transit",
+    "direct-connect-quota-routes-per-bgp-session-public",
+    "direct-connect-quota-sitelink-prefix-limit"
+   ]
+  },
+  {
+   "id": "d12-044",
+   "bullet": "4.4.S7",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dxgw-ecmp-across-transit-vifs",
+    "direct-connect-lag-active-active-mode",
+    "direct-connect-lag-definition-lacp-single-managed-connection",
+    "direct-connect-lag-max-members-two-100-400-or-four-below-100",
+    "direct-connect-lag-minimum-links-default-zero",
+    "direct-connect-lag-no-extra-charge-dynamic-lacp-only",
+    "direct-connect-lag-no-multi-chassis",
+    "direct-connect-lag-not-more-resilient-against-device-failure",
+    "direct-connect-lag-rule-dedicated-connections-only",
+    "direct-connect-lag-rule-same-bandwidth-same-endpoint"
+   ],
+   "question": "Link aggregation group (LAG): what it is (several dedicated connections as one logical connection, LACP), its rules (same speed, same Direct Connect location, dedicated connections only), maximum members (4 below 100 Gbps; 2 at 100 or 400 Gbps), active/active, minimum links. Does a LAG make the connection more resilient (FAQ)?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/lags",
+    "docs/directconnect/latest/UserGuide/limits",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dxgw-ecmp-across-transit-vifs",
+    "direct-connect-lag-active-active-mode",
+    "direct-connect-lag-definition-lacp-single-managed-connection",
+    "direct-connect-lag-max-members-two-100-400-or-four-below-100",
+    "direct-connect-lag-minimum-links-default-zero",
+    "direct-connect-lag-no-extra-charge-dynamic-lacp-only",
+    "direct-connect-lag-no-multi-chassis",
+    "direct-connect-lag-not-more-resilient-against-device-failure",
+    "direct-connect-lag-rule-dedicated-connections-only",
+    "direct-connect-lag-rule-same-bandwidth-same-endpoint"
+   ]
+  },
+  {
+   "id": "d12-045",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-lag-minimum-links-default-zero",
+    "direct-connect-quota-dedicated-connections-per-lag",
+    "direct-connect-quota-lags-per-region",
+    "direct-connect-quota-vifs-per-lag"
+   ],
+   "question": "LAG quotas: dedicated connections per LAG (row with header), LAGs per Region (10), virtual interfaces per LAG (51).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-lag-minimum-links-default-zero",
+    "direct-connect-quota-dedicated-connections-per-lag",
+    "direct-connect-quota-lags-per-region",
+    "direct-connect-quota-vifs-per-lag"
+   ]
+  },
+  {
+   "id": "d12-046",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-resiliency-dev-test-one-location-no-location-failure-protection",
+    "direct-connect-resiliency-high-sla-99-9",
+    "direct-connect-resiliency-high-two-connections-multiple-locations",
+    "direct-connect-resiliency-maximum-separate-devices-more-than-one-location",
+    "direct-connect-resiliency-maximum-sla-99-99"
+   ],
+   "question": "Resiliency models of the Resiliency Toolkit: maximum resiliency (separate connections on separate devices in more than one location), high resiliency (connections in two locations), development and test (one location, separate devices). Quote what each protects against and the recommendation for critical workloads.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/resiliency_toolkit",
+    "docs/directconnect/latest/UserGuide/max-resiliency-set-up",
+    "docs/directconnect/latest/UserGuide/high-resiliency-set-up",
+    "docs/directconnect/latest/UserGuide/devtest-resiliency-set-up",
+    "www/directconnect/resiliency-recommendation",
+    "docs/directconnect/latest/UserGuide/disaster-recovery-resiliency"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-resiliency-dev-test-one-location-no-location-failure-protection",
+    "direct-connect-resiliency-high-sla-99-9",
+    "direct-connect-resiliency-high-two-connections-multiple-locations",
+    "direct-connect-resiliency-maximum-separate-devices-more-than-one-location",
+    "direct-connect-resiliency-maximum-sla-99-99"
+   ]
+  },
+  {
+   "id": "d12-047",
+   "bullet": "1.2.S4",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "partial-verified",
+   "facts": [
+    "direct-connect-resiliency-high-sla-99-9",
+    "direct-connect-resiliency-maximum-sla-99-99",
+    "direct-connect-sla-classic-95",
+    "direct-connect-sla-multi-site-non-redundant-definition",
+    "direct-connect-sla-multi-site-redundant-definition",
+    "direct-connect-sla-multi-site-redundant-support-and-review",
+    "direct-connect-sla-not-for-hosted",
+    "direct-connect-sla-three-commitments",
+    "direct-connect-sla-unavailable-120-seconds",
+    "direct-connect-sla-whitepaper-formal-sla-recommended",
+    "direct-connect-sla-whitepaper-responsibility-ends-at-port"
+   ],
+   "question": "Direct Connect SLA: which availability commitment applies to which configuration (maximum resiliency, high resiliency, single connection)? Quote the SLA page and the whitepaper SLA page.",
+   "look_in": [
+    "www/directconnect/sla",
+    "docs/whitepapers/latest/hybrid-connectivity/service-level-agreement-sla",
+    "www/directconnect/faqs"
+   ],
+   "note": "partial: SLA percentages are stored from connection_options; the service-credit tiers of the SLA page are not quotable as table rows.",
+   "status_found": "partial",
+   "verified_facts": [
+    "direct-connect-resiliency-high-sla-99-9",
+    "direct-connect-resiliency-maximum-sla-99-99",
+    "direct-connect-sla-classic-95",
+    "direct-connect-sla-multi-site-non-redundant-definition",
+    "direct-connect-sla-multi-site-redundant-definition",
+    "direct-connect-sla-multi-site-redundant-support-and-review",
+    "direct-connect-sla-not-for-hosted",
+    "direct-connect-sla-three-commitments",
+    "direct-connect-sla-unavailable-120-seconds",
+    "direct-connect-sla-whitepaper-formal-sla-recommended",
+    "direct-connect-sla-whitepaper-responsibility-ends-at-port"
+   ]
+  },
+  {
+   "id": "d12-048",
+   "bullet": "1.2.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-failover-test-disables-bgp-session",
+    "direct-connect-failover-test-duration-1-to-180-minutes",
+    "direct-connect-failover-test-history-kept-365-days",
+    "direct-connect-failover-test-only-owner-of-vif-account",
+    "direct-connect-fis-resilience-testing-bgp-failover"
+   ],
+   "question": "Failover testing: the Resiliency Toolkit failover test (disables BGP sessions for a set time) and resilience testing with AWS Fault Injection Service (2025-12-18). Test duration limits and history retention (FAQ).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/resiliency_failover",
+    "www/directconnect/faqs",
+    "www/about-aws/whats-new/2025/12/direct-connect-resilience-testing-fault-injection-service"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-failover-test-disables-bgp-session",
+    "direct-connect-failover-test-duration-1-to-180-minutes",
+    "direct-connect-failover-test-history-kept-365-days",
+    "direct-connect-failover-test-only-owner-of-vif-account",
+    "direct-connect-fis-resilience-testing-bgp-failover"
+   ]
+  },
+  {
+   "id": "d12-049",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-backup-vpn-vpc-traffic-fails-over-automatically",
+    "direct-connect-faq-local-zone-no-vpn-backup",
+    "direct-connect-vgw-dxgw-and-vpn-failover-needs-route-to-vgw",
+    "direct-connect-vpn-same-vpc-failover-only-dx-path-preferred"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Site-to-Site VPN as a backup for Direct Connect: can a VPC (virtual private gateway) or a transit gateway use both at once, which path carries traffic while both are up, and what happens when the Direct Connect circuit fails (FAQ items 102 and 135)?",
+   "look_in": [
+    "www/directconnect/faqs",
+    "docs/vpn/latest/s2svpn/vpn-route-priority",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect-site-to-site-vpn",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect-aws-transit-gateway-vpn",
+    "docs/wellarchitected/latest/reliability-pillar/rel_planning_network_topology_ha_conn_private_networks"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-backup-vpn-vpc-traffic-fails-over-automatically",
+    "direct-connect-faq-local-zone-no-vpn-backup",
+    "direct-connect-vgw-dxgw-and-vpn-failover-needs-route-to-vgw",
+    "direct-connect-vpn-same-vpc-failover-only-dx-path-preferred"
+   ]
+  },
+  {
+   "id": "d12-050",
+   "bullet": "1.2.S4",
+   "kind": "default",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-bfd-default-interval-300-multiplier-3",
+    "direct-connect-bfd-enabled-on-aws-side-needs-router-config"
+   ],
+   "question": "Bidirectional Forwarding Detection (BFD): is asynchronous BFD enabled on the AWS side by default, what are the default detection interval and multiplier, and what must you configure on your router?",
+   "look_in": [
+    "www/directconnect/faqs",
+    "docs/directconnect/latest/UserGuide/routing-and-bgp",
+    "docs/directconnect/latest/UserGuide/Welcome"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-bfd-default-interval-300-multiplier-3",
+    "direct-connect-bfd-enabled-on-aws-side-needs-router-config"
+   ]
+  },
+  {
+   "id": "d12-051",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-active-active-same-community-tag",
+    "direct-connect-active-passive-higher-preference-on-primary",
+    "direct-connect-default-local-preference-region-distance-when-no-community",
+    "direct-connect-local-pref-communities-private-and-transit-only",
+    "direct-connect-local-pref-evaluated-before-as-path",
+    "direct-connect-local-pref-recommended-for-active-passive-same-prefix-length",
+    "direct-connect-public-prefixes-global-by-default-without-scope-community"
+   ],
+   "question": "Active/active vs active/passive across two Direct Connect connections: local preference BGP communities and AS_PATH prepending; what AWS does by default when no community is set.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/routing-and-bgp",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-active-active-same-community-tag",
+    "direct-connect-active-passive-higher-preference-on-primary",
+    "direct-connect-default-local-preference-region-distance-when-no-community",
+    "direct-connect-local-pref-communities-private-and-transit-only",
+    "direct-connect-local-pref-evaluated-before-as-path",
+    "direct-connect-local-pref-recommended-for-active-passive-same-prefix-length",
+    "direct-connect-public-prefixes-global-by-default-without-scope-community"
+   ]
+  },
+  {
+   "id": "d12-052",
+   "bullet": "3.4.S1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-sitelink-not-in-govcloud-and-china",
+    "direct-connect-sitelink-pop-to-pop-bypass-regions",
+    "direct-connect-sitelink-private-or-transit-vif-with-dxgw",
+    "direct-connect-sitelink-separate-pricing-fee-off-by-default",
+    "direct-connect-sitelink-vs-cloud-wan"
+   ],
+   "question": "SiteLink: what it does (connects on-premises sites through Direct Connect points of presence without passing through a Region), which virtual interfaces support it, the separate fee, the partitions where it is not available, and SiteLink vs AWS Cloud WAN (FAQ).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/create-vif",
+    "www/directconnect/faqs",
+    "www/directconnect/pricing/pay-as-you-go"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-sitelink-not-in-govcloud-and-china",
+    "direct-connect-sitelink-pop-to-pop-bypass-regions",
+    "direct-connect-sitelink-private-or-transit-vif-with-dxgw",
+    "direct-connect-sitelink-separate-pricing-fee-off-by-default",
+    "direct-connect-sitelink-vs-cloud-wan"
+   ]
+  },
+  {
+   "id": "d12-053",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "partial-verified",
+   "facts": [
+    "direct-connect-behavior-jumbo-frames-update-30-seconds",
+    "direct-connect-behavior-mtu-1500-when-routes-overlap",
+    "direct-connect-limit-mtu-private-vif",
+    "direct-connect-limit-mtu-transit-vif",
+    "direct-connect-limit-tgw-jumbo-frames-8500"
+   ],
+   "question": "MTU per virtual interface type: private virtual interface (1500 or 9001 jumbo frames), transit virtual interface (1500 or 8500), public virtual interface (1500). Quote each value with its scope.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/interface-set-mtu",
+    "docs/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces",
+    "www/directconnect/faqs"
+   ],
+   "note": "partial: private (1500 or 9001) and transit (1500 or 8500) are stored. Registrar search 2026-10-14 (regex over all saved pages and the full Direct Connect guide) found no MTU value for a public virtual interface; the writer must not state one.",
+   "status_found": "partial",
+   "verified_facts": [
+    "direct-connect-behavior-jumbo-frames-update-30-seconds",
+    "direct-connect-behavior-mtu-1500-when-routes-overlap",
+    "direct-connect-limit-mtu-private-vif",
+    "direct-connect-limit-mtu-transit-vif",
+    "direct-connect-limit-tgw-jumbo-frames-8500"
+   ]
+  },
+  {
+   "id": "d12-054",
+   "bullet": "3.4.S1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dxgw-no-charge-remote-region-egress-and-port-hours-apply",
+    "direct-connect-location-gives-access-to-associated-region-and-all-public-regions",
+    "direct-connect-private-vif-with-dxgw-reaches-vpcs-any-region",
+    "direct-connect-private-vif-without-dxgw-reaches-associated-region-only",
+    "direct-connect-public-vif-access-all-public-regions-from-any-location"
+   ],
+   "question": "Access to remote Regions: a public virtual interface reaches public services in other Regions; a private virtual interface reaches VPCs in other Regions through a Direct Connect gateway. Is there an extra fee for remote Regions (FAQ 123)?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/remote_regions",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dxgw-no-charge-remote-region-egress-and-port-hours-apply",
+    "direct-connect-location-gives-access-to-associated-region-and-all-public-regions",
+    "direct-connect-private-vif-with-dxgw-reaches-vpcs-any-region",
+    "direct-connect-private-vif-without-dxgw-reaches-associated-region-only",
+    "direct-connect-public-vif-access-all-public-regions-from-any-location"
+   ]
+  },
+  {
+   "id": "d12-055",
+   "bullet": "4.4.S2",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-dto-does-not-include-internet-transfers",
+    "direct-connect-faq-two-charges-port-hours-data-transfer",
+    "direct-connect-hosted-port-hours-billed-while-provisioned",
+    "direct-connect-no-setup-charge-no-minimum-term",
+    "direct-connect-port-hours-charged-even-when-no-data",
+    "direct-connect-pricing-data-transfer-in-free",
+    "direct-connect-pricing-dedicated-port-hours-while-provisioned",
+    "direct-connect-pricing-dto-account-private-vif",
+    "direct-connect-pricing-dto-by-region-and-location",
+    "direct-connect-pricing-factors-capacity-port-hours-data-transfer-out"
+   ],
+   "question": "Direct Connect pricing dimensions (no dollar amounts): port-hours for dedicated connections (by speed) and hosted connections (by capacity), data transfer out by location and Region, data transfer in; any setup charge or minimum term (FAQ 77); which account pays for data transfer out (FAQ 82, 83).",
+   "look_in": [
+    "www/directconnect/pricing/pay-as-you-go",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-dto-does-not-include-internet-transfers",
+    "direct-connect-faq-two-charges-port-hours-data-transfer",
+    "direct-connect-hosted-port-hours-billed-while-provisioned",
+    "direct-connect-no-setup-charge-no-minimum-term",
+    "direct-connect-port-hours-charged-even-when-no-data",
+    "direct-connect-pricing-data-transfer-in-free",
+    "direct-connect-pricing-dedicated-port-hours-while-provisioned",
+    "direct-connect-pricing-dto-account-private-vif",
+    "direct-connect-pricing-dto-by-region-and-location",
+    "direct-connect-pricing-factors-capacity-port-hours-data-transfer-out"
+   ]
+  },
+  {
+   "id": "d12-056",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-allowed-prefixes-tgw-only-listed-prefixes-advertised",
+    "direct-connect-dxgw-one-vif-type-only",
+    "direct-connect-dxgw-tgw-association-takes-up-to-40-minutes",
+    "direct-connect-dxgw-tgw-not-with-vgw-or-private-vif",
+    "direct-connect-faq-transit-vif-not-to-vgw",
+    "direct-connect-tgw-attachment-single-connection-for-many-vpcs"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Direct Connect with a transit gateway: a transit virtual interface to a Direct Connect gateway that is associated with a transit gateway; the allowed prefixes list; how long an association takes (FAQ 112); the transit gateway attachment page.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/direct-connect-transit-gateways",
+    "docs/directconnect/latest/UserGuide/allowed-to-prefixes",
+    "docs/vpc/latest/tgw/tgw-dcg-attachments",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect-aws-transit-gateway",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-allowed-prefixes-tgw-only-listed-prefixes-advertised",
+    "direct-connect-dxgw-one-vif-type-only",
+    "direct-connect-dxgw-tgw-association-takes-up-to-40-minutes",
+    "direct-connect-dxgw-tgw-not-with-vgw-or-private-vif",
+    "direct-connect-faq-transit-vif-not-to-vgw",
+    "direct-connect-tgw-attachment-single-connection-for-many-vpcs"
+   ]
+  },
+  {
+   "id": "d12-057",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-maintenance-notify-aws-health-email",
+    "direct-connect-maintenance-prepare-redundant-connection-or-vpn-backup",
+    "direct-connect-maintenance-redundant-setup-scheduled-at-different-times",
+    "direct-connect-maintenance-types-planned-and-emergency"
+   ],
+   "question": "Maintenance: does AWS perform planned and emergency maintenance on Direct Connect devices, how are you notified (AWS Health), and what does AWS recommend to avoid an outage during maintenance (redundant connections)?",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/dx-maintenance",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-maintenance-notify-aws-health-email",
+    "direct-connect-maintenance-prepare-redundant-connection-or-vpn-backup",
+    "direct-connect-maintenance-redundant-setup-scheduled-at-different-times",
+    "direct-connect-maintenance-types-planned-and-emergency"
+   ]
+  },
+  {
+   "id": "d12-058",
+   "bullet": "4.4.S7",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-metric-connection-bps-egress",
+    "direct-connect-metric-connection-bps-ingress",
+    "direct-connect-metric-connection-state-up-down",
+    "direct-connect-metric-vif-bgp-prefixes-accepted",
+    "direct-connect-metric-vif-bgp-prefixes-advertised",
+    "direct-connect-metric-vif-bgp-status-up-down"
+   ],
+   "question": "Monitoring: CloudWatch metrics for connections (ConnectionState, ConnectionBpsEgress, ConnectionBpsIngress) and virtual interfaces; BGP metrics (2026-03-30).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/monitoring-cloudwatch",
+    "www/about-aws/whats-new/2026/03/aws-direct-connect-cloudwatch-bgp-monitoring"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-metric-connection-bps-egress",
+    "direct-connect-metric-connection-bps-ingress",
+    "direct-connect-metric-connection-state-up-down",
+    "direct-connect-metric-vif-bgp-prefixes-accepted",
+    "direct-connect-metric-vif-bgp-prefixes-advertised",
+    "direct-connect-metric-vif-bgp-status-up-down"
+   ]
+  },
+  {
+   "id": "d12-059",
+   "bullet": "4.4.K5",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-hosted-connection-supports-one-vif",
+    "direct-connect-hosted-vif-another-account-must-accept"
+   ],
+   "question": "Hosted virtual interface vs hosted connection: a hosted virtual interface is a virtual interface that another account owns on your connection. Quote the difference. Recognition only.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/hosted-vif",
+    "docs/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-hosted-connection-supports-one-vif",
+    "direct-connect-hosted-vif-another-account-must-accept"
+   ]
+  },
+  {
+   "id": "d12-060",
+   "bullet": "3.4.S1",
+   "kind": "default",
+   "lens": "numbers",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-cgw-asn-ranges-private-16-and-32-bit",
+    "site-to-site-vpn-default-vgw-asn-64512",
+    "site-to-site-vpn-faq-vgw-asn-private-range",
+    "site-to-site-vpn-vgw-amazon-side-asn-default-64512-not-changeable",
+    "direct-connect-default-dxgw-asn-64512",
+    "direct-connect-limit-private-asn-ranges"
+   ],
+   "question": "Amazon side ASN: what ASN does AWS assign to a virtual private gateway or a Direct Connect gateway when you do not choose one (64512), and which private ASN ranges can you choose? Low priority.",
+   "look_in": [
+    "www/vpn/faqs",
+    "www/directconnect/faqs",
+    "docs/directconnect/latest/UserGuide/direct-connect-gateways-intro"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-cgw-asn-ranges-private-16-and-32-bit",
+    "site-to-site-vpn-default-vgw-asn-64512",
+    "site-to-site-vpn-faq-vgw-asn-private-range",
+    "site-to-site-vpn-vgw-amazon-side-asn-default-64512-not-changeable",
+    "direct-connect-default-dxgw-asn-64512",
+    "direct-connect-limit-private-asn-ranges"
+   ]
+  },
+  {
+   "id": "d12-070",
+   "bullet": "4.4.S7",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-change-400g-dedicated",
+    "direct-connect-limit-dedicated-port-speeds"
+   ],
+   "question": "Change: 400 Gbps dedicated connections (document-history row 'Support for 400G', 2024-07-18). Old speeds 1, 10 and 100 Gbps; current list from dedicated_connection.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/AboutThisGuide",
+    "docs/directconnect/latest/UserGuide/dedicated_connection"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-change-400g-dedicated",
+    "direct-connect-limit-dedicated-port-speeds"
+   ]
+  },
+  {
+   "id": "d12-071",
+   "bullet": "4.4.S7",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "partial-verified",
+   "facts": [
+    "direct-connect-limit-hosted-port-speeds"
+   ],
+   "question": "Hypothesis: 25 Gbps hosted connections were added on 2024-04-24 (What's New post blocked by robots.txt). Record the date from the feed only as a change pointer; the current list comes from hosted_connection.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/hosted_connection",
+    "docs/directconnect/latest/UserGuide/AboutThisGuide"
+   ],
+   "note": "partial: current list of hosted speeds (with 25 Gbps) is stored; no quotable dated change (the post of 2024-04-24 is blocked by robots.txt). Registrar search 2026-10-14 found nothing new.",
+   "status_found": "partial",
+   "verified_facts": [
+    "direct-connect-limit-hosted-port-speeds"
+   ]
+  },
+  {
+   "id": "d12-072",
+   "bullet": "3.4.S1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-change-prefix-controls",
+    "direct-connect-limit-prefix-controls-default-allocation",
+    "direct-connect-limit-prefix-controls-dxgw-total",
+    "direct-connect-limit-prefix-controls-max-allocation",
+    "direct-connect-limit-prefix-controls-pool-per-connection"
+   ],
+   "question": "Change, not examinable yet: inbound prefix controls and higher prefix scale (2026-08-20). Old value: 100 routes per BGP session on a private or transit virtual interface; new: allocations up to 1,000. Quote the What's New post and the prefix-controls page.",
+   "look_in": [
+    "www/about-aws/whats-new/2026/08/aws-direct-connect-new-prefix-controls",
+    "docs/directconnect/latest/UserGuide/prefix-controls",
+    "docs/directconnect/latest/UserGuide/limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-change-prefix-controls",
+    "direct-connect-limit-prefix-controls-default-allocation",
+    "direct-connect-limit-prefix-controls-dxgw-total",
+    "direct-connect-limit-prefix-controls-max-allocation",
+    "direct-connect-limit-prefix-controls-pool-per-connection"
+   ]
+  },
+  {
+   "id": "d12-073",
+   "bullet": "4.4.S7",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-behavior-hosted-traffic-policing",
+    "direct-connect-change-vif-rate-limiters",
+    "direct-connect-default-vifs-use-100-percent-capacity",
+    "direct-connect-limit-rate-limiter-range-1g",
+    "direct-connect-quota-rate-limiters-per-dedicated",
+    "direct-connect-restriction-rate-limiters-dedicated-only"
+   ],
+   "question": "Change, examinable but recent: VIF Rate Limiters (2026-06-01). What they do (cap the bandwidth of one virtual interface to prevent congestion), on which connections, the allowed range, and the quota of rate limiters per dedicated connection (10).",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/vif-rate-limiters",
+    "www/about-aws/whats-new/2026/06/aws-direct-connect-now-supports-vif-rate-limiters",
+    "docs/directconnect/latest/UserGuide/limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-behavior-hosted-traffic-policing",
+    "direct-connect-change-vif-rate-limiters",
+    "direct-connect-default-vifs-use-100-percent-capacity",
+    "direct-connect-limit-rate-limiter-range-1g",
+    "direct-connect-quota-rate-limiters-per-dedicated",
+    "direct-connect-restriction-rate-limiters-dedicated-only"
+   ]
+  },
+  {
+   "id": "d12-074",
+   "bullet": "4.4.S2",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-behavior-flat-rate-port-pair-no-extra-bandwidth",
+    "direct-connect-change-flat-rate-billing",
+    "direct-connect-pricing-flat-rate-second-port-included",
+    "direct-connect-restriction-flat-rate-dedicated-only"
+   ],
+   "question": "Change, not examinable yet: flat-rate billing for dedicated connections (2026-09-15). What it is (a port pair at a fixed monthly price with data transfer included?) and the sentence that the second port adds redundancy, not throughput.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/flat-rate-connections",
+    "www/about-aws/whats-new/2026/09/aws-direct-connect-announces-flat-rate-pricing",
+    "docs/directconnect/latest/UserGuide/AboutThisGuide"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-behavior-flat-rate-port-pair-no-extra-bandwidth",
+    "direct-connect-change-flat-rate-billing",
+    "direct-connect-pricing-flat-rate-second-port-included",
+    "direct-connect-restriction-flat-rate-dedicated-only"
+   ]
+  },
+  {
+   "id": "d12-075",
+   "bullet": "3.4.S1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-change-bgp-route-visibility"
+   ],
+   "question": "Change, not examinable yet: BGP route visibility on virtual interfaces (2026-07-30). One sentence of what it shows.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/bgp-route-visibility",
+    "www/about-aws/whats-new/2026/07/aws-direct-connect-bgp-visibility"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-change-bgp-route-visibility"
+   ]
+  },
+  {
+   "id": "d12-076",
+   "bullet": "3.4.K4",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-change-interconnect-last-mile-ga",
+    "direct-connect-change-interconnect-multicloud-ga"
+   ],
+   "question": "Hypothesis: AWS Interconnect - multicloud (GA 2026-04-14) and AWS Interconnect - last mile (GA 2026-04-13). What each is, in one quoted sentence each. Is either an in-scope SAA-C03 service? (Recognition only; teach as a name in 'Changed recently' if the writer has room.)",
+   "look_in": [
+    "www/about-aws/whats-new/2026/04/aws-announces-ga-AWS-interconnect-multicloud",
+    "www/about-aws/whats-new/2026/04/aws-announces-ga-AWS-interconnect-last-mile"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-change-interconnect-last-mile-ga",
+    "direct-connect-change-interconnect-multicloud-ga"
+   ]
+  },
+  {
+   "id": "d12-077",
+   "bullet": "3.4.S1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-change-4-byte-asn"
+   ],
+   "question": "Change: 4-byte (long) ASN support for virtual interfaces (history 2025-07-24, What's New 2025-09-12). Low priority.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/AboutThisGuide",
+    "www/about-aws/whats-new/2025/09/aws-direct-connect-4-byte-autonomous-system-numbers"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-change-4-byte-asn"
+   ]
+  },
+  {
+   "id": "d12-078",
+   "bullet": "4.4.S7",
+   "kind": "change",
+   "lens": "changes",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-change-large-bandwidth-tunnels",
+    "site-to-site-vpn-change-modify-tunnel-bandwidth",
+    "site-to-site-vpn-limit-bandwidth-large-tunnel"
+   ],
+   "question": "Change: large bandwidth tunnels up to 5 Gbps (history 2025-09-25, What's New 2025-11-12); old value 1.25 Gbps for every tunnel; standard tunnels stay at 1.25 Gbps. And tunnel bandwidth modification on existing connections (2026-05-06).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/WhatsNew",
+    "www/about-aws/whats-new/2025/11/aws-site-to-site-vpn-5-gbps-bandwidth-tunnels",
+    "www/about-aws/whats-new/2026/05/aws-site-to-site-vpn-modify-bandwidth",
+    "docs/vpn/latest/s2svpn/vpn-limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-change-large-bandwidth-tunnels",
+    "site-to-site-vpn-change-modify-tunnel-bandwidth",
+    "site-to-site-vpn-limit-bandwidth-large-tunnel"
+   ]
+  },
+  {
+   "id": "d12-079",
+   "bullet": "1.2.S4",
+   "kind": "change",
+   "lens": "changes",
+   "service": "site-to-site-vpn",
+   "status": "partial-verified",
+   "facts": [
+    "site-to-site-vpn-change-bgp-logging",
+    "site-to-site-vpn-change-ipv6-outer-tunnel-ips",
+    "site-to-site-vpn-change-recommended-configuration",
+    "site-to-site-vpn-change-secrets-manager-psk",
+    "site-to-site-vpn-logs-tunnel-activity-to-cloudwatch-logs"
+   ],
+   "question": "Changes: pre-shared keys in Secrets Manager and the other two security capabilities (2025-05-27 history, 2025-06-03 What's New); IPv6 outer tunnel IP addresses (2025-07-01); BGP logging (2025-11-20); VPN logs to CloudWatch Logs (2022-08-19).",
+   "look_in": [
+    "docs/vpn/latest/s2svpn/WhatsNew",
+    "www/about-aws/whats-new/2025/06/aws-site-to-site-vpn-three-capabilities-enhanced-security",
+    "www/about-aws/whats-new/2025/11/site-to-site-vpn-bgp-logging-vpn-tunnels"
+   ],
+   "note": "partial: Secrets Manager PSK, IPv6 outer tunnel IPs and BGP logging are dated; the 2022-08-19 VPN logs post is blocked by robots.txt, so that date is a feed pointer only.",
+   "status_found": "partial",
+   "verified_facts": [
+    "site-to-site-vpn-change-bgp-logging",
+    "site-to-site-vpn-change-ipv6-outer-tunnel-ips",
+    "site-to-site-vpn-change-recommended-configuration",
+    "site-to-site-vpn-change-secrets-manager-psk",
+    "site-to-site-vpn-logs-tunnel-activity-to-cloudwatch-logs"
+   ]
+  },
+  {
+   "id": "d12-080",
+   "bullet": "3.4.K4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-definition-managed-client-based-vpn-openvpn",
+    "client-vpn-faq-openvpn-protocol",
+    "client-vpn-ports-443-1194-default-443",
+    "client-vpn-transport-default-udp-not-changeable"
+   ],
+   "question": "What is AWS Client VPN in one sentence (a managed client-based VPN service to access AWS and on-premises resources)? Which protocol and clients does it use (OpenVPN-based clients, the AWS-provided client)?",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/what-is",
+    "www/vpn/client-vpn",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-definition-managed-client-based-vpn-openvpn",
+    "client-vpn-faq-openvpn-protocol",
+    "client-vpn-ports-443-1194-default-443",
+    "client-vpn-transport-default-udp-not-changeable"
+   ]
+  },
+  {
+   "id": "d12-081",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-endpoint-regional-sessions-terminate-there",
+    "client-vpn-snat-ipv4-client-source-translated-to-eni",
+    "client-vpn-target-network-is-subnet-at-least-one"
+   ],
+   "question": "Components and flow: Client VPN endpoint, target network (a subnet association), route, authorization rule, client CIDR range. How client traffic leaves the endpoint (source NAT to the IP of the endpoint's network interface in the associated subnet).",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/what-is",
+    "docs/vpn/latest/clientvpn-admin/how-it-works",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-target",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-endpoint-regional-sessions-terminate-there",
+    "client-vpn-snat-ipv4-client-source-translated-to-eni",
+    "client-vpn-target-network-is-subnet-at-least-one"
+   ]
+  },
+  {
+   "id": "d12-082",
+   "bullet": "1.2.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "partial-verified",
+   "facts": [
+    "client-vpn-active-directory-via-directory-service-ad-connector",
+    "client-vpn-authentication-alone-or-mutual-plus-user-based",
+    "client-vpn-authentication-methods-ad-certificate-saml",
+    "client-vpn-certificate-revocation-list-supported",
+    "client-vpn-mfa-with-active-directory-and-idp",
+    "client-vpn-mutual-auth-certificates-server-cert-in-acm",
+    "client-vpn-saml-federated-authentication-single-idp",
+    "client-vpn-saml-requires-aws-provided-client",
+    "client-vpn-server-certificate-in-acm-always-required"
+   ],
+   "question": "Authentication methods: Active Directory (through AWS Directory Service), mutual authentication (certificates, server certificate in AWS Certificate Manager), single sign-on with SAML 2.0 federated authentication. Which combinations are allowed, and is MFA supported (with Active Directory, with the IdP)?",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/client-authentication",
+    "docs/vpn/latest/clientvpn-admin/ad",
+    "docs/vpn/latest/clientvpn-admin/mutual",
+    "docs/vpn/latest/clientvpn-admin/federated-authentication",
+    "www/vpn/faqs"
+   ],
+   "note": "partial: the allowed authentication combinations are bullet fragments too short to quote; the facts quote 'a combination of mutual authentication with a user-based method'.",
+   "status_found": "partial",
+   "verified_facts": [
+    "client-vpn-active-directory-via-directory-service-ad-connector",
+    "client-vpn-authentication-alone-or-mutual-plus-user-based",
+    "client-vpn-authentication-methods-ad-certificate-saml",
+    "client-vpn-certificate-revocation-list-supported",
+    "client-vpn-mfa-with-active-directory-and-idp",
+    "client-vpn-mutual-auth-certificates-server-cert-in-acm",
+    "client-vpn-saml-federated-authentication-single-idp",
+    "client-vpn-saml-requires-aws-provided-client",
+    "client-vpn-server-certificate-in-acm-always-required"
+   ]
+  },
+  {
+   "id": "d12-083",
+   "bullet": "1.2.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-authorization-rules-default-deny-no-restrict-rules",
+    "client-vpn-authorization-security-groups-and-network-rules",
+    "client-vpn-connect-handler-lambda-authorizes-connection",
+    "client-vpn-security-group-default-applied-to-association"
+   ],
+   "question": "Authorization: authorization rules (network access by Active Directory group or IdP group), security groups applied to the target network association, and connection authorization with an AWS Lambda function (client connect handler). Quote one sentence each.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/client-authorization",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-rules",
+    "docs/vpn/latest/clientvpn-admin/connection-authorization",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-authorization-rules-default-deny-no-restrict-rules",
+    "client-vpn-authorization-security-groups-and-network-rules",
+    "client-vpn-connect-handler-lambda-authorizes-connection",
+    "client-vpn-security-group-default-applied-to-association"
+   ]
+  },
+  {
+   "id": "d12-084",
+   "bullet": "4.4.S7",
+   "kind": "default",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-split-tunnel-benefit-lower-data-transfer-cost",
+    "client-vpn-split-tunnel-default-off-all-traffic-through-tunnel",
+    "client-vpn-split-tunnel-disabled-by-default-at-creation"
+   ],
+   "question": "Split tunnel: by default, does all client traffic go through the VPN tunnel? With split tunnel turned on, which traffic uses the tunnel (only routes in the endpoint route table)? What does split tunnel save (data transfer cost, bandwidth)?",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/split-tunnel-vpn",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-split-tunnel-benefit-lower-data-transfer-cost",
+    "client-vpn-split-tunnel-default-off-all-traffic-through-tunnel",
+    "client-vpn-split-tunnel-disabled-by-default-at-creation"
+   ]
+  },
+  {
+   "id": "d12-085",
+   "bullet": "3.4.S1",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-client-cidr-between-slash-22-and-slash-12",
+    "client-vpn-client-cidr-cannot-change-after-creation",
+    "client-vpn-client-cidr-no-overlap-with-vpc-or-routes",
+    "client-vpn-no-dedicated-tenancy-vpc-subnet-association",
+    "client-vpn-subnets-same-vpc-one-per-availability-zone"
+   ],
+   "question": "Rules for the client CIDR range: size limits (between /22 and /12), must not overlap the VPC or routed networks, cannot be changed after the endpoint is created. Other rules and best practices of the endpoint.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/what-is-best-practices",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-endpoint-create"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-client-cidr-between-slash-22-and-slash-12",
+    "client-vpn-client-cidr-cannot-change-after-creation",
+    "client-vpn-client-cidr-no-overlap-with-vpc-or-routes",
+    "client-vpn-no-dedicated-tenancy-vpc-subnet-association",
+    "client-vpn-subnets-same-vpc-one-per-availability-zone"
+   ]
+  },
+  {
+   "id": "d12-086",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "numbers",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-client-cidr-between-slash-22-and-slash-12",
+    "client-vpn-limit-baseline-bandwidth-50-mbps",
+    "client-vpn-limit-minimum-bandwidth-10-mbps",
+    "client-vpn-limit-username-length-1024-bytes",
+    "client-vpn-ports-443-1194-default-443",
+    "client-vpn-quota-authorization-policy-size",
+    "client-vpn-quota-authorization-rules-per-endpoint",
+    "client-vpn-quota-concurrent-connections-per-endpoint",
+    "client-vpn-quota-concurrent-operations",
+    "client-vpn-quota-crl-entries",
+    "client-vpn-quota-endpoints-per-region",
+    "client-vpn-quota-groups-per-user",
+    "client-vpn-quota-routes-per-association",
+    "client-vpn-split-tunnel-disabled-by-default-at-creation",
+    "client-vpn-transport-default-udp-not-changeable"
+   ],
+   "question": "Client VPN quotas, each row with header: authorization rules per endpoint (200), endpoints per Region (5), concurrent client connections per endpoint by number of associated subnets (7,000 for one subnet and the other values), routes per target network association (100), entries in a client certificate revocation list (20,000), concurrent operations (10). Also the minimum bandwidth per user connection (10 Mbps, test-throughput page).",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/limits",
+    "docs/vpn/latest/clientvpn-admin/test-throughput",
+    "docs/vpn/latest/clientvpn-admin/scaling-considerations"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-client-cidr-between-slash-22-and-slash-12",
+    "client-vpn-limit-baseline-bandwidth-50-mbps",
+    "client-vpn-limit-minimum-bandwidth-10-mbps",
+    "client-vpn-limit-username-length-1024-bytes",
+    "client-vpn-ports-443-1194-default-443",
+    "client-vpn-quota-authorization-policy-size",
+    "client-vpn-quota-authorization-rules-per-endpoint",
+    "client-vpn-quota-concurrent-connections-per-endpoint",
+    "client-vpn-quota-concurrent-operations",
+    "client-vpn-quota-crl-entries",
+    "client-vpn-quota-endpoints-per-region",
+    "client-vpn-quota-groups-per-user",
+    "client-vpn-quota-routes-per-association",
+    "client-vpn-split-tunnel-disabled-by-default-at-creation",
+    "client-vpn-transport-default-udp-not-changeable"
+   ]
+  },
+  {
+   "id": "d12-087",
+   "bullet": "1.2.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-high-availability-multiple-subnets-different-azs",
+    "client-vpn-subnet-associations-add-connection-capacity"
+   ],
+   "question": "High availability and scaling: associate subnets in more than one Availability Zone; the scaling considerations (how many associated subnets for the expected number of users).",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/disaster-recovery-resiliency",
+    "docs/vpn/latest/clientvpn-admin/scaling-considerations",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-target"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-high-availability-multiple-subnets-different-azs",
+    "client-vpn-subnet-associations-add-connection-capacity"
+   ]
+  },
+  {
+   "id": "d12-088",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-internet-access-rule-0-0-0-0-and-default-route",
+    "client-vpn-other-networks-need-route-and-authorization-rule",
+    "client-vpn-route-table-subnet-association-adds-vpc-route"
+   ],
+   "question": "Reaching other networks: to reach the internet, a peered VPC or the on-premises network, the endpoint needs a route and an authorization rule for that destination (and a NAT gateway or internet gateway path for the internet). Quote the scenarios page and the troubleshooting page.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/how-it-works",
+    "docs/vpn/latest/clientvpn-admin/no-internet-access",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-routes",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-internet-access-rule-0-0-0-0-and-default-route",
+    "client-vpn-other-networks-need-route-and-authorization-rule",
+    "client-vpn-route-table-subnet-association-adds-vpc-route"
+   ]
+  },
+  {
+   "id": "d12-089",
+   "bullet": "3.4.S1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-change-transit-gateway-integration",
+    "client-vpn-default-tgw-availability-zones-2",
+    "client-vpn-limit-tgw-availability-zones",
+    "client-vpn-restriction-tgw-no-mixing-associations",
+    "client-vpn-restriction-tgw-no-route-propagation",
+    "client-vpn-restriction-tgw-no-security-group-authorization"
+   ],
+   "question": "Change, examinable but recent: native Transit Gateway integration (history 2026-04-20, What's New 2026-04-23). What it changes (attach the endpoint to a transit gateway instead of a subnet association) and what it requires.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/cvpn-tgw",
+    "www/about-aws/whats-new/2026/04/aws-client-vpn-transit-gateway",
+    "docs/vpn/latest/clientvpn-admin/WhatsNew"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-change-transit-gateway-integration",
+    "client-vpn-default-tgw-availability-zones-2",
+    "client-vpn-limit-tgw-availability-zones",
+    "client-vpn-restriction-tgw-no-mixing-associations",
+    "client-vpn-restriction-tgw-no-route-propagation",
+    "client-vpn-restriction-tgw-no-security-group-authorization"
+   ]
+  },
+  {
+   "id": "d12-090",
+   "bullet": "1.2.S4",
+   "kind": "default",
+   "lens": "numbers",
+   "service": "client-vpn",
+   "status": "partial-verified",
+   "facts": [
+    "client-vpn-change-disconnect-on-session-timeout",
+    "client-vpn-default-session-duration-24-hours"
+   ],
+   "question": "Maximum VPN session duration: the allowed values and the default (24 hours). What happens at the timeout (disconnect on session timeout, history 2025-01-13).",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-max-duration",
+    "docs/vpn/latest/clientvpn-admin/WhatsNew"
+   ],
+   "note": "partial: only the default (24 hours) is stored; the pages say 'choose from the available options'. Registrar search 2026-10-14 found no list of allowed values.",
+   "status_found": "partial",
+   "verified_facts": [
+    "client-vpn-change-disconnect-on-session-timeout",
+    "client-vpn-default-session-duration-24-hours"
+   ]
+  },
+  {
+   "id": "d12-091",
+   "bullet": "1.2.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-billing-elastic-ip-when-vpc-has-internet-gateway",
+    "client-vpn-billing-endpoint-association-and-connection-hours",
+    "client-vpn-billing-logging-and-lambda-extra-charges",
+    "client-vpn-connection-logging-cloudwatch-logs",
+    "client-vpn-cre-enforces-routes-on-connected-device",
+    "client-vpn-self-service-portal-download-client-and-config",
+    "client-vpn-self-service-portal-not-for-mutual-auth",
+    "client-vpn-limit-login-banner-1400-characters"
+   ],
+   "question": "Visibility and control: connection logging to CloudWatch Logs; the self-service portal for downloading the client and configuration; client login banner; Client Route Enforcement (2025-04-20). One quoted sentence each.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/connection-logging",
+    "docs/vpn/latest/clientvpn-admin/cvpn-self-service-portal",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-cre",
+    "www/about-aws/whats-new/2025/04/aws-client-vpn-client-routes-enforcement"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-billing-elastic-ip-when-vpc-has-internet-gateway",
+    "client-vpn-billing-endpoint-association-and-connection-hours",
+    "client-vpn-billing-logging-and-lambda-extra-charges",
+    "client-vpn-connection-logging-cloudwatch-logs",
+    "client-vpn-cre-enforces-routes-on-connected-device",
+    "client-vpn-self-service-portal-download-client-and-config",
+    "client-vpn-self-service-portal-not-for-mutual-auth",
+    "client-vpn-limit-login-banner-1400-characters"
+   ]
+  },
+  {
+   "id": "d12-092",
+   "bullet": "1.2.S4",
+   "kind": "change",
+   "lens": "changes",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-change-device-posture-2026-10",
+    "client-vpn-device-posture-controls-access-by-device-health",
+    "client-vpn-limit-device-posture-reevaluation-5-minutes"
+   ],
+   "question": "Hypothesis: device posture for Client VPN (CrowdStrike, Jamf, JumpCloud trust providers; policy re-evaluated every 5 minutes) may be newer than 2026-07-15 and so not examinable yet. Find its release date in the document history or on the page; if no date is found, report not-found.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/device-posture",
+    "docs/vpn/latest/clientvpn-admin/limits",
+    "docs/vpn/latest/clientvpn-admin/WhatsNew"
+   ],
+   "note": "register-12: found. A refreshed What's New harvest (2026-10-14) gives the post 'AWS Client VPN now supports device posture assessment' of 2026-10-05: GA after 2026-07-15, so device posture is NOT EXAMINABLE YET. The VPN FAQ answer 'does not support posture assessment' was rejected as older.",
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-change-device-posture-2026-10",
+    "client-vpn-device-posture-controls-access-by-device-health",
+    "client-vpn-limit-device-posture-reevaluation-5-minutes"
+   ]
+  },
+  {
+   "id": "d12-093",
+   "bullet": "4.4.S2",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-faq-software-client-free",
+    "client-vpn-pricing-endpoint-and-connection-hourly-fees",
+    "client-vpn-pricing-public-ipv4-address-charge"
+   ],
+   "question": "Client VPN pricing dimensions (no dollar amounts): endpoint association hours (per associated subnet) and active client connection hours; is the AWS-provided client free (FAQ 82)?",
+   "look_in": [
+    "www/vpn/pricing",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-faq-software-client-free",
+    "client-vpn-pricing-endpoint-and-connection-hourly-fees",
+    "client-vpn-pricing-public-ipv4-address-charge"
+   ]
+  },
+  {
+   "id": "d12-094",
+   "bullet": "4.4.S7",
+   "kind": "change",
+   "lens": "changes",
+   "service": "client-vpn",
+   "status": "partial-verified",
+   "note": "adjudicate-12: client-vpn-change-quota-increase-2024-12 rejected (its 100 was replaced by 200 in 2025-03); the 2024-12-19 intermediate row is not taught. The 50 to 200 change and current values are covered.",
+   "facts": [
+    "client-vpn-change-quota-increase-2025-03",
+    "client-vpn-quota-authorization-rules-per-endpoint",
+    "client-vpn-quota-routes-per-association"
+   ],
+   "question": "Change: higher quotas (history 2024-12-19 and 2025-03-13; What's New 2025-03-18). Old and new values for authorization rules per endpoint and routes per association, as the history rows and the post state them.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/WhatsNew",
+    "www/about-aws/whats-new/2025/03/aws-client-vpn-authorization-rules-route-quotas",
+    "docs/vpn/latest/clientvpn-admin/limits"
+   ],
+   "status_found": "partial",
+   "verified_facts": [
+    "client-vpn-change-quota-increase-2025-03",
+    "client-vpn-quota-authorization-rules-per-endpoint",
+    "client-vpn-quota-routes-per-association"
+   ]
+  },
+  {
+   "id": "d12-095",
+   "bullet": "3.4.S1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-change-concurrent-connections-per-client",
+    "client-vpn-change-ipv6-support",
+    "client-vpn-change-vpn-client-v6"
+   ],
+   "question": "Changes: IPv6 resources (history 2025-08-25, What's New 2025-08-26); concurrent VPN connections from one client (2025-01-22); AWS VPN Client v6 with CLI (2026-08-13, not examinable yet).",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/ipv6-considerations",
+    "www/about-aws/whats-new/2025/08/aws-client-vpn-connectivity-ipv6-resources",
+    "www/about-aws/whats-new/2025/01/aws-client-vpn-concurrent-vpn-connections",
+    "www/about-aws/whats-new/2026/08/aws-client-vpn-cli"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-change-concurrent-connections-per-client",
+    "client-vpn-change-ipv6-support",
+    "client-vpn-change-vpn-client-v6"
+   ]
+  },
+  {
+   "id": "d12-096",
+   "bullet": "1.2.S4",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-ad-endpoint-same-account-as-directory",
+    "client-vpn-subnet-same-account-as-endpoint"
+   ],
+   "question": "Account rules: with Active Directory authentication the endpoint must be in the same account as the Directory Service resource; with SAML the endpoint must be in the same account as the IAM SAML identity provider. Can the endpoint and the associated subnet be in different accounts (FAQ 59)?",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/limits",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-ad-endpoint-same-account-as-directory",
+    "client-vpn-subnet-same-account-as-endpoint"
+   ]
+  },
+  {
+   "id": "d12-097",
+   "bullet": "1.2.S4",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-no-traffic-initiated-toward-client-device"
+   ],
+   "question": "Direction of traffic: can a resource in the VPC start a connection to a client device over Client VPN (FAQ 63)? What does the security best-practices page say?",
+   "look_in": [
+    "www/vpn/faqs",
+    "docs/vpn/latest/clientvpn-admin/security-best-practices"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-no-traffic-initiated-toward-client-device"
+   ]
+  },
+  {
+   "id": "d12-110",
+   "bullet": "4.4.S2",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-faq-bypasses-internet-dedicated-private",
+    "direct-connect-faq-vpn-ipsec-over-internet-quick-low-bandwidth",
+    "direct-connect-vs-vpn-internet-vpn-best-effort-low-cost-widely-available",
+    "direct-connect-vs-vpn-performance-dx-for-predictable-latency-throughput",
+    "direct-connect-vs-vpn-vpn-throughput-limited-by-overhead-mtu"
+   ],
+   "question": "Direct Connect vs Site-to-Site VPN: quote the FAQ answer 'How does AWS Direct Connect differ from an IPsec VPN Connection?' and the whitepaper sentences on performance (consistent network performance, latency, bandwidth) and on the internet path of a VPN.",
+   "look_in": [
+    "www/directconnect/faqs",
+    "docs/whitepapers/latest/hybrid-connectivity/performance",
+    "docs/whitepapers/latest/hybrid-connectivity/hybrid-network-connections",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-faq-bypasses-internet-dedicated-private",
+    "direct-connect-faq-vpn-ipsec-over-internet-quick-low-bandwidth",
+    "direct-connect-vs-vpn-internet-vpn-best-effort-low-cost-widely-available",
+    "direct-connect-vs-vpn-performance-dx-for-predictable-latency-throughput",
+    "direct-connect-vs-vpn-vpn-throughput-limited-by-overhead-mtu"
+   ]
+  },
+  {
+   "id": "d12-111",
+   "bullet": "4.4.S2",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-decision-guide-connect-entire-network-to-vpcs",
+    "direct-connect-decision-guide-more-consistent-performance-than-internet",
+    "direct-connect-vs-vpn-security-internet-uses-vpn-private-uses-dx",
+    "direct-connect-vs-vpn-selection-criteria-five-considerations"
+   ],
+   "question": "Internet vs VPN vs Direct Connect: what the AWS networking decision guide says each is for (one quote per service), and the whitepaper's connectivity type selection criteria (time to deploy, security, SLA, performance, cost).",
+   "look_in": [
+    "docs/decision-guides/latest/decision-guides/choosing-networking-and-content-delivery-service",
+    "docs/whitepapers/latest/hybrid-connectivity/connectivity-type-selection",
+    "docs/whitepapers/latest/hybrid-connectivity/hybrid-connectivity-type-and-design-considerations"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-decision-guide-connect-entire-network-to-vpcs",
+    "direct-connect-decision-guide-more-consistent-performance-than-internet",
+    "direct-connect-vs-vpn-security-internet-uses-vpn-private-uses-dx",
+    "direct-connect-vs-vpn-selection-criteria-five-considerations"
+   ]
+  },
+  {
+   "id": "d12-112",
+   "bullet": "4.4.S2",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-vs-vpn-time-dedicated-weeks-to-months",
+    "direct-connect-vs-vpn-time-hosted-faster-than-dedicated",
+    "direct-connect-vs-vpn-time-to-deploy-provisioning-row",
+    "direct-connect-vs-vpn-time-vpn-hours-days-existing-connection"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Time to deploy: VPN over the internet in hours to days; Direct Connect dedicated (net-new) in several weeks to months; hosted connection with an existing partner port in hours to days. Quote the whitepaper paragraphs and the table row with its header.",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/time-to-deploy"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-vs-vpn-time-dedicated-weeks-to-months",
+    "direct-connect-vs-vpn-time-hosted-faster-than-dedicated",
+    "direct-connect-vs-vpn-time-to-deploy-provisioning-row",
+    "direct-connect-vs-vpn-time-vpn-hours-days-existing-connection"
+   ]
+  },
+  {
+   "id": "d12-113",
+   "bullet": "1.2.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-encrypt-private-connection-vpn-over-dx-or-macsec",
+    "direct-connect-plus-site-to-site-vpn-ipsec-encrypted-private-connection",
+    "direct-connect-plus-vpn-public-vif-ipsec-more-consistent-than-internet-vpn",
+    "direct-connect-plus-vpn-tgw-ipsec-encrypted-over-dedicated-connection",
+    "direct-connect-vpn-over-dx-adds-encryption-reduces-mtu"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Encrypting traffic over Direct Connect: Site-to-Site VPN over a public virtual interface (whitepaper 'Direct Connect + Site-to-Site VPN'), private IP VPN over a transit virtual interface, or MACsec. Quote the sentence that the combination gives an IPsec-encrypted private connection with a more consistent experience than internet VPN.",
+   "look_in": [
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect-site-to-site-vpn",
+    "docs/directconnect/latest/UserGuide/encryption-in-transit",
+    "docs/vpn/latest/s2svpn/private-ip-dx",
+    "docs/whitepapers/latest/hybrid-connectivity/security"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-encrypt-private-connection-vpn-over-dx-or-macsec",
+    "direct-connect-plus-site-to-site-vpn-ipsec-encrypted-private-connection",
+    "direct-connect-plus-vpn-public-vif-ipsec-more-consistent-than-internet-vpn",
+    "direct-connect-plus-vpn-tgw-ipsec-encrypted-over-dedicated-connection",
+    "direct-connect-vpn-over-dx-adds-encryption-reduces-mtu"
+   ]
+  },
+  {
+   "id": "d12-114",
+   "bullet": "3.4.S1",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-backup-lower-cost-vpn-primary-dx-with-vpn-backup",
+    "direct-connect-backup-vpn-bandwidth-limit-not-above-1-gbps",
+    "direct-connect-backup-vpn-not-recommended-for-critical-workloads-cost-note",
+    "direct-connect-backup-vpn-on-tgw-ecmp-up-to-50-gbps",
+    "direct-connect-wa-anti-pattern-overestimating-vpn-backup-bandwidth"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Backup for Direct Connect: a Site-to-Site VPN as a lower-cost backup vs a second Direct Connect connection. Quote the Well-Architected REL02-BP02 guidance and the whitepaper reliability page (including what a VPN backup cannot match: bandwidth).",
+   "look_in": [
+    "docs/wellarchitected/latest/reliability-pillar/rel_planning_network_topology_ha_conn_private_networks",
+    "docs/whitepapers/latest/hybrid-connectivity/reliability",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect-aws-transit-gateway-vpn"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-backup-lower-cost-vpn-primary-dx-with-vpn-backup",
+    "direct-connect-backup-vpn-bandwidth-limit-not-above-1-gbps",
+    "direct-connect-backup-vpn-not-recommended-for-critical-workloads-cost-note",
+    "direct-connect-backup-vpn-on-tgw-ecmp-up-to-50-gbps",
+    "direct-connect-wa-anti-pattern-overestimating-vpn-backup-bandwidth"
+   ]
+  },
+  {
+   "id": "d12-115",
+   "bullet": "1.2.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-failure-detection-bfd-for-dx-dpd-for-vpn",
+    "direct-connect-reliability-level-should-match-site-importance-cost",
+    "direct-connect-resiliency-maximum-multi-site-redundant-critical",
+    "direct-connect-resiliency-production-use-multi-site-only",
+    "direct-connect-resiliency-use-dynamic-routing-active-active",
+    "direct-connect-wa-max-resiliency-separate-devices-more-than-one-location"
+   ],
+   "question": "Most resilient design: Direct Connect connections at two or more Direct Connect locations, on separate devices (maximum resiliency). Quote the whitepaper reliability page and the resiliency recommendation page.",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/reliability",
+    "www/directconnect/resiliency-recommendation",
+    "docs/directconnect/latest/UserGuide/max-resiliency-set-up"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-failure-detection-bfd-for-dx-dpd-for-vpn",
+    "direct-connect-reliability-level-should-match-site-importance-cost",
+    "direct-connect-resiliency-maximum-multi-site-redundant-critical",
+    "direct-connect-resiliency-production-use-multi-site-only",
+    "direct-connect-resiliency-use-dynamic-routing-active-active",
+    "direct-connect-wa-max-resiliency-separate-devices-more-than-one-location"
+   ]
+  },
+  {
+   "id": "d12-116",
+   "bullet": "4.4.S7",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "direct-connect-bandwidth-choose-per-throughput-and-failover-needs",
+    "direct-connect-scalability-fewer-bgp-sessions-with-dxgw",
+    "direct-connect-vs-vpn-bandwidth-tgw-ecmp-scales-vpn-horizontally"
+   ],
+   "question": "Choosing bandwidth: one VPN tunnel's limit vs several VPN connections with ECMP on a transit gateway vs a larger Direct Connect port or a LAG. Quote the whitepaper performance and scalability pages.",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/performance",
+    "docs/whitepapers/latest/hybrid-connectivity/scalability",
+    "docs/vpn/latest/s2svpn/vpn-limits"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-bandwidth-choose-per-throughput-and-failover-needs",
+    "direct-connect-scalability-fewer-bgp-sessions-with-dxgw",
+    "direct-connect-vs-vpn-bandwidth-tgw-ecmp-scales-vpn-horizontally"
+   ]
+  },
+  {
+   "id": "d12-117",
+   "bullet": "4.4.S2",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-cost-calculate-breakeven-point",
+    "direct-connect-cost-data-ingress-to-aws-is-free",
+    "direct-connect-cost-permanent-high-volume-dx-temporary-vpn",
+    "direct-connect-cost-reduces-bandwidth-and-data-transfer-costs"
+   ],
+   "question": "Cost: what the whitepaper cost page says about VPN vs Direct Connect (port-hours, data transfer out rates lower over Direct Connect, when Direct Connect lowers total cost).",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/cost",
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-cost-calculate-breakeven-point",
+    "direct-connect-cost-data-ingress-to-aws-is-free",
+    "direct-connect-cost-permanent-high-volume-dx-temporary-vpn",
+    "direct-connect-cost-reduces-bandwidth-and-data-transfer-costs"
+   ]
+  },
+  {
+   "id": "d12-118",
+   "bullet": "3.4.S1",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-accelerated-design-optimized-vpn-over-internet-with-tgw",
+    "direct-connect-design-dxgw-with-tgw-multi-region-public-vif-for-s3",
+    "direct-connect-design-dxgw-with-vgw-single-region-dual-dx",
+    "direct-connect-design-tgw-adds-data-processing-cost-vgw-does-not",
+    "direct-connect-dxgw-vgw-reference-design-up-to-20-vpcs-per-dxgw"
+   ],
+   "question": "Reference designs: Direct Connect gateway with virtual private gateways in one Region; Direct Connect gateway with transit gateways in several Regions plus public peering; accelerated VPN with a transit gateway. One quoted sentence per design on when to use it.",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/connectivity-models",
+    "docs/whitepapers/latest/hybrid-connectivity/aws-dx-dxgw-with-vgw-single-region",
+    "docs/whitepapers/latest/hybrid-connectivity/aws-dx-dxgw-with-aws-transit-gateway-multi-regions-and-aws-public-peering",
+    "docs/whitepapers/latest/hybrid-connectivity/aws-accelerated-site-to-site-vpn-aws-transit-gateway-single-aws-region",
+    "docs/whitepapers/latest/hybrid-connectivity/connectivity-design-selection"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-accelerated-design-optimized-vpn-over-internet-with-tgw",
+    "direct-connect-design-dxgw-with-tgw-multi-region-public-vif-for-s3",
+    "direct-connect-design-dxgw-with-vgw-single-region-dual-dx",
+    "direct-connect-design-tgw-adds-data-processing-cost-vgw-does-not",
+    "direct-connect-dxgw-vgw-reference-design-up-to-20-vpcs-per-dxgw"
+   ]
+  },
+  {
+   "id": "d12-119",
+   "bullet": "3.4.K4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-options-row-managed-ipsec-over-internet-to-single-vpc",
+    "site-to-site-vpn-vgw-regional-terminates-vpn-and-private-vifs",
+    "direct-connect-options-row-direct-connect-predictable-private-lines"
+   ],
+   "question": "Network connection options listed by AWS: the hybrid connectivity services page and the 'Network-to-Amazon VPC connectivity options' list (Site-to-Site VPN, Transit Gateway + VPN, Direct Connect, Direct Connect + Transit Gateway, Direct Connect + VPN, VPN CloudHub, software VPN).",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/aws-hybrid-connectivity-services",
+    "docs/whitepapers/latest/hybrid-connectivity/aws-hybrid-connectivity-building-blocks",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/network-to-amazon-vpc-connectivity-options",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/introduction"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-options-row-managed-ipsec-over-internet-to-single-vpc",
+    "site-to-site-vpn-vgw-regional-terminates-vpn-and-private-vifs",
+    "direct-connect-options-row-direct-connect-predictable-private-lines"
+   ]
+  },
+  {
+   "id": "d12-120",
+   "bullet": "1.2.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-sec09-use-ipsec-vpn-for-network-to-network"
+   ],
+   "question": "Well-Architected security pillar, protecting data in transit: the sentence that recommends encrypting data in transit and names VPN connectivity or similar. Check the canon (well-architected) first and reuse.",
+   "look_in": [
+    "docs/wellarchitected/latest/security-pillar/protecting-data-in-transit"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-sec09-use-ipsec-vpn-for-network-to-network"
+   ]
+  },
+  {
+   "id": "d12-121",
+   "bullet": "3.4.S1",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-hybrid-dns-route-53-resolver-forwards-to-on-premises"
+   ],
+   "question": "Hybrid DNS over VPN or Direct Connect: one sentence from the hybrid DNS whitepaper on resolving names between the VPC and on-premises (Route 53 Resolver endpoints). Chapter 13 owns the details; one fact only.",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-cloud-dns-options-for-vpc/hybrid-cloud-dns-options-for-vpc"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-hybrid-dns-route-53-resolver-forwards-to-on-premises"
+   ]
+  },
+  {
+   "id": "d12-122",
+   "bullet": "3.4.K4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-options-row-openvpn-clients-only",
+    "client-vpn-remote-access-preferred-by-smaller-companies",
+    "client-vpn-vs-site-to-site-decision-guide-remote-users",
+    "client-vpn-whitepaper-managed-secure-software-remote-access"
+   ],
+   "question": "Client VPN vs Site-to-Site VPN vs software remote-access VPN: individual users on devices vs a network to a network. Quote the whitepaper pages for remote access and Client VPN, and the decision guide line if present.",
+   "look_in": [
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-client-vpn",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/software-remote-access-to-amazon-vpc-connectivity-options",
+    "docs/decision-guides/latest/decision-guides/choosing-networking-and-content-delivery-service",
+    "docs/vpn/latest/clientvpn-admin/what-is"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-options-row-openvpn-clients-only",
+    "client-vpn-remote-access-preferred-by-smaller-companies",
+    "client-vpn-vs-site-to-site-decision-guide-remote-users",
+    "client-vpn-whitepaper-managed-secure-software-remote-access"
+   ]
+  },
+  {
+   "id": "d12-123",
+   "bullet": "3.4.S1",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-tgw-vpn-many-vpcs-without-multiple-vpn-connections"
+   ],
+   "question": "VPN on a virtual private gateway vs on a transit gateway: one VPC vs many VPCs, ECMP, accelerated VPN, large bandwidth tunnels. Quote the whitepaper 'Transit Gateway + Site-to-Site VPN' page and the transit gateway VPN attachment page.",
+   "look_in": [
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-transit-gateway-vpn",
+    "docs/vpc/latest/tgw/tgw-vpn-attachments",
+    "docs/vpn/latest/s2svpn/how_it_works"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-tgw-vpn-many-vpcs-without-multiple-vpn-connections"
+   ]
+  },
+  {
+   "id": "d12-124",
+   "bullet": "3.4.S1",
+   "kind": "example",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-example-corp-vpn-for-dev-test-direct-connect-for-production"
+   ],
+   "question": "Worked example from AWS: the Example Corp. Automotive use case and the architecture it selected (requirements and the chosen hybrid design). One or two quotes; optional for the 'In the real world' section.",
+   "look_in": [
+    "docs/whitepapers/latest/hybrid-connectivity/example-corp.-automotive-use-case",
+    "docs/whitepapers/latest/hybrid-connectivity/architecture-selected-by-example-corp.-automotive"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-example-corp-vpn-for-dev-test-direct-connect-for-production"
+   ]
+  },
+  {
+   "id": "d12-130",
+   "bullet": "4.4.K5",
+   "kind": "behavior",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-private-connection-more-consistent-than-internet"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale's 'consistent throughput' reason: quote the guide or FAQ sentence that Direct Connect gives a more consistent network experience than internet-based connections, and the sentence on lower or predictable latency if one exists.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/encryption-in-transit",
+    "docs/directconnect/latest/UserGuide/Welcome",
+    "www/directconnect/faqs",
+    "www/directconnect/features",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-private-connection-more-consistent-than-internet"
+   ]
+  },
+  {
+   "id": "d12-131",
+   "bullet": "4.4.S2",
+   "kind": "price",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-billing-connection-hour-while-available",
+    "direct-connect-hosted-port-hours-billed-while-provisioned",
+    "direct-connect-no-setup-charge-no-minimum-term",
+    "direct-connect-port-hours-charged-even-when-no-data",
+    "direct-connect-pricing-factors-capacity-port-hours-data-transfer-out"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale's 'fixed monthly cost' trade-off: are port-hours charged for the provisioned capacity whether or not traffic flows (pricing page, FAQ 78 and 80)? Is the VPN connection-hour charged while the VPN is idle?",
+   "look_in": [
+    "www/directconnect/pricing/pay-as-you-go",
+    "www/directconnect/faqs",
+    "www/vpn/pricing",
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-billing-connection-hour-while-available",
+    "direct-connect-hosted-port-hours-billed-while-provisioned",
+    "direct-connect-no-setup-charge-no-minimum-term",
+    "direct-connect-port-hours-charged-even-when-no-data",
+    "direct-connect-pricing-factors-capacity-port-hours-data-transfer-out"
+   ]
+  },
+  {
+   "id": "d12-132",
+   "bullet": "3.4.S1",
+   "kind": "behavior",
+   "lens": "decisions",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-tgw-ecmp-not-between-different-attachment-types",
+    "site-to-site-vpn-tgw-prefers-dx-gateway-route-over-vpn",
+    "site-to-site-vpn-tgw-vpn-attachment-supports-static-dynamic-ipv4-ipv6"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale's design 'Direct Connect with a backup VPN to the transit gateway': quote that a transit gateway accepts both a VPN attachment and a Direct Connect gateway attachment, and which path the transit gateway prefers for the same prefix.",
+   "look_in": [
+    "docs/vpc/latest/tgw/tgw-vpn-attachments",
+    "docs/vpc/latest/tgw/tgw-dcg-attachments",
+    "docs/vpn/latest/s2svpn/vpn-route-priority",
+    "docs/whitepapers/latest/aws-vpc-connectivity-options/aws-direct-connect-aws-transit-gateway-vpn"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-tgw-ecmp-not-between-different-attachment-types",
+    "site-to-site-vpn-tgw-prefers-dx-gateway-route-over-vpn",
+    "site-to-site-vpn-tgw-vpn-attachment-supports-static-dynamic-ipv4-ipv6"
+   ]
+  },
+  {
+   "id": "d12-133",
+   "bullet": "1.2.S4",
+   "kind": "capability",
+   "lens": "decisions",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-authorization-rule-group-limits-access-to-network",
+    "client-vpn-federated-idp-list-includes-iam-identity-center"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale's engineers reach a private admin tool: quote that Client VPN can use SAML federated authentication with an IdP such as IAM Identity Center, and that authorization rules can limit access by group to one network range.",
+   "look_in": [
+    "docs/vpn/latest/clientvpn-admin/federated-authentication",
+    "docs/vpn/latest/clientvpn-admin/cvpn-working-rules",
+    "docs/vpn/latest/clientvpn-admin/client-authorization"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-authorization-rule-group-limits-access-to-network",
+    "client-vpn-federated-idp-list-includes-iam-identity-center"
+   ]
+  },
+  {
+   "id": "d12-134",
+   "bullet": "4.4.S7",
+   "kind": "limit",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-limit-hosted-port-speeds",
+    "direct-connect-hosted-connection-provisioned-by-partner"
+   ],
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale's bank allows 500 Mbps on Direct Connect: is 500 Mbps a hosted connection capacity (quote the list), and would a hosted connection be provisioned by a Direct Connect Partner? Reuse the d12-032 fact if it covers this.",
+   "look_in": [
+    "docs/directconnect/latest/UserGuide/hosted_connection",
+    "docs/directconnect/latest/UserGuide/connection_options"
+   ],
+   "note": "Reused (behavior miner): 500 Mbps is in the hosted speed list; a Direct Connect Partner provisions hosted connections.",
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-limit-hosted-port-speeds",
+    "direct-connect-hosted-connection-provisioned-by-partner"
+   ]
+  },
+  {
+   "id": "d12-140",
+   "bullet": "4.4.S2",
+   "kind": "example",
+   "lens": "decisions",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-case-discover-transactions-into-s3",
+    "direct-connect-case-nium-cloudhsm-direct-connect-clearing-systems"
+   ],
+   "tags": [
+    "case-study"
+   ],
+   "question": "Real company examples with Direct Connect: one quoted sentence each from Nium (Direct Connect with CloudHSM to clearing systems) and Discover Financial Services (Direct Connect to move transactions into Amazon S3).",
+   "look_in": [
+    "www/solutions/case-studies/nium",
+    "www/solutions/case-studies/discover-case-study",
+    "www/solutions/case-studies/q2-presidio"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-case-discover-transactions-into-s3",
+    "direct-connect-case-nium-cloudhsm-direct-connect-clearing-systems"
+   ]
+  },
+  {
+   "id": "d12-150",
+   "bullet": "4.4.S7",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-faq-tunnel-max-throughput",
+    "site-to-site-vpn-faq-vgw-aggregate-throughput",
+    "site-to-site-vpn-faq-tgw-for-higher-throughput"
+   ],
+   "question": "VPN FAQ: 'What is the approximate maximum throughput of a Site-to-Site VPN connection?' and 'Is there an aggregated throughput limit for Virtual Private Gateway?' (items 16, 17).",
+   "look_in": [
+    "www/vpn/faqs"
+   ],
+   "note": "The FAQ says 1.25 Gbps per tunnel; the large-bandwidth tunnel (5 Gbps) is in the user guide, and the FAQ itself says 1.25Gbps and 5Gbps for private IP VPN (site-to-site-vpn-faq-private-ip-bandwidth). Writers must not call 1.25 Gbps the only tunnel size. Volatility is frequently-changing so the currency vote runs.",
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-faq-tunnel-max-throughput",
+    "site-to-site-vpn-faq-vgw-aggregate-throughput",
+    "site-to-site-vpn-faq-tgw-for-higher-throughput"
+   ]
+  },
+  {
+   "id": "d12-151",
+   "bullet": "1.2.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-faq-cgw-ike-initiator-default",
+    "site-to-site-vpn-cgw-behind-nat-use-nat-public-ip",
+    "site-to-site-vpn-nat-t-udp-4500-if-not-disabled"
+   ],
+   "question": "VPN FAQ: 'Which side of the VPN tunnel initiates the Internet Key Exchange (IKE) session?' (item 30) and 'Can I NAT my customer gateway behind a router or firewall?' (item 22).",
+   "look_in": [
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-faq-cgw-ike-initiator-default",
+    "site-to-site-vpn-cgw-behind-nat-use-nat-public-ip",
+    "site-to-site-vpn-nat-t-udp-4500-if-not-disabled"
+   ]
+  },
+  {
+   "id": "d12-152",
+   "bullet": "4.4.S2",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-accelerated-why-consistent-experience",
+    "site-to-site-vpn-faq-accelerated-transit-gateway-only",
+    "site-to-site-vpn-faq-accelerated-not-over-public-vif",
+    "site-to-site-vpn-faq-accelerated-two-tunnels",
+    "site-to-site-vpn-faq-accelerated-nat-t-required",
+    "site-to-site-vpn-faq-accelerated-not-in-global-accelerator"
+   ],
+   "question": "VPN FAQ: 'Why should I use Accelerated Site-to-Site VPN?' (41), 'Is Accelerated Site-to-Site VPN supported for both virtual gateway and AWS Transit Gateway?' (45), 'Can I use Accelerated VPN over public AWS Direct Connect virtual interfaces?' (50).",
+   "look_in": [
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-accelerated-why-consistent-experience",
+    "site-to-site-vpn-faq-accelerated-transit-gateway-only",
+    "site-to-site-vpn-faq-accelerated-not-over-public-vif",
+    "site-to-site-vpn-faq-accelerated-two-tunnels",
+    "site-to-site-vpn-faq-accelerated-nat-t-required",
+    "site-to-site-vpn-faq-accelerated-not-in-global-accelerator"
+   ]
+  },
+  {
+   "id": "d12-153",
+   "bullet": "4.4.S2",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "site-to-site-vpn",
+   "status": "verified",
+   "facts": [
+    "site-to-site-vpn-billing-connection-hour-while-available",
+    "site-to-site-vpn-private-ip-vpn-needs-transit-gateway-and-dx-attachment"
+   ],
+   "question": "VPN FAQ: 'What defines billable VPN connection-hours?' (3; reuse vpc-faq-vpn-connection-hour-billing if it is the same sentence) and 'Do I require a Transit gateway for Private IP VPN?' (33).",
+   "look_in": [
+    "www/vpn/faqs"
+   ],
+   "note": "The VPN FAQ billing answer differs from vpc-faq-vpn-connection-hour-billing (which also states partial hours and data transfer rates); both are kept because they quote different pages.",
+   "status_found": "found",
+   "verified_facts": [
+    "site-to-site-vpn-billing-connection-hour-while-available",
+    "site-to-site-vpn-private-ip-vpn-needs-transit-gateway-and-dx-attachment"
+   ]
+  },
+  {
+   "id": "d12-154",
+   "bullet": "1.2.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-authentication-methods-ad-certificate-saml",
+    "client-vpn-faq-mfa-via-ad-or-idp",
+    "client-vpn-faq-split-tunnel-routing"
+   ],
+   "question": "VPN FAQ (Client VPN): 'What authentication mechanisms does AWS Client VPN support?' (64), 'Does AWS Client VPN support Multi-Factor Authentication (MFA)?' (71), 'Does AWS Client VPN support split tunnel?' (62).",
+   "look_in": [
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-authentication-methods-ad-certificate-saml",
+    "client-vpn-faq-mfa-via-ad-or-idp",
+    "client-vpn-faq-split-tunnel-routing"
+   ]
+  },
+  {
+   "id": "d12-155",
+   "bullet": "1.2.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "client-vpn",
+   "status": "verified",
+   "facts": [
+    "client-vpn-no-traffic-initiated-toward-client-device",
+    "client-vpn-faq-security-group-default-applied",
+    "client-vpn-faq-software-client-free"
+   ],
+   "question": "VPN FAQ (Client VPN): 'Can a resource initiate connection to a user's device using Client VPN?' (63), 'Does AWS Client VPN support security group?' (73), 'What is the additional price to use the software client of AWS Client VPN?' (82).",
+   "look_in": [
+    "www/vpn/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "client-vpn-no-traffic-initiated-toward-client-device",
+    "client-vpn-faq-security-group-default-applied",
+    "client-vpn-faq-software-client-free"
+   ]
+  },
+  {
+   "id": "d12-156",
+   "bullet": "4.4.K5",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-faq-dedicated-vs-hosted",
+    "direct-connect-aws-is-not-first-or-last-mile-provider"
+   ],
+   "question": "Direct Connect FAQ: 'What is the difference between dedicated and hosted connections?' (3) and 'Does AWS act as my \"first mile\" or \"last mile\" provider to connect my on-premises locations to AWS?' (6).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-faq-dedicated-vs-hosted",
+    "direct-connect-aws-is-not-first-or-last-mile-provider"
+   ]
+  },
+  {
+   "id": "d12-157",
+   "bullet": "4.4.S2",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-faq-vpn-ipsec-over-internet-quick-low-bandwidth",
+    "direct-connect-faq-bypasses-internet-dedicated-private",
+    "direct-connect-vpn-same-vpc-failover-only-dx-path-preferred"
+   ],
+   "question": "Direct Connect FAQ: 'How does AWS Direct Connect differ from an IPsec VPN Connection?' (101) and 'Can I use AWS Direct Connect and a VPN Connection to the same VPC simultaneously?' (102).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-faq-vpn-ipsec-over-internet-quick-low-bandwidth",
+    "direct-connect-faq-bypasses-internet-dedicated-private",
+    "direct-connect-vpn-same-vpc-failover-only-dx-path-preferred"
+   ]
+  },
+  {
+   "id": "d12-158",
+   "bullet": "1.2.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-lag-not-more-resilient-against-device-failure",
+    "direct-connect-faq-high-availability-multiple-locations",
+    "direct-connect-faq-second-connection-redundant-equipment",
+    "direct-connect-backup-vpn-vpc-traffic-fails-over-automatically",
+    "direct-connect-faq-offers-sla"
+   ],
+   "question": "Direct Connect FAQ: 'Does having a link aggregation group (LAG) make my connection more resilient?' (21), 'How do I order connections to AWS Direct Connect for high availability?' (22), 'Does AWS Direct Connect offer a Service Level Agreement (SLA)?' (24).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "note": "The FAQ answer on the SLA is only 'Yes, AWS Direct Connect offers an SLA. Details are here.'; the SLA terms are on www/directconnect/sla (numbers lens).",
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-lag-not-more-resilient-against-device-failure",
+    "direct-connect-faq-high-availability-multiple-locations",
+    "direct-connect-faq-second-connection-redundant-equipment",
+    "direct-connect-backup-vpn-vpc-traffic-fails-over-automatically",
+    "direct-connect-faq-offers-sla"
+   ]
+  },
+  {
+   "id": "d12-159",
+   "bullet": "1.2.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-macsec-not-a-replacement-for-other-encryption",
+    "direct-connect-macsec-supported-dedicated-10-100-400-gbps",
+    "direct-connect-faq-macsec-what-it-encrypts",
+    "direct-connect-faq-macsec-needs-capable-device",
+    "direct-connect-macsec-cipher-suites",
+    "direct-connect-macsec-no-extra-charge"
+   ],
+   "question": "Direct Connect FAQ: 'Does MACsec replace other encryption technologies I currently use in my network?' (176) and 'Which type of AWS Direct Connect connections support MACsec?' (177).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-macsec-not-a-replacement-for-other-encryption",
+    "direct-connect-macsec-supported-dedicated-10-100-400-gbps",
+    "direct-connect-faq-macsec-what-it-encrypts",
+    "direct-connect-faq-macsec-needs-capable-device",
+    "direct-connect-macsec-cipher-suites",
+    "direct-connect-macsec-no-extra-charge"
+   ]
+  },
+  {
+   "id": "d12-160",
+   "bullet": "3.4.S1",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-faq-dxgw-definition-global",
+    "direct-connect-faq-dxgw-share-private-vif-up-to-20-vpcs",
+    "direct-connect-faq-dxgw-transit-vif-dedicated-no-private-vif",
+    "direct-connect-faq-dxgw-no-vpc-to-vpc-routing",
+    "direct-connect-vgw-dxgw-and-vpn-failover-needs-route-to-vgw",
+    "direct-connect-dxgw-not-between-vpn-and-vif"
+   ],
+   "question": "Direct Connect FAQ: 'Why is an AWS Direct Connect gateway necessary?' (118), 'Can I send traffic from a VPC that is associated with an AWS Direct Connect gateway to another VPC associated to the same AWS Direct Connect gateway?' (139), and item 135 (VGW with a VPN and a Direct Connect gateway when the circuit goes down).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-faq-dxgw-definition-global",
+    "direct-connect-faq-dxgw-share-private-vif-up-to-20-vpcs",
+    "direct-connect-faq-dxgw-transit-vif-dedicated-no-private-vif",
+    "direct-connect-faq-dxgw-no-vpc-to-vpc-routing",
+    "direct-connect-vgw-dxgw-and-vpn-failover-needs-route-to-vgw",
+    "direct-connect-dxgw-not-between-vpn-and-vif"
+   ]
+  },
+  {
+   "id": "d12-161",
+   "bullet": "4.4.S2",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "verified",
+   "facts": [
+    "direct-connect-no-setup-charge-no-minimum-term",
+    "direct-connect-faq-two-charges-port-hours-data-transfer",
+    "direct-connect-hosted-port-hours-billed-while-provisioned",
+    "direct-connect-dto-does-not-include-internet-transfers"
+   ],
+   "question": "Direct Connect FAQ: 'Are there any setup charges or a minimum service term commitment required to use AWS Direct Connect?' (77), 'Does AWS Direct Connect Data Transfer Out include transfers to the internet?' (84), 'What defines billable port-hours for Hosted Connections?' (80).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "note": "The FAQ is silent on a fee for early cancellation beyond 'you may cancel at any time'. Flat-rate billing of dedicated connections (2026-09-15) is not examinable yet; the port-hour answer is the examinable one.",
+   "status_found": "found",
+   "verified_facts": [
+    "direct-connect-no-setup-charge-no-minimum-term",
+    "direct-connect-faq-two-charges-port-hours-data-transfer",
+    "direct-connect-hosted-port-hours-billed-while-provisioned",
+    "direct-connect-dto-does-not-include-internet-transfers"
+   ]
+  },
+  {
+   "id": "d12-162",
+   "bullet": "4.4.S7",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "direct-connect",
+   "status": "partial-verified",
+   "facts": [
+    "direct-connect-limit-dedicated-port-speeds",
+    "direct-connect-limit-hosted-port-speeds",
+    "direct-connect-faq-no-data-limit-up-to-port-capacity",
+    "direct-connect-quota-routes-per-bgp-session-private-transit"
+   ],
+   "adjudication": "adjudicate-12: the FAQ answers on 100 routes (FAQ 90, 91) were rejected as outdated (100 is now the default allocation). Teach the quotas row instead: default 100 each for IPv4 and IPv6, BGP session idle and DOWN above the configured allocation. No verbatim FAQ quote for item 91.",
+   "question": "Direct Connect FAQ: 'What connection speeds are available?' (88), 'Are there limits on the amount of data that I can transfer using AWS Direct Connect?' (89), 'What happens if I advertise more than 100 routes over a Border Gateway Protocol session?' (91).",
+   "look_in": [
+    "www/directconnect/faqs"
+   ],
+   "note": "The FAQ still states 100 routes per BGP session and no mention of prefix controls (up to 1,000, GA 2026-08-20, not examinable yet).",
+   "status_found": "partial",
+   "verified_facts": [
+    "direct-connect-limit-dedicated-port-speeds",
+    "direct-connect-limit-hosted-port-speeds",
+    "direct-connect-faq-no-data-limit-up-to-port-capacity",
+    "direct-connect-quota-routes-per-bgp-session-private-transit"
+   ]
+  }
+ ],
+ "registered_by": "register-12",
+ "registered_at": "2026-10-14",
+ "verify_facts": {
+  "closed_by": "close-facts-12",
+  "closed_at": "2026-10-14",
+  "verified": 519,
+  "rejected": 7,
+  "demand_status": {
+   "verified": 109,
+   "partial-verified": 10
+  }
+ }
+}

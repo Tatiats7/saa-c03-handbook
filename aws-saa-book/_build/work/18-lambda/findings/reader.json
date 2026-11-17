@@ -1,0 +1,215 @@
+{
+ "lens": "reader",
+ "chapter": "18",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "18-lambda/3-do.md",
+   "section": "whole file; also 1-fast.md Look first, 2-deep.md Try it callouts, 4-say.md",
+   "quote": "Nothing here yet.",
+   "type": "missing-content",
+   "severity": "blocking",
+   "evidence": "Rule TOOLS-items.md sync: 'Only items with status: ready are printed'; TOOLS-rules.md R5: 'A reviewer sets cards, speak items and tasks to ready in the stage of that kind, after the item lint is clean.' data/18-lambda/tasks.json (lambda-t01, t02, t03), speak.json (s01 to s04) and cards.json (24 cards) are all status candidate although the tasks, speak and cards stages passed. Result after sync 18: 3-do.md and 4-say.md say 'Nothing here yet.', the Look first region in 1-fast.md (task:start id=lambda-t01 ... task:end) is empty, and the two Try it callouts in 2-deep.md ('See [3-do.md](3-do.md)') send the reader to an empty page. She gets no hands-on tasks and no spoken answers, two of the four things she asked for.",
+   "status": "fixed",
+   "resolution": "fix-18: same fix as claims-18-014: number cards added, cards, speak items and tasks set ready, sync 18 printed 3-do.md, 4-say.md and the Look first region."
+  },
+  {
+   "id": "reader-02",
+   "file": "18-lambda/2-deep.md",
+   "section": "FAQ quick-fire, FAQ 8",
+   "quote": "**FAQ 8.** If a database password sits in an environment variable, how is it stored?",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "Fact lambda-faq-sensitive-env-vars-kms, www/lambda/faqs quote: 'we recommend you use client-side encryption using AWS Key Management Service and store the resulting values as ciphertext in your environment variable. You will need to include logic in your AWS Lambda function code to decrypt these values.' The FAQ is a recommendation for what you should do, but the book's question 'how is it stored?' with the answer 'As encrypted ciphertext' reads as if Lambda stores the password as ciphertext by itself. It also sits next to the role section's exam signal 'use AWS Secrets Manager instead of environment variables' (lambda-secrets-manager-not-env-vars) without saying how the two fit together. Reword: 'Where should a database password go?' Secrets Manager first, with client-side KMS encryption as AWS's fallback when the password has to be in an environment variable.",
+   "status": "fixed",
+   "resolution": "fix-18: same fix as claims-18-001: Secrets Manager first, then client-side KMS encryption as AWS's recommendation for a value in an environment variable."
+  },
+  {
+   "id": "reader-03",
+   "file": "18-lambda/2-deep.md",
+   "section": "FAQ quick-fire, FAQ 4; and One Regional concurrency quota is shared by all functions and throttles the excess (table)",
+   "quote": "Amazon S3 can retry them for [24 hours](../facts/lambda.md#lambda-faq-throttle-s3-retry-24-hours).",
+   "type": "contradiction",
+   "severity": "blocking",
+   "evidence": "The concurrency section table says '| Amazon S3 or Amazon SNS | Success | Lambda retries for [up to 6 hours by default](...lambda-async-throttle-retry-6-hours) |' (docs quote: 'For throttling errors (429) and system errors (500-series), Lambda returns the event to the queue and attempts to run the function again for up to 6 hours by default.'). FAQ 4 asks 'What happens to S3 events that Lambda throttles?' and answers that S3 retries them for 24 hours (FAQ quote: 'events rejected by AWS Lambda may be retained and retried by S3 for 24 hours'). A reader gets two answers to the same question, from two different retriers with two different durations, and nothing explains the difference. Either reconcile them in one sentence (S3 retries only when Lambda rejects the event at the API, before Lambda's async queue accepts it; once the event is accepted, Lambda retries throttles for up to 6 hours) or drop FAQ 4.",
+   "status": "fixed",
+   "resolution": "fix-18: same fix as claims-18-019: FAQ 4 is about rejected events (S3 retries for 24 hours) and adds that an accepted, throttled event is retried by Lambda for up to 6 hours by default."
+  },
+  {
+   "id": "reader-04",
+   "file": "18-lambda/2-deep.md",
+   "section": "How it works, Say it boxes",
+   "quote": "> **Say it:** The short answer is: services push, and Lambda polls queues and streams. The thing to watch is the mapping.",
+   "type": "speech",
+   "severity": "should",
+   "evidence": "READER.md: 'Every chapter gives her sentences she can say'. The exemplar (exemplar/iam-2-deep.md) ends each Say it with a reason: 'The thing to watch is the trust policy, which names who can use the role.' Here several Say it boxes end with a bare noun that a listener cannot use: 'The thing to watch is the mapping.', 'The thing to watch is the destination.', 'The thing to watch is Amazon S3.', 'The thing to watch is the public subnet.', 'The thing to watch is the missing queue.', 'The thing to watch is the visibility timeout.' Add the reason, for example: 'The thing to watch is the public subnet: it gives the function no internet access.'",
+   "status": "fixed",
+   "resolution": "fix-18: each Say it now ends with a reason within the 25-word limit (L202): the mapping does the polling; the destination keeps failed events; the visibility timeout returns failed messages; permission for Amazon S3; the public subnet gives no internet access; nothing queues requests; the standby Region with its own quota; the idle cost of ready environments."
+  },
+  {
+   "id": "reader-05",
+   "file": "18-lambda/2-deep.md",
+   "section": "Each request runs in an execution environment that Lambda can freeze and reuse",
+   "quote": "> **Say it:** The short answer is: Lambda reuses warm environments. The thing to watch is that nothing in them lasts.",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "The table directly above says that an Init variable is 'Kept' for the next warm request, and a /tmp file is 'Kept: it [remains when the execution environment is frozen]' (lambda-tmp-transient-cache). 'nothing in them lasts' contradicts the table. Say what is true: 'nothing in them is guaranteed to last, so keep state in DynamoDB or S3.'",
+   "status": "fixed",
+   "resolution": "fix-18: now 'The thing to watch is that nothing in them is sure to last.'"
+  },
+  {
+   "id": "reader-06",
+   "file": "18-lambda/2-deep.md",
+   "section": "Each request runs in an execution environment that Lambda can freeze and reuse",
+   "quote": "Why **stateless** (STAYT-less)? An environment serves [a maximum of one invocation at a time](../facts/lambda.md#lambda-managed-instances-multi-concurrency-row), with its own **ephemeral** (ih-FEM-er-ul) /tmp storage.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The 'Why' does not explain cause and effect. A function must be stateless because the next request may go to a different environment, and Lambda [terminates execution environments every few hours] (lambda-environment-not-persistent), so what one environment holds is not there for the next request. 'One invocation at a time' is not that reason. The Stop and answer that follows makes the right point (requests run 'in different environments'), so put that cause into the Why sentence.",
+   "status": "fixed",
+   "resolution": "fix-18: the Why now gives the cause: 'The next request can reach another environment, with its own ephemeral /tmp storage.' The managed-instances link was removed from this sentence."
+  },
+  {
+   "id": "reader-07",
+   "file": "18-lambda/2-deep.md",
+   "section": "Provisioned concurrency keeps environments initialized and you pay for them while idle",
+   "quote": "| SnapStart | Fast, best effort: [as low as sub-second](../facts/lambda.md#lambda-snapstart-vs-pc-guide) |",
+   "type": "term-unexplained",
+   "severity": "should",
+   "evidence": "SnapStart appears in 1-fast.md Signals ('best effort is enough: SnapStart'), in Changed recently, in this table, in an Exam signal and in FAQ 7, but the book never says what it is or how it works (Lambda saves a snapshot of the initialized environment and starts new environments from that snapshot). Rule STYLE: explain a term at first use. Add one sentence before the table and a needs-term marker.",
+   "status": "fixed",
+   "resolution": "fix-18: the SnapStart row now explains it: 'Resumes from a pre-initialized snapshot; best effort, as low as sub-second' (lambda-faq-snapstart-how), with SnapStart in bold."
+  },
+  {
+   "id": "reader-08",
+   "file": "18-lambda/2-deep.md",
+   "section": "Provisioned concurrency keeps environments initialized and you pay for them while idle",
+   "quote": "2. **Pin.** It applies to a published version or `alias`, [not the $LATEST version](../facts/lambda.md#lambda-pc-not-latest-no-cold-start).",
+   "type": "term-before-explained",
+   "severity": "should",
+   "evidence": "'alias', 'published version' and '$LATEST' are first explained two subsections later, in 'Code ships as a zip archive or an image and published versions never change' (step 3 and step 4). The trap in this subsection ('If an event source calls $LATEST') and q014 depend on these terms. Either move the versions and aliases subsection in front of provisioned concurrency, or give a one-line definition here. The word alias is also set in code font although it is an ordinary term, not a parameter.",
+   "status": "fixed",
+   "resolution": "fix-18: the Pin step defines both terms in place: 'a published version, a fixed copy of the code, or an `alias` that points to one'. The code font stays: the plain word alias is the banned variant of alias record (L901 failed when it was removed)."
+  },
+  {
+   "id": "reader-09",
+   "file": "18-lambda/2-deep.md",
+   "section": "A synchronous caller handles errors itself but Lambda retries asynchronous events, Stop and answer",
+   "quote": "[The queue itself is eventually consistent](../facts/lambda.md#lambda-async-queue-eventually-consistent), so an event can arrive twice.",
+   "type": "term-unexplained",
+   "severity": "should",
+   "evidence": "'eventually consistent' is used without an explanation (lint W901 also flags it as not bold). A reader whose second language is English cannot get from 'eventually consistent' to 'the same event can be delivered twice' without help. Say it in plain words: 'Lambda's internal queue can deliver the same event more than once.'",
+   "status": "fixed",
+   "resolution": "fix-18: now 'The same event can arrive twice: the queue itself is eventually consistent.'"
+  },
+  {
+   "id": "reader-10",
+   "file": "18-lambda/2-deep.md",
+   "section": "FAQ quick-fire, FAQ 9",
+   "quote": "**FAQ 9.** Do you pay for compute while a durable function waits for an approval?",
+   "type": "padding",
+   "severity": "should",
+   "evidence": "'durable function' and 'durable execution SDK' appear nowhere else in the chapter, the facts it teaches or the questions. The reader cannot tell what a durable function is, so this FAQ teaches nothing. Either replace it with an FAQ about something the chapter teaches, or add a short explanation and a cross-reference to the Step Functions chapter (32).",
+   "status": "fixed",
+   "resolution": "fix-18: same fix as claims-18-030: FAQ 9 now says what a durable function does."
+  },
+  {
+   "id": "reader-11",
+   "file": "18-lambda/1-fast.md",
+   "section": "Check",
+   "quote": "**Check 2.** An image-resizing function is slow at a small memory setting. Which one setting makes it faster?",
+   "type": "gist-answerable",
+   "severity": "should",
+   "evidence": "READER.md: 'Headings, tables and captions must give a correct gist on their own; questions must test what the gist misses.' Check 2 is answered by the Signals table row '\"a CPU-heavy function is too slow\" | more memory', and Check 1 ('a video job runs for most of an hour ... Where does it run?') by the Choose it table row 'How long can one run last?' plus the Signals 'But not if' cell 'Fargate or AWS Batch'. Both can be answered from a skim. Test what the tables leave out instead: the 6 vCPU ceiling, or that the timeout cannot be raised.",
+   "status": "fixed",
+   "resolution": "fix-18: Check 2 now asks how much CPU a function can get at the largest memory setting (up to 6 vCPU, then Fargate), which no table states. Check 1 stays: it carries the Predict 1 answer on the timeout trap."
+  },
+  {
+   "id": "reader-12",
+   "file": "18-lambda/1-fast.md",
+   "section": "In one breath; and 2-deep.md Decision record",
+   "quote": "## In one breath (3 min)",
+   "type": "length",
+   "severity": "should",
+   "evidence": "Lint warnings from stage show 18: 'W201 `In one breath` has 328 words; the section allows 0 to 280' and 'W201 `Decision record` has 374 words; the section allows 0 to 280'. READER.md: long text intimidates her. In In one breath, the five-step figure explanation can go into the Go deeper details, or step 5 can go (the How it works section repeats it). In the Decision record, the three-step Before list repeats the figure caption.",
+   "status": "fixed",
+   "resolution": "fix-18: Decision record now within 280 words (W201 cleared). In one breath went from 328 to 318 words (startup example and terms paragraph shortened); the five figure steps are fixed by the hero spec (L703), so W201 stays as a warning there."
+  },
+  {
+   "id": "reader-13",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 10 (lambda-q009), Why not; also Question 8 (lambda-q002)",
+   "quote": "- \"Configure an S3 event notification that invokes an ...\": A function stops at [15 minutes per invocation]",
+   "type": "ambiguous-label",
+   "severity": "should",
+   "evidence": "In q009 two Why not bullets carry the same truncated label 'Configure an S3 event notification that invokes an ...', one for the Lambda option and one for the timeout-increase option, so the reader cannot tell which explanation belongs to which option. In q002 the Why not label of the timeout option is the same as the opening words of the correct answer. Reword option d of both questions so that it starts differently (for example 'Request a function timeout above 15 minutes in Service Quotas, and ...'). Stems and keys of a passed question change only through the q add --replace path.",
+   "status": "rejected",
+   "resolution": "fix-18: the Why not labels are generated from the first 8 words of each option (sync). Rewording option d of q002 and q009 changes options of verified questions and needs a new blind verification (TOOLS-rules R5). Logged for the W14 review."
+  },
+  {
+   "id": "reader-14",
+   "file": "18-lambda/1-fast.md",
+   "section": "Choose it or not, Function URL or API Gateway or Application Load Balancer",
+   "quote": "| API keys and AWS WAF? | No | [API keys for usage plans](../facts/lambda.md#lambda-apigw-extra-features-waf-keys) and [WAF integration for additional security](../facts/lambda.md#lambda-apigw-extra-features-waf-keys) | See [Elastic Load Balancing](../14-elb/1-fast.md) |",
+   "type": "gist-incomplete",
+   "severity": "should",
+   "evidence": "READER.md: tables must give a correct gist on their own. In two of the three rows the ALB column is only a cross-reference ('See Elastic Load Balancing'), and the API Gateway charge cell is 'See chapter 33'. A reader who skims learns nothing about when to choose the ALB, and q019 has an ALB distractor that she has to judge. Chapter 14 facts are verified and may be linked: put the ALB answer (AWS WAF yes, no API keys or usage plans) in the cell itself.",
+   "status": "fixed",
+   "resolution": "fix-18: the ALB cell now says 'AWS WAF: AWS Web Application Firewall (WAF) rules' (elb-waf-integrates-with-alb). The charge cell keeps the chapter 14 link: the canon has no ALB price fact."
+  },
+  {
+   "id": "reader-15",
+   "file": "data/18-lambda/speak.json",
+   "section": "lambda-s02 sixty_second; lambda-s03 sixty_second",
+   "quote": "So the first requests get an answer in double-digit milliseconds.",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "Fact lambda-faq-pc-what says that the functions are 'ready to respond in double-digit milliseconds': it is the start-up that takes double-digit milliseconds, not the whole answer, because the handler still runs for its own duration. Said to a founder, the line promises a response time. Say: 'So the first requests skip the start-up delay.' In s03, 'it queues or throttles new connections instead of failing' conflicts with the s03 follow-up answer 'If connection requests exceed the limits you set, the proxy rejects them.'",
+   "status": "fixed",
+   "resolution": "fix-18: same fixes as claims-18-007 and claims-18-008."
+  },
+  {
+   "id": "reader-16",
+   "file": "data/18-lambda/tasks.json",
+   "section": "lambda-t01 step 1 expect",
+   "quote": "Two numbers, Quota and Unreserved. They are equal when no function in this Region reserves concurrency.",
+   "type": "expectation-gap",
+   "severity": "should",
+   "evidence": "The task lists fact lambda-new-account-reduced-quotas ('New AWS accounts have reduced concurrency and memory quotas for Lambda functions, and AWS raises these quotas automatically based on usage.') but the steps never use it. In a new or little-used account the reader may see a number far below the 1,000 that the chapter teaches, and nothing tells her why. Add that to the expect text. The same fact is a documented exception to the deep trap 'AWS raises a quota by itself when a workload reaches it', so the trap should say that this applies to the request of a quota increase, not to new-account limits.",
+   "status": "fixed",
+   "resolution": "fix-18: same fix as claims-18-011 (t01 step 1 expect) and claims-18-010 (the deep trap's Truth)."
+  },
+  {
+   "id": "reader-17",
+   "file": "18-lambda/2-deep.md",
+   "section": "One Regional concurrency quota is shared by all functions and throttles the excess",
+   "quote": "| An SQS mapping | Nothing | [Lambda continues to retry the message](../facts/lambda.md#lambda-sqs-throttle-drop-after-visibility) |",
+   "type": "unclear",
+   "severity": "note",
+   "evidence": "'Sees: Nothing' is unclear (who sees nothing: the queue, the producer?). The quote is also cut before its condition: lambda-sqs-throttle-drop-after-visibility continues 'until the message's timestamp exceeds your queue's visibility timeout, at which point Lambda drops the message.' Below the table, 'Why one pool? A default safety throttle limits how far a runaway function scales.' explains why a limit exists, not why all functions share one pool.",
+   "status": "fixed",
+   "resolution": "fix-18: same fixes as claims-18-004 ('No error', retry until the visibility timeout passes) and claims-18-022 (why one pool)."
+  },
+  {
+   "id": "reader-18",
+   "file": "18-lambda/2-deep.md",
+   "section": "Numbers that decide answers, Changed recently; FAQ 1",
+   "quote": "> **Changed recently:** (2026-09-09) Longer timeout on Lambda Managed Instances.<br>",
+   "type": "term-unexplained",
+   "severity": "note",
+   "evidence": "'Lambda Managed Instances' is not explained anywhere in the chapter. FAQ 1 quotes 'There are no maintenance windows or scheduled downtimes for either.', and 'either' points to something the reader never sees. In the Figure caption of the push and pull subsection, `Lambda` is set in code font for no reason.",
+   "status": "fixed",
+   "resolution": "fix-18: Lambda Managed Instances are now introduced by the 2025-11-30 Changed recently entry in 1-fast.md, and the 90-minute entry was removed. FAQ 1 keeps the verbatim quote (its 'either' is the service and its functions); the answer stays 'No.' for the word limit. The figure caption keeps `Lambda` in code font: the caption must equal the spec claim (L702), and the plain form failed L702 in this stage."
+  },
+  {
+   "id": "reader-19",
+   "file": "data/18-lambda/cards.json",
+   "section": "first core card; differ card on trigger vs event source mapping",
+   "quote": "In AWS Lambda, a job runs for most of an hour after each upload, with no servers to manage. Function or Fargate?",
+   "type": "card-wording",
+   "severity": "note",
+   "evidence": "The context prefix 'In AWS Lambda,' says that the job runs in Lambda, which is the wrong answer of the card. The card 'trigger or event source mapping: which one is a resource of the Lambda service?' tests a point that 2-deep.md never teaches.",
+   "status": "fixed",
+   "resolution": "fix-18: lambda-c001 front now 'On AWS, a job runs for most of an hour after each upload, with no servers to manage. A Lambda function or AWS Fargate?'; lambda-c029 now asks which one polls an SQS queue for the function (lambda-esm-lambda-polls-source), a point 2-deep.md teaches."
+  }
+ ]
+}

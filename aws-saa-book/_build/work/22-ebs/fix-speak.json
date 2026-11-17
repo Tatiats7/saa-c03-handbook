@@ -1,0 +1,349 @@
+[
+ {
+  "id": "ebs-s01",
+  "chapter": "ebs",
+  "kind": "explain",
+  "prompt": "If that instance fails tomorrow, what do we lose, and how long are we offline?",
+  "persona": "Ana, CEO of Callvale",
+  "ten_second": "If the instance fails, the volume survives and we attach it again. If the zone fails, we restore last night's snapshot within hours.",
+  "sixty_second": [
+   "The short answer is: if only the instance fails, we lose nothing on the database disk.",
+   "It works like this. The database writes to a volume, a disk that lives apart from the instance.",
+   "AWS copies the volume inside its zone, against hardware faults.",
+   "If the instance dies, we attach the volume to a new instance in that zone.",
+   "Every night, we also take a snapshot: a copy kept across the whole Region.",
+   "If the volume or its zone fails, we rebuild it from that snapshot in another zone.",
+   "The thing to watch is this. AWS doesn't back up volumes, so we automate the snapshots.",
+   "A rebuild takes hours, and the new volume is slow at first.",
+   "In your case, a zone failure costs at most one day of new data.",
+   "Can our customers accept losing one day of analysis in the worst case?"
+  ],
+  "skeleton": [
+   "instance fails: volume survives",
+   "copied inside one zone",
+   "nightly snapshot, rebuild anywhere",
+   "snapshots are our job"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "An EBS volume is off-instance storage that persists independently of its instance; a new instance must be in the same Availability Zone to attach it.",
+    "accept": [
+     "the disk lives apart from the instance",
+     "the volume outlives the instance"
+    ],
+    "facts": [
+     "ebs-volume-persists-independently-of-instance",
+     "ebs-volume-same-az-as-instance"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "A volume is automatically replicated within its Availability Zone, which protects against the failure of a single hardware component.",
+    "accept": [
+     "AWS copies the volume inside its zone",
+     "one broken part does not lose the data"
+    ],
+    "facts": [
+     "ebs-volume-replicated-within-az"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "AWS does not automatically back up the volume data; regular snapshots are the customer's job, and Data Lifecycle Manager or AWS Backup can automate them.",
+    "accept": [
+     "backups are our job",
+     "we automate the snapshots"
+    ],
+    "facts": [
+     "ebs-no-automatic-backup-customer-creates-snapshots"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "Snapshot data is replicated across all Availability Zones of the Region, so you can restore the volume in any zone of that Region.",
+    "accept": [
+     "we can rebuild in another zone",
+     "the snapshot is kept across the Region"
+    ],
+    "facts": [
+     "ebs-snapshot-restore-in-any-az-of-region"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "A volume restored from a snapshot shows higher latency until its data blocks are downloaded from Amazon S3.",
+    "accept": [
+     "a restored volume is slow at first"
+    ],
+    "facts": [
+     "ebs-volume-initialization-from-snapshot"
+    ]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "Snapshots protect against a volume failure; replication across Availability Zones protects against a zone failure and recovers faster.",
+    "accept": [
+     "a second zone recovers faster than a snapshot"
+    ],
+    "facts": [
+     "ebs-faq-snapshot-vs-az-replication-protects"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "AWS backs up the disk for us.",
+    "correct": "AWS does not automatically back up EBS volume data. Snapshots are our job, so we automate them.",
+    "fact": "ebs-no-automatic-backup-customer-creates-snapshots"
+   },
+   {
+    "error": "We lose nothing, ever.",
+    "correct": "Replication inside the zone covers a single hardware failure. After a zone failure we restore the newest snapshot, so newer data is lost.",
+    "fact": "ebs-volume-replicated-within-az"
+   },
+   {
+    "error": "The restored disk is fast at once.",
+    "correct": "A volume restored from a snapshot shows increased I/O latency until its blocks are downloaded from Amazon S3.",
+    "fact": "ebs-volume-initialization-from-snapshot"
+   }
+  ],
+  "terms": [
+   {
+    "say": "volume",
+    "avoid": [
+     "hard drive"
+    ]
+   },
+   {
+    "say": "snapshot",
+    "avoid": [
+     "backup copy"
+    ]
+   },
+   {
+    "say": "instance",
+    "avoid": [
+     "box",
+     "VM"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "What if someone deletes the volume by mistake?",
+    "answer": "The newest snapshot alone can rebuild the volume. Recycle Bin can also restore deleted EBS volumes and snapshots for a time period that you specify, if a retention rule exists.",
+    "facts": [
+     "ebs-snapshot-deletion-keep-only-latest",
+     "ebs-recycle-bin-recovers-volumes-snapshots-amis"
+    ]
+   },
+   {
+    "question": "What happens to the volumes if we terminate the instance?",
+    "answer": "By default, the root volume is deleted when the instance terminates, and other EBS volumes are kept. The DeleteOnTermination attribute of each volume changes this.",
+    "facts": [
+     "ec2-delete-on-termination-defaults"
+    ]
+   }
+  ],
+  "facts": [
+   "ebs-volume-persists-independently-of-instance",
+   "ebs-volume-replicated-within-az",
+   "ebs-no-automatic-backup-customer-creates-snapshots",
+   "ebs-snapshot-restore-in-any-az-of-region",
+   "ebs-volume-initialization-from-snapshot",
+   "ebs-faq-snapshot-vs-az-replication-protects",
+   "ebs-snapshot-deletion-keep-only-latest",
+   "ebs-recycle-bin-recovers-volumes-snapshots-amis",
+   "ec2-delete-on-termination-defaults",
+   "ebs-volume-same-az-as-instance"
+  ],
+  "section": "2-deep.md#each-snapshot-stores-changed-blocks-but-can-restore-the-whole-volume",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false,
+  "status": "candidate",
+  "rev": 1
+ },
+ {
+  "id": "ebs-s02",
+  "chapter": "ebs",
+  "kind": "compare",
+  "prompt": "The AWS page says io2 is for databases. Should we pay for io2, or is gp3 enough for our Postgres?",
+  "persona": "a startup founder in office hours",
+  "ten_second": "Start on gp3. It fits medium-sized databases at a lower cost. Move to io2 Block Express when your latency or IOPS needs outgrow gp3.",
+  "sixty_second": [
+   "Both gp3 and io2 are SSD volumes that can run your Postgres database.",
+   "The difference is latency, durability and price.",
+   "It works like this. With gp3, you buy IOPS and throughput without buying more space.",
+   "Every gp3 volume starts at three thousand IOPS. You add more, up to five hundred IOPS per gibibyte.",
+   "io2 Block Express adds sub-millisecond latency and higher durability, for a higher price.",
+   "AWS suggests io2 when you need more than gp3 can give.",
+   "The thing to watch is the instance. Its own EBS limit can cap any volume.",
+   "So a faster volume can change nothing if the instance is the bottleneck.",
+   "In your case, I'd start on gp3 and watch the latency and IOPS metrics.",
+   "What latency and how many IOPS does your database need at the peak today?"
+  ],
+  "skeleton": [
+   "both SSD, both run databases",
+   "gp3: buy IOPS without space",
+   "io2: lower latency, higher durability",
+   "instance can cap the volume"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "gp3 suits applications that need a balance between cost and performance, including medium-sized single-instance databases.",
+    "accept": [
+     "gp3 is enough for a medium-sized database",
+     "gp3 balances cost and performance"
+    ],
+    "facts": [
+     "ebs-faq-gp3-suited-workloads"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "With gp3 you provision IOPS and throughput independently of volume size, within a ratio of 500 IOPS per GiB, and every gp3 volume includes 3,000 IOPS.",
+    "accept": [
+     "you buy IOPS without buying space",
+     "gp3 performance does not depend on size"
+    ],
+    "facts": [
+     "ebs-gp3-performance-independent-of-size",
+     "ebs-gp3-baseline-iops",
+     "ebs-gp3-max-iops-80000"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "AWS recommends io2 Block Express for higher durability, better latency consistency, or more IOPS and throughput than gp3 can provide.",
+    "accept": [
+     "move to io2 when gp3 is not enough",
+     "io2 for steady low latency"
+    ],
+    "facts": [
+     "ebs-faq-gp3-to-io2-when"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "io2 Block Express is designed for 99.999 percent volume durability, and gp3 for 99.8 percent to 99.9 percent.",
+    "accept": [
+     "io2 is more durable than gp3"
+    ],
+    "facts": [
+     "ebs-io2-durability-afr",
+     "ebs-gp3-durability-afr"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "EBS performance is bounded by the instance type's limits or by the volumes, whichever is smaller.",
+    "accept": [
+     "the instance can cap the volume"
+    ],
+    "facts": [
+     "ebs-instance-performance-bounded-by-smaller"
+    ]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "Average EBS latency is single-digit milliseconds, and io2 Block Express averages sub-millisecond latency.",
+    "accept": [
+     "io2 has sub-millisecond latency"
+    ],
+    "facts": [
+     "ebs-faq-average-latency"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "Every production database needs io2.",
+    "correct": "gp3 fits medium-sized single-instance databases. AWS recommends io2 Block Express when the needs go beyond what gp3 can provide.",
+    "fact": "ebs-faq-gp3-to-io2-when"
+   },
+   {
+    "error": "gp3 is only for test systems.",
+    "correct": "gp3 suits a balance between cost and performance, including medium-sized single-instance databases and boot volumes.",
+    "fact": "ebs-faq-gp3-suited-workloads"
+   },
+   {
+    "error": "With io2 you don't need backups.",
+    "correct": "Higher durability is not a backup. AWS does not automatically back up EBS volume data, so you still take snapshots.",
+    "fact": "ebs-no-automatic-backup-customer-creates-snapshots"
+   }
+  ],
+  "terms": [
+   {
+    "say": "IOPS",
+    "avoid": [
+     "disk speed"
+    ]
+   },
+   {
+    "say": "io2 Block Express",
+    "avoid": [
+     "io2 express"
+    ]
+   },
+   {
+    "say": "throughput",
+    "avoid": [
+     "through-put"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "How far can gp3 go before we have to switch?",
+    "answer": "The maximum IOPS of one gp3 volume is 80,000. io2 Block Express reaches up to 256,000 IOPS on a Nitro-based instance.",
+    "facts": [
+     "ebs-gp3-max-iops-80000",
+     "ebs-io2-nitro-iops-limit"
+    ]
+   },
+   {
+    "question": "If we start on gp3, can we move to io2 later without downtime?",
+    "answer": "Yes, on an instance that supports Elastic Volumes. You can change the volume type without detaching the volume or restarting the instance.",
+    "facts": [
+     "ebs-elastic-volumes-modify-without-detach"
+    ]
+   }
+  ],
+  "facts": [
+   "ebs-faq-gp3-suited-workloads",
+   "ebs-gp3-performance-independent-of-size",
+   "ebs-gp3-baseline-iops",
+   "ebs-faq-gp3-to-io2-when",
+   "ebs-io2-use-cases",
+   "ebs-io2-durability-afr",
+   "ebs-gp3-durability-afr",
+   "ebs-instance-performance-bounded-by-smaller",
+   "ebs-faq-average-latency",
+   "ebs-no-automatic-backup-customer-creates-snapshots",
+   "ebs-gp3-max-iops-80000",
+   "ebs-io2-nitro-iops-limit",
+   "ebs-elastic-volumes-modify-without-detach"
+  ],
+  "section": "2-deep.md#io2-block-express-buys-more-iops-lower-latency-and-higher-durability",
+  "layer": "core",
+  "pass_route": false,
+  "pack": false,
+  "status": "candidate",
+  "rev": 1
+ }
+]

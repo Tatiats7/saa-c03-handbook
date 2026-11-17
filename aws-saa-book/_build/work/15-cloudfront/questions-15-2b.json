@@ -1,0 +1,372 @@
+[
+  {
+   "id": "cloudfront-q004",
+   "section": "2-deep.md#origin-access-control-keeps-the-bucket-private-and-lets-your-distribution-read-it",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": ["3.4.K1"],
+   "topics": ["security"],
+   "services": ["cloudfront", "s3", "ec2"],
+   "concept": "oac-or-signed-urls",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company sells online courses. It stores the course files in an Amazon S3 bucket and delivers them to learners through an Amazon CloudFront distribution in the same AWS account. A solutions architect must restrict access to the course files. Every visitor of the website can download the files, but nobody can download them with Amazon S3 URLs. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["Every visitor of the website can download the files", "nobody can download them with Amazon S3 URLs", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Configure origin access control on the S3 origin, and add a bucket policy that allows the CloudFront service principal to read objects for this distribution only.",
+     "correct": true,
+     "why": "The bucket policy allows the [CloudFront service principal (cloudfront.amazonaws.com)](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal) for this distribution, so viewers [cannot access it directly by using Amazon S3 URLs](../facts/cloudfront.md#cloudfront-private-s3-oac-plus-signed-urls).",
+     "concept": "origin-access-control",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Add a trusted key group to the cache behavior, and have the application create a CloudFront signed URL for each file after the user signs in.",
+     "correct": false,
+     "why": "Signed URLs check users, which the stem does not need, and they leave S3 URLs working; locking the bucket is a separate step: [this prevents someone from bypassing CloudFront](../facts/cloudfront.md#cloudfront-private-s3-oac-plus-signed-urls).",
+     "concept": "signed-urls",
+     "trap": null,
+     "misconception": "signed URLs also stop direct access to the bucket",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Add a bucket policy that allows public reads of the objects for requests that carry the domain name of the website in the Referer header.",
+     "correct": false,
+     "why": "A public read policy makes S3 URLs work for anyone who sends that header, and CloudFront needs no public access: the policy can allow the [CloudFront service principal (cloudfront.amazonaws.com)](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal).",
+     "concept": "public-bucket-referer",
+     "trap": "cloudfront-trap-public-bucket",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Serve the files through an application on Amazon EC2 instances that checks each request and reads the objects from the bucket with an IAM role.",
+     "correct": false,
+     "why": "It works, but the company then runs and scales instances for every download, while origin access control is one setting plus a bucket policy.",
+     "concept": "proxy-fleet",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The stem restricts the path, not the users: every visitor can download. With origin access control, the bucket policy allows CloudFront [only when the request is on behalf](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal) of this distribution, so the bucket stays private.",
+   "takeaway": "Stop S3 URLs with origin access control; choose which users get files with signed URLs or signed cookies.",
+   "twin": "If the stem said \"Only customers who paid for a course can download its files, for a limited time\" instead: CloudFront signed URLs, because they serve [users who have paid a fee](../facts/cloudfront.md#cloudfront-dec-signed-urls-cookies-for-paying-users).",
+   "say": "Every visitor can download, so I don't check users. I lock the bucket to the distribution with origin access control.",
+   "facts": [
+    "cloudfront-oac-bucket-policy-cloudfront-service-principal",
+    "cloudfront-private-s3-oac-plus-signed-urls",
+    "cloudfront-dec-signed-urls-cookies-for-paying-users"
+   ],
+   "sources": [],
+   "exam_english": ["ee-restrict", "ee-least-operational-overhead"],
+   "twin_of": null
+  },
+  {
+   "id": "cloudfront-q014",
+   "section": "2-deep.md#cloudfront-encrypts-two-separate-connections-and-each-one-has-its-own-setting",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": ["1.3.S3"],
+   "topics": ["security"],
+   "services": ["cloudfront", "acm", "elb"],
+   "concept": "acm-certificate-region-for-cloudfront",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company runs a web application on Amazon EC2 instances behind an Application Load Balancer in ap-southeast-2. The company adds an Amazon CloudFront distribution for www.example.com in front of the load balancer. Both connections, from viewers to CloudFront and from CloudFront to the load balancer, must use HTTPS so that data stays encrypted in transit. Both must use public certificates from AWS Certificate Manager (ACM), and the load balancer will use a certificate for origin.example.com. Where should the company request the two certificates?",
+   "keywords": ["Application Load Balancer in ap-southeast-2", "CloudFront distribution for www.example.com", "certificate for origin.example.com"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Request both certificates in ap-southeast-2, where the application runs, and select each certificate in the distribution and in the load balancer.",
+     "correct": false,
+     "why": "The distribution reads its certificate from [US East (N. Virginia)](../facts/acm.md#acm-cloudfront-us-east-1), whatever the Region of the origin, so a certificate in ap-southeast-2 does not appear in the distribution.",
+     "concept": "certificate-in-origin-region",
+     "trap": "secrets-certificates-trap-cloudfront-certificate-any-region",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Request both certificates in US East (N. Virginia), and select each certificate in the distribution and in the load balancer.",
+     "correct": false,
+     "why": "[Certificates in ACM are regional resources](../facts/acm.md#acm-certificates-regional), so the load balancer in ap-southeast-2 cannot use a certificate from US East (N. Virginia).",
+     "concept": "all-certificates-in-us-east-1",
+     "trap": null,
+     "misconception": "every certificate that works with CloudFront belongs in US East (N. Virginia)",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Request the www.example.com certificate in US East (N. Virginia) for the distribution, and the origin.example.com certificate in ap-southeast-2 for the load balancer.",
+     "correct": true,
+     "why": "CloudFront reads its certificate from [US East (N. Virginia)](../facts/acm.md#acm-cloudfront-us-east-1), and the certificate of the load balancer [must be in the same Region](../facts/acm.md#acm-faq-certificate-same-region-as-resource) as the load balancer.",
+     "concept": "two-certificates-two-regions",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Use the default CloudFront certificate for www.example.com, and request the origin.example.com certificate in ap-southeast-2 for the load balancer.",
+     "correct": false,
+     "why": "For a name such as www.example.com, [the certificate must cover the alternate domain name](../facts/cloudfront.md#cloudfront-cert-alternate-domain-covered-by-san), so the distribution needs its own certificate for that name.",
+     "concept": "default-certificate-custom-name",
+     "trap": null,
+     "misconception": "the default CloudFront certificate covers a custom domain name",
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "ACM certificates [must be in the same Region](../facts/acm.md#acm-faq-certificate-same-region-as-resource) as the resource that uses them, and [the only exception is Amazon CloudFront](../facts/acm.md#acm-faq-certificate-same-region-as-resource). So the certificate of the load balancer comes from ap-southeast-2, and the certificate of the distribution from [US East (N. Virginia)](../facts/acm.md#acm-cloudfront-us-east-1), from where it is [distributed to all the geographic locations](../facts/acm.md#acm-cloudfront-us-east-1).",
+   "takeaway": "A CloudFront certificate comes from US East (N. Virginia); a load balancer certificate comes from the Region of the load balancer.",
+   "twin": "If the stem said \"a certificate from a third-party authority for www.example.com\" instead: import it into ACM in US East (N. Virginia), because the rule covers all certificates, [including the certificates that you import](../facts/acm.md#acm-imported-regional-cloudfront).",
+   "say": "CloudFront takes its certificate from us-east-1, and the load balancer takes one from its own Region.",
+   "facts": [
+    "acm-cloudfront-us-east-1",
+    "acm-certificates-regional",
+    "acm-faq-certificate-same-region-as-resource",
+    "cloudfront-cert-alternate-domain-covered-by-san",
+    "acm-imported-regional-cloudfront"
+   ],
+   "sources": [],
+   "exam_english": ["ee-in-transit"],
+   "twin_of": null
+  },
+  {
+   "id": "cloudfront-q022",
+   "section": "2-deep.md#health-checks-and-traffic-dials-move-new-connections-from-one-region-to-another",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.2",
+   "bullets": ["3.2.K2"],
+   "topics": ["resilience"],
+   "services": ["global-accelerator", "route53", "elb"],
+   "concept": "traffic-dial-region-maintenance",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an online service on Amazon EC2 instances behind Application Load Balancers in us-east-1 and us-west-2. An AWS Global Accelerator standard accelerator has an endpoint group for each Region, and us-west-2 has enough capacity for all users. Users reach the service through a Route 53 alias record for the accelerator. The operations team must apply an operating system patch to the us-east-1 instances, and the patch restarts each instance. The patching must cause minimal downtime for users. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["enough capacity for all users", "minimal downtime for users", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Change the Route 53 record of the service from the accelerator to the us-west-2 load balancer, wait one minute, patch the instances, and change the record back.",
+     "correct": false,
+     "why": "Resolvers cache the old answer [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control), so some users still reach us-east-1 through the accelerator while the instances restart.",
+     "concept": "dns-switch-for-maintenance",
+     "trap": "route53-trap-ttl-instant-change",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Set the traffic dial of the us-east-1 endpoint group to 0, wait until the existing connections close, patch the instances, and set the dial back to 100.",
+     "correct": true,
+     "why": "After a dial change, [the updated setting applies to only new connections](../facts/global-accelerator.md#global-accelerator-traffic-dial-new-connections-only), so the team waits for open connections to finish before the restarts.",
+     "concept": "dial-zero-then-drain",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Set the traffic dial of the us-east-1 endpoint group to 0, patch the instances right away because open connections move to us-west-2, and then set the dial back.",
+     "correct": false,
+     "why": "Open connections do not move: Global Accelerator [continues to direct traffic for established connections](../facts/global-accelerator.md#global-accelerator-established-connections-until-idle-timeout) to us-east-1, so the restarts break them.",
+     "concept": "dial-zero-patch-at-once",
+     "trap": "cloudfront-trap-traffic-dial-moves-existing",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Launch a patched fleet behind a new load balancer in us-east-1, add it to the endpoint group, and remove the old load balancer after its connections close.",
+     "correct": false,
+     "why": "It works, but it builds a new fleet and load balancer for one patch, while a traffic dial moves new connections to us-west-2 with no new resources.",
+     "concept": "blue-green-fleet-for-patch",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "AWS describes this maintenance step: [set the traffic dial to 0](../facts/global-accelerator.md#global-accelerator-dec-traffic-dial-zero-cuts-off-region) for the Region, then [adjust the traffic dial to 100](../facts/global-accelerator.md#global-accelerator-dec-traffic-dial-zero-cuts-off-region) when the work is done. Because [the updated setting applies to only new connections](../facts/global-accelerator.md#global-accelerator-traffic-dial-new-connections-only), the team waits for open connections to close before the instances restart.",
+   "takeaway": "Planned work in one Region: turn its traffic dial down, let open connections finish, then patch.",
+   "twin": "If the stem said \"us-east-1 fails without warning\" instead: health checks act without a dial change, because Global Accelerator [instantly begins directing traffic for all new connections](../facts/global-accelerator.md#global-accelerator-health-checks-standard-failover-new-connections) to another endpoint.",
+   "say": "I turn the us-east-1 dial to zero, let open connections finish, patch, and turn it back up.",
+   "facts": [
+    "route53-faq-resolver-caches-by-ttl-outside-control",
+    "global-accelerator-traffic-dial-new-connections-only",
+    "global-accelerator-established-connections-until-idle-timeout",
+    "global-accelerator-dec-traffic-dial-zero-cuts-off-region",
+    "global-accelerator-health-checks-standard-failover-new-connections"
+   ],
+   "sources": [],
+   "exam_english": ["ee-minimal-downtime", "ee-least-operational-overhead"],
+   "twin_of": null
+  },
+  {
+   "id": "cloudfront-q007",
+   "section": "2-deep.md#global-accelerator-carries-tcp-and-udp-from-two-static-addresses-over-the-aws-network",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": ["3.4.K1"],
+   "topics": ["networking"],
+   "services": ["cloudfront", "global-accelerator", "route53", "s3"],
+   "concept": "cloudfront-or-ga-by-traffic",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LOWEST latency",
+   "stem": "A gaming company runs game servers on Amazon EC2 instances behind Network Load Balancers in us-east-1 and eu-west-1. Players worldwide connect to these servers, many of them through partner networks. Players download large game patch files over HTTPS, and the files change once a week. The company wants to improve response times for players who are far from both Regions. Which solution will provide the LOWEST latency for players?",
+   "keywords": ["download large game patch files over HTTPS", "the files change once a week", "LOWEST latency"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an Amazon CloudFront distribution that uses the two Network Load Balancers as origins, and point the game client at the domain name of the distribution.",
+     "correct": true,
+     "why": "Patch files are content that [benefits from edge delivery](../facts/cloudfront.md#cloudfront-faq-good-for-static-edge-content): edge locations keep copies, so most downloads are answered close to the players.",
+     "concept": "cloudfront-for-downloads",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Create an AWS Global Accelerator standard accelerator with one listener and an endpoint group for the Network Load Balancer in each of the two Regions.",
+     "correct": false,
+     "why": "It works for HTTPS, but it improves performance by [proxying packets at the edge](../facts/global-accelerator.md#global-accelerator-faq-vs-cloudfront-content-types), so every download still reaches the instances and nothing is cached.",
+     "concept": "global-accelerator-for-downloads",
+     "trap": "cloudfront-trap-ga-caches",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create Amazon Route 53 latency-based records that point to the two Network Load Balancers, and point the game client at the name of the records.",
+     "correct": false,
+     "why": "It works, but Route 53 only answers with the record whose [Region gives the user the lowest latency](../facts/route53.md#route53-latency-routing-lowest-latency-region); every download still comes from the instances in that Region.",
+     "concept": "latency-routing-for-downloads",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Turn on Amazon S3 Transfer Acceleration for a bucket that stores the game data, and point the game client at the accelerated endpoint of the bucket.",
+     "correct": false,
+     "why": "Transfer Acceleration routes data to and from a bucket [over an optimized network path](../facts/s3.md#s3-transfer-acceleration-how-it-works), and it keeps no cached copies near the players.",
+     "concept": "transfer-acceleration",
+     "trap": null,
+     "misconception": "S3 Transfer Acceleration caches content at edge locations",
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "Patch files change once a week, so copies can stay at the edge. CloudFront suits [frequently accessed static content](../facts/cloudfront.md#cloudfront-faq-good-for-static-edge-content) such as software downloads. Each request goes to the [edge location that provides the lowest latency](../facts/cloudfront.md#cloudfront-request-routed-lowest-latency-edge), and on a cache hit [CloudFront returns it to the user](../facts/cloudfront.md#cloudfront-cache-hit-returns-from-edge) from there.",
+   "takeaway": "Large files that many users download: CloudFront caches them at the edge; Global Accelerator does not cache.",
+   "twin": "If the stem said \"Players send their moves over UDP, and partner networks must allow-list a fixed set of IP addresses\" instead: Global Accelerator, because it supports [both TCP and UDP protocols](../facts/global-accelerator.md#global-accelerator-faq-protocols-tcp-and-udp) from fixed addresses.",
+   "say": "Patch files are cacheable, so CloudFront serves them from edge locations near the players.",
+   "facts": [
+    "cloudfront-faq-good-for-static-edge-content",
+    "global-accelerator-faq-vs-cloudfront-content-types",
+    "route53-latency-routing-lowest-latency-region",
+    "s3-transfer-acceleration-how-it-works",
+    "cloudfront-request-routed-lowest-latency-edge",
+    "cloudfront-cache-hit-returns-from-edge",
+    "global-accelerator-faq-protocols-tcp-and-udp"
+   ],
+   "sources": [],
+   "exam_english": ["ee-users-around-the-world", "ee-lowest-latency"],
+   "twin_of": "cloudfront-q002"
+  },
+  {
+   "id": "cloudfront-q010",
+   "section": "2-deep.md#signed-urls-and-signed-cookies-decide-which-users-can-fetch-private-files",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": ["3.4.K1"],
+   "topics": ["security"],
+   "services": ["cloudfront", "s3", "ec2"],
+   "concept": "oac-or-signed-urls",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company sells online courses. It stores the course files in an Amazon S3 bucket and delivers them to learners through an Amazon CloudFront distribution in the same AWS account. A solutions architect must restrict access to the course files. Only customers who paid for a course can download its files, for a limited time. The bucket already accepts reads only from the distribution through origin access control. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["Only customers who paid for a course", "for a limited time", "The bucket already accepts reads only from the distribution"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Configure origin access control on the S3 origin, and add a bucket policy that allows the CloudFront service principal to read objects for this distribution only.",
+     "correct": false,
+     "why": "Origin access control is already in place; it makes sure that [only CloudFront can access the content](../facts/cloudfront.md#cloudfront-faq-secure-origin-oac-supported-origins), and it does not know which customers paid.",
+     "concept": "origin-access-control",
+     "trap": null,
+     "misconception": "origin access control decides which users can download",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Add a trusted key group to the cache behavior, and have the application create a CloudFront signed URL for each file after the user signs in.",
+     "correct": true,
+     "why": "Signed URLs serve [users who have paid a fee](../facts/cloudfront.md#cloudfront-dec-signed-urls-cookies-for-paying-users), and each URL carries [an ending date and time](../facts/cloudfront.md#cloudfront-dec-signed-url-expiry-restrictions) after which it stops working.",
+     "concept": "signed-urls",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add a bucket policy that allows public reads of the objects for requests that carry the domain name of the website in the Referer header.",
+     "correct": false,
+     "why": "A public read policy undoes origin access control: anyone who sends that header can then use S3 URLs, whether the person paid or not.",
+     "concept": "public-bucket-referer",
+     "trap": "cloudfront-trap-public-bucket",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Serve the files through an application on Amazon EC2 instances that checks each request and reads the objects from the bucket with an IAM role.",
+     "correct": false,
+     "why": "It works, because the application can check each payment, but the company then runs a fleet for downloads that CloudFront can check at the edge.",
+     "concept": "proxy-fleet",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The bucket is already private, so the open need is per user and per time. CloudFront restricts content to selected users by [using signed URLs or signed cookies](../facts/cloudfront.md#cloudfront-dec-signed-urls-cookies-for-paying-users). The application signs each URL after sign-in with [a trusted key group that you create](../facts/cloudfront.md#cloudfront-signer-key-group-recommended), and CloudFront checks the signature before it serves the file.",
+   "takeaway": "Stop S3 URLs with origin access control; choose which users get files with signed URLs or signed cookies.",
+   "twin": "If the stem said \"Every visitor of the website can download the files, but nobody can download them with Amazon S3 URLs\" instead: origin access control, because then viewers [cannot access it directly by using Amazon S3 URLs](../facts/cloudfront.md#cloudfront-private-s3-oac-plus-signed-urls).",
+   "say": "The bucket is already locked to the distribution. Paying users get signed URLs that expire.",
+   "facts": [
+    "cloudfront-faq-secure-origin-oac-supported-origins",
+    "cloudfront-dec-signed-urls-cookies-for-paying-users",
+    "cloudfront-dec-signed-url-expiry-restrictions",
+    "cloudfront-signer-key-group-recommended",
+    "cloudfront-private-s3-oac-plus-signed-urls"
+   ],
+   "sources": [],
+   "exam_english": ["ee-restrict", "ee-least-operational-overhead"],
+   "twin_of": "cloudfront-q004"
+  }
+]

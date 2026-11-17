@@ -1,0 +1,101 @@
+{
+ "id": "vpc-q018",
+ "section": "2-deep.md#flow-logs-record-accepted-and-rejected-traffic-so-they-show-where-packets-drop",
+ "pool": "chapter",
+ "layer": "extended",
+ "domain": 1,
+ "task": "1.2",
+ "bullets": [
+  "1.2.S1"
+ ],
+ "topics": [
+  "networking",
+  "security",
+  "operations"
+ ],
+ "services": [
+  "vpc",
+  "ec2"
+ ],
+ "concept": "flow-log-diagnosis-stateless",
+ "difficulty": 3,
+ "type": "single",
+ "select": 1,
+ "qualifier": "MOST secure",
+ "stem": "A company runs a reporting service on Amazon EC2 instances in a private subnet. Amazon Linux instances in another subnet of the same VPC call the service on TCP 8443, and every call times out. The client subnet uses the default network ACL. The security group of the service allows inbound TCP 8443 from the security group of the clients. A VPC flow log for the service shows an ACCEPT record for each request and a REJECT record for each response. The company must restore the calls. Which change will meet these requirements in the MOST secure way?",
+ "keywords": [
+  "Amazon Linux instances",
+  "ACCEPT record for each request and a REJECT record for each response",
+  "MOST secure"
+ ],
+ "options": [
+  {
+   "id": "a",
+   "text": "Add an outbound rule to the security group of the service instances that allows TCP ports 32768-61000 to the security group of the clients.",
+   "correct": false,
+   "why": "Because [security groups are stateful](../facts/vpc.md#vpc-sg-connection-tracking-stateful), the security group already lets the responses out; the network ACL drops them.",
+   "concept": "sg-outbound-reply-rule",
+   "trap": "vpc-trap-nacl-reply",
+   "misconception": null,
+   "distractor_type": "sibling-confusion"
+  },
+  {
+   "id": "b",
+   "text": "Add an outbound rule to the network ACL of the service subnet that allows TCP ports 32768-61000 to the CIDR block of the client subnet.",
+   "correct": true,
+   "why": "The rule lets the responses leave the service subnet, and Amazon Linux clients use [ports 32768-61000](../facts/vpc.md#vpc-nacl-ephemeral-linux-32768-61000) for the reply.",
+   "concept": "nacl-outbound-linux-ephemeral",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "c",
+   "text": "Replace the outbound rules of the network ACL of the service subnet with one rule that allows all traffic to every destination.",
+   "correct": false,
+   "why": "It works, but it opens every port to every destination, which is far less secure than one rule for the reply ports of the client subnet.",
+   "concept": "nacl-allow-all-outbound",
+   "trap": "how-the-exam-asks-trap-works-means-correct",
+   "misconception": "opening all outbound traffic is an acceptable fix for one blocked reply",
+   "distractor_type": "violates-qualifier"
+  },
+  {
+   "id": "d",
+   "text": "Add an inbound rule to the network ACL of the client subnet that allows TCP ports 32768-61000 from the CIDR block of the service subnet.",
+   "correct": false,
+   "why": "The client subnet uses the default network ACL, and [The default network ACL allows all inbound and outbound traffic](../facts/vpc.md#vpc-nacl-every-subnet-associated), so the responses pass there.",
+   "concept": "client-nacl-inbound",
+   "trap": null,
+   "misconception": "a response is rejected where it arrives, not where it leaves",
+   "distractor_type": "keyword-bait"
+  }
+ ],
+ "explanation": "AWS shows the same record pair for a ping: [A REJECT record for the response ping that the network ACL denied](../facts/vpc.md#vpc-flow-logs-diagnose-stateless-nacl). The request passes, and the response is dropped on its way out, because [network ACLs perform stateless filtering](../facts/vpc.md#vpc-faq-stateful-vs-stateless). The service subnet needs an outbound rule for the reply ports that the Amazon Linux clients use.",
+ "takeaway": "An ACCEPT for the request and a REJECT for the response point to an outbound network ACL rule.",
+ "twin": "If the stem said \"the flow log shows a REJECT record for each request\" instead: fix the inbound side, because the request itself is blocked before the service can answer.",
+ "say": "Accept in, reject out means a stateless network ACL, so I'd add the outbound ephemeral rule.",
+ "facts": [
+  "vpc-nacl-ephemeral-linux-32768-61000",
+  "vpc-sg-connection-tracking-stateful",
+  "vpc-nacl-every-subnet-associated",
+  "vpc-flow-logs-diagnose-stateless-nacl",
+  "vpc-faq-stateful-vs-stateless"
+ ],
+ "sources": [],
+ "exam_english": [
+  "ee-these-requirements",
+  "ee-most-secure"
+ ],
+ "twin_of": null,
+ "worked": {
+  "steps": [
+   "I read the last sentence first: it asks for the change that restores the calls in the MOST secure way.",
+   "I mark the constraints: the clients run Amazon Linux, the client subnet uses the default network ACL, the security group of the service allows the requests, and the flow log shows an ACCEPT for each request and a REJECT for each response.",
+   "Before I look at the options, I predict an outbound security group rule on the service instances for the reply ports, because the responses are the traffic that fails.",
+   "I remove the inbound rule on the client network ACL, because the default network ACL allows all inbound and outbound traffic. I remove the rule that allows all outbound traffic, because it opens every port to every destination.",
+   "Between the outbound security group rule and the outbound network ACL rule, the difference is state. My first idea breaks because security groups are stateful, so the security group already lets the responses out and only the stateless network ACL drops them. I choose the outbound network ACL rule for ports 32768-61000 to the client subnet.",
+   "Check: the requests already pass, the new rule lets out only the replies to the client subnet, and nothing else opens. Time: 120 seconds."
+  ],
+  "wrong_path": true
+ }
+}

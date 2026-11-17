@@ -1,0 +1,345 @@
+sandbox aws-saa-book/_build/tmp/smoke ready (fixture book + service key vpc on chapter 99)
+
+## fetch the NAT gateway page and the VPC quotas page (real AWS pages)
+$ saa.py --book-dir _build/tmp/smoke fetch https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-basics.html https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html
+exit=0 expected=[0] OK
+  cached docs/vpc/latest/userguide/nat-gateway-basics status=200 kind=markdown bytes=5385 title='NAT gateway basics'
+    txt=aws-saa-book/_build/tmp/smoke/_build/corpus/snap/docs/vpc/latest/userguide/nat-gateway-basics.txt
+    meta=aws-saa-book/_build/tmp/smoke/_build/corpus/snap/docs/vpc/latest/userguide/nat-gateway-basics.meta.json
+  cached docs/vpc/latest/userguide/amazon-vpc-limits status=200 kind=markdown bytes=14649 title='Amazon VPC quotas'
+    txt=aws-saa-book/_build/tmp/smoke/_build/corpus/snap/docs/vpc/latest/userguide/amazon-vpc-limits.txt
+    meta=aws-saa-book/_build/tmp/smoke/_build/corpus/snap/docs/vpc/latest/userguide/amazon-vpc-limits.meta.json
+  summary: cached=2
+
+## MUST FAIL: fetch from a host outside the allow-list
+$ saa.py --book-dir _build/tmp/smoke fetch https://example.com/
+exit=4 expected=[4] OK
+  error exit=4 https://example.com/
+    host 'example.com' is not in the allow-list (docs.aws.amazon.com, aws.amazon.com, d1.awsstatic.com, repost.aws, pricing.us-east-1.amazonaws.com)
+
+## the tables of the quotas page
+$ saa.py --book-dir _build/tmp/smoke tables docs/vpc/latest/userguide/amazon-vpc-limits --index 2
+exit=0 expected=[0] OK
+  [docs/vpc/latest/userguide/amazon-vpc-limits] 11 tables | https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html
+  table 2 at line 40, 5 rows, under heading 'Gateways'
+    header: | Name | Default | Adjustable | Comments |
+    L42: |  Egress-only internet gateways per Region  |  5  | [Yes](https://console.aws.amazon.com/servicequotas/home/services/vpc/quotas/L-45FE3B85) | To increase this quota, increase the quota for VPCs per Region. You can attach only one egress-only internet gateway to a VPC at a time. |
+    L43: |  Internet gateways per Region  |  5  | [Yes](https://console.aws.amazon.com/servicequotas/home/services/vpc/quotas/L-A4707A72) | To increase this quota, increase the quota for VPCs per Region. You can attach only one internet gateway to a VPC at a time. |
+    L44: |  NAT gateways per Availability Zone  |  5  | [Yes](https://console.aws.amazon.com/servicequotas/home/services/vpc/quotas/L-FE5A380F) | NAT gateways only count toward your quota in the pending, active, and deleting states. |
+    L45: |  Private IP address quota per NAT gateway  |  8  | [Yes](https://console.aws.amazon.com/servicequotas/home/services/vpc/quotas/L-DFA99DE7) |  |
+    L46: | Carrier gateways per VPC | 1 | No |  |
+
+## search the snapshots
+$ saa.py --book-dir _build/tmp/smoke search scales up to 100 Gbps --scope snap
+exit=0 expected=[0] OK
+  docs/vpc/latest/userguide/nat-gateway-basics:13 [NAT gateway basics]  + A NAT gateway supports 5 Gbps of bandwidth and automatically scales up to 100 Gbps. If you require more bandwidth, you can split your resources into multiple subnets and create a NAT gateway in each...
+  1 of 1 hits shown; 1 of 11 files matched (scope snap, limit 20)
+
+## add three facts with verbatim quotes
+$ saa.py --book-dir _build/tmp/smoke facts add --file aws-saa-book/tools/helpers/smoke/facts-add.json --by smoke-miner --json
+exit=0 expected=[0] OK
+  {
+   "added": [
+    "vpc-natgw-bandwidth",
+    "vpc-natgw-no-security-group",
+    "vpc-natgw-az-scope"
+   ],
+   "rejected": [],
+   "conflicts": []
+  }
+
+## adopt one fact from a table row (table 2, row 2 of the quotas page)
+$ saa.py --book-dir _build/tmp/smoke facts adopt --source docs/vpc/latest/userguide/amazon-vpc-limits --table 2 --row 2 --file aws-saa-book/tools/helpers/smoke/fact-adopt.json --by smoke-miner --json
+exit=0 expected=[0] OK
+  {
+   "added": [
+    "vpc-natgw-per-az-quota"
+   ],
+   "rejected": [],
+   "conflicts": []
+  }
+
+## MUST FAIL: a fact whose number (45 Gbps) is not in its quote
+$ saa.py --book-dir _build/tmp/smoke facts add --file aws-saa-book/tools/helpers/smoke/fact-bad.json --by smoke-miner --json
+exit=1 expected=[1] OK
+  {
+   "added": [],
+   "rejected": [
+    {
+     "id": "vpc-natgw-bandwidth-wrong",
+     "errors": [
+      {
+       "code": "M5",
+  ... (17 more lines)
+  check: the bad fact is rejected with M5: OK
+
+## mechanical verification of the vpc facts
+$ saa.py --book-dir _build/tmp/smoke facts verify --service vpc --json
+exit=0 expected=[0] OK
+  {
+   "checked": 4,
+   "ok": 4,
+   "failed": []
+  }
+  check: 4 facts checked, 4 ok: OK
+
+## make an entail batch
+$ saa.py --book-dir _build/tmp/smoke facts batch --chapter 99 --lens entail --json
+exit=0 expected=[0] OK
+  {
+   "chapter": "99",
+   "lens": "entail",
+   "facts": 4,
+   "batches": [
+    "99-entail-001"
+   ]
+  }
+
+## write the verifier packet
+$ saa.py --book-dir _build/tmp/smoke facts packet 99-entail-001 --out aws-saa-book/_build/tmp/smoke/_build/tmp/packet-entail.json
+exit=0 expected=[0] OK
+  wrote aws-saa-book/_build/tmp/smoke/_build/tmp/packet-entail.json (148 lines)
+  check: the packet holds no author, status or votes: OK
+
+## MUST FAIL: the author votes on the author's own facts
+$ saa.py --book-dir _build/tmp/smoke facts vote --file aws-saa-book/tools/helpers/smoke/votes.json --by smoke-miner --json
+exit=1 expected=[1] OK
+  {
+   "appended": 0,
+   "refused": [
+    {
+     "fact": "vpc-natgw-bandwidth",
+     "errors": [
+  ... (47 more lines)
+
+## record four entail votes by another label
+$ saa.py --book-dir _build/tmp/smoke facts vote --file aws-saa-book/tools/helpers/smoke/votes.json --by smoke-verifier --json
+exit=0 expected=[0] OK
+  {
+   "appended": 4,
+   "refused": [],
+   "disputed": [],
+   "verdicts": [
+    {
+  ... (21 more lines)
+
+## finalize
+$ saa.py --book-dir _build/tmp/smoke facts finalize --service vpc --json
+exit=0 expected=[0] OK
+  {
+   "verified": [
+    "vpc-natgw-az-scope",
+    "vpc-natgw-bandwidth",
+    "vpc-natgw-no-security-group",
+    "vpc-natgw-per-az-quota"
+   ],
+   "disputed": [],
+   "rejected": [],
+   "pending": []
+  }
+  check: 4 facts verified: OK
+
+## render the fact sheet facts/vpc.md
+$ saa.py --book-dir _build/tmp/smoke facts render --service vpc
+exit=0 expected=[0] OK
+  facts render: 1 written, 0 unchanged
+  facts/vpc.md
+  check: the fact sheet has one anchor per fact and the exact AWS sentence: OK
+
+## writer cards with ready-made links
+$ saa.py --book-dir _build/tmp/smoke facts card --service vpc
+exit=0 expected=[0] OK
+  facts card: 4 facts
+  vpc-natgw-az-scope
+    claim: Each NAT gateway is created in a specific Availability Zone and implemented with redundancy in that zone.
+    scope: per NAT gateway.
+    link: [a specific Availability Zone](../facts/vpc.md#vpc-natgw-az-scope)
+    link: [redundancy in that zone](../facts/vpc.md#vpc-natgw-az-scope)
+    say: one Availability Zone
+  vpc-natgw-bandwidth
+    claim: A NAT gateway supports 5 Gbps of bandwidth and automatically scales up to 100 Gbps.
+    scope: per NAT gateway; maximum; not adjustable.
+  ... (13 more lines)
+
+(edited 99-sample/2-deep.md: one Go deeper block with five links to the four vpc facts)
+
+## sync the generated files
+$ saa.py --book-dir _build/tmp/smoke sync 99
+exit=0 expected=[0] OK
+  sync: written=6 unchanged=1
+  99-sample/1-fast.md
+  99-sample/3-do.md
+  99-sample/4-say.md
+  99-sample/5-quiz.md
+  99-sample/sources.md
+  facts/widget.md
+
+## lint the chapter (draft status; warnings allowed, no error)
+$ saa.py --book-dir _build/tmp/smoke lint 99
+exit=2 expected=[0, 2] OK
+  lint 99: ok errors=0 warnings=4
+  99-sample/1-fast.md:22: W901 first use of the term `shelf` is not bold
+  99-sample/1-fast.md:29: W901 first use of the term `widget` is not bold
+  99-sample/2-deep.md:17: W901 first use of the term `Regional` is not bold
+  99-sample/2-deep.md:104: W307 needs-fact marker: After how many days does Widget Store delete an empty crate?
+
+## MUST FAIL: lint with the wrong number `up to 45 Gbps` in one link text
+$ saa.py --book-dir _build/tmp/smoke lint 99
+exit=1 expected=[1] OK
+  lint 99: FAIL errors=1 warnings=4
+  99-sample/2-deep.md:43: L303 link text `up to 45 Gbps` holds no value of vpc-natgw-bandwidth
+  99-sample/1-fast.md:22: W901 first use of the term `shelf` is not bold
+  99-sample/1-fast.md:29: W901 first use of the term `widget` is not bold
+  ... (2 more lines)
+  check: lint reports L303 for the wrong number: OK
+
+## lint again after the number is restored
+$ saa.py --book-dir _build/tmp/smoke lint 99
+exit=2 expected=[0, 2] OK
+  lint 99: ok errors=0 warnings=4
+  99-sample/1-fast.md:22: W901 first use of the term `shelf` is not bold
+  99-sample/1-fast.md:29: W901 first use of the term `widget` is not bold
+  ... (2 more lines)
+
+## add two questions
+$ saa.py --book-dir _build/tmp/smoke q add --chapter 99 --file aws-saa-book/tools/helpers/smoke/questions.json --by smoke-writer --json
+exit=0 expected=[0] OK
+  {
+   "added": [
+    "sample-q005",
+    "sample-q006"
+   ],
+   "replaced": [],
+   "rejected": []
+  }
+  check: two questions stored: OK
+
+## lint the questions of the chapter
+$ saa.py --book-dir _build/tmp/smoke q lint 99
+exit=0 expected=[0, 2] OK
+  q lint 99: ok errors=0 warnings=0 total=6 candidate=2 verified=0 ready=4 rejected=0 multi=1 twin_pairs=1
+
+## blind pack, lens closed
+$ saa.py --book-dir _build/tmp/smoke q pack --chapter 99 --lens closed --ids sample-q005 sample-q006 --out aws-saa-book/_build/tmp/smoke/_build/tmp/pack-closed.json
+exit=0 expected=[0] OK
+  wrote aws-saa-book/_build/tmp/smoke/_build/tmp/pack-closed.json (57 lines)
+  check: the closed pack holds only id, type, select, stem and options: OK
+
+## blind pack, lens open
+$ saa.py --book-dir _build/tmp/smoke q pack --chapter 99 --lens open --ids sample-q005 sample-q006 --out aws-saa-book/_build/tmp/smoke/_build/tmp/pack-open.json
+exit=0 expected=[0] OK
+  wrote aws-saa-book/_build/tmp/smoke/_build/tmp/pack-open.json (57 lines)
+  check: the open pack holds only id, type, select, stem and options: OK
+
+## blind pack, lens ambiguity
+$ saa.py --book-dir _build/tmp/smoke q pack --chapter 99 --lens ambiguity --ids sample-q005 sample-q006 --out aws-saa-book/_build/tmp/smoke/_build/tmp/pack-ambiguity.json
+exit=0 expected=[0] OK
+  wrote aws-saa-book/_build/tmp/smoke/_build/tmp/pack-ambiguity.json (57 lines)
+  check: the ambiguity pack holds only id, type, select, stem and options: OK
+  check: the lenses do not all get the same option order: OK
+
+## adjudicate the three answer files
+$ saa.py --book-dir _build/tmp/smoke q adjudicate --chapter 99 --answers aws-saa-book/_build/tmp/smoke/_build/tmp/answers-closed.json aws-saa-book/_build/tmp/smoke/_build/tmp/answers-open.json aws-saa-book/_build/tmp/smoke/_build/tmp/answers-ambiguity.json --json
+exit=0 expected=[0, 1] OK
+  {
+   "pass": [
+    "sample-q005",
+    "sample-q006"
+   ],
+   "needs_edit": [],
+   "rejected": [],
+   "below_min": false
+  }
+  check: both questions pass the blind solve: OK
+
+## list the questions
+$ saa.py --book-dir _build/tmp/smoke q list --chapter 99
+exit=0 expected=[0] OK
+  q list: 6 questions
+  sample-q001 ready pass 2 single 2.1 shelf-capacity
+  sample-q002 ready pass 2 single 2.1 shelf-capacity
+  sample-q003 ready pass 1 multi 2.1 shelf-defaults
+  sample-q004 ready pass 1 single 2.1 shelf-vs-crate
+  sample-q005 verified pass 2 single 2.1 natgw-zone-resilience
+  sample-q006 verified pass 1 single 2.1 natgw-bandwidth
+
+## add one small Look task
+$ saa.py --book-dir _build/tmp/smoke tasks add --chapter 99 --file aws-saa-book/tools/helpers/smoke/task.json --by smoke-writer --json
+exit=0 expected=[0] OK
+  {
+   "added": [
+    "sample-t03"
+   ],
+   "replaced": [],
+   "rejected": []
+  }
+
+## lint the tasks of the chapter (warnings allowed)
+$ saa.py --book-dir _build/tmp/smoke tasks lint 99
+exit=2 expected=[0, 2] OK
+  WARN tasks lint: chapter 99, 3 tasks, 0 errors, 2 warnings
+  data/99-sample/tasks.json: T201 2 look tasks; the template asks for 1 to 1
+  data/99-sample/tasks.json: T113 no CLI check report; run `tasks check-cli 99`
+
+## check the task commands against the AWS CLI model (uv helper; the fixture's invented `aws widget` commands MUST FAIL, exit 5 means uv or the package index was not reachable)
+$ saa.py --book-dir _build/tmp/smoke tasks check-cli 99
+exit=1 expected=[1, 5] OK
+  FAIL tasks check-cli: 9 commands, 7 not ok (awscli 1.46.1)
+  _build/reports/cli/99.json: T113 unknown service widget: aws widget list-shelves --query "Shelves[].[Name,Region]"
+  _build/reports/cli/99.json: T113 unknown service widget: aws widget create-shelf --name saa-sample-shelf --tags book=saa,task=sample-t02
+  ... (5 more lines)
+  check: the two real `aws ec2 describe-...` commands of the new task are ok: OK
+
+## build one diagram (JSON spec to SVG)
+$ saa.py --book-dir _build/tmp/smoke diagram build sample-natgw-zones
+exit=0 expected=[0, 2] OK
+  ok   sample-natgw-zones  392x550  nodes 6  edges 5  crossings 0  -> aws-saa-book/_build/tmp/smoke/diagrams/svg/sample-natgw-zones.svg
+  check: the SVG exists and is an svg document: OK
+
+## stage begin (verify-facts)
+$ saa.py --book-dir _build/tmp/smoke stage begin 99 verify-facts --run smoke
+exit=0 expected=[0] OK
+  GO 99 verify-facts attempt=1 reason=inputs-changed
+
+## stage end (runs the facts-final gate)
+$ saa.py --book-dir _build/tmp/smoke stage end 99 verify-facts --note w0 smoke
+exit=0 expected=[0, 2] OK
+  PASS 99 verify-facts status=facts-verified gates=facts-final:ok(0e/0w)
+  check: the stage passed: OK
+
+## MUST FAIL: begin a stage whose prerequisite has not passed
+$ saa.py --book-dir _build/tmp/smoke stage begin 99 prose
+exit=3 expected=[3] OK
+  BLOCKED 99 prose attempt=0 reason=prereq:brief
+
+## stage show
+$ saa.py --book-dir _build/tmp/smoke stage show 99
+exit=0 expected=[0] OK
+  {
+   "chapter": "99",
+   "slug": "sample",
+   "status": "facts-verified",
+   "blocked": null,
+   "rev": 0,
+  ... (94 more lines)
+
+## sync again
+$ saa.py --book-dir _build/tmp/smoke sync 99
+exit=0 expected=[0] OK
+  sync: written=0 unchanged=7
+
+## sync --check: generated files are fresh
+$ saa.py --book-dir _build/tmp/smoke sync 99 --check
+exit=0 expected=[0] OK
+  sync --check: ok checked=7 stale=0 missing=0
+
+## gate lint
+$ saa.py --book-dir _build/tmp/smoke gate 99 --gate lint
+exit=2 expected=[0, 2] OK
+  PASS 99 gates=lint:ok(0e/4w)
+
+## status
+$ saa.py --book-dir _build/tmp/smoke status
+exit=0 expected=[0] OK
+  1 chapters: facts-verified=1
+  99 sample deep W0 facts-verified next=brief facts=11/11 q=4/4 warn=1 stale=0

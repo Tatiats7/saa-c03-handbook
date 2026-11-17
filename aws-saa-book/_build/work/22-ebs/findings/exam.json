@@ -1,0 +1,149 @@
+{
+ "lens": "exam",
+ "chapter": "22",
+ "findings": [
+  {
+   "id": "exam-01",
+   "file": "22-ebs/2-deep.md",
+   "section": "io2 Block Express buys more IOPS lower latency and higher durability (4 min), Stop and answer; also FAQ 10",
+   "quote": "**Stop and answer.** An io2 Block Express volume has 100,000 provisioned IOPS, on an instance type not built on Nitro. What does the database get? ... Much less: such types reach [up to 32,000 IOPS]",
+   "type": "wrong-premise",
+   "severity": "blocking",
+   "evidence": "ebs-io2-nitro-iops-limit quote: 'Nitro-based instances support volumes provisioned with up to 256,000 IOPS. Other instance types can be attached to volumes provisioned with up to 64,000 IOPS, but can achieve up to 32,000 IOPS.' A volume with 100,000 provisioned IOPS is above what a non-Nitro type can be attached to, so the scenario cannot happen as written. The answer teaches that it attaches and runs slower. Fix the case to 'provisioned with 60,000 IOPS', or teach both limits (attach up to 64,000, reach up to 32,000). FAQ 10 ('available on all EC2 instance types' -> 'Yes.') has the same gap: add the 64,000 attach limit beside it so the two do not conflict.",
+   "status": "fixed",
+   "resolution": "fix-22: Stop-and-answer uses 60,000 IOPS; the answer teaches attach up to 64,000 and reach up to 32,000; FAQ 10 answer and the B-list add the 64,000 attach limit."
+  },
+  {
+   "id": "exam-02",
+   "file": "22-ebs/1-fast.md",
+   "section": "Signals and traps, rows gp3 and io2 Block Express",
+   "quote": "| \"boot volume, dev and test, cost-effective\" | gp3 | ... | it needs more than gp3: io2 Block Express | ... | \"sub-millisecond latency, I/O-intensive database\" | io2 Block Express | ... | non-Nitro instances reach [up to 32,000 IOPS](...): pick a Nitro-based type |",
+   "type": "weak-guard",
+   "severity": "should",
+   "evidence": "The 'but not if' guard must name the stem phrase that flips the answer. The gp3 guard 'it needs more than gp3' is vague: it names no phrase to look for. ebs-faq-gp3-to-io2-when gives the phrases ('higher durability, better latency consistency', or IOPS above the gp3 maximum of 80,000, ebs-gp3-max-iops-80000). The io2 guard is a setup note (pick a Nitro type), not a different answer. The guard that decides real questions is the reverse case: no latency or durability requirement plus 'cost-effective' means gp3 (ebs-gp3-lowest-cost-ssd; trap ebs-trap-io2-for-every-database; quiz Questions 3 and 14).",
+   "status": "fixed",
+   "resolution": "fix-22: gp3 guard names 'sub-millisecond latency', 'higher durability' or more than 80,000 IOPS; io2 guard is the reverse case (no latency or durability need, 'cost-effective': gp3)."
+  },
+  {
+   "id": "exam-03",
+   "file": "22-ebs/2-deep.md",
+   "section": "Instance store data lives on the host and ends with the instance (3 min); 1-fast.md EBS volume or instance store table",
+   "quote": "Some data serves one job: a cache, a buffer, scratch files. It has to be fast, and it can disappear.",
+   "type": "untaught-but-tested",
+   "severity": "should",
+   "evidence": "The chapter never teaches why instance store wins on performance. The fast table has no performance row, and the deep subsection only says 'It has to be fast'. Yet the key of quiz Question 5 rests on 'the lowest latency possible', and the twin line of Question 8 cites instance-store-ssd-high-random-io ('high random I/O performance with very low latency'). That fact is not linked in 1-fast.md or 2-deep.md. FREQUENCY.md row 153 reports 'ephemeral highest IOPS' as the instance store signal. Add a performance row to the fast table and a step to the deep subsection with this fact, plus a signal 'highest random IOPS, lowest latency, data that can be re-created'.",
+   "status": "fixed",
+   "resolution": "fix-22: performance row in the fast table, step 3 in the deep subsection and the signal phrase 'lowest latency', all with instance-store-ssd-high-random-io."
+  },
+  {
+   "id": "exam-04",
+   "file": "22-ebs/5-quiz.md",
+   "section": "Question 7 (ebs-q013), distractor d",
+   "quote": "\"Attach an instance store volume to the running ...\": You can attach instance store volumes to an instance [only when you launch it]",
+   "type": "untaught-but-tested",
+   "severity": "should",
+   "evidence": "instance-store-attach-only-at-launch ('Instance store volumes can be attached to an instance only when you launch it. You can't attach instance store volumes to an instance after you've launched it.') is a common belief and a verified fact, but neither 1-fast.md nor 2-deep.md teaches it, so the Review link cannot help. Add it as step 2 of the instance store subsection ('Get it with the type ... and only at launch'). It also explains why the instance type decides instance store.",
+   "status": "fixed",
+   "resolution": "fix-22: deep step 2 teaches 'only when you launch it' (instance-store-attach-only-at-launch)."
+  },
+  {
+   "id": "exam-05",
+   "file": "22-ebs/5-quiz.md",
+   "section": "Question bank coverage (shipped items)",
+   "quote": "Question 3 ... '- A Throughput Optimized HDD (st1) volume ...' and '- A Cold HDD (sc1) volume ...' (distractors only)",
+   "type": "coverage-gap",
+   "severity": "should",
+   "evidence": "Bullet 4.1.K6 ('Block storage options (for example, HDD volume types, SSD volume types)') and FREQUENCY.md row 155 ('gp3 vs io2 vs st1 vs sc1 ... sequential throughput vs cold') call for a question whose key is an HDD type. In the 18 shipped questions, st1 and sc1 appear only as wrong options and in one twin line. The planned st1 twin (ebs-q006, twin_of ebs-q001) was rejected and not replaced. Add an original question whose key is st1 (large sequential scans many times a day, MOST cost-effective), with sc1 and gp3 as finalists. Pair it with Question 3 as a strict twin.",
+   "status": "rejected",
+   "resolution": "fix-22: a new st1-key question must pass the three-lens blind panel, which the fix stage does not run; the only st1 twin (ebs-q006) was rejected. Left for a later question round; the st1 or sc1 choice is now taught in the 2-deep Stop-and-answer."
+  },
+  {
+   "id": "exam-06",
+   "file": "data/22-ebs/questions.json",
+   "section": "ebs-q015 (Multi-Attach, multi), ebs-q011 (snapshot sharing), ebs-q010",
+   "quote": "\"status\": \"verified\", ... \"verification\": {\"status\": \"edited-pass\"",
+   "type": "coverage-gap",
+   "severity": "should",
+   "evidence": "Three questions passed the blind panel but have status 'verified', not 'ready', so 5-quiz.md does not print them (TOOLS-items.md: 'Only items with status: ready are printed'). As a result, no shipped question has Multi-Attach as its key (FREQUENCY.md row 55 lists Multi-Attach as a reported sub-topic), and no shipped question tests cross-account sharing of an encrypted snapshot. That topic is a 1.3 and 2.2 classic and is taught in 2-deep.md (ebs-snapshot-aws-managed-key-not-shareable, ebs-snapshot-share-encrypted-share-cmk-too). If the cut was on purpose, swap q015 or q011 in for a weaker item (see exam-08). If it was not, set them to ready.",
+   "status": "fixed",
+   "resolution": "fix-22: ebs-q015 (Multi-Attach key, difficulty 3) now ships in place of ebs-q018. ebs-q011 stays unshipped: core and extended counts allow this one swap without dropping a sound verified item."
+  },
+  {
+   "id": "exam-07",
+   "file": "22-ebs/5-quiz.md",
+   "section": "Questions 5 (ebs-q002) and 8 (ebs-q009, twin_of ebs-q002)",
+   "quote": "Q5: '... The files are temporary scratch data that the application can re-create from Amazon S3, and the storage must give the lowest latency possible.' / Q8: '... needs about 2,000 IOPS of small, random reads and writes ... still there after the instances are stopped and started again ...'",
+   "type": "twin-not-minimal",
+   "severity": "should",
+   "evidence": "STYLE.md line 126: 'A twin pair is two questions with the same scenario and one changed phrase, with different keys.' This pair changes at least three phrases (re-creatable scratch data, lowest latency possible, 2,000 IOPS plus survives stop and start) and one option (Amazon EFS in Q5 becomes io2 Block Express in Q8). The reader cannot isolate the one deciding phrase. Keep the Q5 stem and options, and change only 'that the application can re-create from Amazon S3' to 'that must still be there after a weekly stop and start'. The pair Q4 and Q10 shows the right shape.",
+   "status": "rejected",
+   "resolution": "fix-22: a minimal-twin rewrite changes the stem of a verified question and resets its verification; the chapter ships exactly the minimum of two twin pairs, so neither question can be retired. Both keys differ and passed the panel. Left for a later question round."
+  },
+  {
+   "id": "exam-08",
+   "file": "22-ebs/5-quiz.md",
+   "section": "Difficulty mix; Questions 6 (ebs-q008) and 7 (ebs-q013)",
+   "quote": "Q6: '- Make no change, because Amazon EBS volumes persist after their instance is terminated, whatever the settings are.' / Q7: 'The application cannot be stopped ...' with '- Stop the instance, detach the volume, ...'",
+   "type": "difficulty-mix",
+   "severity": "should",
+   "evidence": "STYLE.md line 126 target: difficulty 1 20%, 2 55%, 3 25%. Shipped: difficulty 1 = 2 of 18 (11%), 2 = 13 (72%), 3 = 3 (17%). Ledger warnings Q204 report the same (d1 0.10 vs 0.20, d2 0.71 vs 0.55). The two difficulty-1 items also have giveaway options: Q6 'whatever the settings are' is an absolute, and Q7 'Stop the instance' breaks the stated constraint 'cannot be stopped', so both solve by elimination without the concept. Turn two difficulty-2 items into clean one-concept items, and add one difficulty-3 item (for example the st1 question of exam-05 with three plausible finalists).",
+   "status": "fixed",
+   "resolution": "fix-22: partly fixed: difficulty 3 rises from 3 to 4 of 18 with ebs-q015. The difficulty-1 distractors stay: editing options resets verification, and new difficulty-1 items need the blind panel (Q204 stays a warning)."
+  },
+  {
+   "id": "exam-09",
+   "file": "22-ebs/5-quiz.md",
+   "section": "Question 16 (ebs-q022)",
+   "quote": "- Lock each monthly snapshot in compliance mode for one year, without a cooling-off period, as soon as the company creates the snapshot.",
+   "type": "untaught-but-tested",
+   "severity": "should",
+   "evidence": "The key and the governance-mode distractor turn on the cooling-off period. The chapter never explains it: 2-deep.md only says 'after the cooling-off period'. ebs-snapshot-lock-cooling-off-range ('optional ... from 1 to 72 hours; omit it to lock in compliance mode immediately') is verified but not taught. A solver without that fact cannot judge whether the 'without a cooling-off period' part of the key is valid. Teach it in the Recycle Bin and snapshot lock subsection (see reader-08), or drop the phrase from the key.",
+   "status": "fixed",
+   "resolution": "fix-22: Recycle Bin and snapshot lock step 4 teaches the optional cooling-off period from 1 to 72 hours and the immediate lock without it."
+  },
+  {
+   "id": "exam-10",
+   "file": "22-ebs/2-deep.md",
+   "section": "SSD volumes serve small random IO and HDD volumes serve large sequential reads (4 min), Stop and answer",
+   "quote": "**Stop and answer.** A weekly job scans 10 TB of logs. Which is cheapest, st1 or sc1? ... sc1, at [the lowest cost per GB](...), because the job scans rarely.",
+   "type": "signal-conflict",
+   "severity": "should",
+   "evidence": "The exam signal just above says '\"big data\" or \"log processing\" points to st1', and here a log job gets sc1. The item asks 'which is cheapest', which the label 'lowest cost per GB' answers without reasoning, so it does not train the deciding factor: how often the data is scanned and how fast each scan must finish (ebs-sc1-use-cases 'colder data requiring fewer scans per day'; ebs-st1-max-throughput vs ebs-sc1-max-throughput). Ask instead 'which type, and what would change your answer?', with the answer: sc1 for a weekly scan with no deadline, st1 if the scan must finish in a short window or runs many times a day.",
+   "status": "fixed",
+   "resolution": "fix-22: the Stop-and-answer asks which HDD type fits and what would change the answer; the answer uses scan rate and deadline."
+  },
+  {
+   "id": "exam-11",
+   "file": "22-ebs/1-fast.md",
+   "section": "Signals and traps, row 'full performance right after a restore'; 2-deep.md restored volume subsection",
+   "quote": "| \"full performance right after a restore\" | fast snapshot restore | ... | a predictable warm-up time is enough: an initialization rate |",
+   "type": "guard-points-to-newer-feature",
+   "severity": "note",
+   "evidence": "The guard names a recent feature (provisioned initialization rate, ebs-volume-initialization-rate-range) that SAA-C03 items are unlikely to offer. The chapter's own Question 12 uses the classic alternative instead, reading every block with dd or fio (ebs-manual-initialization-read-all-blocks). The Stop-and-answer answer ('Fast snapshot restore ... or an initialization rate') also leaves out dd and fio. Name the dd or fio read as the low-cost alternative in the guard and in the answer, and keep the initialization rate as a second option.",
+   "status": "fixed",
+   "resolution": "fix-22: the guard names dd or fio as the low-cost warm-up; the restore subsection adds step 4 and the Stop-and-answer names dd or fio."
+  },
+  {
+   "id": "exam-12",
+   "file": "22-ebs/2-deep.md",
+   "section": "Data Lifecycle Manager and AWS Backup take snapshots on a schedule (4 min), table",
+   "quote": "| Question | Data Lifecycle Manager | AWS Backup | ... | Policy scope | Volumes it targets | [apply it across accounts and Regions] |",
+   "type": "table-no-deciding-question",
+   "severity": "note",
+   "evidence": "DLM vs AWS Backup is a frequent exam decision (FREQUENCY.md row 163 'AWS Backup vs native snapshots | Central, cross-account/Region, Vault Lock'), but this table ends without the line that decides (CONVENTIONS.md D4 pattern). Add '**Deciding question:** Only EBS snapshots and AMIs, or one policy for many services and accounts?' Also add a row for immutability (snapshot lock vs AWS Backup Vault Lock) if a verified fact exists, because exam stems pair 'administrators must not delete backups' with AWS Backup.",
+   "status": "fixed",
+   "resolution": "fix-22: a Deciding question line and an Immutable backups row (Vault Lock, ebs-aws-backup-air-gapped-vault-lock) were added."
+  },
+  {
+   "id": "exam-13",
+   "file": "22-ebs/5-quiz.md",
+   "section": "Question 1 (ebs-q014, worked)",
+   "quote": "- Create a new 1 TiB gp3 volume, copy the data to it with a file copy tool, switch the database to it, and delete the old volume.",
+   "type": "weak-distractor",
+   "severity": "note",
+   "evidence": "This option has no misconception behind it. It is the key with a bigger number, and step 4 of the think-aloud removes it at once. A distractor that tests a real belief would teach more, for example 'Change the volume type to sc1 to lower the price per GB' (wrong, because database I/O is small and random: ebs-faq-hdd-not-for-random-small-io).",
+   "status": "rejected",
+   "resolution": "fix-22: changing a distractor of verified worked question ebs-q014 resets its verification; the option is wrong and passed the panel. Left for a later question round."
+  }
+ ]
+}

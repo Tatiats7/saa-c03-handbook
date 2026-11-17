@@ -1,0 +1,595 @@
+[
+ {
+  "id": "lambda-s01",
+  "kind": "decide",
+  "prompt": "Why not move the audio conversion to Lambda too, and delete the workers?",
+  "persona": "Ben, CTO of Callvale",
+  "ten_second": "Because a function stops after fifteen minutes, and our longest conversions take longer. Lambda fits short jobs that events start. Long work stays on workers.",
+  "sixty_second": [
+   "The short answer is: keep the long conversions on the workers.",
+   "It works like this. A function can run for up to fifteen minutes per invocation.",
+   "Lambda is built for short jobs that start on an event.",
+   "Registering an upload or sending a notification takes seconds, so those fit well.",
+   "Our longest conversions run longer than that limit, and we can't raise it.",
+   "Containers on Fargate have no hard limit on execution time.",
+   "The thing to watch is cost at a steady, high volume.",
+   "Lambda usually costs less when traffic is low.",
+   "For sustained, heavy work, Fargate's per-second billing tends to cost less.",
+   "In your case, the short steps move to functions, and conversion stays where it is.",
+   "Could we split a long recording into parts that each convert in a few minutes?"
+  ],
+  "skeleton": [
+   "fifteen-minute limit, not raisable",
+   "short event jobs fit",
+   "Fargate has no time limit",
+   "steady heavy work costs less elsewhere"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "A Lambda function has a maximum execution time of 15 minutes per invocation.",
+    "accept": [
+     "a function stops after fifteen minutes",
+     "the timeout is at most fifteen minutes"
+    ],
+    "facts": [
+     "lambda-fargate-no-execution-time-limit",
+     "lambda-best-suited-short-invocations"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "The maximum timeout is 900 seconds, and function configuration quotas such as the timeout can't be changed.",
+    "accept": [
+     "we cannot raise the timeout",
+     "no quota request lifts the limit"
+    ],
+    "facts": [
+     "lambda-timeout-max",
+     "lambda-config-quotas-not-changeable"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "Lambda functions fit event-driven tasks and unpredictable workloads, and Lambda is best suited for short invocations.",
+    "accept": [
+     "Lambda is for short jobs that events start",
+     "short, event-driven work"
+    ],
+    "facts": [
+     "lambda-choose-functions-event-driven-unpredictable",
+     "lambda-best-suited-short-invocations"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "Containers in Fargate can run indefinitely because Fargate has no hard limit on execution time.",
+    "accept": [
+     "Fargate has no time limit",
+     "containers can run as long as needed"
+    ],
+    "facts": [
+     "lambda-fargate-no-execution-time-limit"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "You typically pay less with Lambda at lower traffic volumes; Fargate's per-second billing tends to be more economical for sustained, high-throughput workloads.",
+    "accept": [
+     "Lambda is cheaper at low volume",
+     "steady heavy work is cheaper on Fargate"
+    ],
+    "facts": [
+     "lambda-vs-fargate-cost-by-volume"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "we can raise the function timeout with a quota request",
+    "correct": "The maximum timeout is 900 seconds, and function configuration quotas such as the timeout can't be changed.",
+    "fact": "lambda-config-quotas-not-changeable"
+   },
+   {
+    "error": "Lambda is always cheaper than workers or containers",
+    "correct": "Lambda typically costs less at lower traffic volumes. For sustained, high-throughput work, Fargate's per-second billing tends to be more economical.",
+    "fact": "lambda-vs-fargate-cost-by-volume"
+   }
+  ],
+  "terms": [
+   {
+    "say": "invoke a function",
+    "avoid": [
+     "call a lambda"
+    ]
+   },
+   {
+    "say": "execution time",
+    "avoid": [
+     "runtime cap"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "Could one function convert a part and then call the next function for the next part?",
+    "answer": "Functions that call other functions directly are generally an anti-pattern, because of cost and complexity. Put an Amazon SQS queue between them, or let AWS Step Functions coordinate the steps and handle errors at each step.",
+    "facts": [
+     "lambda-chaining-anti-pattern-sqs-or-step-functions",
+     "lambda-step-functions-orchestrate-errors"
+    ]
+   },
+   {
+    "question": "How is a function billed, compared with a worker that runs all the time?",
+    "answer": "Lambda charges for the number of requests and for duration, measured in GB-seconds. At lower traffic volumes it typically costs less. For sustained, high-throughput work, Fargate's per-second billing tends to be more economical.",
+    "facts": [
+     "lambda-pricing-dimensions",
+     "lambda-vs-fargate-cost-by-volume"
+    ]
+   }
+  ],
+  "facts": [
+   "lambda-fargate-no-execution-time-limit",
+   "lambda-best-suited-short-invocations",
+   "lambda-timeout-max",
+   "lambda-config-quotas-not-changeable",
+   "lambda-choose-functions-event-driven-unpredictable",
+   "lambda-vs-fargate-cost-by-volume",
+   "lambda-chaining-anti-pattern-sqs-or-step-functions",
+   "lambda-step-functions-orchestrate-errors",
+   "lambda-pricing-dimensions"
+  ],
+  "section": "2-deep.md#short-event-driven-work-fits-lambda-and-long-or-steady-work-fits-containers-or-instances",
+  "layer": "core",
+  "pass_route": false,
+  "pack": false
+ },
+ {
+  "id": "lambda-s02",
+  "kind": "compare",
+  "prompt": "Reserved concurrency or provisioned concurrency: which one fixes our slow first requests?",
+  "persona": "a startup founder in office hours",
+  "ten_second": "Provisioned concurrency. It keeps environments initialized, so first requests skip the cold start. Reserved concurrency only sets capacity aside and caps it.",
+  "sixty_second": [
+   "Both control concurrency. The difference is that only provisioned concurrency removes cold starts.",
+   "It works like this. A cold start is the time Lambda needs to prepare a new environment.",
+   "Provisioned concurrency keeps some environments initialized before requests arrive.",
+   "So the first requests get an answer in double-digit milliseconds.",
+   "Reserved concurrency sets aside part of the account limit for one function and caps it.",
+   "It costs nothing extra, but it doesn't prepare any environment.",
+   "The thing to watch is cost. You pay for provisioned environments even when they're idle.",
+   "And you set it on a published version or an alias, not on the latest version.",
+   "Application Auto Scaling can change it on a schedule.",
+   "In your case, keep it high in busy hours and low at night.",
+   "When do the slow requests happen: after quiet nights, or at a known time each morning?"
+  ],
+  "skeleton": [
+   "provisioned removes cold starts",
+   "reserved sets aside and caps",
+   "pay for idle provisioned environments",
+   "version or alias, schedule it"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Provisioned concurrency is a number of pre-initialized execution environments, so a function using it does not exhibit cold start behavior.",
+    "accept": [
+     "provisioned concurrency keeps environments warm",
+     "it prepares environments before the requests arrive"
+    ],
+    "facts": [
+     "lambda-pc-scales-beyond-setting",
+     "lambda-pc-not-latest-no-cold-start"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "Reserved concurrency reserves a subset of the account concurrency limit for a function and caps it there; it incurs no additional charges.",
+    "accept": [
+     "reserved concurrency sets capacity aside",
+     "reserved concurrency is a cap and costs nothing"
+    ],
+    "facts": [
+     "lambda-faq-per-function-concurrency-control",
+     "lambda-reserved-concurrency-no-charge"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "You pay for provisioned instances even when they are not handling requests.",
+    "accept": [
+     "provisioned concurrency costs money while idle",
+     "we pay for warm environments all the time"
+    ],
+    "facts": [
+     "lambda-pc-costs-while-idle"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "Provisioned concurrency must be applied to a specific version or alias of a function, not the $LATEST version.",
+    "accept": [
+     "set it on a version or an alias",
+     "not on latest"
+    ],
+    "facts": [
+     "lambda-pc-not-latest-no-cold-start"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "Application Auto Scaling can adjust provisioned concurrency on a schedule or in real time as demand changes.",
+    "accept": [
+     "schedule provisioned concurrency",
+     "scale it with Application Auto Scaling"
+    ],
+    "facts": [
+     "lambda-faq-pc-application-auto-scaling"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "reserved concurrency keeps the functions warm",
+    "correct": "Reserved concurrency reserves part of the account concurrency and caps the function. Provisioned concurrency keeps environments initialized.",
+    "fact": "lambda-faq-per-function-concurrency-control"
+   },
+   {
+    "error": "provisioned concurrency is free",
+    "correct": "You pay for the provisioned instances even when they are not handling requests.",
+    "fact": "lambda-pc-costs-while-idle"
+   },
+   {
+    "error": "turn it on for the latest version of the function",
+    "correct": "Provisioned concurrency must be applied to a specific version or alias of a function, not the $LATEST version.",
+    "fact": "lambda-pc-not-latest-no-cold-start"
+   }
+  ],
+  "terms": [
+   {
+    "say": "provisioned concurrency",
+    "avoid": [
+     "prewarming"
+    ]
+   },
+   {
+    "say": "cold start",
+    "avoid": [
+     "boot lag"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "What happens when traffic goes above the provisioned amount?",
+    "answer": "Lambda can scale the function above the provisioned concurrency setting. The excess executions are billed at the on-demand rate, and they run in new environments, which can have a cold start.",
+    "facts": [
+     "lambda-pc-scales-beyond-setting",
+     "lambda-pc-excess-at-on-demand-rate",
+     "lambda-cold-start-definition"
+    ]
+   },
+   {
+    "question": "Could SnapStart fix the slow first requests instead?",
+    "answer": "SnapStart reduces startup latency, but it is a best-effort optimization and does not guarantee the end of cold starts. For strict double-digit millisecond startup times, AWS recommends provisioned concurrency.",
+    "facts": [
+     "lambda-faq-snapstart-vs-pc"
+    ]
+   }
+  ],
+  "facts": [
+   "lambda-pc-scales-beyond-setting",
+   "lambda-pc-not-latest-no-cold-start",
+   "lambda-faq-per-function-concurrency-control",
+   "lambda-reserved-concurrency-no-charge",
+   "lambda-pc-costs-while-idle",
+   "lambda-faq-pc-application-auto-scaling",
+   "lambda-faq-pc-what",
+   "lambda-cold-start-definition",
+   "lambda-pc-excess-at-on-demand-rate",
+   "lambda-faq-snapstart-vs-pc"
+  ],
+  "section": "2-deep.md#provisioned-concurrency-keeps-environments-initialized-and-you-pay-for-them-while-idle",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false
+ },
+ {
+  "id": "lambda-s03",
+  "kind": "explain",
+  "prompt": "Our Lambda functions take down our PostgreSQL database during traffic spikes. What do we change?",
+  "persona": "a fintech CTO you advise",
+  "ten_second": "Put Amazon RDS Proxy between the functions and the database. It pools connections and queues the surge, so the database isn't overwhelmed.",
+  "sixty_second": [
+   "The short answer is: put Amazon RDS Proxy between your functions and the database.",
+   "It works like this. Lambda scales by creating many execution environments at the same time.",
+   "Each environment keeps its own database connection.",
+   "In a spike, that can exhaust the database's connection limit.",
+   "RDS Proxy pools the connections and shares them between your functions.",
+   "When the pool is busy, it queues or throttles new connections instead of failing.",
+   "The thing to watch is your code. Open the connection outside the handler.",
+   "Then a warm environment reuses it for later requests.",
+   "Also, the proxy has its own hourly charge.",
+   "In your case, you can also cap the function with reserved concurrency.",
+   "Must every request be served at the peak, or can some of them wait?"
+  ],
+  "skeleton": [
+   "one connection per environment",
+   "RDS Proxy pools and queues",
+   "connect outside the handler",
+   "reserved concurrency caps the function"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Each concurrent execution environment keeps its own database connection, so high concurrency can exhaust database connection limits; RDS Proxy pools and manages connections.",
+    "accept": [
+     "every copy of the function opens its own connection",
+     "the proxy pools the connections"
+    ],
+    "facts": [
+     "lambda-vpc-db-connections-rds-proxy"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "RDS Proxy queues or throttles application connections that it can't serve at once, so latency can rise but the application keeps scaling.",
+    "accept": [
+     "the proxy queues the surge",
+     "requests wait a little instead of breaking the database"
+    ],
+    "facts": [
+     "rds-proxy-surges-queue-throttle"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "Initialization code doesn't run again in a warm environment, so open database connections there and reuse them across invocations.",
+    "accept": [
+     "connect outside the handler",
+     "reuse the connection in a warm environment"
+    ],
+    "facts": [
+     "lambda-static-init-reuse-connections"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "To limit how high a function can scale and protect a downstream dependency, configure reserved concurrency on it.",
+    "accept": [
+     "cap the function with reserved concurrency",
+     "limit the number of copies"
+    ],
+    "facts": [
+     "lambda-bp-reserved-protects-downstream"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "Amazon RDS charges an hourly rate for proxies, based on the database instance size.",
+    "accept": [
+     "the proxy costs extra per hour",
+     "RDS Proxy has its own charge"
+    ],
+    "facts": [
+     "lambda-rds-proxy-hourly-charge"
+    ]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "With RDS Proxy, Lambda functions can use IAM authentication instead of database credentials in the code.",
+    "accept": [
+     "use IAM authentication to the proxy",
+     "no password in the function code"
+    ],
+    "facts": [
+     "rds-proxy-lambda-connection-pooling"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "buy a bigger database and the problem goes away",
+    "correct": "Amazon RDS has fixed capacity, and many functions that connect at the same time can exceed the connection quota. Pool the connections with RDS Proxy.",
+    "fact": "lambda-rds-connection-quota-spikes"
+   },
+   {
+    "error": "open and close a connection in every request",
+    "correct": "Open the connection in the initialization code, so that warm invocations in the same environment reuse it.",
+    "fact": "lambda-static-init-reuse-connections"
+   }
+  ],
+  "terms": [
+   {
+    "say": "connection pooling",
+    "avoid": [
+     "connection sharing pool"
+    ]
+   },
+   {
+    "say": "execution environment",
+    "avoid": [
+     "lambda container"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "Do the functions still need the database password in their code?",
+    "answer": "Not with RDS Proxy: Lambda functions can use the IAM authentication they already have instead. For any other secret, AWS recommends AWS Secrets Manager instead of environment variables.",
+    "facts": [
+     "rds-proxy-lambda-connection-pooling",
+     "lambda-secrets-manager-not-env-vars"
+    ]
+   },
+   {
+    "question": "What happens to requests when the proxy reaches its limit?",
+    "answer": "RDS Proxy queues or throttles connections that it can't serve at once, so latency can rise. If connection requests exceed the limits you set, the proxy rejects them. AWS calls this shedding load.",
+    "facts": [
+     "rds-proxy-surges-queue-throttle"
+    ]
+   }
+  ],
+  "facts": [
+   "lambda-vpc-db-connections-rds-proxy",
+   "rds-proxy-surges-queue-throttle",
+   "lambda-static-init-reuse-connections",
+   "lambda-bp-reserved-protects-downstream",
+   "lambda-rds-proxy-hourly-charge",
+   "rds-proxy-lambda-connection-pooling",
+   "lambda-rds-connection-quota-spikes",
+   "lambda-secrets-manager-not-env-vars"
+  ],
+  "section": "2-deep.md#rds-proxy-pools-the-database-connections-that-many-concurrent-functions-would-exhaust",
+  "layer": "core",
+  "pass_route": false,
+  "pack": false
+ },
+ {
+  "id": "lambda-s04",
+  "kind": "explain",
+  "prompt": "If no calls arrive at night, do we still pay for the functions?",
+  "persona": "Ana, CEO of Callvale",
+  "ten_second": "No, not for the functions. We pay per request and for how long the code runs. With no work at night, they cost nothing.",
+  "sixty_second": [
+   "The short answer is no, not for the functions themselves.",
+   "It works like this. A function is a small piece of our code that AWS runs when work arrives.",
+   "AWS charges for each request and for how long the code runs.",
+   "When no upload arrives, nothing runs, and we don't pay for idle capacity.",
+   "So a quiet night costs almost nothing for this part.",
+   "The thing to watch is any extra we add for speed.",
+   "If we keep functions ready for speed, we pay for that even when nothing runs.",
+   "And the queue, the database and the storage still have their own costs at night.",
+   "In your case, the busy morning gets the capacity it needs, and the night stays cheap.",
+   "Is a short delay on the first upload of the morning fine for our customers?"
+  ],
+  "skeleton": [
+   "pay per request and duration",
+   "no charge for idle capacity",
+   "kept-ready functions cost money",
+   "other services still cost"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Lambda functions are priced on the number of requests served and on the duration the code runs, measured in GB-seconds.",
+    "accept": [
+     "we pay per request and per run time",
+     "the bill counts requests and duration"
+    ],
+    "facts": [
+     "lambda-pricing-dimensions"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "You pay only for actual function invocations and execution time, and you do not provision or pay for idle capacity.",
+    "accept": [
+     "no charge when nothing runs",
+     "we don't pay for idle capacity"
+    ],
+    "facts": [
+     "lambda-no-pay-for-idle-capacity"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "Provisioned concurrency increases costs: you pay for the provisioned instances even when they are not handling requests.",
+    "accept": [
+     "keeping functions ready costs money all night",
+     "warm functions are charged while idle"
+    ],
+    "facts": [
+     "lambda-pc-costs-while-idle"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "nice",
+    "point": "AWS Lambda is priced on a pay-per-use basis.",
+    "accept": [
+     "pay per use",
+     "we pay for what we use"
+    ],
+    "facts": [
+     "lambda-faq-pay-per-use"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "Lambda is free",
+    "correct": "Lambda is priced on a pay-per-use basis: we pay for the requests and for the duration the code runs.",
+    "fact": "lambda-faq-pay-per-use"
+   },
+   {
+    "error": "the functions can never cost us anything at night",
+    "correct": "Functions with provisioned concurrency are charged even when they are not handling requests.",
+    "fact": "lambda-pc-costs-while-idle"
+   }
+  ],
+  "terms": [
+   {
+    "say": "idle capacity",
+    "avoid": [
+     "empty servers"
+    ]
+   },
+   {
+    "say": "invoke a function",
+    "avoid": [
+     "fire a lambda"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "Is there a free amount each month?",
+    "answer": "Yes. The Lambda free tier includes one million requests and 400,000 GB-seconds per month. The free tier does not apply to functions that use provisioned concurrency.",
+    "facts": [
+     "lambda-free-tier",
+     "lambda-pc-no-free-tier"
+    ]
+   },
+   {
+    "question": "Can a commitment lower the daytime bill for the functions?",
+    "answer": "Yes. Compute Savings Plans apply to Lambda usage automatically. EC2 Instance Savings Plans and Reserved Instances do not apply to Lambda.",
+    "facts": [
+     "lambda-sp-ec2-instance-plans-exclude-lambda"
+    ]
+   }
+  ],
+  "facts": [
+   "lambda-pricing-dimensions",
+   "lambda-no-pay-for-idle-capacity",
+   "lambda-pc-costs-while-idle",
+   "lambda-faq-pay-per-use",
+   "lambda-free-tier",
+   "lambda-pc-no-free-tier",
+   "lambda-sp-ec2-instance-plans-exclude-lambda"
+  ],
+  "section": "2-deep.md#short-event-driven-work-fits-lambda-and-long-or-steady-work-fits-containers-or-instances",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false
+ }
+]

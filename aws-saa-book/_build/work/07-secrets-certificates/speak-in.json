@@ -1,0 +1,243 @@
+[
+ {
+  "id": "secrets-certificates-s01",
+  "chapter": "secrets-certificates",
+  "kind": "compare",
+  "prompt": "Parameter Store or Secrets Manager? I want one place for configuration. Which one, and why?",
+  "persona": "Ben, CTO of Callvale",
+  "ten_second": "Both store values and encrypt them with AWS KMS. Secrets Manager also rotates passwords. Put credentials there, and plain configuration in Parameter Store.",
+  "sixty_second": [
+   "Both store your values, and both encrypt the sensitive ones with AWS KMS.",
+   "The difference is rotation. Secrets Manager can change a database password on a schedule.",
+   "It works like this. Parameter Store holds configuration, like feature flags and URLs.",
+   "A SecureString parameter is encrypted, but Parameter Store doesn't rotate it for you.",
+   "Secrets Manager rotates the password with a Lambda function.",
+   "Your application reads the secret at run time, so you don't redeploy.",
+   "And you still get one place. The application can read the secret through a Parameter Store reference.",
+   "The thing to watch is cost. Standard parameters are free, but you pay for each secret every month.",
+   "In your case, put the database password in Secrets Manager and turn on rotation.",
+   "Keep everything else in Parameter Store as standard parameters.",
+   "Which other values does the application treat as secrets today?"
+  ],
+  "skeleton": [
+   "both encrypt with KMS",
+   "only Secrets Manager rotates",
+   "one place through a reference",
+   "cost per secret"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Both are managed key-value stores that use AWS KMS to encrypt sensitive data.",
+    "accept": ["both encrypt with KMS", "both keep encrypted values"],
+    "facts": ["secrets-manager-ecs-compare-parameter-store"]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "Credential rotation is None in Parameter Store and automatic, with native database integrations, in Secrets Manager.",
+    "accept": ["only Secrets Manager rotates", "Parameter Store does not rotate"],
+    "facts": ["parameter-store-vs-secrets-manager-rotation-row", "parameter-store-no-automatic-rotation"]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "Parameter Store can reference a Secrets Manager secret through the reserved path /aws/reference/secretsmanager/, and it honors the IAM policies on the secret.",
+    "accept": ["read the secret through Parameter Store", "one place with a reference"],
+    "facts": ["parameter-store-reference-secrets-manager-prefix", "parameter-store-reference-honors-secret-iam"]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "The standard tier of Parameter Store is free; Secrets Manager is billed per secret per month and per API call.",
+    "accept": ["standard parameters cost nothing", "each secret costs money"],
+    "facts": ["parameter-store-vs-secrets-manager-cost-row", "secrets-manager-pay-per-secret-and-call"]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "Rotation does not require updating the application, because the application reads the secret at run time.",
+    "accept": ["no redeploy after rotation", "the app reads the secret at run time"],
+    "facts": ["secrets-manager-rotation-without-redeploy", "secrets-manager-rotation-templates-ready-lambda"]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "a SecureString parameter rotates the password for you",
+    "correct": "Parameter Store does not provide automatic rotation. Store the secret in Secrets Manager and reference it as a Parameter Store parameter.",
+    "fact": "parameter-store-no-automatic-rotation"
+   },
+   {
+    "error": "Parameter Store cannot hold sensitive values",
+    "correct": "For sensitive data, use the SecureString parameter type. Parameter Store encrypts it with an AWS KMS key.",
+    "fact": "parameter-store-no-sensitive-in-string"
+   }
+  ],
+  "terms": [
+   {"say": "rotate a secret", "avoid": ["refresh the password"]},
+   {"say": "SecureString parameter", "avoid": ["secure parameter"]}
+  ],
+  "follow_ups": [
+   {
+    "question": "Can a Lambda function read both without an SDK call every time?",
+    "answer": "Yes. The AWS Parameters and Secrets Lambda Extension retrieves parameters and secrets and caches them, which cuts API calls and latency. The cache does not detect changes, so use a shorter TTL for values that change often.",
+    "facts": ["parameter-store-lambda-extension-cache", "parameter-store-lambda-extension-no-auto-refresh"]
+   },
+   {
+    "question": "Can our other AWS account read a parameter or a secret?",
+    "answer": "A parameter, yes, if it is in the advanced tier: you share it through AWS RAM. A secret needs an allow in a resource policy and in an identity policy, and a KMS key that you create.",
+    "facts": ["parameter-store-sharing-advanced-ram", "secrets-manager-cross-account-needs-both-policies", "secrets-manager-cross-account-no-aws-managed-key"]
+   }
+  ],
+  "facts": [
+   "secrets-manager-ecs-compare-parameter-store",
+   "parameter-store-vs-secrets-manager-rotation-row",
+   "parameter-store-no-automatic-rotation",
+   "parameter-store-reference-secrets-manager-prefix",
+   "parameter-store-reference-honors-secret-iam",
+   "parameter-store-vs-secrets-manager-cost-row",
+   "secrets-manager-pay-per-secret-and-call",
+   "secrets-manager-rotation-without-redeploy",
+   "secrets-manager-rotation-templates-ready-lambda",
+   "parameter-store-no-sensitive-in-string",
+   "parameter-store-securestring-kms-keys",
+   "parameter-store-lambda-extension-cache",
+   "parameter-store-lambda-extension-no-auto-refresh",
+   "parameter-store-sharing-advanced-ram",
+   "secrets-manager-cross-account-needs-both-policies",
+   "secrets-manager-cross-account-no-aws-managed-key"
+  ],
+  "section": "1-fast.md#choose-it-or-not",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false,
+  "status": "candidate",
+  "rev": 1
+ },
+ {
+  "id": "secrets-certificates-s02",
+  "chapter": "secrets-certificates",
+  "kind": "explain",
+  "prompt": "Our TLS certificate expired once and took the site down. How does ACM keep that from happening again?",
+  "persona": "a startup CTO you advise",
+  "ten_second": "ACM renews its own certificates automatically. You need DNS validation, the CNAME record in place, and the certificate in use.",
+  "sixty_second": [
+   "The short answer is: ACM renews its own certificates automatically when you use DNS validation.",
+   "It works like this. When you request the certificate, ACM gives you CNAME records.",
+   "You add them to your DNS once and leave them there.",
+   "You attach the certificate to a service, for example your load balancer.",
+   "While the record stays and the certificate is in use, ACM renews it for you.",
+   "The ARN stays the same, so you change no configuration.",
+   "Open connections aren't affected. New connections get the new certificate.",
+   "The thing to watch is imported certificates. ACM doesn't renew those for you.",
+   "And if someone deletes the record, renewal is no longer automatic.",
+   "In your case, request the certificates in ACM with DNS validation.",
+   "Put them on the load balancer and CloudFront, and alarm on the expiration events.",
+   "Who hosts your DNS records today?"
+  ],
+  "skeleton": [
+   "DNS validation, CNAME stays",
+   "in use, ACM renews",
+   "same ARN, connections safe",
+   "imported certificates are yours"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "ACM automatically renews DNS-validated certificates as long as the certificate is in use and the DNS record is in place.",
+    "accept": ["DNS validation plus the record means automatic renewal", "keep the CNAME and keep it in use"],
+    "facts": ["acm-dns-validation-recommended", "acm-dns-renewal-criteria", "acm-dns-cname-records"]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "When ACM renews a certificate, its ARN stays the same.",
+    "accept": ["same ARN after renewal", "nothing to reconfigure"],
+    "facts": ["acm-renewal-keeps-arn-per-region"]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "Existing connections are not affected when ACM deploys a renewed certificate; new connections use the new certificate.",
+    "accept": ["open connections keep working", "no downtime at renewal"],
+    "facts": ["acm-faq-renewal-existing-connections-unaffected"]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "ACM does not manage the renewal of imported certificates; you monitor their expiration and renew them.",
+    "accept": ["imported certificates are your job", "ACM won't renew an imported certificate"],
+    "facts": ["acm-faq-imported-no-managed-renewal"]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "ACM sends daily expiration events for active certificates, so you can alarm on them.",
+    "accept": ["alarm on the expiration events"],
+    "facts": ["acm-approaching-expiration-event"]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "Email-validated certificates need an action by the domain owner to be renewed.",
+    "accept": ["email validation needs someone to click"],
+    "facts": ["acm-email-validation-needs-owner-action"]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "ACM renews every certificate in the account",
+    "correct": "ACM does not manage the renewal process for imported certificates. You renew them and reimport them.",
+    "fact": "acm-faq-imported-no-managed-renewal"
+   },
+   {
+    "error": "the renewal drops the open connections",
+    "correct": "Existing connections are not affected. Connections made after the deployment use the new certificate.",
+    "fact": "acm-faq-renewal-existing-connections-unaffected"
+   },
+   {
+    "error": "after a renewal you update the ARN everywhere",
+    "correct": "When ACM renews a certificate, its ARN stays the same.",
+    "fact": "acm-renewal-keeps-arn-per-region"
+   }
+  ],
+  "terms": [
+   {"say": "DNS validation", "avoid": ["DNS verification"]},
+   {"say": "managed renewal", "avoid": ["auto-refresh"]}
+  ],
+  "follow_ups": [
+   {
+    "question": "Can CloudFront use the certificate from our load balancer's Region?",
+    "answer": "Only if that Region is US East (N. Virginia). For CloudFront you request or import the certificate there. ACM certificates are Regional resources, and you cannot copy a certificate between Regions.",
+    "facts": ["acm-cloudfront-us-east-1", "acm-certificates-regional"]
+   },
+   {
+    "question": "Our DNS is not in Route 53. Does DNS validation still work?",
+    "answer": "Yes. You enter the CNAME records from ACM in your provider's DNS yourself. If you cannot edit your DNS, you use email validation, and each renewal then needs an action by the domain owner.",
+    "facts": ["acm-dns-without-route53", "acm-email-validation-needs-owner-action"]
+   }
+  ],
+  "facts": [
+   "acm-dns-validation-recommended",
+   "acm-dns-renewal-criteria",
+   "acm-dns-cname-records",
+   "acm-renewal-keeps-arn-per-region",
+   "acm-faq-renewal-existing-connections-unaffected",
+   "acm-faq-imported-no-managed-renewal",
+   "acm-approaching-expiration-event",
+   "acm-email-validation-needs-owner-action",
+   "acm-elb-deploys-on-load-balancer",
+   "acm-cloudfront-us-east-1",
+   "acm-certificates-regional",
+   "acm-dns-without-route53"
+  ],
+  "section": "2-deep.md#acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false,
+  "status": "candidate",
+  "rev": 1
+ }
+]

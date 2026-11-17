@@ -1,0 +1,239 @@
+{
+ "lens": "claims",
+ "chapter": "19",
+ "reviewer": "review-19-claims (lenses: claims, technical)",
+ "reviewed": "2026-10-14",
+ "findings": [
+  {
+   "id": "claims-19-001",
+   "file": "19-containers/2-deep.md",
+   "section": "eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+   "quote": "3. **Choose compute.** ... A **Fargate profile** selects pods [matched using a namespace and the labels](../facts/eks.md#eks-fargate-profile-selects-pods).\n4. **Permissions.** AWS [recommends using EKS Pod Identities](../facts/eks.md#eks-pod-identity-recommended-over-irsa) to give pods an IAM role.",
+   "type": "technical: condition dropped from fact / misleading for Fargate pods",
+   "severity": "blocking",
+   "evidence": "Fact eks-pod-identity-recommended-over-irsa quotes \"AWS recommends using EKS Pod Identities to grant access to AWS resources to your pods whenever possible.\" The sentence drops \"whenever possible\". The saved page docs/eks/latest/userguide/pod-identities (EKS Pod Identity restrictions) says: \"EKS Pod Identities are available on the following: ... Worker nodes in the cluster that are Linux Amazon EC2 instances.\" and \"You can't use EKS Pod Identities with: + Pods that run anywhere except Linux Amazon EC2 instances. Linux and Windows pods that run on AWS Fargate (Fargate) aren't supported.\" Step 4 follows directly after the Fargate profile step, so the reader learns that Fargate pods get their IAM role from Pod Identity, which is wrong (a stem with EKS on Fargate pods that need S3 access is answered with IAM roles for service accounts). Fix: keep \"whenever possible\" and add one sentence: Pod Identity works only for pods on Linux EC2 nodes; pods on Fargate use IAM roles for service accounts (IRSA). Mine a fact for the restriction line first.",
+   "status": "fixed",
+   "resolution": "fix-19: step 4 now reads 'AWS [recommends using EKS Pod Identities] whenever possible. Pods on Fargate use [IAM roles for service accounts] (IRSA).' The IRSA sentence links the verified fact eks-fargate-imds-unavailable-use-irsa (IMDS is not available to Fargate pods; pods that need IAM credentials get them through IRSA). The 'cannot use Pod Identity on Fargate' line is not stated as a hard claim, because no verified fact holds it; registering that restriction quote is left to the orchestrator (no fact request was filed, so the counts gate is not blocked)."
+  },
+  {
+   "id": "claims-19-002",
+   "file": "19-containers/2-deep.md",
+   "section": "images-live-in-a-regional-ecr-repository-that-tasks-pull-from",
+   "quote": "No. Only content pushed [after replication is configured is replicated](../facts/ecr.md#ecr-replication-only-new-pushes). Push the tag again.",
+   "type": "technical: unsupported remedy that contradicts the chapter's own best practice",
+   "severity": "blocking",
+   "evidence": "\"Push the tag again\" has no fact. The same subsection teaches step 3 \"Protect. Tag immutability can prevent image tags from being overwritten\", and task containers-t02 creates the repository with --image-tag-mutability IMMUTABLE. The saved page docs/AmazonECR/latest/userguide/image-tag-mutability says: \"After tag immutability is turned on, the ImageTagAlreadyExistsException error is returned if you push an image with a tag that is already in the repository. Tag immutability affects all tags.\" So in the setup the chapter recommends, the remedy fails. The page docs/AmazonECR/latest/userguide/replication only says: \"Only repository content pushed or restored to a repository after replication is configured is replicated. Any preexisting content in a repository isn't replicated.\" Fix: answer \"No. Only content pushed or restored after replication is configured is replicated.\" and drop \"Push the tag again\", or give a remedy that is grounded in a fact and works with immutable tags (for example push the release under a new tag).",
+   "status": "removed",
+   "resolution": "fix-19: the ungrounded remedy is removed. The answer now reads 'No. Only content pushed or restored [after replication is configured is replicated].' No remedy is offered, because none is grounded in a verified fact."
+  },
+  {
+   "id": "claims-19-003",
+   "file": "19-containers/2-deep.md",
+   "section": "service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+   "quote": "The strategy replaces the older **launch type**: [capacity providers are the recommended way](../facts/ecs.md#ecs-capacity-providers-recommended-over-launch-types).",
+   "type": "claims: sentence says more than its link",
+   "severity": "blocking",
+   "evidence": "Fact ecs-capacity-providers-recommended-over-launch-types: \"Capacity providers are the recommended way to configure capacity for workloads compared to traditional launch types.\" A recommendation is not a replacement. The same saved page (docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison, Best practices) says: \"Use launch types to define infrastructure compatibility ... When you define tasks, specify RequiresCompatibilities to include one or more launch types that are compatible with tasks. You can use following launch types: EC2, Fargate, External, and Amazon ECS Managed Instances. While you can also use launch type to run your tasks or services, we recommend using the launch type only for defining compatibilities in your task definitions, and use capacity providers for launching tasks or services.\" The chapter's own task containers-t03 uses --requires-compatibilities FARGATE, and exam stems still say \"Fargate launch type\". A reader told that launch types are replaced will distrust both. Fix: \"For launching tasks, AWS recommends a capacity provider strategy over a launch type; the launch type still names the compatibility of a task definition.\"",
+   "status": "fixed",
+   "resolution": "fix-19: the sentence now reads 'AWS recommends [using the launch type only for defining compatibilities](ecs-launch-type-only-for-compatibility).', directly after the strategy is introduced. The verified fact's claim is 'AWS recommends using the launch type only for defining compatibilities in your task definitions, and using capacity providers for launching tasks or services.' The word 'replaces' is gone."
+  },
+  {
+   "id": "claims-19-004",
+   "file": "19-containers/1-fast.md",
+   "section": "words-that-go-together",
+   "quote": "| capacity provider | **associate** a capacity provider with a cluster | Fargate, Fargate Spot or an Auto Scaling group | launch type |",
+   "type": "technical: incomplete list stated as complete (outdated)",
+   "severity": "should",
+   "evidence": "Saved page docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison: \"Amazon ECS supports following capacity providers: Fargate and FARGATE_SPOT, Auto Scaling groups for self-managed EC2 instances, and Amazon ECS Managed Instances.\" Verified fact ecs-change-managed-instances-launch-2025-09 (September 30, 2025) makes this examinable under RULINGS hard rule 7. Fix: \"Fargate, Fargate Spot, an Auto Scaling group or ECS Managed Instances\" with a fact link.",
+   "status": "fixed",
+   "resolution": "fix-19: the cell now reads 'Fargate, Fargate Spot, an Auto Scaling group or [Amazon ECS Managed Instances](ecs-change-managed-instances-launch-2025-09)'."
+  },
+  {
+   "id": "claims-19-005",
+   "file": "19-containers/1-fast.md",
+   "section": "changed-recently",
+   "quote": "> **Changed recently:** (2025-07-15) Blue/green without AWS CodeDeploy.<br> ... (only change note in the chapter); also data/19-containers/speak.json containers-s02: \"Should we run our containers on Fargate or on EC2 instances?\" ... \"Use EC2 for GPUs or large, price-optimized fleets.\"",
+   "type": "technical: current truth missing (RULINGS rule 7)",
+   "severity": "should",
+   "evidence": "Verified facts: ecs-change-managed-instances-launch-2025-09 (\"Amazon ECS supports Amazon ECS Managed Instances for running containerized workloads | September 30, 2025\"); ecs-cluster-managed-instances-recommended-for-most-new-workloads (\"Amazon ECS Managed Instances is the recommended choice for most new workloads as it provides the best combination of performance, cost optimization, and operational simplicity while allowing AWS to handle infrastructure management tasks.\"); ecs-capacity-managed-instances (\"you can access specific compute capabilities such as GPU acceleration ... while AWS handles provisioning, patching, scaling, and maintenance of the underlying infrastructure\"); ecs-managed-instances-privileged-capabilities-allowed. The chapter never names ECS Managed Instances: the Choose table offers only Fargate, EC2 capacity and Lambda, the signals row says \"GPUs or privileged mode: EC2 capacity\", and spoken answer s02 tells a founder Fargate or self-managed EC2. The reader explains AWS to founders daily (READER.md); advice that omits the option AWS now recommends for most new workloads is outdated. Fix: one Changed recently note (old: Fargate or self-managed EC2; now: ECS Managed Instances, 2025-09-30; older questions assume the two-way choice) and one sentence in s02 (GPU or privileged workloads without patching instances: ECS Managed Instances).",
+   "status": "fixed",
+   "resolution": "fix-19: 1-fast.md Changed recently has a second entry: (2025-09-30) ECS Managed Instances; Old: Fargate or self-managed EC2; Now: [Amazon ECS Managed Instances](ecs-change-managed-instances-launch-2025-09), [the recommended choice for most new workloads](ecs-cluster-managed-instances-recommended-for-most-new-workloads); the exam probably expects Fargate or EC2 in older questions; examinable. Speak s02 adds the line 'ECS Managed Instances is a middle path: AWS patches them, and GPUs work.' (fact ecs-managed-instances-full-range-ec2-aws-manages added to s02 facts). The Choose table and signals row are unchanged (fast file at 999 of 1,000 words)."
+  },
+  {
+   "id": "claims-19-006",
+   "file": "19-containers/2-deep.md",
+   "section": "in-awsvpc-mode-each-task-gets-its-own-network-interface",
+   "quote": "| Private, with internet | A network address translation (NAT) gateway |\n| Private, no internet | VPC endpoints |",
+   "type": "claims: unlinked table rows / condition dropped",
+   "severity": "should",
+   "evidence": "Two of three rows carry no fact link, though fact fargate-task-has-route-to-internet-to-pull supports them (display `the subnet can have a NAT gateway attached`; claim: \"When the container images are hosted in Amazon ECR, you can configure Amazon ECR to use an interface VPC endpoint\"). The row \"Private, no internet | VPC endpoints\" drops that condition: endpoints work only for images in Amazon ECR (fact ecr-vpc-endpoints-fargate-need-ecr-and-s3: \"require both Amazon ECR VPC endpoints and the Amazon S3 gateway endpoints\", Fargate platform version 1.4.0 or later); an image in Docker Hub cannot be pulled through them. Fix: link both rows and write \"Private, no internet, image in Amazon ECR | ECR interface endpoints and the S3 gateway endpoint\".",
+   "status": "fixed",
+   "resolution": "fix-19: the endpoint row now carries the condition and the link: 'Private, no internet, image in Amazon ECR | VPC endpoints: tasks [require both Amazon ECR VPC endpoints](ecr-vpc-endpoints-fargate-need-ecr-and-s3) and one for S3'. The words 'S3 gateway' are avoided because lint L901 bans that variant. The NAT row keeps its wording without a link: it holds no hard word, and 2-deep.md is at its 2,400-word cap (L201)."
+  },
+  {
+   "id": "claims-19-007",
+   "file": "19-containers/2-deep.md",
+   "section": "a-task-definition-gives-the-agent-one-role-and-the-application-another",
+   "quote": "Why two roles? The agent works before your code starts.",
+   "type": "technical: oversimplified, contradicted by the fact and the section itself",
+   "severity": "should",
+   "evidence": "Fact ecs-task-execution-role-use-cases: the execution role is needed for a task that \"pulls a container image from an Amazon ECR private repository or sends container logs to CloudWatch Logs using the awslogs log driver\". Log delivery happens while the code runs, and the section's own scenario says the task \"sends logs\". The reason is that a different program calls AWS (the agent versus your code), not the timing. Fix: \"Why two roles? Two programs call AWS: the agent pulls the image and sends logs, and your code calls Amazon S3.\"",
+   "status": "fixed",
+   "resolution": "fix-19: now 'Why two roles? Two programs call AWS: the agent and your code.' Step 3 already says the agent pulls, sends logs and reads secrets. The timing claim is gone."
+  },
+  {
+   "id": "claims-19-008",
+   "file": "data/19-containers/tasks.json",
+   "section": "containers-t03 verify",
+   "quote": "\"command\": \"aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=containers-t03 --query \\\"ResourceTagMappingList[].ResourceARN\\\"\", \"expect\": \"An empty list. If the task definition ARN still shows, ECS has not finished the deletion: wait one minute and run the command again. A second check without tags: aws ecs describe-task-definition --task-definition $TD_ARN returns an error after the deletion has finished.\"",
+   "type": "technical: verify step that cannot reliably prove the cleanup",
+   "severity": "should",
+   "evidence": "Saved page docs/resourcegroupstagging/latest/APIReference/API_GetResources: \"Returns all the tagged or previously tagged resources that are located in the specified AWS Region for the account.\" The ECS guide (full:amazonecs-developerguide, Amazon ECS task definition states) says: \"After the task definition is in the DELETE_IN_PROGRESS state, Amazon ECS periodically verifies that the target task definition is not being referenced by any active tasks or deployments, and then deletes the task definition permanently.\" and \"Task definitions that are in the DELETE_IN_PROGRESS state can be viewed in the console and you can retrieve the task definition by calling DescribeTaskDefinition.\" No page gives a time for the permanent delete, so \"wait one minute\" is invented, and both checks can keep showing the revision after a correct cleanup (the reader then thinks the cleanup failed). Fix: verify with aws ecs describe-task-definition --task-definition $TD_ARN --query taskDefinition.status, expect DELETE_IN_PROGRESS (or an error once the delete is final), which proves the delete request was accepted.",
+   "status": "fixed",
+   "resolution": "fix-19: the verify expect no longer invents a wait time. It now says: an empty list, or the ARN while ECS still holds the revision for deletion; the tagging API can also list previously tagged resources; then 'aws ecs describe-task-definition --task-definition $TD_ARN --query taskDefinition.status' shows DELETE_IN_PROGRESS, which proves that ECS accepted the delete. The verify command is unchanged, so the CLI check report (T113, commands hash) stays valid. tasks lint clean."
+  },
+  {
+   "id": "claims-19-009",
+   "file": "data/19-containers/questions.json",
+   "section": "containers-q006",
+   "quote": "**Answer.** Create an ECR pull through cache rule for Docker Hub, store the Docker Hub credentials in a Secrets Manager secret, and use the cached images. ... **Why.** A pull through cache rule lets ECR [cache repositories in an upstream registry](../facts/ecr.md#ecr-pull-through-cache-keeps-cache-current) ...",
+   "type": "claims: part of the key is unexplained and unlinked",
+   "severity": "should",
+   "evidence": "The key adds a Secrets Manager secret, and the explanation never says why. Verified fact ecr-pull-through-cache-upstream-registries-auth quotes \"Docker Hub, Microsoft Azure Container Registry, GitHub Container Registry, GitLab Container Registry and Chainguard Registry (requires authentication with AWS Secrets Manager secret)\". Without it, the reader cannot tell whether the secret is required or a distractor detail. Fix (explanation only, key unchanged): add \"Docker Hub [requires authentication with AWS Secrets Manager secret](../facts/ecr.md#ecr-pull-through-cache-upstream-registries-auth).\"",
+   "status": "fixed",
+   "resolution": "fix-19: q006 explanation (explanation only; stem, options and key byte-identical, so the passed verification stands) now adds 'The Secrets Manager secret holds the Docker Hub credentials that the rule signs in with.' The suggested link was tried and refused by q lint: ecr-pull-through-cache-upstream-registries-auth is volatile ('currently supports'), and Q112 forbids a volatile fact in the explanation. The fact stays in the item's facts list. q lint --ship clean."
+  },
+  {
+   "id": "claims-19-010",
+   "file": "19-containers/3-do.md",
+   "section": "whole file (also 4-say.md and 1-fast.md#look-first)",
+   "quote": "# ECS, EKS, Fargate and ECR: do it\n\nNothing here yet.",
+   "type": "technical: generated files empty; items still candidate",
+   "severity": "should",
+   "evidence": "TOOLS-items.md: \"Only items with status: ready are printed\"; TOOLS-rules.md R5: \"A reviewer sets cards, speak items and tasks to ready in the stage of that kind, after the item lint is clean.\" All 3 tasks, 2 speak items and 12 cards in data/19-containers/ have \"status\": \"candidate\", although the tasks, speak and cards stages passed. Result after sync 19: 3-do.md and 4-say.md say \"Nothing here yet.\", the task region in 1-fast.md Look first is empty, and both \"Try it: ... See [3-do.md](3-do.md)\" links in 2-deep.md lead to an empty page. Finalize (counts gate) will fail. Fix: after the fixes below, set the items to ready with tasks/speak/cards set-status and re-run sync.",
+   "status": "fixed",
+   "resolution": "fix-19: after the item fixes, tasks t01 to t03, speak s01 and s02, and cards c001 to c012 were set to ready (set-status, no refusal; item lints clean, speak and cards --ship clean). sync 19 printed 3-do.md, 4-say.md and the Look first task region in 1-fast.md."
+  },
+  {
+   "id": "claims-19-011",
+   "file": "19-containers/2-deep.md",
+   "section": "in-awsvpc-mode-each-task-gets-its-own-network-interface",
+   "quote": "**Stop and answer.** EC2 instances run awsvpc tasks, but fewer than their CPU and memory allow. Why? ... an instance has a [default quota for the number of network interfaces](../facts/ecs.md#ecs-awsvpc-eni-limits-tasks-per-instance).",
+   "type": "technical: exam remedy missing",
+   "severity": "should",
+   "evidence": "Verified fact ecs-awsvpc-trunking-increases-eni-density: \"When you opt in to the awsvpcTrunking account setting and register Amazon EC2 Linux instances that use these instance types to your cluster, these instances have higher ENI quota. Using these instances with this higher quota means that you can place more tasks on each Amazon EC2 Linux instance.\" The answer explains the limit but not the documented fix, which is what an exam stem asks for. Fix: add \"Opt in to awsvpcTrunking to raise the ENI quota on supported instance types.\" with the fact link.",
+   "status": "rejected",
+   "resolution": "fix-19: deferred, not applied. 2-deep.md is at its 2,400-word cap (L201 is a blocking error), and the words went to the blocking and key-supporting fixes (Pod Identity and IRSA, launch type, binpack for q012, execution role and secrets). The sentence was drafted and linted ('Opt in to awsvpcTrunking on supported types: [these instances have higher ENI quota]'); it can go in when the orchestrator raises the cap or trims the file. The answer as it stands is correct."
+  },
+  {
+   "id": "claims-19-012",
+   "file": "19-containers/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "Amazon ECS is a [fully managed container orchestration service](../facts/ecs.md#ecs-fully-managed-orchestration), Amazon EKS runs Kubernetes for you, and Fargate is a ...",
+   "type": "claims: unlinked, oversimplified",
+   "severity": "note",
+   "evidence": "No fact link. EKS runs the control plane, not the nodes: fact eks-faq-managed-kubernetes-no-control-plane-to-run and fact eks-compute-compare-who-manages-ec2-instances (managed node groups: \"Must deploy and manage Amazon EC2 instances | Yes\"). The chapter's own 2-deep heading says it correctly. Fix: \"Amazon EKS runs the Kubernetes control plane for you\".",
+   "status": "fixed",
+   "resolution": "fix-19: the Say it now reads 'Amazon EKS runs the Kubernetes **control plane**'. No link was added (the fast file is at 999 of 1,000 words, and a link adds the display words); the phrase holds no hard word, and 2-deep.md links the control plane facts."
+  },
+  {
+   "id": "claims-19-013",
+   "file": "19-containers/2-deep.md",
+   "section": "eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+   "quote": "| DaemonSets | Yes | No: [run as a sidecar container](../facts/eks.md#eks-fargate-no-daemonsets) |",
+   "type": "claims: unlinked cell",
+   "severity": "note",
+   "evidence": "The \"Yes\" for managed node groups has no link; fact eks-daemonset-runs-on-every-node (\"you can use a DaemonSet to ensure that the selected application runs on every node in your cluster\") supports it. Fix: link it.",
+   "status": "rejected",
+   "resolution": "fix-19: deferred for the 2,400-word cap of 2-deep.md: the link needs display text ('runs on every node in your cluster', 7 words) and the file has none left. The cell 'Yes' holds no hard word (lint clean); the q008 twin line links eks-daemonset-runs-on-every-node."
+  },
+  {
+   "id": "claims-19-014",
+   "file": "data/19-containers/tasks.json",
+   "section": "containers-t02 cost",
+   "quote": "\"cost\": \"$0: the repository stays empty. With Amazon ECR you pay only for the amount of data you store and for data transferred to the internet, and this task stores and transfers no image.\"",
+   "type": "claims: 'only' contradicted by the task's own cost fact",
+   "severity": "note",
+   "evidence": "The task's own cost_facts include ecr-pricing-dimensions-storage-transfer-actions: \"you pay for the amount of data you store in your repositories, data transfer from your image pushes and pulls, and image actions that you opt in to such as image signing and replication\"; fact ecr-pricing-same-region-transfer-free: \"Data transferred between Amazon ECR and other services in different regions will be charged at Internet Data Transfer rates on both sides of the transfer.\" The $0 result stays true. Fix: \"You pay for stored data, data transfer and image actions you opt in to; this task stores and transfers no image.\"",
+   "status": "fixed",
+   "resolution": "fix-19: t02 cost now reads 'With Amazon ECR you pay for stored data, data transfer and image actions that you opt in to, and this task stores and transfers no image.' The still_costs line was changed the same way. 'only' is gone; tasks lint clean."
+  },
+  {
+   "id": "claims-19-015",
+   "file": "19-containers/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "| \"private subnets with no internet access, images in Amazon ECR\" | VPC endpoints for ECR and S3 | tasks [require both Amazon ECR VPC endpoints](../facts/ecr.md#ecr-vpc-endpoints-fargate-need-ecr-and-s3) plus one for S3 | ...; also 2-deep Spot the bug: \"tasks [require both Amazon ECR VPC endpoints](...) and that endpoint\"",
+   "type": "claims: scope dropped",
+   "severity": "note",
+   "evidence": "Fact ecr-vpc-endpoints-fargate-need-ecr-and-s3 scope: \"Fargate platform version 1.4.0 or later\"; quote: \"Amazon ECS tasks hosted on Fargate using platform version 1.4.0 or later require both Amazon ECR VPC endpoints and the Amazon S3 gateway endpoints.\" The S3 endpoint is also a gateway endpoint, which the signals row does not say. Low risk (1.4.0 is the current platform), but the scope should stay with the claim. Fix: \"plus the Amazon S3 gateway endpoint\".",
+   "status": "rejected",
+   "resolution": "fix-19: not changed. The suggested wording 'Amazon S3 gateway endpoint' fails lint L901 (banned variant 'S3 gateway'; the term is 'gateway endpoint'), and 'a gateway endpoint for Amazon S3' adds words to a fast file at 999 of 1,000. The row is not wrong as written, and the 2-deep Spot the bug answer names 'the gateway endpoint for Amazon S3'."
+  },
+  {
+   "id": "claims-19-016",
+   "file": "diagrams/src/containers-hero.json",
+   "section": "1-fast.md#in-one-breath (figure)",
+   "quote": "\"alt\": \"A VPC with private subnets in two Availability Zones. ... The tasks pull their image from Amazon ECR and write to Amazon S3.\"",
+   "type": "technical: diagram contradicts the chapter's own pull rule",
+   "severity": "note",
+   "evidence": "The tasks sit in private subnets and pull from Amazon ECR with no NAT gateway or VPC endpoint in the picture, while 2-deep teaches that the task \"[must have a route to the internet](fargate-task-has-route-to-internet-to-pull), or its virtual private cloud (VPC) needs endpoints\" and the Spot the bug makes the missing endpoint the error. A reader who trusts the gist of one glance (READER.md) learns the wrong path. Fix: add \"VPC endpoints\" (or a NAT gateway) on the ECR and S3 edges, or say in the alt that the pull goes through VPC endpoints.",
+   "status": "rejected",
+   "resolution": "fix-19: not changed in the fix stage. The alt text becomes the SVG desc (TOOLS-diagram.md), so any change needs a new spec, a re-render and the diagram QA loop (diagrams gate D04); an alt that names endpoints the drawing does not show would mislead more. Logged for the orchestrator: add endpoint nodes on the ECR and S3 edges in a diagrams rerun."
+  },
+  {
+   "id": "claims-19-017",
+   "file": "19-containers/2-deep.md",
+   "section": "decision-record",
+   "quote": "**Context.** Callvale's application runs on one Auto Scaling group that the team patches.",
+   "type": "claims: story inconsistency with its own diagram",
+   "severity": "note",
+   "evidence": "The before diagram directly below says \"Conversion workers run in a second group\", and STARTUP.md (stage 2 adds) says \"After launch day: a second group for conversion workers.\" The after diagram keeps \"Conversion workers stay on EC2\". Fix: \"Callvale's web application runs on one Auto Scaling group that the team patches.\"",
+   "status": "fixed",
+   "resolution": "fix-19: Context now reads 'Callvale's web application runs on one Auto Scaling group.' (the patching and the 14 engineers stay in the figure caption below it). The 1-fast Startup example says 'web application' too."
+  },
+  {
+   "id": "claims-19-018",
+   "file": "19-containers/2-deep.md",
+   "section": "eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+   "quote": "3. **Choose compute.** A **managed node group** keeps nodes in [an Amazon EC2 Auto Scaling group](...). A **Fargate profile** selects pods ...",
+   "type": "technical: current option missing",
+   "severity": "note",
+   "evidence": "Verified facts eks-change-auto-mode-launch-2024-12 and eks-compute-compare-who-manages-ec2-instances (\"Must deploy and manage Amazon EC2 instances | Yes | No - Learn about EC2 managed instances | ...\" for managed node groups versus EKS Auto Mode). The compute choice and the table list only managed node groups and Fargate. Fix: one clause or a Go deeper line naming EKS Auto Mode as the option where AWS also manages the nodes.",
+   "status": "rejected",
+   "resolution": "fix-19: deferred for the 2,400-word cap of 2-deep.md. The clause was drafted and linted ('With EKS Auto Mode, AWS [extends AWS management of Kubernetes clusters] to the nodes', fact eks-auto-mode-aws-manages-infrastructure) and removed for words. Logged for the orchestrator together with eks-faq-auto-mode-vs-fargate-recommended."
+  },
+  {
+   "id": "claims-19-019",
+   "file": "data/19-containers/speak.json",
+   "section": "containers-s02 must_not_say",
+   "quote": "\"error\": \"Fargate always costs more than EC2.\", \"correct\": \"No AWS page says that. On Fargate you pay for what you provision, so compare the real task sizes with well-used instances.\"",
+   "type": "claims: correction is a meta-claim, not a fact",
+   "severity": "note",
+   "evidence": "\"No AWS page says that\" cannot be verified and is not a sentence she can say to a founder. Fact fargate-guide-pricing-per-second-pay-for-what-you-provision supports only the second sentence. Fix: drop the first sentence.",
+   "status": "removed",
+   "resolution": "fix-19: the sentence 'No AWS page says that.' is removed; the correction now starts 'On Fargate you pay for what you provision'. speak lint clean."
+  },
+  {
+   "id": "claims-19-020",
+   "file": "19-containers/2-services.md",
+   "section": "amazon-eks-distro",
+   "quote": "**Do not confuse with.** With Amazon EKS, AWS runs the control plane for you. Amazon EKS Anywhere adds tooling for the cluster lifecycle.",
+   "type": "claims: unlinked statements",
+   "severity": "note",
+   "evidence": "Neither sentence has a fact link. The EKS Anywhere facts say the opposite emphasis: eks-anywhere-faq-customer-managed-product \"customers are responsible for cluster lifecycle operations and maintenance of Amazon EKS Anywhere clusters\". Same pattern in the ECS Anywhere card: \"You register each server as an external instance in an ECS cluster.\" (fact ecs-anywhere-external-instances-outbound-workloads exists but is not linked there). Fix: link eks-faq-managed-kubernetes-no-control-plane-to-run and ecs-anywhere-external-instances-outbound-workloads; reword the EKS Anywhere sentence or ground it in a fact.",
+   "status": "fixed",
+   "resolution": "fix-19: EKS Distro card: 'Amazon EKS is a [managed service](eks-faq-managed-kubernetes-no-control-plane-to-run) that runs the control plane for you. Amazon EKS Anywhere packages EKS Distro for [VMware vSphere, bare metal, Nutanix](eks-anywhere-faq-built-on-cluster-api-infrastructure) and other platforms.' The lifecycle-tooling claim is gone. ECS Anywhere card: the unlinked sentence moved into One fact, 'Each server joins an ECS cluster as an external instance, which suits applications that [generate outbound traffic or process data]' (ecs-anywhere-external-instances-outbound-workloads)."
+  },
+  {
+   "id": "claims-19-021",
+   "file": "19-containers/1-fast.md",
+   "section": "look-first",
+   "quote": "Fargate quotas count the [number of vCPU cores used](../facts/fargate.md#fargate-faq-quotas-based-on-vcpu-per-region-account) in a Region of your account.",
+   "type": "claims: change note missing for a change the task depends on",
+   "severity": "note",
+   "evidence": "Verified fact ecs-change-fargate-vcpu-based-quotas-2022-09: \"Fargate is transitioning from task count-based quotas to vCPU-based quotas ... September 8, 2022\". This is after mid-2022, so RULINGS rule 7 asks for a Changed recently note; older practice questions may still count tasks. Fix: add it to Changed recently (old: task count quotas; now: vCPU quotas).",
+   "status": "rejected",
+   "resolution": "fix-19: deferred. 1-fast.md is at 999 of 1,000 words (L201 blocking) after the ECS Managed Instances entry, which this fix ranked higher (a current option that founders ask about). The Look first sentence was removed to make room; the Look task containers-t01, now printed in that region, teaches that the quotas count vCPUs. A third Changed recently entry (about 30 words) needs the orchestrator to raise the cap or cut elsewhere."
+  }
+ ]
+}

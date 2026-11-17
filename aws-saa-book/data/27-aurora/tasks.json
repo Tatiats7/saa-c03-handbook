@@ -1,0 +1,414 @@
+{
+ "v": 1,
+ "chapter": "aurora",
+ "items": [
+  {
+   "id": "aurora-t01",
+   "type": "look",
+   "title": "Read your Aurora quota and find the serverless instance class",
+   "kills": "\"Aurora Serverless v2 is a separate database product with its own kind of cluster.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "rds:DescribeAccountAttributes",
+    "rds:DescribeDBEngineVersions",
+    "rds:DescribeOrderableDBInstanceOptions"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read your quota for DB clusters in this Region: how many you use, and the maximum.",
+     "command": "aws rds describe-account-attributes --query \"AccountQuotas[?AccountQuotaName=='DBClusters'].[AccountQuotaName,Used,Max]\" --output table",
+     "expect": "One row: DBClusters, then Used and Max. Max is your quota of DB clusters in this Region. The default quota is 40 Aurora DB clusters, and you can ask AWS to raise it.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the default Aurora PostgreSQL version and its parameter group family. Aurora is a managed relational database engine, compatible with MySQL and PostgreSQL. This task uses PostgreSQL.",
+     "command": "aws rds describe-db-engine-versions --engine aurora-postgresql --default-only --query \"DBEngineVersions[].[EngineVersion,DBParameterGroupFamily]\" --output table",
+     "expect": "One row: a version number, and a family name that starts with aurora-postgresql. The Try tasks of this chapter use the family again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the same default version as APG_VERSION, for the next command.",
+     "command": "aws rds describe-db-engine-versions --engine aurora-postgresql --default-only",
+     "capture": {
+      "name": "APG_VERSION",
+      "query": "DBEngineVersions[0].EngineVersion"
+     },
+     "expect": "No output. APG_VERSION now holds the version number from the table above.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the DB instance classes that this version offers in this Region. Look for db.serverless, the instance class of Aurora Serverless v2.",
+     "command": "aws rds describe-orderable-db-instance-options --engine aurora-postgresql --engine-version $APG_VERSION --query \"OrderableDBInstanceOptions[].DBInstanceClass\" --output text",
+     "expect": "A long list of DB instance class names that start with db. One of them is db.serverless, in the same list as the classes of provisioned DB instances. Aurora Serverless v2 is an instance class, not a separate kind of cluster: one Aurora DB cluster can hold any combination of provisioned and serverless DB instances. If db.serverless is missing, this Region does not offer Aurora Serverless v2 for this version.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "aurora-quota-db-clusters-per-region",
+    "aurora-is-managed-relational-engine",
+    "aurora-serverless-db-serverless-instance-class-type",
+    "aurora-serverless-db-instance-class-always-db-serverless",
+    "aurora-serverless-faq-mixed-cluster-with-provisioned"
+   ],
+   "sources": [
+    {
+     "title": "describe-account-attributes (AWS CLI Command Reference, AccountQuotas with Used and Max)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-account-attributes.html"
+    },
+    {
+     "title": "Quotas and constraints for Amazon Aurora (DB clusters per Region)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_Limits.html"
+    },
+    {
+     "title": "describe-db-engine-versions (AWS CLI Command Reference, --default-only and DBParameterGroupFamily)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-engine-versions.html"
+    },
+    {
+     "title": "describe-orderable-db-instance-options (AWS CLI Command Reference, DBInstanceClass)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-orderable-db-instance-options.html"
+    },
+    {
+     "title": "Requirements and limitations for Aurora serverless (official example: describe-orderable-db-instance-options with db.serverless)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.requirements.html"
+    }
+   ],
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-14"
+  },
+  {
+   "id": "aurora-t02",
+   "type": "try",
+   "title": "Set a recovery point limit for an Aurora PostgreSQL global database",
+   "kills": "\"Nobody can set an upper bound on the data that an Aurora global database loses in a failover.\"",
+   "trap": "aurora-trap-global-failover-no-data-loss",
+   "section": "2-deep.md#a-secondary-region-takes-over-by-failover-after-an-outage-by-switchover-when-healthy",
+   "pass_route": true,
+   "minutes": 10,
+   "cost": "$0: the task creates no DB cluster and no DB instance, only a DB cluster parameter group, which holds engine settings. Aurora bills DB instance hours and storage per GB-month, and the task creates neither.",
+   "cost_if_forgotten": "$0 a day. Delete the group anyway, so that no unused parameter group stays in the account.",
+   "cost_facts": [],
+   "permissions": [
+    "rds:DescribeDBEngineVersions",
+    "rds:DescribeEngineDefaultClusterParameters",
+    "rds:CreateDBClusterParameterGroup",
+    "rds:AddTagsToResource",
+    "rds:ModifyDBClusterParameterGroup",
+    "rds:DescribeDBClusterParameters",
+    "rds:DescribeDBClusterParameterGroups",
+    "rds:DeleteDBClusterParameterGroup"
+   ],
+   "read_only_alternative": "These commands create nothing. Run steps 1 and 2: they only read. Answer the predict question of step 4 on paper. Then read the range of values that AWS allows for the parameter: aws rds describe-engine-default-cluster-parameters --db-parameter-group-family $FAMILY --query \"EngineDefaults.Parameters[?ParameterName=='rds.global_db_rpo'].AllowedValues\" --output text Expect 20-2147483647: the smallest limit that you can set is 20 seconds.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the parameter group family of the default Aurora PostgreSQL version as FAMILY.",
+     "command": "aws rds describe-db-engine-versions --engine aurora-postgresql --default-only",
+     "capture": {
+      "name": "FAMILY",
+      "query": "DBEngineVersions[0].DBParameterGroupFamily"
+     },
+     "expect": "No output. FAMILY now holds a name that starts with aurora-postgresql.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the engine default of rds.global_db_rpo for this family. In an Aurora PostgreSQL global database, this parameter sets the recovery point objective (RPO): the most data that a failover can lose.",
+     "command": "aws rds describe-engine-default-cluster-parameters --db-parameter-group-family $FAMILY --query \"EngineDefaults.Parameters[?ParameterName=='rds.global_db_rpo'].[ParameterName,ApplyType,IsModifiable]\" --output table",
+     "expect": "One row: rds.global_db_rpo, dynamic, and True. True means that a custom group can change the value. Dynamic means that a change needs no reboot. If the table is empty, this family has no such parameter: stop here and use the read-only alternative.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create your own DB cluster parameter group for this family, tagged for this book and this task. No DB cluster uses the group, so no database changes.",
+     "command": "aws rds create-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t02 --db-parameter-group-family $FAMILY --description \"saa global RPO\" --tags Key=book,Value=saa Key=task,Value=aurora-t02 --query \"DBClusterParameterGroup.DBClusterParameterGroupName\"",
+     "expect": "saa-aurora-t02: the name of the new group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Your business allows a failover to lose at most 10 seconds of writes. Set rds.global_db_rpo to 10 in your group.",
+     "command": "aws rds modify-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t02 --parameters \"ParameterName=rds.global_db_rpo,ParameterValue=10,ApplyMethod=immediate\"",
+     "expect": "An error, and AWS changes nothing.",
+     "break_it": true,
+     "predict": "Can you set the recovery point limit of an Aurora PostgreSQL global database to 10 seconds?",
+     "explain": "Valid values of rds.global_db_rpo start at [20 seconds](../facts/aurora.md#aurora-global-rpo-parameter-range), so AWS refuses a lower limit. The parameter lets you [manage the recovery point objective (RPO)](../facts/aurora.md#aurora-global-db-postgres-rpo-managed-by-parameter). It protects the limit on the writer: if all secondary clusters fall behind it, [Aurora pauses transactions on the primary cluster](../facts/aurora.md#aurora-global-db-rpo-blocks-commits-when-all-secondaries-behind)."
+    },
+    {
+     "text": "Fix it: set the smallest valid value, 20. In a real global database, you set this value in the parameter group of the primary cluster.",
+     "command": "aws rds modify-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t02 --parameters \"ParameterName=rds.global_db_rpo,ParameterValue=20,ApplyMethod=immediate\"",
+     "expect": "The name saa-aurora-t02. AWS accepted the value.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the parameters that you changed in your group, with the range that AWS allows. With only two Regions, AWS recommends keeping the default value in the parameter group of the secondary Region.",
+     "command": "aws rds describe-db-cluster-parameters --db-cluster-parameter-group-name saa-aurora-t02 --source user --query \"Parameters[].[ParameterName,ParameterValue,AllowedValues]\" --output table",
+     "expect": "One row: rds.global_db_rpo, the value 20, and the allowed range 20-2147483647. A lower limit costs something: the writer can pause commits until a secondary cluster catches up.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete your DB cluster parameter group.",
+     "command": "aws rds delete-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t02"
+    }
+   ],
+   "verify": {
+    "command": "aws rds describe-db-cluster-parameter-groups --db-cluster-parameter-group-name saa-aurora-t02",
+    "expect": "An error with the code DBParameterGroupNotFound. The group is gone."
+   },
+   "still_costs": [
+    "No billed resource: the task creates no DB cluster and no DB instance. If the CloudShell session ended before the cleanup, the cleanup command still works, because it names the group and uses no variable."
+   ],
+   "facts": [
+    "aurora-global-rpo-parameter-range",
+    "aurora-global-db-postgres-rpo-managed-by-parameter",
+    "aurora-global-db-rpo-blocks-commits-when-all-secondaries-behind",
+    "aurora-global-db-rpo-parameter-dynamic",
+    "aurora-global-db-two-region-keep-default-rpo-secondary",
+    "aurora-global-db-postgres-rpo-parameter-affects-primary",
+    "aurora-on-demand-billing-one-second-increments-ten-minute-minimum",
+    "aurora-pricing-storage-billed-gb-month-both-configurations"
+   ],
+   "sources": [
+    {
+     "title": "Using switchover or failover in Amazon Aurora Global Database (Managing RPOs: official example of modify-db-cluster-parameter-group and describe-db-cluster-parameters --source user)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html"
+    },
+    {
+     "title": "Amazon Aurora PostgreSQL parameters (cluster-level parameter rds.global_db_rpo)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Reference.ParameterGroups.html"
+    },
+    {
+     "title": "Creating a DB cluster parameter group in Amazon Aurora",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.CreatingCluster.html"
+    },
+    {
+     "title": "Modifying parameters in a DB cluster parameter group in Amazon Aurora",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.ModifyingCluster.html"
+    },
+    {
+     "title": "Deleting a DB cluster parameter group in Amazon Aurora",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.DeletingCluster.html"
+    },
+    {
+     "title": "describe-db-engine-versions (AWS CLI Command Reference, --default-only and DBParameterGroupFamily)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-engine-versions.html"
+    },
+    {
+     "title": "describe-engine-default-cluster-parameters (AWS CLI Command Reference, ApplyType, AllowedValues, IsModifiable)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-engine-default-cluster-parameters.html"
+    },
+    {
+     "title": "create-db-cluster-parameter-group (AWS CLI Command Reference, --tags)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-cluster-parameter-group.html"
+    },
+    {
+     "title": "modify-db-cluster-parameter-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/modify-db-cluster-parameter-group.html"
+    },
+    {
+     "title": "ModifyDBClusterParameterGroup (Amazon RDS API Reference, ApplyMethod immediate for dynamic parameters)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBClusterParameterGroup.html"
+    },
+    {
+     "title": "describe-db-cluster-parameters (AWS CLI Command Reference, --source user)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-cluster-parameters.html"
+    },
+    {
+     "title": "describe-db-cluster-parameter-groups (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-cluster-parameter-groups.html"
+    },
+    {
+     "title": "DescribeDBClusterParameterGroups (Amazon RDS API Reference, error DBParameterGroupNotFound)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBClusterParameterGroups.html"
+    },
+    {
+     "title": "delete-db-cluster-parameter-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/delete-db-cluster-parameter-group.html"
+    }
+   ],
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-14"
+  },
+  {
+   "id": "aurora-t03",
+   "type": "try",
+   "title": "Require TLS in an Aurora MySQL cluster parameter group",
+   "kills": "\"Aurora MySQL and Aurora PostgreSQL use the same parameter to require TLS.\"",
+   "trap": null,
+   "section": "2-deep.md#encryption-at-rest-is-set-at-creation-and-covers-the-whole-cluster",
+   "pass_route": false,
+   "minutes": 10,
+   "cost": "$0: the task creates no DB cluster and no DB instance, only a DB cluster parameter group, which holds engine settings. Aurora bills DB instance hours and storage per GB-month, and the task creates neither.",
+   "cost_if_forgotten": "$0 a day. Delete the group anyway, so that no unused parameter group stays in the account.",
+   "cost_facts": [],
+   "permissions": [
+    "rds:DescribeDBEngineVersions",
+    "rds:DescribeEngineDefaultClusterParameters",
+    "rds:CreateDBClusterParameterGroup",
+    "rds:AddTagsToResource",
+    "rds:ModifyDBClusterParameterGroup",
+    "rds:DescribeDBClusterParameters",
+    "rds:DescribeDBClusterParameterGroups",
+    "rds:DeleteDBClusterParameterGroup"
+   ],
+   "read_only_alternative": "These commands create nothing. Run step 1: it only reads. Answer the predict question of step 3 on paper. Then look for the TLS parameter of Aurora MySQL in the engine defaults of this family: aws rds describe-engine-default-cluster-parameters --db-parameter-group-family $FAMILY --query \"EngineDefaults.Parameters[?ParameterName=='require_secure_transport'].[ParameterName,ApplyType,IsModifiable]\" --output table Expect one row. Run the command again with rds.force_ssl in place of require_secure_transport: expect no row.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the parameter group family of the default Aurora MySQL version as FAMILY.",
+     "command": "aws rds describe-db-engine-versions --engine aurora-mysql --default-only",
+     "capture": {
+      "name": "FAMILY",
+      "query": "DBEngineVersions[0].DBParameterGroupFamily"
+     },
+     "expect": "No output. FAMILY now holds a name that starts with aurora-mysql.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create your own DB cluster parameter group for this family, tagged for this book and this task. No DB cluster uses the group, so no database changes.",
+     "command": "aws rds create-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t03 --db-parameter-group-family $FAMILY --description \"saa require TLS\" --tags Key=book,Value=saa Key=task,Value=aurora-t03 --query \"DBClusterParameterGroup.DBClusterParameterGroupName\"",
+     "expect": "saa-aurora-t03: the name of the new group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Your team requires TLS on its Aurora PostgreSQL cluster with rds.force_ssl set to 1. Set the same parameter in this Aurora MySQL group.",
+     "command": "aws rds modify-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t03 --parameters \"ParameterName=rds.force_ssl,ParameterValue=1,ApplyMethod=immediate\"",
+     "expect": "An error, and AWS changes nothing.",
+     "break_it": true,
+     "predict": "Both engines encrypt connections with TLS. Does an Aurora MySQL group accept the parameter that requires TLS on Aurora PostgreSQL?",
+     "explain": "On both engines you can [encrypt a connection to a DB cluster](../facts/aurora.md#aurora-ssl-tls-connections-both-engines), but the parameter that requires TLS differs by engine. On Aurora PostgreSQL, rds.force_ssl is how you [require SSL/TLS connections](../facts/aurora.md#aurora-postgres-rds-force-ssl-parameter). On Aurora MySQL, you [require that all user connections](../facts/aurora.md#aurora-mysql-require-secure-transport-parameter) use TLS with the require_secure_transport DB cluster parameter."
+    },
+    {
+     "text": "Fix it: set require_secure_transport, the parameter of Aurora MySQL, to ON.",
+     "command": "aws rds modify-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t03 --parameters \"ParameterName=require_secure_transport,ParameterValue=ON,ApplyMethod=immediate\"",
+     "expect": "The name saa-aurora-t03. AWS accepted the change. A DB cluster that uses this group needs no reboot for the change to take effect.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the parameters that you changed in your group, with the apply type of each. The default of require_secure_transport depends on the Aurora MySQL version, so set it yourself.",
+     "command": "aws rds describe-db-cluster-parameters --db-cluster-parameter-group-name saa-aurora-t03 --source user --query \"Parameters[].[ParameterName,ParameterValue,ApplyType]\" --output table",
+     "expect": "One row: require_secure_transport, ON, and dynamic. Dynamic means that the change needs no reboot.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete your DB cluster parameter group.",
+     "command": "aws rds delete-db-cluster-parameter-group --db-cluster-parameter-group-name saa-aurora-t03"
+    }
+   ],
+   "verify": {
+    "command": "aws rds describe-db-cluster-parameter-groups --db-cluster-parameter-group-name saa-aurora-t03",
+    "expect": "An error with the code DBParameterGroupNotFound. The group is gone."
+   },
+   "still_costs": [
+    "No billed resource: the task creates no DB cluster and no DB instance. If the CloudShell session ended before the cleanup, the cleanup command still works, because it names the group and uses no variable."
+   ],
+   "facts": [
+    "aurora-mysql-require-secure-transport-parameter",
+    "aurora-postgres-rds-force-ssl-parameter",
+    "aurora-mysql-require-secure-transport-no-reboot",
+    "aurora-mysql-require-secure-transport-default-by-version",
+    "aurora-ssl-tls-connections-both-engines",
+    "aurora-on-demand-billing-one-second-increments-ten-minute-minimum",
+    "aurora-pricing-storage-billed-gb-month-both-configurations"
+   ],
+   "sources": [
+    {
+     "title": "Security with Amazon Aurora MySQL (Requiring a TLS connection: require_secure_transport, no reboot)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Security.html"
+    },
+    {
+     "title": "Security with Amazon Aurora PostgreSQL (rds.force_ssl)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Security.html"
+    },
+    {
+     "title": "Aurora MySQL configuration parameters (cluster-level parameter require_secure_transport)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Reference.ParameterGroups.html"
+    },
+    {
+     "title": "Creating a DB cluster parameter group in Amazon Aurora",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.CreatingCluster.html"
+    },
+    {
+     "title": "Modifying parameters in a DB cluster parameter group in Amazon Aurora",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.ModifyingCluster.html"
+    },
+    {
+     "title": "Viewing parameter values for a DB cluster parameter group in Amazon Aurora (describe-db-cluster-parameters)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.ViewingCluster.html"
+    },
+    {
+     "title": "Deleting a DB cluster parameter group in Amazon Aurora",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.DeletingCluster.html"
+    },
+    {
+     "title": "describe-db-engine-versions (AWS CLI Command Reference, --default-only and DBParameterGroupFamily)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-engine-versions.html"
+    },
+    {
+     "title": "create-db-cluster-parameter-group (AWS CLI Command Reference, --tags)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-cluster-parameter-group.html"
+    },
+    {
+     "title": "modify-db-cluster-parameter-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/modify-db-cluster-parameter-group.html"
+    },
+    {
+     "title": "ModifyDBClusterParameterGroup (Amazon RDS API Reference, ApplyMethod immediate for dynamic parameters)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBClusterParameterGroup.html"
+    },
+    {
+     "title": "describe-db-cluster-parameters (AWS CLI Command Reference, --source user)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-cluster-parameters.html"
+    },
+    {
+     "title": "describe-engine-default-cluster-parameters (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-engine-default-cluster-parameters.html"
+    },
+    {
+     "title": "describe-db-cluster-parameter-groups (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-cluster-parameter-groups.html"
+    },
+    {
+     "title": "DescribeDBClusterParameterGroups (Amazon RDS API Reference, error DBParameterGroupNotFound)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBClusterParameterGroups.html"
+    },
+    {
+     "title": "delete-db-cluster-parameter-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/delete-db-cluster-parameter-group.html"
+    }
+   ],
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-14"
+  }
+ ]
+}

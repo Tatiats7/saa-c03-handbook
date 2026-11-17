@@ -1,0 +1,140 @@
+{
+  "id": "messaging-after",
+  "kind": "arch",
+  "size": "s",
+  "chapter": "31",
+  "title": "Callvale after: queues between the steps and a topic for results",
+  "claim": "Uploads wait in queues between the steps, and the transcript-ready topic sends each finished transcript to two queues.",
+  "alt": "After: an upload to Amazon S3 sends an event to the uploads queue. The start-job function reads it and sends work to the convert queue. Conversion workers in an Auto Scaling group read the convert queue. The save-results function publishes to the transcript-ready topic, which sends a copy to the webhooks queue and the indexing queue. The convert queue has a dead-letter queue for repeated failures.",
+  "cols": 2,
+  "rows": 6,
+  "flow": "down",
+  "nodes": [
+    {
+      "id": "s3",
+      "icon": "s3",
+      "label": "Uploads",
+      "at": "A1"
+    },
+    {
+      "id": "upq",
+      "icon": "queue",
+      "label": "uploads queue",
+      "at": "B1",
+      "emph": true
+    },
+    {
+      "id": "start",
+      "icon": "lambda-function",
+      "label": "start-job",
+      "at": "B2"
+    },
+    {
+      "id": "convq",
+      "icon": "queue",
+      "label": "convert queue",
+      "at": "B3",
+      "emph": true
+    },
+    {
+      "id": "workers",
+      "icon": "auto-scaling-group",
+      "label": "Conversion\nworkers",
+      "at": "A3"
+    },
+    {
+      "id": "dlq",
+      "icon": "queue",
+      "label": "Dead-letter\nqueue",
+      "at": "B4"
+    },
+    {
+      "id": "save",
+      "icon": "lambda-function",
+      "label": "save-results",
+      "at": "A4"
+    },
+    {
+      "id": "topic",
+      "icon": "topic",
+      "label": "transcript-ready\ntopic",
+      "at": "A5",
+      "emph": true
+    },
+    {
+      "id": "webq",
+      "icon": "queue",
+      "label": "webhooks queue",
+      "at": "A6"
+    },
+    {
+      "id": "idxq",
+      "icon": "queue",
+      "label": "indexing queue",
+      "at": "B6"
+    }
+  ],
+  "edges": [
+    {
+      "from": "s3",
+      "to": "upq",
+      "label": "event",
+      "step": 1,
+      "say": "An upload to Amazon S3 sends an event to the uploads queue."
+    },
+    {
+      "from": "start",
+      "to": "upq",
+      "label": "polls",
+      "step": 2,
+      "say": "The start-job function reads the uploads queue and sends conversion work to the convert queue."
+    },
+    {
+      "from": "start",
+      "to": "convq",
+      "label": "work",
+      "step": 2
+    },
+    {
+      "from": "workers",
+      "to": "convq",
+      "label": "polls",
+      "step": 3,
+      "say": "Conversion workers scale on the convert backlog and process each message."
+    },
+    {
+      "from": "workers",
+      "to": "save",
+      "label": "results",
+      "dashed": true
+    },
+    {
+      "from": "save",
+      "to": "topic",
+      "label": "publish",
+      "step": 4,
+      "say": "The save-results function publishes to the transcript-ready topic, which sends the message to each subscribed queue."
+    },
+    {
+      "from": "topic",
+      "to": "webq",
+      "step": 4,
+      "label": "copy"
+    },
+    {
+      "from": "topic",
+      "to": "idxq",
+      "step": 4,
+      "label": "copy"
+    },
+    {
+      "from": "convq",
+      "to": "dlq",
+      "label": "repeated failures",
+      "step": 5,
+      "dashed": true,
+      "say": "A consumer can receive a message a set number of times before it is moved to a dead-letter queue."
+    }
+  ],
+  "notes": "Brief 31 story pair, after (pipeline state P2, shared with chapter 18); 2-deep.md#decision-record (after Decision). Title, claim, alt, say from brief.json. Queues and the topic are the highlight. Arrows start at whoever starts the call: functions and workers poll the queue. Twelve nodes do not fit four dead-letter queues: one is drawn, under the convert queue. Facts: sns-publish-sends-message-to-each-subscribed-queue (4), sqs-dlq-max-receive-count-meaning (5). No AWS number drawn."
+}

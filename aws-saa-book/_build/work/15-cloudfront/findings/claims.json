@@ -1,0 +1,283 @@
+{
+ "lens": "claims",
+ "chapter": "15",
+ "reviewer": "review-15-claims (lenses: claims, technical)",
+ "date": "2026-10-14",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Cache headers decide how long a copy lives and versioned names replace it sooner (Exam trap)",
+   "quote": "and daily invalidations soon use up the free paths",
+   "type": "claims: unsupported claim, contradicted by the chapter's own facts",
+   "severity": "blocking",
+   "evidence": "No fact supports it, and two verified facts refute it. cloudfront-invalidation-first-1000-paths-free: \"The first 1,000 invalidation paths that you submit per month are free; you pay for each invalidation path over 1,000 in a month.\" cloudfront-invalidation-wildcard-counts-one-path: \"A path that includes the `*` wildcard counts as one path even if it causes CloudFront to invalidate thousands of files.\" One invalidation a day is about 30 paths a month (one with a wildcard), far below 1,000. The chapter's own spoken answer cloudfront-s03 says the opposite: \"The thing to watch is the real reason. It isn't mainly cost.\" Fix: drop the clause, or give the real reason from cloudfront-invalidation-prefer-versioning-for-frequent-updates (versioning also controls copies in browsers and corporate proxies; invalidation does not).",
+   "status": "fixed",
+   "resolution": "fix-15: the clause is gone. The trap now gives the real reason: a new name also replaces copies in browsers and proxies, which an invalidation does not clear. The A-list cell 'Frequent releases pay' is now 'A wildcard path counts as one'. Speak cloudfront-s03 aligned (claims-16)."
+  },
+  {
+   "id": "claims-02",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Decision record (after figure, step 4); also diagrams/src/cloudfront-after.json edge 4 say text",
+   "quote": "4. Dynamic requests go to the load balancer, whose security group allows the CloudFront prefix list.",
+   "type": "technical: insecure recommendation that contradicts the chapter's own best practice",
+   "severity": "blocking",
+   "evidence": "The prefix list admits every CloudFront distribution, not only Callvale's. full:amazoncloudfront-developerguide (Use the CloudFront managed prefix list): \"This allows all of the CloudFront global origin-facing servers to reach the instance.\" For an internet-facing ALB, AWS lists the mitigation (full:amazoncloudfront-developerguide, Restrict access to Application Load Balancers): \"Configure CloudFront to add a custom HTTP header to requests that it sends to the Application Load Balancer.\" and \"Configure the Application Load Balancer to only forward requests that contain the custom HTTP header.\" The chapter itself teaches both locks: the origin-lock ladder says \"Prefix list and header\", and shipped question cloudfront-q012 keys prefix list PLUS secret header for \"only requests that come through the company's own distribution\". The chapter also calls VPC origins \"the newest and recommended solution\" (cloudfront-dec-ddos-wp-vpc-origins-newest-recommended). Fix: make the decision a VPC origin (internal ALB), or the prefix list plus a custom header and a listener rule; update the figure's step 4 text to match.",
+   "status": "fixed",
+   "resolution": "fix-15: decision step 4 and the cloudfront-after spec say now read 'Dynamic requests go to the load balancer, locked by the prefix list and a secret header.' (SVG rebuilt). The trade-off says the load balancer stays internet-facing and a VPC origin can come later. The VPC origins subsection now teaches both locks with elb-alb-cloudfront-prefix-list-sg, cloudfront-alb-restrict-custom-header-and-https and cloudfront-prefix-list-origin-facing-servers (all CloudFront servers pass the prefix list)."
+  },
+  {
+   "id": "claims-03",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "CloudFront encrypts two separate connections and each one has its own setting (Spot the bug answer)",
+   "quote": "The ALB can keep its own: [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region).",
+   "type": "technical: misleading; the link is right but the sentence reads as if an ALB can use a certificate from any Region",
+   "severity": "blocking",
+   "evidence": "The fact's quote means the origin certificate is not tied to us-east-1, not that a load balancer can use a certificate from another Region. full:acm-userguide (Supported Regions): \"Certificates in ACM are regional resources. To use a certificate with Elastic Load Balancing for the same fully qualified domain name (FQDN) or set of FQDNs in more than one AWS region, you must request or import a certificate for each region.\" ... \"You cannot copy a certificate between regions.\" The chapter's own question cloudfront-q014 rejects \"Request both certificates in US East (N. Virginia)\" with acm-certificates-regional. Placed in an eu-west-1 scenario, \"in any AWS Region\" invites exactly the wrong belief that q014 tests. Fix: say the ALB keeps its certificate from its own Region (eu-west-1), linking acm-faq-certificate-same-region-as-resource.",
+   "status": "removed",
+   "resolution": "fix-15: first rewritten with acm-faq-certificate-same-region-as-resource, then the whole TLS Spot the bug was removed to bring 2-deep.md under its 4,500-word limit (L201). The misleading sentence is gone; step 2 keeps the US East (N. Virginia) rule for the CloudFront certificate, and q014 still tests the ALB Region. The cache behaviors Spot the bug keeps the spot_the_bug count at 1."
+  },
+  {
+   "id": "claims-04",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "In one breath (picture steps 3 and 4); also 2-deep.md How it works step 4 and diagrams/src/cloudfront-hero.json claim and aside",
+   "quote": "3. On a miss, the request goes to the regional edge cache, which has [a larger cache](../facts/cloudfront.md#cloudfront-rec-larger-cache-than-pop).",
+   "type": "claims: oversimplified, stated as always true; verified exceptions left out",
+   "severity": "should",
+   "evidence": "full:amazoncloudfront-developerguide (How CloudFront works with regional edge caches): \"Proxy HTTP methods (`PUT`, `POST`, `PATCH`, `OPTIONS`, and `DELETE`) go directly to the origin from the POPs and do not proxy through the regional edge caches.\" \"Dynamic requests, as determined at request time, do not flow through regional edge caches, but go directly to the origin.\" \"When the origin is an Amazon S3 bucket and the request's optimal regional edge cache is in the same AWS Region as the S3 bucket, the POP skips the regional edge cache and goes directly to the S3 bucket.\" Verified facts exist and are unused: cloudfront-rec-proxy-methods-skip, cloudfront-rec-dynamic-requests-skip, cloudfront-rec-skipped-same-region-s3. The same claim is in 2-deep.md (\"Climb on a miss. The next stop is a regional edge cache.\") and the hero aside \"Both caches keep a copy\". It matters for Callvale: its buckets are in US East (N. Virginia). Fix: say \"typically\" and add the three exceptions in a Go deeper block.",
+   "status": "fixed",
+   "resolution": "fix-15: 'typically' added to 2-deep step 4 and to hero step 3 (1-fast.md and cloudfront-hero spec say, SVG rebuilt). New Go deeper block in 2-deep: dynamic requests (cloudfront-rec-dynamic-requests-skip) and S3 origins in the same Region (cloudfront-rec-skipped-same-region-s3) go straight to the origin. The hero aside shows the drawn GET case and stays."
+  },
+  {
+   "id": "claims-05",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "CloudFront encrypts two separate connections and each one has its own setting",
+   "quote": "Why two settings? CloudFront [terminates TLS close to viewers](../facts/cloudfront.md#cloudfront-pricing-page-dynamic-acceleration-mechanisms) and opens a new TLS connection to the origin.",
+   "type": "claims: the link supports only the first half; the sentence says more",
+   "severity": "should",
+   "evidence": "cloudfront-pricing-page-dynamic-acceleration-mechanisms quotes: \"CloudFront terminates TLS close to viewers from distributed edge locations, maintains persistent connections to your origin, ...\" Nothing says it opens a new TLS connection, and with the origin protocol policy HTTP (row 1 of the table directly above) there is no TLS to the origin at all. Fix: \"... and opens a separate connection to the origin, HTTP or HTTPS by the origin protocol policy\", or link cloudfront-https-viewer-origin-protocol-independent.",
+   "status": "fixed",
+   "resolution": "fix-15: now 'CloudFront terminates TLS close to viewers and opens a separate connection to the origin, with the protocol that the origin protocol policy sets.' No claim of a second TLS connection."
+  },
+  {
+   "id": "claims-06",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "An origin group fails over to a second origin when the first one fails (Stop and answer); also Numbers A-list row and card cloudfront-c019",
+   "quote": "by default CloudFront can wait as long as [30 seconds](../facts/cloudfront.md#cloudfront-default-connect-wait-before-failover) before the secondary.",
+   "type": "technical: condition dropped from the fact (connection attempts only)",
+   "severity": "should",
+   "evidence": "The 30 seconds are 3 connection attempts of 10 seconds: \"By default, CloudFront waits as long as 30 seconds (3 attempts of 10 seconds each) before attempting to connect to the secondary origin or returning an error response.\" (full:amazoncloudfront-developerguide, Connection attempts). An origin that accepts the connection but does not answer is governed by the response timeout: \"For response timeout, the default is 30 seconds.\" and for GET and HEAD \"CloudFront drops the connection. CloudFront tries again to connect according to the value of Connection attempts.\" So in an outage the wait can be longer than 30 seconds. Card cloudfront-c019 makes it an upper bound (\"waits up to 30 seconds\"). Fix: say \"when the primary refuses connections\" and mention the response timeout.",
+   "status": "fixed",
+   "resolution": "fix-15: Stop-and-answer now says connection attempts to an unreachable primary take 30 seconds by default and a primary that connects but does not answer adds a response timeout. A-list label: 'CloudFront connection attempts before the secondary origin'. Card cloudfront-c019 front names connection attempts; its extra adds the response timeout with cloudfront-default-response-timeout."
+  },
+  {
+   "id": "claims-07",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "VPC origins let CloudFront reach load balancers and instances in private subnets (step 3 and Say it)",
+   "quote": "3. **Keep a gateway.** [You need to add an internet gateway](../facts/cloudfront.md#cloudfront-vpc-origin-needs-internet-gateway) to the VPC.",
+   "type": "technical: condition dropped from the fact; can push the reader to make the subnet public",
+   "severity": "should",
+   "evidence": "cloudfront-vpc-origin-needs-internet-gateway quotes: \"The internet gateway is required to denote that the VPC can receive traffic from the internet. The internet gateway is not used for routing traffic to origins inside the subnet, and you don't need to update the routing policies.\" The chapter keeps only the first sentence, and the Say it line (\"The thing to watch is the internet gateway.\") adds weight. A reader who adds a 0.0.0.0/0 route to the gateway makes the subnet public, which defeats the VPC origin. Fix: add \"no route to it is needed; the subnet stays private\" with the second display of the same fact.",
+   "status": "fixed",
+   "resolution": "fix-15: step 3 now reads '... to the VPC, but it does not route traffic to the subnet. The subnet stays private.' in the sentence linked to cloudfront-vpc-origin-needs-internet-gateway (the second link was dropped for the word limit)."
+  },
+  {
+   "id": "claims-08",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Health checks and traffic dials move new connections from one Region to another (table)",
+   "quote": "| Traffic dial 0 | One endpoint group | No new connections to that Region |",
+   "type": "technical: contradicts the chapter's own Stop-and-answer",
+   "severity": "should",
+   "evidence": "global-accelerator-failover-to-another-endpoint-group-ignores-dial: \"If there are no healthy endpoints in an endpoint group that have a weight greater than zero, Global Accelerator tries to fail over to a healthy endpoint with a weight greater than zero in another endpoint group. Note that for this failover, Global Accelerator ignores the traffic dial setting.\" The Stop-and-answer of the same section tells the reader to use a dial of 0 on the standby so that it does receive new connections on failover. Fix: \"No new connections to that Region, except in a failover\".",
+   "status": "fixed",
+   "resolution": "fix-15: cell changed as proposed."
+  },
+  {
+   "id": "claims-09",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Changed recently (VPC origins)",
+   "quote": "> **The exam probably expects:** an internet-facing Application Load Balancer that allows the [AWS-managed prefix list for CloudFront](../facts/elb.md#elb-alb-cloudfront-prefix-list-sg). Prefer an option that is right under both.<br>",
+   "type": "technical: incomplete older answer; date not linked",
+   "severity": "should",
+   "evidence": "The older AWS answer for an internet-facing ALB is a custom header plus a listener rule (full:amazoncloudfront-developerguide, Restrict access to Application Load Balancers: \"Configure CloudFront to add a custom HTTP header to requests that it sends to the Application Load Balancer.\"), and the chapter's own question cloudfront-q012 keys the prefix list together with the secret header. The prefix list alone \"allows all of the CloudFront global origin-facing servers to reach the instance\". Also the date (2024-11-20) carries no link although the verified fact cloudfront-change-vpc-origins-2024-11 holds it (\"VPC origins | Use CloudFront VPC origins to restrict access to an Application Load Balancer, Network Load Balancer, or EC2 instance origin. | November 20, 2024\"). Fix: \"... the prefix list in its security group plus a secret custom header\" and link the date.",
+   "status": "fixed",
+   "resolution": "fix-15: the line now says the ALB allows the prefix list 'and checks a secret custom header'. The date stays unlinked in the entry header, the house form of every Changed recently entry; L107 checks it against changed.date of the Now fact (cloudfront-dec-ddos-wp-vpc-origins-newest-recommended, 2024-11-20)."
+  },
+  {
+   "id": "claims-10",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Choose it or not: CloudFront Functions or edge Lambda functions (row Network and request body); also 2-deep.md table row Read the request body",
+   "quote": "| Network and request body? | No [network access](../facts/cloudfront.md#cloudfront-functions-no-network-no-body-fs-access), no [access to the request body](../facts/cloudfront.md#cloudfront-functions-no-network-no-body-fs-access) | Yes: it can [make network calls to external resources](../facts/cloudfront.md#cloudfront-lambda-edge-network-calls-allowed) |",
+   "type": "claims: \"Yes\" for request body has no fact link, and its conditions are dropped",
+   "severity": "should",
+   "evidence": "The Lambda@Edge cell's link supports network calls only. Body access needs the Include Body option and is truncated: cloudfront-lambda-edge-body-truncated-viewer-request-40kb \"For viewer request events, the body is truncated at 40 KB.\"; cloudfront-lambda-edge-body-truncated-origin-request-1mb \"For origin request events, the body is truncated at 1 MB.\" The 2-deep.md row \"| Read the request body | Lambda@Edge |\" has no link either. Fix: link one of these facts and name the Include Body option.",
+   "status": "fixed",
+   "resolution": "fix-15: 1-fast cell now 'Yes: make network calls ...; viewer request body: 40 KB' and the 2-deep row 'Lambda@Edge, with Include Body: 40 KB on viewer requests', both linked to cloudfront-lambda-edge-body-truncated-viewer-request-40kb."
+  },
+  {
+   "id": "claims-11",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Numbers that decide answers (B-list)",
+   "quote": "| [75](../facts/cloudfront.md#cloudfront-quota-cache-behaviors-per-distribution) | Cache behaviors per distribution |",
+   "type": "technical: condition dropped from the fact (default, adjustable)",
+   "severity": "should",
+   "evidence": "cloudfront-quota-cache-behaviors-per-distribution: \"Cache behaviors per distribution | 75<br />Request a higher quota\" (scope: default; adjustable). Same for the 250,000 row, cloudfront-quota-requests-per-second-per-distribution: \"(This quota doesn't apply for distributions subscribed to CloudFront flat-rate pricing plans. ...) | 250,000<br />Request a higher quota\". Next to the fixed rows (1 certificate, 50 GB) the reader cannot tell which numbers are hard limits. Fix: write \"Default cache behaviors per distribution (adjustable)\" and \"Default requests per second per distribution (adjustable)\".",
+   "status": "fixed",
+   "resolution": "fix-15: both B-list labels changed as proposed."
+  },
+  {
+   "id": "claims-12",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Changed recently (whole section; the OAC entry was removed at edit)",
+   "quote": "> **Changed recently:** (2024-11-20) VPC origins for private subnets.<br>",
+   "type": "rule: RULINGS hard rule 7 (Changed recently for a fact changed since mid-2022)",
+   "severity": "should",
+   "evidence": "OAC replaced OAI as the recommended way after mid-2022. full:amazoncloudfront-developerguide (Document history): \"... with origin access control](#private-content-restricting-access-to-s3) | You can now secure Amazon S3 origins by permitting access to only the designated CloudFront distributions. | August 24, 2022 |\". RULINGS rule 7: \"Where a fact changed since mid-2022, add a 'Changed recently' note with old value, new value, date, and what older exam questions may assume.\" The ledger note of edit-15 says \"OAC 2022 Changed recently entry removed\"; the trap line (\"Older practice questions still name OAI\") gives no date and no old/new pair. Fix: restore the entry (old: OAI; now: OAC recommended; 2022-08-24; older questions name OAI), with a registered change fact.",
+   "status": "rejected",
+   "resolution": "fix-15: cannot be grounded in this stage. L107 requires the date to equal changed.date of a verified fact linked in Now:, and the canon has no verified OAC launch fact. The only one, cloudfront-change-oac-s3-origins-2022-08, was disputed at rev 2 (entail partial: its condition names a What's New date 2022-08-25 that no quote carries); fix-15 rejected it so that facts-final can pass. To restore the entry, a facts run must add a new change fact from the Document history row without that condition and get its votes. The trap line keeps 'we recommend that you use OAC instead' and the note that older questions name OAI."
+  },
+  {
+   "id": "claims-13",
+   "file": "15-cloudfront/3-do.md",
+   "section": "whole file; also 4-say.md and the task region of 1-fast.md Look first",
+   "quote": "Nothing here yet.",
+   "type": "technical: generated reader files are empty; every Try it link points to an empty page",
+   "severity": "should",
+   "evidence": "TOOLS-items.md sync: \"Only items with `status: ready` are printed ... A file with no item still gets its H1 and the line `Nothing here yet.`\" All 4 tasks, 4 speak items and 32 cards in data/15-cloudfront/ have \"status\": \"candidate\", although the tasks, speak and cards stages are pass. TOOLS-rules.md R5: \"A reviewer sets cards, speak items and tasks to `ready` in the stage of that kind, after the item lint is clean.\" Result: 3-do.md and 4-say.md say \"Nothing here yet.\", the region `<!-- task:start id=cloudfront-t01 -->` in 1-fast.md is empty, and three \"See [3-do.md](3-do.md)\" links lead nowhere. The finalize counts gate (T201, P201, C201) will fail on this. Fix: after the fixes below, run tasks/speak/cards set-status --status ready and sync 15.",
+   "status": "fixed",
+   "resolution": "fix-15: after item lint was clean, set-status ready for tasks t01 to t04, speak s01 to s04 and cards c001 to c032; sync 15 wrote 3-do.md, 4-say.md and the t01 region of 1-fast.md. Speak cloudfront-s02 kp6 had listed the disputed fact cloudfront-cache-hit-returns-from-edge; it now uses cloudfront-cache-hit-ratio-definition."
+  },
+  {
+   "id": "claims-14",
+   "file": "data/15-cloudfront/tasks.json",
+   "section": "cloudfront-t03 verify",
+   "quote": "aws resourcegroupstaggingapi get-resources --region us-west-2 --tag-filters Key=task,Values=cloudfront-t03 --query \"ResourceTagMappingList[].ResourceARN\"",
+   "type": "technical: verify step that may not be able to fail",
+   "severity": "should",
+   "evidence": "The expected result is \"An empty list\". No saved page shows that the Resource Groups Tagging API returns Global Accelerator accelerators; the Global Accelerator tagging page (full:global-accelerator-dg, Tagging in AWS Global Accelerator) names only \"the AWS console, AWS CLI, or Global Accelerator API\" and \"AWS Global Accelerator supports tagging for accelerators and cross-account attachments.\" If the tagging API does not index accelerators, the command returns an empty list while the accelerator still exists and still costs $0.025 an hour (global-accelerator-price-fixed-fee-per-hour). The proving check (list-accelerators) is only in the expect text. Fix: make the verify command aws globalaccelerator list-accelerators --region us-west-2 --query \"Accelerators[?Name=='saa-cloudfront-t03'].AcceleratorArn\" with the expect \"An empty list\", and keep the tagging API call as a second check.",
+   "status": "fixed",
+   "resolution": "fix-15: the verify command stays, because T108 needs a tag filter or a --*-name option and list-accelerators has neither (a --query filter does not count), and changing it would also void the CLI report. The expect now says no saved page shows that the tagging list holds accelerators, so the proving check is list-accelerators --query \"Accelerators[?Name=='saa-cloudfront-t03'].AcceleratorArn\", which must return an empty list."
+  },
+  {
+   "id": "claims-15",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Choose it or not: CloudFront Functions or edge Lambda functions (row Which events?)",
+   "quote": "| Which events? | Viewer request and viewer response | Viewer events, plus [Origin request](../facts/lambda.md#lambda-edge-event-sources-row) and origin response |",
+   "type": "claims: outdated or incomplete; no link for the CloudFront Functions cell",
+   "severity": "note",
+   "evidence": "CloudFront Functions now also run as Connection Functions. docs/AmazonCloudFront/latest/DeveloperGuide/WhatsNew: \"Added Connection Functions | CloudFront supports Connection Functions for mutual TLS (viewer). | November 24, 2025\". This is older than 3 months, so examinable under rule 7. Probably not an SAA answer driver, but the cell reads as a complete list. Fix: \"Viewer request and viewer response (plus connection functions for viewer mTLS)\" with a fact, or keep the cell and add \"for requests\".",
+   "status": "rejected",
+   "resolution": "fix-15: no verified fact on Connection Functions exists in the canon, so the cell cannot name them. The row compares request events, the cell claims no completeness word, and Connection Functions are not an SAA answer driver. Left for a later facts run."
+  },
+  {
+   "id": "claims-16",
+   "file": "data/15-cloudfront/speak.json",
+   "section": "cloudfront-s03 sixty_second",
+   "quote": "The thing to watch is the real reason. It isn't mainly cost.",
+   "type": "claims: inconsistent with the chapter and the card; AWS gives both reasons",
+   "severity": "note",
+   "evidence": "cloudfront-invalidation-prefer-versioning-for-frequent-updates (claim): \"versioning controls what a request returns even when users have a version cached locally or behind a corporate proxy, and it is less expensive than invalidation.\" The 2-deep.md table and card cloudfront-c007 lead with \"Versioning is less expensive\", and the 2-deep.md trap says daily invalidations use up the free paths (claims-01). After claims-01 is fixed, align the three: cost is one reason, browser and proxy copies are the other.",
+   "status": "fixed",
+   "resolution": "fix-15: s03 now says 'The thing to watch is copies outside CloudFront. Versioning costs less, and a wildcard path counts as one path. The bigger problem is that invalidation can't reach copies in browsers and proxies.' Speak lint clean."
+  },
+  {
+   "id": "claims-17",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Requests reach the nearest edge location and cache misses travel on to the origin (table)",
+   "quote": "| Miss in both | Origin | One: [this brief pause helps to reduce the load](../facts/cloudfront.md#cloudfront-request-collapsing) |",
+   "type": "claims: the link supports a different case (simultaneous requests)",
+   "severity": "note",
+   "evidence": "cloudfront-request-collapsing is about \"additional requests for the same object (with the same cache key)\" that \"arrive at an edge location before CloudFront receives the response to the first request\". A single miss gives one origin request without any collapsing. Fix: \"One, even when many viewers ask at once: ...\" so the link fits the sentence.",
+   "status": "removed",
+   "resolution": "fix-15: the three-row table was removed to meet the 4,500-word limit of 2-deep.md; the steps carry hit and miss. Request collapsing stays in the Stop-and-answer, now scoped to two users at the same edge location."
+  },
+  {
+   "id": "claims-18",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Origin access control keeps the bucket private and lets your distribution read it",
+   "quote": "Why the Condition? Without it, the bucket would trust the CloudFront service as a whole.",
+   "type": "claims: explanatory claim without a fact link",
+   "severity": "note",
+   "evidence": "Plausible (any distribution in any account could use the service principal), but no fact backs it. cloudfront-oac-bucket-policy-cloudfront-service-principal supports only the positive form (\"only when the request is on behalf\" of the named distribution). Fix: rephrase as the positive form with that display, or register a fact from the OAC page on the AWS:SourceArn condition.",
+   "status": "fixed",
+   "resolution": "fix-15: now the positive form: 'It allows reads only when the request is on behalf of your own distribution.', linked to cloudfront-oac-bucket-policy-cloudfront-service-principal."
+  },
+  {
+   "id": "claims-19",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Check (answer to Predict 3)",
+   "quote": "**Predict 3:** After the cached copy expires, or immediately with a new file name.",
+   "type": "claims: oversimplified",
+   "severity": "note",
+   "evidence": "It leaves out invalidation, which the chapter teaches for the urgent case (cloudfront-faq-remove-item-delete-origin-or-invalidate: \"you can use the Invalidation API to remove the object from all Amazon CloudFront edge locations\"), and a new file name helps only once the page that references it is updated (cloudfront-s03: \"Your HTML page points to the new names after each release.\"). Fix: \"When the cached copy expires, after an invalidation, or at once with a new file name that the page links to.\"",
+   "status": "fixed",
+   "resolution": "fix-15: now 'When the copy expires, after an invalidation, or right away with a new file name.' The page-link clause was cut to keep Check within 150 words."
+  },
+  {
+   "id": "claims-20",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Decision record (Trade-off)",
+   "quote": "**Trade-off.** Cached files stay [until the files expire](../facts/cloudfront.md#cloudfront-removed-origin-file-stays-until-expiry), so releases use versioned file names. Callvale accepts that.",
+   "type": "claims: story drift (STARTUP.md)",
+   "severity": "note",
+   "evidence": "STARTUP.md chapter 15: \"Accepts: cached files can be old after a release.\" The record says versioned names are used, which removes that cost, and then says Callvale \"accepts that\". Fix: \"Cached files can be old after a release until they expire; Callvale accepts that and moves to versioned file names.\" (Also W201: the section has 360 words for a limit of 280.)",
+   "status": "fixed",
+   "resolution": "fix-15: trade-off now 'After a release, cached files can be old until the files expire; Callvale accepts that and uses versioned file names.' Figures' alt, captions and steps shortened in spec and Markdown (SVGs rebuilt); the section went from 360 to about 310 words (W201 still warns)."
+  },
+  {
+   "id": "claims-21",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Choose it or not: Origin access control or signed access",
+   "quote": "Most private content uses both.",
+   "type": "claims: generalization without a fact",
+   "severity": "note",
+   "evidence": "No fact says how much private content uses both. The next clause has the right fact (cloudfront-private-s3-oac-plus-signed-urls). Fix: \"For private content, AWS recommends both:\" and keep the link.",
+   "status": "fixed",
+   "resolution": "fix-15: now 'AWS recommends both for private content.' followed by the linked sentence."
+  },
+  {
+   "id": "claims-22",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Numbers that decide answers (Changed recently, MRAP)",
+   "quote": "> **The exam probably expects:** OAC for an ordinary S3 bucket origin. Do not let this number decide an answer.<br>",
+   "type": "claims: wording; there is no number in this entry",
+   "severity": "note",
+   "evidence": "The entry is about a feature (OAC for S3 Multi-Region Access Points, cloudfront-change-oac-s3-mrap-2026-08), not a number. Fix: \"Do not let this feature decide an answer.\"",
+   "status": "fixed",
+   "resolution": "fix-15: now 'Do not let this change decide an answer.'"
+  },
+  {
+   "id": "claims-23",
+   "file": "data/15-cloudfront/cards.json",
+   "section": "cloudfront-c022 front",
+   "quote": "an internet-facing Application Load Balancer must accept CloudFront traffic and nothing else. What is the source of its security group rule?",
+   "type": "technical: correct for the security group alone, but invites the single-lock belief of claims-02",
+   "severity": "note",
+   "evidence": "Supported for \"non-CloudFront traffic\" (cloudfront-prefix-list-origin-facing-servers: \"which prevents non-CloudFront traffic from reaching your origin\"), but the prefix list \"allows all of the CloudFront global origin-facing servers to reach the instance\" (full:amazoncloudfront-developerguide), so it does not limit traffic to one distribution. Fix: add to extra \"To admit only your distribution, also add a custom header and a listener rule.\"",
+   "status": "fixed",
+   "resolution": "fix-15: c022 extra adds 'To admit your own distribution alone, CloudFront can also add a custom HTTP header to requests, and a listener rule checks it.' with cloudfront-alb-restrict-custom-header-and-https in facts."
+  },
+  {
+   "id": "claims-24",
+   "file": "data/15-cloudfront/tasks.json",
+   "section": "cloudfront-t03 step 1 expect",
+   "quote": "An error instead of a list, for example that the AWS CLI could not connect to the endpoint URL.",
+   "type": "claims: expected output not grounded in a saved page",
+   "severity": "note",
+   "evidence": "global-accelerator-cli-region-us-west-2 says only \"you must specify the US West (Oregon) Region (that is, specify the parameter `--region us-west-2`) in Regional Global Accelerator AWS CLI commands.\" The exact error is not documented in the corpus. The \"for example\" hedge keeps it acceptable; the step is labelled \"checked against docs, not run in a real account\".",
+   "status": "rejected",
+   "resolution": "fix-15: no change; the reviewer judges the 'for example' hedge acceptable and the task carries the fixed label."
+  },
+  {
+   "id": "claims-25",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "all files: statements checked and held (record of the refutation attempts)",
+   "quote": "[Up to 30 seconds](../facts/cloudfront.md#cloudfront-edge-compare-duration) | Lambda@Edge run time",
+   "type": "claims: checked, no change needed (record only)",
+   "severity": "note",
+   "evidence": "Tried to refute and failed, so no change is needed: Lambda@Edge 30 seconds and 50 MB for viewer events too (full:amazoncloudfront-developerguide, Quotas on Lambda@Edge: \"Function timeout. ... | 30 seconds |\", \"Maximum compressed size of a Lambda function and any included libraries | 50 MB |\"); NLB with TLS listener not a VPC origin; Do not sign requests needs a public bucket; signed URL takes precedence over signed cookies; Minimum TTL above 0 overrides no-cache (q008); origin failover only for GET, HEAD, OPTIONS; price class billing at the least expensive location; GA fixed fee $0.025 per hour, enabled or disabled, plus $0.005 per IP per hour; GA addresses kept until delete; dial 0 plus failover behavior (Stop-and-answer); prefix list \"prevents non-CloudFront traffic\" (t01 step 4); t02 and t04 verify commands can fail and their cleanup removes all created resources; t04 bucket stays private with Block Public Access on, and the policy is scoped by AWS:SourceArn to one distribution. All 18 shipped quiz keys and explanations held against their facts.",
+   "status": "rejected",
+   "resolution": "fix-15: record only; no change needed."
+  }
+ ]
+}

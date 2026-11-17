@@ -1,0 +1,215 @@
+{
+  "lens": "reader",
+  "chapter": "17",
+  "findings": [
+    {
+      "id": "reader-01",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "step-scaling-follows-alarm-size-and-warmup-replaces-the-old-cooldown",
+      "quote": "Why warmup? A cooldown blocks every activity for a fixed time; a warmup hides new instances from the metric.",
+      "type": "misleading",
+      "severity": "blocking",
+      "evidence": "Contradicts the table and trap directly above and below it. Facts ec2-auto-scaling-cooldown-scheduled-action-does-not-wait, ec2-auto-scaling-cooldown-unhealthy-replacement-does-not-wait and ec2-auto-scaling-cooldown-target-tracking-step-do-not-wait show that the cooldown does not block scheduled actions, unhealthy replacement, step scaling or target tracking. The absolute word 'every' has no fact link (RULINGS hard rule 1). Suggested text: 'A cooldown stops a simple scaling policy for a fixed time; a warmup only hides new instances from the metric, so other policies keep acting.'",
+      "status": "fixed",
+      "resolution": "fix-17: 'A cooldown pauses further [scaling activities initiated by simple scaling policies] for a fixed time. A warmup acts on the metric: a new instance [waits before contributing usage data].' The suggested 'only hides ... so other policies keep acting' was not used: fact ec2-auto-scaling-warmup-blocks-scale-in says a warmup also blocks dynamic scale in. See claims-17-005."
+    },
+    {
+      "id": "reader-02",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "decision-record",
+      "quote": "At 08:45 the action raises capacity to 6, and you can use scheduled scaling and scaling policies together.",
+      "type": "mechanism-wrong",
+      "severity": "blocking",
+      "evidence": "'Raises capacity' does not say which number changes, and there is no action that lowers it after 11:00. If the action raises only the desired capacity while the minimum stays at 3, target tracking scales in again at 08:45 because traffic is still low. Fact ec2-auto-scaling-scheduled-action-keeps-current-limits: an action that sets no new minimum keeps the current limits. Fact ec2-auto-scaling-scheduled-plus-policies-together: the policy works 'within the minimum and maximum set by the scheduled action'. The chapter's own question auto-scaling-q003 uses the correct design: 'raise the minimum capacity before 09:00 and lower it after 11:00'. Also fix the after-diagram caption and the speak item s02 so they agree.",
+      "status": "fixed",
+      "resolution": "fix-17: Decision now raises the minimum capacity from 3 to 6 at 08:45 and sets it back to 3 with a second action at 11:00, linked to 'must fall within the minimum and maximum capacity'. After-diagram claim, alt and lane label changed to 'raises the minimum' (SVG rebuilt). Speak s02 follow-up now says the schedule raises the minimum (claims-17-004). See claims-17-003."
+    },
+    {
+      "id": "reader-03",
+      "file": "17-auto-scaling/1-fast.md",
+      "section": "in-one-breath",
+      "quote": "5. When an instance fails its health checks, the group terminates it and launches another.",
+      "type": "gist-wrong",
+      "severity": "should",
+      "evidence": "The hero picture shows a load balancer, so a reader who skims takes this step to mean that a failed load balancer check leads to replacement. That is the gist trap of Predict 1 and of the first trap. Fact ec2-auto-scaling-elb-health-checks-ignored-by-default. Suggested text: 'When an instance fails the health checks that the group uses (EC2 checks by default; ELB checks once you turn them on), the group terminates it and launches another.' (READER.md: headings, tables and captions must give a correct gist on their own.)",
+      "status": "fixed",
+      "resolution": "fix-17: step 5 (and the hero spec say) now: 'The group [terminates the unhealthy instance and launches another] when an instance fails a check that the group uses: EC2 checks, and ELB checks after you turn them on.' See claims-17-016."
+    },
+    {
+      "id": "reader-04",
+      "file": "17-auto-scaling/1-fast.md",
+      "section": "check",
+      "quote": "Check 1. Three instances behind an Application Load Balancer use default group settings. The application on one instance hangs. What happens to that instance?",
+      "type": "skim-answerable",
+      "severity": "should",
+      "evidence": "From a skim alone, Check 1 is answered by signal row 1, Check 2 by signal row 2 ('traffic rises at the same time' leads to a scheduled action), Check 3 by signal row 5 together with the hibernate trap, and Recap 3 by the bold Truth of trap 2. READER.md says 'questions must test what the gist misses'. Make at least two checks need the mechanism, for example Check 2 with a sale whose time is known only one hour ahead, or a target tracking group whose scheduled action raises only the desired capacity.",
+      "status": "fixed",
+      "resolution": "fix-17: Check 2 now asks which number a scheduled action at 09:45 must raise while target tracking runs; the answer (the minimum, because the policy keeps acting and can scale in a raised desired capacity) is not in any signal row or trap. Check 1 stays: it answers the gist-trap Predict 1, which the template pairs with it. Check 3 now uses full sentences (reader-15). The Check section is at 177 words against its 150-word guide (W201 warning), so no third rewrite."
+    },
+    {
+      "id": "reader-05",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "how-it-works",
+      "quote": "> **Say it:** The short answer is: the group holds the desired count between minimum and maximum. The thing to watch is the maximum.",
+      "type": "not-speech",
+      "severity": "should",
+      "evidence": "All 12 Say-it lines in How it works use the same template, 'The short answer is: X. The thing to watch is Y.' Y is a bare noun with no reason ('the maximum', 'the timeout', 'the target', 'rollback'), so she cannot say it to a customer and explain why. READER.md asks for 'sentences she can say' and for model answers written for speech. Suggested shape: 'The thing to watch is the maximum: if it is too low, the group stops adding instances at the peak.'",
+      "status": "fixed",
+      "resolution": "fix-17: every How it works Say it now gives the reason with the watch noun, inside the 25-word Say it limit (L202) and the required 'The short answer is' / 'The thing to watch is' shape, for example 'The thing to watch is the maximum, because it caps the peak.', 'the timeout, which ends in ABANDON', 'scale in, which predictive scaling does not do', 'rollback, which you turn on yourself'. The short-answer half was shortened to make room."
+    },
+    {
+      "id": "reader-06",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "scale-in-removes-the-instance-that-the-termination-policy-picks",
+      "quote": "from [health check replacement](../facts/ec2-auto-scaling.md#ec2-auto-scaling-scale-in-protection-not-health-replacement). <!-- trap: auto-scaling-trap-scale-in-protection-protects-all -->\n> **Say it:** The short answer is: scale in drains one instance from the fullest zone.",
+      "type": "layout",
+      "severity": "should",
+      "evidence": "There is no blank line between the Exam trap blockquote and the Say it blockquote. In Markdown both become one paragraph, so the Say it line runs on after the trap text. Every other section separates the two callouts.",
+      "status": "fixed",
+      "resolution": "fix-17: a blank line now separates the Exam trap and the Say it callouts."
+    },
+    {
+      "id": "reader-07",
+      "file": "17-auto-scaling/1-fast.md",
+      "section": "words-that-go-together",
+      "quote": "| decouple (dee-KUP-ul) | decouple the **tiers** with a queue |",
+      "type": "terminology-gap",
+      "severity": "should",
+      "evidence": "The words table spends 4 of its 8 rows on general or ELB terms (stateless, decouple, single point of failure, deregistration delay). It leaves out the chapter's own collocations, which she must say aloud: 'set the desired capacity' is folded into the group row, and 'attach a scaling policy', 'complete a lifecycle action', 'start an instance refresh' and 'protect an instance from scale in' are missing. Lint also flags W307 needs-term markers for desired capacity, launch template, lifecycle hook and warm pool. READER.md: she forgets terminology under stress; every chapter gives collocations.",
+      "status": "fixed",
+      "resolution": "fix-17: rows decouple and deregistration delay replaced by desired capacity ('**raise** the desired capacity') and lifecycle hook ('**complete** a lifecycle action'); the table stays at its 8-row maximum. The 16 missing chapter terms of the brief's term_requests that 2-deep.md uses as definitions were added to data/terms.json (desired capacity, scaling policy, lifecycle hook, health check grace period, step scaling policy, simple scaling policy, cooldown, instance warmup, scheduled action, predictive scaling, backlog per instance, termination policy, Capacity Rebalancing, warm pool, immutable infrastructure, instance refresh, plus instance maintenance policy), as fix-16 did for chapter 16, and every needs-term marker was removed (L307 from status reviewed). Respellings left null (no guessed pronunciations). data/cards-terms.json was already stale before this change (cards build --check); regenerating it is the orchestrator's step."
+    },
+    {
+      "id": "reader-08",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "a-new-instance-joins-the-load-balancer-before-it-becomes-inservice",
+      "quote": "InService can move to Standby and back.",
+      "type": "term-unexplained",
+      "severity": "should",
+      "evidence": "Standby appears only in the alt text of the lifecycle diagram, and the prose never says what it is or why you use it: to take an instance out of service, update or troubleshoot it, and keep it in the group. Lint warning W901 ('first use of the term `standby` is not bold'). Rule: a term used but never explained.",
+      "status": "fixed",
+      "resolution": "fix-17: added after the lifecycle figure: 'Standby takes an instance out of service for an update and keeps it in the group. Standby instances [do not actively handle load balancer traffic], and the group [does not perform health checks] on them.' (ec2-auto-scaling-standby-no-lb-traffic, ec2-auto-scaling-standby-no-health-checks). Not bold: the bank term 'standby' means a database standby; W901 stays a warning."
+    },
+    {
+      "id": "reader-09",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "a-new-instance-joins-the-load-balancer-before-it-becomes-inservice",
+      "quote": "A launch lifecycle hook holds the instance in Pending:Wait until your code completes the action.",
+      "type": "leap",
+      "severity": "should",
+      "evidence": "The section never says how 'your code' learns that an instance is waiting (a notification to EventBridge, SNS or SQS, or the user data script on the instance) or what it calls to finish (CompleteLifecycleAction). The chapter's own question auto-scaling-q017 expects the reader to know CompleteLifecycleAction, and auto-scaling-q018 expects 'a script or an AWS Lambda function'. Rule: a mechanism is described but not explained as cause and effect. Add one step that has a fact link.",
+      "status": "fixed",
+      "resolution": "fix-17: step 1 now: the hook holds the instance in [Pending:Wait]; a hook made in the console [sends lifecycle event notifications to Amazon EventBridge] (ec2-auto-scaling-lifecycle-hook-eventbridge-default), or a user data script does the setup; when your code completes the action, the instance moves to [Pending:Proceed]."
+    },
+    {
+      "id": "reader-10",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "stopped-instances-belong-in-a-warm-pool-not-in-the-running-group",
+      "quote": "Two ideas stop an instance that the group expects to run: a change to a larger instance type, and hibernation at night.",
+      "type": "unclear-sentence",
+      "severity": "should",
+      "evidence": "'Ideas' do not stop instances, so the subject of the sentence does not work, and the sentence is hard to read for a reader whose English is a second language. The section then mixes three topics (stopping an instance, the warm pool, and the scale-up downtime trap), so the exam trap about a larger instance type is placed in the warm pool section. STYLE: one idea per sentence, plain English. Suggested text: 'Two plans stop a running instance of the group: resizing it, and hibernating it at night. Both fail.'",
+      "status": "fixed",
+      "resolution": "fix-17: now 'Two plans stop a running instance of the group: a resize to a larger instance type, and hibernation at night. Both fail.' The scale-up trap stays here because the brief places trap auto-scaling-trap-scale-up-without-downtime in this section."
+    },
+    {
+      "id": "reader-11",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "scale-in-removes-the-instance-that-the-termination-policy-picks",
+      "quote": "- **Wrong belief:** A longer deregistration delay gives the instance time to copy its logs.",
+      "type": "format-inconsistent",
+      "severity": "note",
+      "evidence": "This is the only trap inside How it works written as a Wrong belief / Truth bullet. Every other trap there is an '> **Exam trap:**' callout, and this section now has two traps in two formats. Convert it to the callout form, or move it to the signals list.",
+      "status": "rejected",
+      "resolution": "fix-17: 2-deep.md already holds 12 counted callouts (10 Exam trap, 2 Try it), the file maximum (callouts_max, L402), and the fast traps list is at its maximum of 5. A Wrong belief / Truth list item with a trap marker is a valid trap form, so the trap stays as it is."
+    },
+    {
+      "id": "reader-12",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "a-new-instance-joins-the-load-balancer-before-it-becomes-inservice",
+      "quote": "The group [registers your instance with the load balancer](...) [before it marks the instance as](...) InService.",
+      "type": "readability",
+      "severity": "note",
+      "evidence": "One fact is split over two links, and the second link text is a fragment ('before it marks the instance as'). One link over the whole clause reads better and still contains the verbatim phrase.",
+      "status": "fixed",
+      "resolution": "fix-17: one link over 'registers your instance with the load balancer before it marks the instance as InService', with the condition 'With a load balancer,' in front."
+    },
+    {
+      "id": "reader-13",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "a-worker-group-scales-on-the-backlog-of-messages-per-instance",
+      "quote": "is the queue length divided by the InService instances: [Divide that number by the fleet's running capacity]",
+      "type": "readability",
+      "severity": "note",
+      "evidence": "The sentence says the same thing twice, and the second half starts with a capital letter after the colon. Keep one statement with the fact link.",
+      "status": "fixed",
+      "resolution": "fix-17: now 'Take the queue length and [divide that number by the fleet's running capacity]. The result is the **backlog per instance**.'"
+    },
+    {
+      "id": "reader-14",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "stopped-instances-belong-in-a-warm-pool-not-in-the-running-group",
+      "quote": "### Stopped instances belong in a warm pool not in the running group (4 min)",
+      "type": "grammar",
+      "severity": "note",
+      "evidence": "A comma is missing before 'not'. Without it, the assertion heading reads as one run-on phrase when she skims.",
+      "status": "rejected",
+      "resolution": "fix-17: SPEC headings.h2_h3_regex allows only letters, digits, spaces and hyphens in a heading, so a comma fails the lint; a reworded heading would change the section id that brief.json, the questions and speak item s04 reference."
+    },
+    {
+      "id": "reader-15",
+      "file": "17-auto-scaling/1-fast.md",
+      "section": "check",
+      "quote": "In a warm pool, Hibernated: they [save the contents of your RAM]",
+      "type": "readability",
+      "severity": "note",
+      "evidence": "'In a warm pool, Hibernated:' is not a sentence. Suggested text: 'In a warm pool, in the Hibernated state: the instances save the contents of their RAM.'",
+      "status": "fixed",
+      "resolution": "fix-17: now 'In a warm pool, in the Hibernated state: the instances [save the contents of your RAM].' (the link text keeps the verbatim display)."
+    },
+    {
+      "id": "reader-16",
+      "file": "data/17-auto-scaling/speak.json",
+      "section": "auto-scaling-s02",
+      "quote": "\"error\": \"the group scales up and down on its own once we create it\"",
+      "type": "term-inconsistent",
+      "severity": "note",
+      "evidence": "The words table in 1-fast.md teaches that 'scale up' means a larger instance size and is not the same as 'scale out'. Here the speak item uses 'scales up and down' for adding and removing instances, which undoes that lesson for a reader who mixes up terms under stress. Use 'scales out and in'.",
+      "status": "fixed",
+      "resolution": "fix-17: now 'the group scales out and in on its own once we create it'."
+    },
+    {
+      "id": "reader-17",
+      "file": "data/17-auto-scaling/tasks.json",
+      "section": "auto-scaling-t03",
+      "quote": "Add a second action, saa-once-b, with the same <FUTURE_TIME> as in step 6.",
+      "type": "task-teaches-little",
+      "severity": "note",
+      "evidence": "This break-it step teaches an API rule (two scheduled actions cannot share a start time) that neither the exam nor a customer conversation needs. A break-it that shows a scaling behavior would teach more, for example a scheduled action that sets the desired capacity above the maximum, which ties to fact ec2-auto-scaling-desired-within-min-max.",
+      "status": "rejected",
+      "resolution": "fix-17: the suggested break-it (a desired capacity above the maximum through the API) is the API error that the brief excludes because no verified fact states its result (brief.json slots rule), and any new step changes the task commands that tasks check-cli confirmed. The current break-it rests on verified fact ec2-auto-scaling-scheduled-unique-start-time."
+    },
+    {
+      "id": "reader-18",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "step-scaling-follows-alarm-size-and-warmup-replaces-the-old-cooldown",
+      "quote": "A new instance starts with high CPU utilization. Counting that CPU adds instances without need.",
+      "type": "ungrounded-generalization",
+      "severity": "note",
+      "evidence": "This states as a general truth something that is true only for some workloads, and it has no fact link. Write 'A new instance can show high CPU utilization while it starts' (hedged), or link a warmup fact.",
+      "status": "fixed",
+      "resolution": "fix-17: hedged: 'A new instance can show high CPU utilization as it starts. Counting that CPU can add instances without need.' The Why warmup line links ec2-auto-scaling-default-instance-warmup-purpose."
+    },
+    {
+      "id": "reader-19",
+      "file": "17-auto-scaling/2-deep.md",
+      "section": "how-it-works",
+      "quote": "## How it works (54 min)",
+      "type": "length",
+      "severity": "note",
+      "evidence": "Lint W201: 3506 words, while the section allows 2600 to 3500. Candidates to trim: the 'Group in one zone / Group in three zones' table, which repeats the sentence after it, and the double statement of the backlog definition.",
+      "status": "fixed",
+      "resolution": "fix-17: How it works is back under 3,500 words (no W201) although the fixes added text: removed the zone table, the fleet-management table, the load-pattern table (the ladder figure carries it), the hook-result table, the termination-policy table, the allocation-strategy table, two Go deeper blocks (target values, maximum instance lifetime; both numbers stay in the Numbers lists) and the double backlog definition. 2-deep.md is 4,496 words (limit 4,500, L201)."
+    }
+  ]
+}

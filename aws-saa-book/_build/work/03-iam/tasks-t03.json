@@ -1,0 +1,114 @@
+{
+ "v": 1,
+ "chapter": "iam",
+ "items": [
+  {
+   "id": "iam-t03",
+   "type": "try",
+   "title": "Watch a permissions boundary cap a role",
+   "kills": "\"A permissions boundary that allows an action gives the role that action.\"",
+   "trap": "iam-trap-scp-grants",
+   "section": "2-deep.md#a-permissions-boundary-lets-developers-create-roles-without-escalating",
+   "pass_route": false,
+   "minutes": 12,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "iam:CreateRole",
+    "iam:TagRole",
+    "iam:PutRolePermissionsBoundary",
+    "iam:GetRole",
+    "iam:SimulatePrincipalPolicy",
+    "iam:PutRolePolicy",
+    "iam:DeleteRolePolicy",
+    "iam:DeleteRolePermissionsBoundary",
+    "iam:DeleteRole",
+    "iam:SimulateCustomPolicy",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "This command creates nothing. It simulates an identity-based policy and a permissions boundary together: aws iam simulate-custom-policy --policy-input-list '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\",\"s3:PutObject\"],\"Resource\":\"arn:aws:s3:::saa-example-bucket/*\"}]}' --permissions-boundary-policy-input-list '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\",\"s3:DeleteObject\"],\"Resource\":\"*\"}]}' --action-names s3:GetObject s3:PutObject s3:DeleteObject --resource-arns arn:aws:s3:::saa-example-bucket/report.csv --query \"EvaluationResults[].[EvalActionName,EvalDecision]\" Expect s3:GetObject to show allowed, because both policies allow it. Expect s3:PutObject and s3:DeleteObject to show implicitDeny, because each of them is in one policy and not in the other.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a test role for a workload on Amazon EC2. Its trust policy names Amazon EC2, and the role has no permissions policy yet.",
+     "command": "aws iam create-role --role-name saa-iam-t03 --assume-role-policy-document '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}' --tags Key=book,Value=saa Key=task,Value=iam-t03",
+     "capture": {"name": "ROLE_ARN", "query": "Role.Arn"},
+     "expect": "No output. ROLE_ARN now holds the ARN of the new role.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Set the AWS managed policy AmazonS3ReadOnlyAccess as the permissions boundary of the role. This policy allows read-only access to Amazon S3.",
+     "command": "aws iam put-role-permissions-boundary --role-name saa-iam-t03 --permissions-boundary arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the permissions boundary of the role.",
+     "command": "aws iam get-role --role-name saa-iam-t03 --query \"Role.PermissionsBoundary.PermissionsBoundaryArn\"",
+     "expect": "The ARN arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Ask the policy simulator whether the role can read an object in an example bucket. The simulator sends no real request.",
+     "command": "aws iam simulate-principal-policy --policy-source-arn $ROLE_ARN --action-names s3:GetObject --resource-arns arn:aws:s3:::saa-example-bucket/report.csv --query \"EvaluationResults[].[EvalActionName,EvalDecision]\"",
+     "expect": "s3:GetObject shows implicitDeny.",
+     "break_it": true,
+     "predict": "The boundary allows reads in Amazon S3. The role has no permissions policy. Does the simulator allow s3:GetObject?",
+     "explain": "A permissions boundary [does not provide permissions on its own](../facts/iam.md#iam-boundary-limits-but-never-grants). The role can do only what is [allowed by both its identity-based policies and its permissions boundaries](../facts/iam.md#iam-permissions-boundary-sets-maximum-does-not-grant). The role has no identity-based policy yet, so nothing allows the read."
+    },
+    {
+     "text": "Fix it: add an inline policy that allows every Amazon S3 action on the example bucket. This policy allows more than the boundary does.",
+     "command": "aws iam put-role-policy --role-name saa-iam-t03 --policy-name saa-allow-s3 --policy-document '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:*\",\"Resource\":\"arn:aws:s3:::saa-example-bucket/*\"}]}'",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Simulate a read and a write on the same object. Before you run it, predict which of the two actions is allowed.",
+     "command": "aws iam simulate-principal-policy --policy-source-arn $ROLE_ARN --action-names s3:GetObject s3:PutObject --resource-arns arn:aws:s3:::saa-example-bucket/report.csv --query \"EvaluationResults[].[EvalActionName,EvalDecision]\"",
+     "expect": "s3:GetObject shows allowed. s3:PutObject still shows implicitDeny, although the inline policy allows every Amazon S3 action.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {"text": "Delete the inline policy.", "command": "aws iam delete-role-policy --role-name saa-iam-t03 --policy-name saa-allow-s3"},
+    {"text": "Remove the permissions boundary from the role.", "command": "aws iam delete-role-permissions-boundary --role-name saa-iam-t03"},
+    {"text": "Delete the test role.", "command": "aws iam delete-role --role-name saa-iam-t03"}
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=iam-t03 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing: IAM roles and policies have no charge. Delete the role anyway, so that no unused role stays in the account."
+   ],
+   "facts": [
+    "iam-boundary-limits-but-never-grants",
+    "iam-permissions-boundary-sets-maximum-does-not-grant",
+    "iam-boundary-applies-to-users-and-roles-not-slr",
+    "iam-policy-simulator-no-real-request",
+    "iam-faq-policy-simulator-policy-types",
+    "iam-offered-at-no-additional-charge"
+   ],
+   "sources": [
+    {"title": "put-role-permissions-boundary (AWS CLI Command Reference, example 2: an AWS managed policy as the boundary)", "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-permissions-boundary.html"},
+    {"title": "simulate-principal-policy (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/simulate-principal-policy.html"},
+    {"title": "simulate-custom-policy (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/simulate-custom-policy.html"},
+    {"title": "create-role (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html"},
+    {"title": "SimulatePrincipalPolicy (IAM API Reference)", "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_SimulatePrincipalPolicy.html"},
+    {"title": "Permissions boundaries for IAM entities", "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html"},
+    {"title": "IAM policy testing with the IAM policy simulator", "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_testing-policies.html"},
+    {"title": "AWS managed policies for Amazon S3", "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-iam-awsmanpol.html"}
+   ],
+   "chapter": "iam",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-12"
+  }
+ ]
+}

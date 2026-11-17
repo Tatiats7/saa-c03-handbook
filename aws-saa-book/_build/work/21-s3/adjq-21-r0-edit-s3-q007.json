@@ -1,0 +1,148 @@
+{
+ "id": "s3-q007",
+ "section": "2-deep.md#a-lifecycle-rule-moves-objects-one-way-to-colder-classes-and-then-expires-them",
+ "pool": "chapter",
+ "layer": "core",
+ "domain": 4,
+ "task": "4.1",
+ "bullets": [
+  "4.1.S9"
+ ],
+ "topics": [
+  "storage",
+  "cost"
+ ],
+ "services": [
+  "s3"
+ ],
+ "concept": "lifecycle-plan-transition-expire",
+ "difficulty": 2,
+ "type": "single",
+ "select": 1,
+ "qualifier": "MOST cost-effective",
+ "stem": "A company stores application logs in an Amazon S3 bucket. Each log file is larger than 1 MB, and the bucket holds the only copy. Engineers read the logs often for 30 days and rarely from day 30 to day 90, when a log must still open in milliseconds. After 90 days, the logs are an archive: auditors read a few logs each year and can wait up to 24 hours for a log. The company must retain the logs for 7 years and then delete them. Which solution is the MOST cost-effective way to meet these requirements?",
+ "keywords": [
+  "must still open in milliseconds",
+  "can wait up to 24 hours",
+  "retain the logs for 7 years",
+  "MOST cost-effective"
+ ],
+ "options": [
+  {
+   "id": "a",
+   "text": "Add one lifecycle rule that transitions the logs to S3 Glacier Deep Archive after 30 days, and moves a log back to S3 Standard when an auditor asks for it.",
+   "correct": false,
+   "why": "A lifecycle transition [can go only one way](../facts/s3.md#s3-lifecycle-no-transition-out-of-archive), so no rule moves a log from Deep Archive back to S3 Standard.",
+   "concept": "lifecycle-back-to-standard",
+   "trap": "s3-trap-lifecycle-back-to-standard",
+   "misconception": null,
+   "distractor_type": "impossible-feature"
+  },
+  {
+   "id": "b",
+   "text": "Add one lifecycle rule that transitions the logs to S3 Standard-IA after 30 days and to S3 Glacier Deep Archive after 90 days, and expires them after 7 years.",
+   "correct": true,
+   "why": "Standard-IA keeps logs [available for millisecond access](../facts/s3.md#s3-ia-classes-millisecond-access-retrieval-fee) until day 90, and Deep Archive returns data [within 12 hours](../facts/s3.md#s3-archive-retrieval-times-deep) with a Standard retrieval, well inside the 24 hours of the auditors.",
+   "concept": "standard-ia-then-deep-archive",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "c",
+   "text": "Add one lifecycle rule that transitions the logs to S3 Standard-IA after 30 days and to S3 One Zone-IA after 90 days, and expires them after 7 years.",
+   "correct": false,
+   "why": "S3 One Zone-IA is [not resilient to the physical loss](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use) of its zone, and the bucket holds the only copy of the logs.",
+   "concept": "one-zone-for-archive",
+   "trap": "s3-trap-one-zone-for-only-copy",
+   "misconception": null,
+   "distractor_type": "sibling-confusion"
+  },
+  {
+   "id": "d",
+   "text": "Add one lifecycle rule that transitions the logs to S3 Standard-IA after 30 days and to S3 Glacier Flexible Retrieval after 90 days, and expires them after 7 years.",
+   "correct": false,
+   "why": "It works, but S3 Glacier Deep Archive is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours) and still meets the wait of the auditors.",
+   "concept": "flexible-retrieval-for-yearly-reads",
+   "trap": "how-the-exam-asks-trap-works-means-correct",
+   "misconception": null,
+   "distractor_type": "violates-qualifier"
+  }
+ ],
+ "explanation": "Each storage class matches one stage of the logs. Standard-IA serves the rare reads that need milliseconds. From day 90, S3 Glacier Deep Archive is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours), and a Standard retrieval finishes [within 12 hours](../facts/s3.md#s3-archive-retrieval-times-deep), which fits the wait of the auditors. The rule follows [a waterfall model for transitioning between storage classes](../facts/s3.md#s3-lifecycle-transition-waterfall) and then expires the logs.",
+ "takeaway": "Build a lifecycle rule from the access pattern: an IA class for rare fast reads, then the coldest class that meets the wait.",
+ "twin": "If the stem said \"auditors need a log within 5 hours\" instead: S3 Glacier Flexible Retrieval after 90 days, because a Standard retrieval there takes [3–5 hours](../facts/s3.md#s3-archive-retrieval-times-flexible).",
+ "say": "Standard-IA for the rare fast reads, Deep Archive after day ninety, and expire at seven years.",
+ "facts": [
+  "s3-ia-classes-millisecond-access-retrieval-fee",
+  "s3-archive-retrieval-times-deep",
+  "s3-lifecycle-no-transition-out-of-archive",
+  "s3-standard-ia-vs-one-zone-ia-use",
+  "s3-class-deep-archive-lowest-cost-twelve-hours",
+  "s3-lifecycle-transition-waterfall",
+  "s3-archive-retrieval-times-flexible"
+ ],
+ "sources": [],
+ "exam_english": [
+  "ee-retain",
+  "ee-archive",
+  "ee-most-cost-effective"
+ ],
+ "twin_of": null,
+ "chapter": "s3",
+ "status": "candidate",
+ "rev": 1,
+ "keyRev": 2,
+ "verification": {
+  "status": "candidate",
+  "round": 1,
+  "solvers": [
+   {
+    "lens": "closed",
+    "answer": [
+     "b"
+    ],
+    "agree": true,
+    "flag": null,
+    "solver": "solve-21-closed-r0",
+    "stem_only": "One lifecycle rule: S3 Standard for 30 days, transition to S3 Standard-IA at day 30 (multi-AZ, ms access), transition to S3 Glacier Deep Archive at day 90 (standard retrieval within 12 hours), expire after 7 years."
+   },
+   {
+    "lens": "open",
+    "answer": [
+     "b"
+    ],
+    "agree": true,
+    "flag": null,
+    "solver": "solve-21-open-r0",
+    "citations": [
+     "s3-archive-restore-needed-flexible-deep",
+     "s3-archive-retrieval-times-deep",
+     "s3-class-deep-archive-lowest-cost-twelve-hours",
+     "s3-faq-deep-archive-vs-flexible-cost",
+     "s3-faq-one-zone-az-loss",
+     "s3-faq-standard-vs-ia-access-frequency",
+     "s3-lifecycle-no-transition-out-of-archive",
+     "s3-standard-ia-vs-one-zone-ia-use"
+    ],
+    "citations_ok": true
+   },
+   {
+    "lens": "ambiguity",
+    "answer": [
+     "b"
+    ],
+    "agree": true,
+    "flag": "The stem names no retrieval tier, so a candidate could defend S3 Glacier Flexible Retrieval over Deep Archive because a 12-hour wait leaves no margin for Deep Archive standard retrieval.",
+    "solver": "solve-21-ambiguity-r0",
+    "case_option": "d"
+   }
+  ],
+  "checked": "2026-10-13",
+  "note": "ambiguity flag"
+ },
+ "volatile": false,
+ "authors": [
+  "questions-21-1"
+ ]
+}

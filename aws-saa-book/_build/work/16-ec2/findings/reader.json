@@ -1,0 +1,175 @@
+{
+ "lens": "reader",
+ "chapter": "16",
+ "by": "review-16-reader",
+ "date": "2026-10-13",
+ "basis": "First review after edit (pass_seq 1). sync 16 run first (written=0, unchanged=11). Read 1-fast.md (skim pass on headings, bold, tables and captions, then full), 2-deep.md, 3-do.md, 4-say.md, 5-quiz.md and data/16-ec2/{questions,cards,speak,tasks}.json as the reader in READER.md.",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "16-ec2/3-do.md",
+   "section": "whole file (also 4-say.md; 1-fast.md#look-first; 2-deep.md Try it callouts)",
+   "quote": "# Amazon EC2: do it\n\nNothing here yet.",
+   "type": "missing",
+   "severity": "blocking",
+   "evidence": "Every task (ec2-t01..t03), speak item (ec2-s01..s04) and card (24) in data/16-ec2/ has status 'candidate', so sync generates nothing: 3-do.md and 4-say.md say 'Nothing here yet', the task region under 'Look first' in 1-fast.md is empty, and both 'Try it' callouts in 2-deep.md ('See [3-do.md](3-do.md)') send her to an empty page. TOOLS-rules.md line 149: 'A reviewer sets cards, speak items and tasks to `ready` in the stage of that kind, after the item lint is clean.' The cards, speak and tasks stages passed without that step. She asked for more practice and spoken answers; the chapter currently ships none. Run item lint and `tasks|speak|cards set-status --status ready`, then sync 16.",
+   "status": "fixed",
+   "resolution": "Same fix as claims-21: tasks, speak items and cards set ready after a clean item lint; sync 16 regenerated 3-do.md, 4-say.md and the Look first task region."
+  },
+  {
+   "id": "reader-02",
+   "file": "16-ec2/1-fast.md",
+   "section": "check",
+   "quote": "**Check 1.** A company buys a Compute Savings Plan and expects AWS to hold capacity for 20 instances in one Availability Zone. Will AWS hold it?",
+   "type": "skim-answerable",
+   "severity": "should",
+   "evidence": "READER.md: 'Headings, tables and captions must give a correct gist on their own; questions must test what the gist misses.' Skim test: Check 1 is answered by the compare table row 'Does it hold capacity? ... No: Savings Plans do not provide a capacity reservation'; Check 2 (Elastic IP after stop and start) by the 2-deep.md state table row 'Elastic IP address | Kept | remains associated with the instance'; Check 3 (unencrypted root volume) by the 2-deep.md heading 'Hibernation saves the memory to an encrypted EBS root volume'. All three can be answered from the skim. Rewrite them to test a mechanism the tables do not state, for example a zonal against a regional Reserved Instance, or a stop and start of an instance whose only public address is auto-assigned while an Elastic IP is attached to a secondary interface.",
+   "status": "fixed",
+   "resolution": "Three new Check prompts that the tables and headings do not answer: instance store data after hibernation, Spot for a stateful tightly coupled job, hibernation in an Auto Scaling group. Predict answers stay in the reveals."
+  },
+  {
+   "id": "reader-03",
+   "file": "16-ec2/1-fast.md",
+   "section": "words",
+   "quote": "| instance | **launch** an instance | A virtual computer that you run in Amazon EC2 | a server, which is a machine on premises |",
+   "type": "contradiction",
+   "severity": "should",
+   "evidence": "The 'In one breath' sentence she is told to say (same file) calls an instance 'a virtual server in the AWS Cloud', and 2-deep.md step 1 repeats 'An Amazon EC2 instance is a virtual server in the AWS Cloud' (fact ec2-instance-virtual-server-type-sets-hardware). The words table tells her not to confuse an instance with a server. One term per concept (RULINGS rule 8): make the 'Do not confuse with' cell a real neighbour (for example 'an AMI: the image the instance starts from') and keep 'virtual server' as the definition.",
+   "status": "fixed",
+   "resolution": "See claims-17: the instance row now defines a virtual server and contrasts it with an AMI."
+  },
+  {
+   "id": "reader-04",
+   "file": "16-ec2/1-fast.md",
+   "section": "look-first",
+   "quote": "Open AWS CloudShell and read two instance types",
+   "type": "mismatch",
+   "severity": "should",
+   "evidence": "Task ec2-t01 (data/16-ec2/tasks.json) is titled 'Read the processor of three instance types and your metadata defaults', step 1 reads t3.micro, t4g.micro and r6g.large, and steps 2 and 3 also read the AMI parameters and the bare metal types. The intro names two types and only the metadata defaults, so the reader's prediction of what she will see is wrong. Say three types, the two AMI IDs, and the bare metal hibernation flag.",
+   "status": "fixed",
+   "resolution": "See claims-18."
+  },
+  {
+   "id": "reader-05",
+   "file": "data/16-ec2/speak.json",
+   "section": "ec2-s03",
+   "quote": "So you can delete the SSH rule from the security group.",
+   "type": "incomplete",
+   "severity": "should",
+   "evidence": "Fact ec2-ssm-agent-outbound-https-443-no-inbound (now verified and used in 2-deep.md step 3 of the role and Session Manager subsection): without VPC endpoints the instance must allow 'HTTPS (port 443) outbound traffic' to the Systems Manager endpoints. The spoken answer to a fintech CTO names only the role as 'the thing to watch'; production instances in private subnets with no NAT and no endpoints will not connect, and that is the first follow-up a CTO asks. The speak note says fr-0061 was open when s03 was written; it is closed now. Add one sentence: the agent connects out on port 443, so a private subnet needs a NAT gateway or VPC endpoints; add the fact to the item.",
+   "status": "fixed",
+   "resolution": "See claims-04: ec2-s03 now names the outbound path (VPC endpoints or outbound internet access over HTTPS) in the sixty-second answer and in must point kp6."
+  },
+  {
+   "id": "reader-06",
+   "file": "data/16-ec2/speak.json",
+   "section": "ec2-s04",
+   "quote": "\"ten_second\": \"Yes, hibernate them. At night the memory is saved to the encrypted root volume. In the morning it loads back.\"",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "The prompt is about existing servers ('Can we switch the servers off at night'). Fact ec2-hibernate-enable-only-at-launch: you 'can't enable hibernation on an existing instance'. The item's own must_not_say lists 'we can turn hibernation on for the running instances tonight'. The ten-second answer, which is what she says under stress, gives an unconditional yes. Make it conditional: 'Yes, with hibernation, but only on instances launched with it turned on and an encrypted root volume.'",
+   "status": "fixed",
+   "resolution": "ec2-s04 ten_second: 'Yes, if the instances are launched with hibernation turned on. At night the memory is saved to the encrypted root volume.'"
+  },
+  {
+   "id": "reader-07",
+   "file": "16-ec2/2-deep.md",
+   "section": "recovery-and-a-moved-network-interface-keep-an-instances-addresses-after-a-failure",
+   "quote": "### Recovery and a moved network interface keep an instances addresses after a failure (5 min)",
+   "type": "language",
+   "severity": "should",
+   "evidence": "STYLE: plain correct English. 'an instances addresses' needs the possessive 'an instance's addresses'; the Spot heading 'with two minutes notice' needs 'two minutes of notice' (the phrase the chapter uses everywhere else). For an ESL reader a missing possessive reads as a plural noun. If the apostrophe is avoided for anchors, rephrase ('keep the addresses of an instance'). The quiz Review links and speak/tasks section anchors that point to these headings must be updated with the heading.",
+   "status": "rejected",
+   "resolution": "L103 refuses an apostrophe in a heading ('instance's', 'minutes''), and any rewording changes the section id that brief.json fixes for the chapter (TOOLS-rules R4: the orchestrator changes the brief). Headings kept; reported to the orchestrator for a brief change ('keep the addresses of an instance', 'with two minutes of notice')."
+  },
+  {
+   "id": "reader-08",
+   "file": "16-ec2/2-deep.md",
+   "section": "a-role-gives-the-instance-credentials-and-session-manager-needs-no-open-port",
+   "quote": "An access key and an open Secure Shell (SSH) port both leak.",
+   "type": "unclear",
+   "severity": "should",
+   "evidence": "A port does not leak; a key leaks and a port is exposed. The sentence states two different risks with one verb, so the cause and effect is lost. Say: 'An access key in a file can leak, and an open SSH port lets anyone on the internet try to connect.'",
+   "status": "fixed",
+   "resolution": "Now: 'A key in a file can leak, and anyone can try an open Secure Shell (SSH) port.'"
+  },
+  {
+   "id": "reader-09",
+   "file": "16-ec2/2-deep.md",
+   "section": "on-demand-bills-each-second-and-a-commitment-lowers-the-price-of-steady-use",
+   "quote": "Why match the price to each part? Parts that run for [extended periods (for commitment discounts)](../facts/ec2.md#ec2-wa-pricing-model-per-component) get a commitment.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "'each part' and 'match the price' are not introduced anywhere in the subsection, and the answer restates the question. The 'Why' line is meant to give the cause. Say what the parts are (a steady database, a web tier with peaks, a nightly batch job) and why each gets a different option: steady parts run every hour, so a commitment is always used; peaks would leave a commitment idle.",
+   "status": "fixed",
+   "resolution": "Why line now gives the cause: 'Why a different price for each part? Short peaks would leave a commitment idle. Parts that run for extended periods get a commitment.'"
+  },
+  {
+   "id": "reader-10",
+   "file": "16-ec2/2-deep.md",
+   "section": "spot-instances-use-spare-capacity-that-ec2-can-take-back-with-two-minutes-notice",
+   "quote": "Why so cheap? [Spot does not guarantee](../facts/ec2.md#ec2-spot-no-guarantee-to-finish) that your instances run long enough to finish.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The answer is a consequence, not the cause. The subsection's own first line gives the cause: AWS sells spare capacity and can take it back. Say: 'Why so cheap? It is spare capacity that AWS can take back when it needs it, so Spot does not guarantee that your instances run long enough to finish.'",
+   "status": "fixed",
+   "resolution": "Why line now gives the cause: 'Amazon EC2 can interrupt your Spot Instance when it needs it back, so Spot does not guarantee ...' (fact ec2-spot-interruption-reasons)."
+  },
+  {
+   "id": "reader-11",
+   "file": "16-ec2/2-deep.md",
+   "section": "decision-record",
+   "quote": "**Decision.** Rebuild: a burstable web instance, a compute optimized worker and a separate database instance.",
+   "type": "budget",
+   "severity": "note",
+   "evidence": "Ledger warning W201: 'Decision record has 326 words; the section allows 0 to 280'. The 'before' figure is followed by a three-step list that repeats its caption and the Context; cut the before list or merge it into Context.",
+   "status": "rejected",
+   "resolution": "The three steps after the 'before' figure are the step texts of diagram spec ec2-before (L702/L703 compare them with the spec), so they cannot be cut in the prose alone. The decision record stays a W201 warning."
+  },
+  {
+   "id": "reader-12",
+   "file": "16-ec2/2-deep.md",
+   "section": "how-it-works",
+   "quote": "> **Say it:** The short answer is: EC2 gives you control, and you run the instance. The thing to watch is patching.",
+   "type": "speech",
+   "severity": "note",
+   "evidence": "All 14 'Say it' lines use the same two-slot frame, and several watch-items are single nouns that she could not expand on ('The thing to watch is patching.', 'The thing to watch is the zone.', 'The thing to watch is the role policy.'). Give each a short reason she can say aloud ('The thing to watch is patching: on EC2 the operating system updates are yours.').",
+   "status": "fixed",
+   "resolution": "The patching Say it now gives its reason ('which is yours'). Longer reasons for the others broke the 25-word Say it limit (L202), so they stay as they were; the Savings Plan Say it no longer says that every discount holds no capacity."
+  },
+  {
+   "id": "reader-13",
+   "file": "16-ec2/2-deep.md",
+   "section": "an-ami-and-a-launch-template-let-you-launch-identical-instances",
+   "quote": "| Root volume with the software | Yes: EC2 [creates snapshots of your instance's root volume](../facts/ec2.md#ec2-create-ami-snapshots-all-ebs-volumes) |",
+   "type": "incomplete",
+   "severity": "note",
+   "evidence": "The linked fact id is ec2-create-ami-snapshots-all-ebs-volumes: an EBS-backed AMI includes snapshots of every attached EBS volume, not only the root volume. The 'In the AMI?' table lists root, instance store and user data but no row for attached EBS data volumes, so she may think data volumes are left out. Add a row 'Other attached EBS volumes | Yes'.",
+   "status": "fixed",
+   "resolution": "AMI table gained the row 'Other attached EBS volumes | Yes: EC2 takes snapshots of them too'."
+  },
+  {
+   "id": "reader-14",
+   "file": "16-ec2/1-fast.md",
+   "section": "words",
+   "quote": "| ephemeral (ih-FEM-er-ul) | ephemeral **storage** | Temporary: the data disappears when its host stops | persistent |",
+   "type": "imprecise",
+   "severity": "note",
+   "evidence": "Fact instance-store-data-persists-reboot-not-stop: the data is lost when the instance is 'stopped, hibernated, or terminated'. 'when its host stops' suggests a hardware event, not the instance's own stop. Say 'when the instance stops or ends'.",
+   "status": "fixed",
+   "resolution": "See claims-17."
+  },
+  {
+   "id": "reader-15",
+   "file": "16-ec2/1-fast.md",
+   "section": "recap",
+   "quote": "**Recap 3.** After a stop and start, which address of an instance changes, and which address stays?",
+   "type": "redundant",
+   "severity": "note",
+   "evidence": "Predict 2, Check 2 and Recap 3 all test the same public IPv4 against Elastic IP fact in a 20-minute file. Use the third slot for a different point of the file, for example the deciding question of the placement table or Dedicated Host against Dedicated Instance.",
+   "status": "fixed",
+   "resolution": "Recap 3 now asks which option shows the physical cores for a per-core license (Dedicated Host against Dedicated Instance)."
+  }
+ ],
+ "fixed_by": "fix-16"
+}

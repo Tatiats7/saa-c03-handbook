@@ -1,0 +1,42 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "card.schema.json",
+ "title": "Flashcard file: data/<NN-slug>/cards.json",
+ "description": "One fact per card. Word limits and the fields each type needs are checked by the card lint from SPEC.json (cards.*).",
+ "type": "object",
+ "required": ["v", "chapter", "items"],
+ "additionalProperties": false,
+ "properties": {
+  "v": {"const": 1},
+  "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+  "items": {"type": "array", "items": {"$ref": "#/$defs/card"}}
+ },
+ "$defs": {
+  "card": {
+   "type": "object",
+   "required": ["id", "chapter", "type", "deck", "front", "back", "facts", "section", "tags", "status", "rev"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-c[0-9]{3}$", "description": "stable; the Anki note GUID is derived from it"},
+    "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "type": {"enum": ["term", "meaning", "decide", "differ", "number", "cannot", "partner", "word", "say"], "description": "writers write decide, differ, number and cannot; `cards build` generates term, meaning and partner (from data/terms.json), word (from data/exam-english.json) and say (from speak items with pack true)"},
+    "deck": {"enum": ["core", "extended", "exam-english"]},
+    "front": {"type": "string", "minLength": 3, "description": "names its context; a number card holds exactly one cloze {{c1::value}}; a partner card holds ___"},
+    "back": {"type": "string", "description": "the answer; empty string for a number (cloze) card"},
+    "extra": {"type": ["string", "null"], "description": "one line of reason shown after the answer; may hold fact links"},
+    "facts": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}, "uniqueItems": true},
+    "term": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "id in data/terms.json"},
+    "word": {"type": ["string", "null"], "pattern": "^ee-[a-z0-9]+(-[a-z0-9]+)*$", "description": "id in data/exam-english.json"},
+    "speak": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-s[0-9]{2}$", "description": "speak item a say card is built from"},
+    "trap": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-trap-[a-z0-9]+(-[a-z0-9]+)*$"},
+    "section": {"type": ["string", "null"], "pattern": "^([0-9]{2}-[a-z0-9-]+/)?[a-z0-9-]+\\.md#[a-z0-9-]+$", "description": "'<file>#<section id>' the card depends on; null on generated cards"},
+    "pair": {"type": ["string", "null"], "description": "id of a deliberately similar card"},
+    "changed": {"type": "boolean"},
+    "generated": {"type": "boolean", "description": "true on cards that `cards build` writes (types term, meaning, partner, word, say); never set by a writer"},
+    "tags": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9:_-]+$"}, "uniqueItems": true, "description": "extra tags only; writers leave it empty, the export derives chapter, domain, type and trap tags from the fields"},
+    "status": {"enum": ["candidate", "verified", "ready", "rejected", "retired"]},
+    "rev": {"type": "integer", "minimum": 1}
+   }
+  }
+ }
+}

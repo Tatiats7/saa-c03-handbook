@@ -1,0 +1,220 @@
+[
+  {
+   "id": "iam-q008",
+   "section": "2-deep.md#aws-allows-a-request-only-when-nothing-denies-and-something-allows",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.S2"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "s3"],
+   "concept": "explicit-deny",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a data pipeline on Amazon EC2 instances that use one IAM role. The role has an AWS managed policy that allows all Amazon S3 actions. The role also has a customer managed policy with a Deny statement for s3:PutObject on the raw/ prefix of a bucket. The Deny statement was written for an old job that no longer runs. A new job now fails with an access denied error when it uploads to that prefix. No SCP or permissions boundary applies to the role. Which solution will fix the uploads with the LEAST operational overhead?",
+   "keywords": ["a Deny statement for s3:PutObject", "an old job that no longer runs", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a second IAM role without the Deny statement, and run the new job on separate Amazon EC2 instances that use the new role.",
+     "correct": false,
+     "why": "It works, but a new role, a new instance profile and new instances are far more work than one edit to the policy that holds the Deny.",
+     "concept": "second-role",
+     "trap": null,
+     "misconception": "builds new infrastructure to avoid editing one policy",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Attach the AdministratorAccess managed policy to the role, so that its allow for every action on every resource outweighs the Deny statement.",
+     "correct": false,
+     "why": "[AdministratorAccess grants all actions for all services and resources](../facts/iam.md#iam-job-function-poweruseraccess-excludes-iam-org), but it is one more allow, and [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow).",
+     "concept": "admin-allow",
+     "trap": "iam-trap-allow-beats-deny",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Edit the customer managed policy to remove the Deny statement for the raw/ prefix, and leave the AWS managed policy on the role unchanged.",
+     "correct": true,
+     "why": "The Deny statement causes the failure, because [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow). Without it, the allow of the managed policy decides the upload.",
+     "concept": "remove-deny",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Add a statement to the bucket policy that allows s3:PutObject on the raw/ prefix for the ARN of the IAM role that the instances use.",
+     "correct": false,
+     "why": "A bucket policy adds one more allow, and [even one explicit deny that applies](../facts/iam.md#iam-eval-deny-checked-first) makes the final decision Deny.",
+     "concept": "bucket-policy-allow",
+     "trap": "iam-trap-allow-beats-deny",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "Two policies of the role disagree. AWS [first looks for a Deny statement in every policy that applies](../facts/iam.md#iam-eval-deny-checked-first), and [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow). So an added allow, in any policy type, leaves the upload denied. The Deny was written for a job that no longer runs, so removing it is the one change that fixes the upload.",
+   "takeaway": "An added allow does not beat a Deny statement; change the Deny statement itself.",
+   "twin": "If the stem said \"the Deny statement is in an SCP on the account\" instead: the change belongs in the organization, because principals in the member account [cannot remove or change SCPs that are applied to that account](../facts/iam.md#iam-scp-faq-member-principals-cannot-change-scps).",
+   "say": "A Deny beats every allow, so I'd remove the old Deny instead of adding another allow.",
+   "facts": [
+    "iam-eval-explicit-deny-overrides-allow",
+    "iam-eval-deny-checked-first",
+    "iam-job-function-poweruseraccess-excludes-iam-org",
+    "iam-scp-faq-member-principals-cannot-change-scps"
+   ],
+   "sources": [],
+   "exam_english": ["ee-least-operational-overhead"],
+   "twin_of": null
+  },
+  {
+   "id": "iam-q009",
+   "section": "2-deep.md#iam-identity-center-gives-employees-one-sign-in-for-many-accounts",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.K2"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "iam-identity-center", "organizations"],
+   "concept": "identity-center-vs-iam-users",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations with all features enabled and has 40 member accounts. About 300 employees need access to the AWS Management Console and the AWS CLI in several accounts, based on their job functions. The company has no external identity provider. The security team wants to centrally manage which employees can access each account, and employees must use one sign-in to reach all their accounts. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["40 member accounts", "centrally manage which employees can access each account", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create IAM users for the employees in each member account, add the users to IAM groups by job function, and attach policies to each group.",
+     "correct": false,
+     "why": "It works, but every member account repeats the same users, groups and policies, and employees sign in to each account separately.",
+     "concept": "iam-users-per-account",
+     "trap": null,
+     "misconception": "An IAM user in each account is the simplest way to give employees access to many accounts.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Enable IAM Identity Center, create the employees as users and groups in its identity store, and assign permission sets to the groups for each account.",
+     "correct": true,
+     "why": "Identity Center [applies these permissions to the selected accounts automatically](../facts/iam.md#iam-idc-permission-sets), and employees reach their accounts through the AWS access portal.",
+     "concept": "identity-center-permission-sets",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create an Amazon Cognito user pool for the employees, and map each group in the user pool to an IAM role in every member account.",
+     "correct": false,
+     "why": "Amazon Cognito manages [identities for your customer facing applications](../facts/iam.md#iam-idc-cognito-not-an-identity-source), not the workforce of the company.",
+     "concept": "cognito-for-workforce",
+     "trap": null,
+     "misconception": "uses the customer identity service for workforce users",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Create IAM users in one central account, and let the users switch to roles that the security team creates in each member account.",
+     "correct": false,
+     "why": "It works, but the team still manages IAM users and a role in every member account, and AWS calls Identity Center the [primary tool to manage the AWS access of your workforce users](../facts/iam.md#iam-idc-recommended-front-door-for-workforce).",
+     "concept": "central-iam-users-switch-role",
+     "trap": null,
+     "misconception": "believes a central account of IAM users is the recommended way in for employees",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The employees are a workforce that works in many accounts of one organization. AWS calls IAM Identity Center the [recommended front door into AWS](../facts/iam.md#iam-idc-recommended-front-door-for-workforce), and Identity Center [creates and manages IAM roles in individual AWS accounts for each permission set](../facts/iam.md#iam-idc-creates-role-per-permission-set). The team manages users, groups and permission sets in one place, and each employee has one sign-in.",
+   "takeaway": "Employees in many accounts get IAM Identity Center with permission sets, not IAM users in each account.",
+   "twin": "If the stem said \"customers of the company's mobile app need to sign in\" instead: Amazon Cognito, because Cognito manages [identities for your customer facing applications](../facts/iam.md#iam-idc-cognito-not-an-identity-source).",
+   "say": "For employees across many accounts I'd use IAM Identity Center with permission sets.",
+   "facts": [
+    "iam-idc-permission-sets",
+    "iam-idc-recommended-front-door-for-workforce",
+    "iam-idc-creates-role-per-permission-set",
+    "iam-idc-cognito-not-an-identity-source"
+   ],
+   "sources": [],
+   "exam_english": ["ee-centrally-manage", "ee-least-operational-overhead"],
+   "twin_of": null
+  },
+  {
+   "id": "iam-q010",
+   "section": "2-deep.md#cognito-and-roles-anywhere-give-app-users-and-servers-temporary-credentials",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.K2"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "cognito", "sts", "s3"],
+   "concept": "cognito-identity-pools",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST securely",
+   "stem": "A company is building a mobile app that lets each user upload photos directly to an Amazon S3 bucket. Users sign up and sign in to the app through an Amazon Cognito user pool. The company expects the app to grow quickly. Company policy requires that the app does not contain long-term AWS credentials. Each upload must use temporary credentials. Which solution will meet these requirements MOST securely?",
+   "keywords": ["mobile app", "does not contain long-term AWS credentials", "MOST securely"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a user in IAM Identity Center for each app user, and let the app request credentials for a permission set that allows uploads.",
+     "correct": false,
+     "why": "AWS calls Identity Center the [primary tool to manage the AWS access of your workforce users](../facts/iam.md#iam-idc-recommended-front-door-for-workforce), and app customers are not the company's workforce.",
+     "concept": "identity-center-for-app-users",
+     "trap": null,
+     "misconception": "uses the workforce sign-in service for customers of an app",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Use an Amazon Cognito identity pool to give each signed-in user temporary credentials for an IAM role that allows all Amazon S3 actions.",
+     "correct": false,
+     "why": "It works, but a role with every Amazon S3 action gives each app user far more than an upload needs, which breaks least privilege.",
+     "concept": "identity-pool-broad-role",
+     "trap": null,
+     "misconception": "gives the app role broad permissions because the credentials are temporary",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Call the AWS STS GetFederationToken operation from the app for each user, and pass a session policy that allows uploads to the bucket.",
+     "correct": false,
+     "why": "GetFederationToken is called with [the long-term credentials of an IAM user](../facts/sts.md#sts-getfederationtoken-long-term-user-credentials), so the app would hold a long-term key.",
+     "concept": "getfederationtoken-in-app",
+     "trap": null,
+     "misconception": "A mobile app needs an access key embedded in the app to upload to Amazon S3.",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Use an Amazon Cognito identity pool to give each signed-in user temporary credentials for an IAM role that allows s3:PutObject on the bucket.",
+     "correct": true,
+     "why": "Cognito [identity pools deliver temporary IAM credentials](../facts/iam.md#iam-federation-cognito-identity-pools-deliver-iam-credentials) to signed-in users, and a role that allows s3:PutObject on one bucket grants what each upload needs.",
+     "concept": "identity-pool-narrow-role",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "App users are not employees, so their credentials come from Amazon Cognito. The user pool signs the user in, and Cognito [identity pools deliver temporary IAM credentials](../facts/iam.md#iam-federation-cognito-identity-pools-deliver-iam-credentials) for a role. For mobile apps AWS points to [Amazon Cognito or AssumeRoleWithWebIdentity](../facts/sts.md#sts-getfederationtoken-long-term-user-credentials), not to GetFederationToken. A role that allows s3:PutObject on the one bucket keeps each credential narrow.",
+   "takeaway": "Mobile app users get temporary AWS credentials from a Cognito identity pool, with a narrow role.",
+   "twin": "If the stem said \"employees need console access to the company's AWS accounts\" instead: IAM Identity Center, because it is the [primary tool to manage the AWS access of your workforce users](../facts/iam.md#iam-idc-recommended-front-door-for-workforce).",
+   "say": null,
+   "facts": [
+    "iam-federation-cognito-identity-pools-deliver-iam-credentials",
+    "sts-getfederationtoken-long-term-user-credentials",
+    "iam-idc-recommended-front-door-for-workforce"
+   ],
+   "sources": [],
+   "exam_english": ["ee-temporary", "ee-most-secure", "ee-mandates"],
+   "twin_of": null
+  }
+]

@@ -1,0 +1,251 @@
+{
+ "lens": "claims",
+ "chapter": "26",
+ "reviewer": "review-26-claims",
+ "lenses_applied": ["claims", "technical"],
+ "date": "2026-10-13",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "26-rds/5-quiz.md (data/26-rds/questions.json rds-q005)",
+   "section": "Core / Question 5 (rds-q005), Why",
+   "quote": "Through the proxy, [most connections stay alive during failovers](../facts/rds-proxy.md#rds-proxy-failover-idle-connections-kept).",
+   "type": "claims: link to a fact that is not verified (disputed); technical: condition dropped",
+   "severity": "blocking",
+   "evidence": "facts show rds-proxy-failover-idle-connections-kept: status disputed, rev 3 entail vote partial ('The quote limits the behavior to applications that maintain their own connection pool; the claim drops that condition'). Source docs/AmazonRDS/latest/UserGuide/rds-proxy.howitworks: \"For applications that maintain their own connection pool, going through RDS Proxy means that most connections stay alive during failovers or other disruptions. Only connections that are in the middle of a transaction or SQL statement are canceled.\" The fact is absent from facts/rds-proxy.md, so the link does not resolve; this is the reason verify-questions failed. Fix: link the verified rds-proxy-failover-66-percent (\"routes traffic to a new database instance while preserving application connections\") or rds-proxy-failover-same-ip-no-dns instead, and drop the 'most connections' clause.",
+   "status": "fixed",
+   "resolution": "fix-26: rds-proxy-failover-idle-connections-kept is now verified (rev 4, entail support; claim and qualifiers carry the condition 'applications that maintain their own connection pool'). facts render and sync 26 put it in facts/rds-proxy.md, so the link in rds-q005 resolves. The question was not edited (an explanation edit resets a verified question, R5): the stem's application holds open database connections ('lost all its open database connections'), the case the AWS sentence describes, and the display is verbatim. 2-deep.md (RDS Proxy failover, step 3) now states the condition and that in-transaction connections are canceled."
+  },
+  {
+   "id": "claims-02",
+   "file": "26-rds/1-fast.md",
+   "section": "Signals and traps; Traps; Choose it or not (Amazon RDS or RDS Custom or a database on Amazon EC2); also 2-deep.md 'Amazon RDS runs the database engine while you keep the queries' step 4 and card rds-c032",
+   "quote": "| \"access to the operating system\" | Amazon RDS Custom | you [customize your database environment and operating system](../facts/rds.md#rds-custom-os-access) | AWS should run the operating system: standard Amazon RDS |",
+   "type": "technical: scope dropped from a fact (engine limit of RDS Custom)",
+   "severity": "blocking",
+   "evidence": "Fact rds-custom-os-access qualifiers.scope = \"RDS Custom (Oracle and SQL Server)\". full:amazonrds-userguide line 36298 [Management model and benefits for Amazon RDS Custom]: \"RDS Custom supports only the Oracle Database and Microsoft SQL Server DB engines.\" The chapter's running engine is PostgreSQL; the signal row, the trap ('RDS Custom lets you customize...'), 2-deep step 4 and card c032 ('a vendor agent must run on the database host's operating system -> Amazon RDS Custom') give no engine limit, so the reader will offer RDS Custom for PostgreSQL, MySQL or MariaDB, where the right answer is a database on EC2. Add 'for Oracle or SQL Server' wherever RDS Custom is the answer (needs a fact for the engine list).",
+   "status": "fixed",
+   "resolution": "fix-26 (softened, no ungrounded engine claim added): no verified fact states the RDS Custom engine list (the scope qualifier is not a display), so the book does not state it. 2-deep.md step 4 now says 'Check that RDS Custom runs your engine; if not, use Amazon EC2.'; 1-fast.md signal row 'access to the operating system' now has the guard 'RDS Custom does not run your engine: Amazon EC2', and the trap rds-trap-rds-gives-os-access adds 'If RDS Custom does not run your engine, use Amazon EC2.' Card rds-c032 is scoped to a Microsoft SQL Server database (RDS Custom for SQL Server exists per verified rds-proxy-not-rds-custom-sqlserver). Fact request fr-0086 asks for the engine-list fact so a later pass can name Oracle and SQL Server."
+  },
+  {
+   "id": "claims-03",
+   "file": "data/26-rds/speak.json (rds-s04) -> 26-rds/4-say.md",
+   "section": "Prompt 'Should we keep running Postgres ourselves on EC2 ... or move it to Amazon RDS?', Do not say",
+   "quote": "\"correct\": \"Standard Amazon RDS doesn't let you access the underlying host. RDS Custom or a database on Amazon EC2 gives that access.\"",
+   "type": "technical: wrong for the customer's engine (spoken answer)",
+   "severity": "blocking",
+   "evidence": "full:amazonrds-userguide line 36298: \"RDS Custom supports only the Oracle Database and Microsoft SQL Server DB engines.\" The prompt is about PostgreSQL, so the correction she would say aloud offers a service that cannot run the customer's database. The sixty-second answer ('If an agent must run on the host, keep that database on EC2') is right; make the must_not_say correction and kp3 match it (RDS Custom only for Oracle or SQL Server).",
+   "status": "fixed",
+   "resolution": "fix-26: rds-s04 replaced (speak add --replace). The correction now reads 'For host access, use a database on Amazon EC2, or RDS Custom if it runs your engine.' and the 60-second line reads 'If an agent needs the host, check RDS Custom for your engine, or use EC2.' kp3 already named EC2 for full control. Item lint clean; set ready; 4-say.md synced."
+  },
+  {
+   "id": "claims-04",
+   "file": "26-rds/2-deep.md",
+   "section": "Encryption at rest is chosen at creation and covers every copy, step 4",
+   "quote": "Clients use [Transport Layer Security (TLS)](../facts/rds.md#rds-tls-all-engines). To require it, you change a parameter. A default parameter group stays as it is, so [create a new parameter group.](../facts/rds.md#rds-parameter-group-default-not-modifiable)",
+   "type": "technical: oversimplified, outdated for the chapter's engine",
+   "severity": "should",
+   "evidence": "Fact rds-tls-force-postgresql (verified): \"The `rds.force_ssl` parameter default value is 1 (on) for RDS for PostgreSQL version 15 and later. For all other RDS for PostgreSQL major versions 14 and older, the default value of this parameter is 0 (off).\" For RDS for PostgreSQL 15 and later (the default version today), TLS is already required with the default parameter group; a parameter change is needed only for older versions or other engines. Say so, with the fact link.",
+   "status": "fixed",
+   "resolution": "fix-26: 2-deep.md encryption step 4 now reads 'On RDS for PostgreSQL, `rds.force_ssl` requires it, and it is on by default from [version 15 and later](rds-tls-force-postgresql). A default parameter group stays as it is, so [create a new parameter group.]'"
+  },
+  {
+   "id": "claims-05",
+   "file": "data/26-rds/tasks.json (rds-t03) -> 26-rds/3-do.md",
+   "section": "Force TLS in a custom parameter group, steps 2, 4 and 5",
+   "quote": "\"expect\": \"One row: the default value, the apply type (static or dynamic), and True ... For PostgreSQL 15 and later, the default value is 1.\"",
+   "type": "technical: task teaches a no-op; break step may not show the lesson",
+   "severity": "should",
+   "evidence": "Fact rds-tls-force-postgresql: default 1 for version 15 and later. Step 1 takes the family of the default PostgreSQL version (expect: 'for example postgres17'), so step 5 sets rds.force_ssl to the value it already has, and the task title 'Force TLS in a custom parameter group' changes nothing for the reader's default engine. Step 4 also accepts a 'group was not found' error as 'the lesson is the same', but a not-found error does not show that a default group cannot be modified (rds-parameter-group-default-not-modifiable). Fix: say in the text that the custom group is needed to change any parameter (for example on PostgreSQL 14 or MySQL require_secure_transport, with a fact), and drop the not-found clause or tell the reader that the break step then proves nothing.",
+   "status": "fixed",
+   "resolution": "fix-26: rds-t03 replaced with the same commands (the CLI report hash stays valid). Title is now 'Change a parameter in a custom parameter group'. Step 2 expect: on 15 and later the default is already 1; on 14 and older it is 0 and this task is how you turn it on. Step 4 expect: a not-found error means the step proves nothing. Step 4 explain: 'To change any parameter, you create a custom DB parameter group'. Step 5 expect: on 15 and later the value was already 1, the group now holds it as your own setting. The 2-deep Try it callout now says 'Change a parameter: a default group refuses, and a custom group accepts.'"
+  },
+  {
+   "id": "claims-06",
+   "file": "26-rds/2-deep.md",
+   "section": "Storage autoscaling grows storage before it fills but never shrinks it, heading and step 2",
+   "quote": "**RDS watches free space.** RDS scales when free space is at or below [10 percent of the allocated storage](../facts/rds.md#rds-storage-autoscaling-trigger-free-space) for [at least five minutes](../facts/rds.md#rds-storage-autoscaling-trigger-five-minutes).",
+   "type": "technical: condition dropped; heading overclaims",
+   "severity": "should",
+   "evidence": "Fact rds-storage-autoscaling-trigger-five-minutes scope: \"one of three trigger conditions\"; rds-storage-autoscaling-trigger-free-space scope: \"the previous modification must have finished optimizing\". full:amazonrds-userguide line 17547 [Limitations of storage autoscaling]: \"Autoscaling can't completely prevent storage-full situations for large data loads. This is because further storage modifications can't be made until storage optimization completes on the instance\". The step reads as the full trigger and the heading says storage grows 'before it fills'; add the third condition and the large-data-load limit.",
+   "status": "fixed",
+   "resolution": "fix-26: step 2 now reads 'It scales when free space falls to [10 percent of the allocated storage] for [at least five minutes], after the last change finishes optimizing.' The large-load limit is in 1-fast.md as the guard of the 'unpredictable storage growth' signal ('a large one-time data load: allocate the storage first'); it could not be linked in 2-deep.md because the only display of rds-storage-autoscaling-large-loads has a contraction (L803), see fact request fr-0088. The heading text is fixed by brief.json (R4) and was not changed."
+  },
+  {
+   "id": "claims-07",
+   "file": "26-rds/1-fast.md",
+   "section": "Signals and traps (Traps) and Recap 3; 2-deep.md 'Encryption at rest...' step 3; FAQ 8; card rds-c010",
+   "quote": "**Recap 3.** How do you encrypt an existing unencrypted DB instance? ... Encrypt a snapshot copy, then [restore an encrypted DB instance](../facts/rds.md#rds-encrypt-existing-via-snapshot-copy).",
+   "type": "claims: current alternative omitted (teach current truth)",
+   "severity": "should",
+   "evidence": "Verified fact rds-encryption-blue-green-change-key (no dependents) from docs/AmazonRDS/latest/UserGuide/Overview.Encryption: \"You can also use a blue/green deployment to create a green environment that's encrypted with a different KMS key than the blue environment. Use this deployment to encrypt an unencrypted DB instance or to change the KMS key of an encrypted DB instance.\" The chapter presents snapshot-copy-restore as the way to encrypt an existing instance; it is one of two documented ways. Add the blue/green route in one sentence (and keep q004 valid: its options do not include blue/green).",
+   "status": "fixed",
+   "resolution": "fix-26: 2-deep.md encryption step 3 adds 'You can also [use a blue/green deployment] to [encrypt an unencrypted DB instance]' (rds-encryption-blue-green-change-key). 1-fast.md trap rds-trap-encrypt-existing-in-place and Recap 3 add 'Or [use a blue/green deployment]'. q004 is unchanged; its options hold no blue/green route."
+  },
+  {
+   "id": "claims-08",
+   "file": "26-rds/1-fast.md",
+   "section": "Changed recently",
+   "quote": "> **Changed recently:** (2025-09-23) Snapshot copy to another Region and another account. ... > **Changed recently:** (2026-07-15) More storage changes in one day.",
+   "type": "rule: missing Changed recently notes (RULINGS hard rule 7)",
+   "severity": "should",
+   "evidence": "RULINGS rule 7: 'Where a fact changed since mid-2022, add a Changed recently note'. The chapter teaches two values that changed after mid-2022 without a note: (1) fact rds-change-read-replicas-15-2022-10, \"You can now create up to 15 read replicas for RDS for MariaDB, MySQL, and PostgreSQL DB instances ... October 20, 2022\" (shown in 1-fast compare table, Numbers A-list, card c005 has changed: true); (2) the engine list 'six popular engines' includes Db2, added on 2023-11-27: docs/AmazonRDS/latest/UserGuide/WhatsNew line 179: \"You can now run IBM Db2 database engines in Amazon RDS.\" (row date: November 27, 2023). Older questions may assume 5 replicas or five engines.",
+   "status": "rejected",
+   "resolution": "fix-26: cannot be written as a valid entry now. L107 requires the date of a Changed recently entry to equal changed.date of the fact linked in Now:, and an Old: value needs a fact. rds-change-read-replicas-15-2022-10 has changed: null (its note: no saved AWS page states the old value verbatim; the What's New post is blocked by robots.txt), and no Db2 change fact exists. An unlinked old value would be a hard claim from memory. Fact request fr-0087 asks for both change facts; the entries can be added when they are verified."
+  },
+  {
+   "id": "claims-09",
+   "file": "26-rds/2-deep.md",
+   "section": "A read replica receives changes later and serves only reads",
+   "quote": "Why can a replica show old data? Changes arrive after the commit, so its data [might be stale](../facts/rds.md#rds-read-replica-use-source-unavailable).",
+   "type": "claims: link does not support the sentence (scope differs)",
+   "severity": "should",
+   "evidence": "Fact rds-read-replica-use-source-unavailable quote: \"For this use case, keep in mind that the data on the read replica might be stale because the source DB instance is unavailable.\" The fact is about reads while the source is unavailable; the sentence uses it for general asynchronous lag. Link a lag fact instead (for example rds-faq-multi-az-for-write-availability, whose claim covers lag that 'can vary significantly', or rds-replica-size-as-much-as-source 'replication lag is likely to increase').",
+   "status": "fixed",
+   "resolution": "fix-26: the sentence now reads 'Why can a replica show old data? With [asynchronous replication](rds-compare-replication-sync-async), changes arrive after the commit.' The two suggested lag facts could not be used: their displays hold `lag`, a banned term variant (L901)."
+  },
+  {
+   "id": "claims-10",
+   "file": "26-rds/2-deep.md",
+   "section": "RDS Proxy shares a small pool of connections among many clients, step 1",
+   "quote": "**The class sets the limit.** RDS sets max_connections [based on the database instance class](../facts/rds.md#rds-max-connections-from-instance-class).",
+   "type": "technical: condition dropped from a fact",
+   "severity": "should",
+   "evidence": "Fact rds-max-connections-from-instance-class quote: \"If you did not explicitly set the connection limit (such as the `max_connections` parameter) in your database's parameter group, Amazon RDS and Aurora calculate it automatically based on the database instance class.\" Scope: 'not set explicitly in the parameter group'. Add 'unless you set it in a parameter group' (speak item rds-s03 kp2 already has it).",
+   "status": "fixed",
+   "resolution": "fix-26: step 1 now reads 'Unless you set it in a parameter group, RDS sets max_connections [based on the database instance class].'"
+  },
+  {
+   "id": "claims-11",
+   "file": "26-rds/2-deep.md",
+   "section": "Amazon RDS runs the database engine while you keep the queries",
+   "quote": "A move to the same engine is a **homogeneous migration**; the RDS console runs it with [AWS Database Migration Service (AWS DMS)](../facts/rds.md#rds-console-dms-migration).",
+   "type": "technical: scope and condition dropped",
+   "severity": "should",
+   "evidence": "Fact rds-console-dms-migration scope: \"RDS for MySQL, MariaDB and PostgreSQL targets\"; claim: \"the source and target must have the same engine and compatible versions\". The sentence says every same-engine move runs from the RDS console; it is for MySQL, MariaDB and PostgreSQL only. Add the engine list.",
+   "status": "fixed",
+   "resolution": "fix-26: the paragraph now reads 'A move to the same engine is a homogeneous migration. For MySQL, MariaDB and PostgreSQL, the RDS console runs it with [AWS DMS].'"
+  },
+  {
+   "id": "claims-12",
+   "file": "26-rds/5-quiz.md (data/26-rds/questions.json rds-q018)",
+   "section": "Extended / Question 18, answer and Why",
+   "quote": "Use Amazon RDS for MySQL, create a read replica, and set the read_only parameter of the replica to 0. ... After this parameter change on the replica, the team adds its indexes and tables there, and changes from the source keep arriving.",
+   "type": "claims: mechanism without a fact; technical: oversimplified, against an AWS recommendation",
+   "severity": "should",
+   "evidence": "No verified fact names the read_only parameter (rds-replica-mysql-logical-writable only says 'You can enable the MariaDB or MySQL read replica to be writable'). full:amazonrds-userguide line 16252 [Monitoring replication lag] lists as a common cause of lag: \"Writing to tables with indexes on a read replica. If the `read_only` parameter is not set to 0 on the read replica, it can break replication.\" Line 26188 [Recommendations]: \"Your DB instance has a read replica in writable mode, which allows updates from clients. We recommend that you set the `read_only` parameter to `TrueIfReplica` so that the read replicas isn't in writable mode.\" So 'changes from the source keep arriving' hides the lag and breakage risk, and the chapter heading says a replica 'serves only reads'. Ground read_only=0 in a fact (line 16159 'set the read_only parameter to 0 in the DB parameter group for the read replica') and name the risk, or replace the question.",
+   "status": "rejected",
+   "resolution": "fix-26: the premise is wrong. Verified fact rds-faq-read-replica-mysql-ddl is in the question's facts and the key's why links it; its claim names the parameter ('by setting the read_only parameter to 0') and its display is 'setting the “read_only” parameter to “0.”'. The AWS FAQ describes this use (DDL on a MySQL replica). The lag risk is real but does not change the key, and an explanation edit would reset a verified question (R5). The chapter now teaches the writable MySQL or MariaDB replica in a Go deeper block of the read replica subsection, which also addresses the heading tension."
+  },
+  {
+   "id": "claims-13",
+   "file": "26-rds/3-do.md, 26-rds/4-say.md, 26-rds/1-fast.md",
+   "section": "Look first (task region rds-t01); 2-deep 'Try it' callouts",
+   "quote": "# Amazon RDS: do it\n\nNothing here yet.",
+   "type": "rule: generated files empty while the prose points to them",
+   "severity": "should",
+   "evidence": "TOOLS-items.md sync rule: \"Only items with `status: ready` are printed ... A file with no item still gets its H1 and the line `Nothing here yet.`\" All 3 tasks, 4 speak items and 32 cards are `status: candidate`, so 3-do.md and 4-say.md are empty, the rds-t01 region in 1-fast.md 'Look first' is empty, and 2-deep 'See [3-do.md](3-do.md)' leads nowhere. TOOLS-rules.md: 'A reviewer sets cards, speak items and tasks to ready in the stage of that kind, after the item lint is clean.' Set them ready after the fixes, then sync.",
+   "status": "fixed",
+   "resolution": "fix-26: after the item fixes, cards lint, speak lint and tasks lint (all --ship) are clean; all 32 cards, 4 speak items and 3 tasks are ready; sync 26 printed 3-do.md, 4-say.md and the rds-t01 region of 1-fast.md; sync --check is clean."
+  },
+  {
+   "id": "claims-14",
+   "file": "26-rds/2-deep.md",
+   "section": "RDS Proxy keeps client connections open while the database fails over (heading and Exam signal)",
+   "quote": "### RDS Proxy keeps client connections open while the database fails over (3 min)",
+   "type": "technical: heading overclaims (gist is wrong for in-flight work)",
+   "severity": "should",
+   "evidence": "docs/AmazonRDS/latest/UserGuide/rds-proxy.howitworks: \"For applications that maintain their own connection pool, going through RDS Proxy means that most connections stay alive during failovers or other disruptions. Only connections that are in the middle of a transaction or SQL statement are canceled.\" The reader takes the gist from headings (READER.md); the heading promises that every connection survives. Say 'most connections' and add that in-flight transactions are canceled, so retry logic is still needed.",
+   "status": "fixed",
+   "resolution": "fix-26: new step 3 'Open transactions fail. For an application with its own pool, [most connections stay alive during failovers]. Those [in the middle of a transaction] are canceled, so keep retry logic.' (rds-proxy-failover-idle-connections-kept, now verified). The H3 text is fixed by brief.json (R4: a heading change goes through the orchestrator), so the body carries the limit."
+  },
+  {
+   "id": "claims-15",
+   "file": "26-rds/1-fast.md",
+   "section": "Choose it or not (both compare tables) and Signals and traps",
+   "quote": "| Engines or software? | [Six popular engines](...) | MySQL and PostgreSQL compatible | ... | Read scaling? | ... | Aurora Replicas behind a reader endpoint | ... | Storage? | ... | Managed by AWS |",
+   "type": "claims: statements without a fact link",
+   "severity": "note",
+   "evidence": "Hunt rule (a). Unlinked factual cells: Aurora 'MySQL and PostgreSQL compatible', 'Aurora Replicas behind a reader endpoint', DynamoDB storage 'Managed by AWS'; RDS Custom 'AWS automates the administration tasks', 'Legacy, custom and packaged applications', EC2 'Teams that want full management responsibility'; signals 'a slower restore is acceptable: cross-Region automated backups', 'the growth is planned: grow storage by hand'. Neighbour facts are verified (chapter 27 Aurora, rds-custom-os-access, rds-cross-region-backup-replication) and can be linked.",
+   "status": "rejected",
+   "resolution": "fix-26 (note): the listed cells hold no number with a unit and no absolute word (L304 clean); the 'But not if' cells are the heuristic column of a signals table by design (R2 exemption 5); a link needs a display held in the link text, and none of the neighbour facts has a display for these phrases. The Aurora and DynamoDB cells are taught with links in chapters 27 and 28. Two guards were rewritten anyway (exam-06, exam-08)."
+  },
+  {
+   "id": "claims-16",
+   "file": "26-rds/2-deep.md",
+   "section": "On failover RDS points the same endpoint at the standby, Stop and answer; and 5-quiz.md Question 5 Twin",
+   "quote": "A shorter cache: the Java cache should be [no more than 60 seconds](../facts/rds.md#rds-multi-az-jvm-dns-ttl-60).",
+   "type": "claims: two different numbers for one advice",
+   "severity": "note",
+   "evidence": "rds-multi-az-jvm-dns-ttl-60: \"we recommend that you configure your JVM with a TTL value of no more than 60 seconds\"; rds-bp-dns-ttl-under-30-seconds (used in q005 Twin): \"set a time-to-live (TTL) value of less than 30 seconds\". Both are AWS text, but the reader meets 60 seconds in the chapter and 30 seconds in the quiz with no explanation. Name the scope of each (JVM setting vs any client DNS cache) or use one.",
+   "status": "fixed",
+   "resolution": "fix-26: the Stop and answer reveal now names both scopes: 'the Java cache should be [no more than 60 seconds]. For other client DNS caches, AWS advises [less than 30 seconds].'"
+  },
+  {
+   "id": "claims-17",
+   "file": "26-rds/2-deep.md",
+   "section": "RDS Proxy keeps client connections open while the database fails over, Exam trap; speak rds-s03 line 9",
+   "quote": "It is [priced per vCPU per hour](../facts/rds-proxy.md#rds-proxy-pricing-per-vcpu) of the database",
+   "type": "technical: scope dropped",
+   "severity": "note",
+   "evidence": "rds-proxy-pricing-per-vcpu: \"For provisioned instances on Amazon Aurora, Amazon RDS for PostgreSQL, ... RDS Proxy is priced per vCPU per hour.\" Scope: 'Aurora Serverless is priced per ACU per hour instead'. Add 'for provisioned instances'.",
+   "status": "fixed",
+   "resolution": "fix-26: the trap now reads 'For provisioned instances, it is [priced per vCPU per hour] of the database'. rds-s03 kp5 already said 'For provisioned instances'."
+  },
+  {
+   "id": "claims-18",
+   "file": "26-rds/2-deep.md",
+   "section": "Manual snapshots stay until you delete them and can leave the Region, step 3",
+   "quote": "You can [copy both automatic and manual DB snapshots](../facts/rds.md#rds-snapshots-copy-both-share-manual) to another Region, with a [KMS key valid in the destination AWS Region](../facts/rds.md#rds-snapshot-copy-cross-region-kms-destination).",
+   "type": "technical: condition dropped",
+   "severity": "note",
+   "evidence": "rds-snapshot-copy-cross-region-kms-destination: \"If you copy an encrypted snapshot across Regions, you must specify a KMS key valid in the destination AWS Region. It can be a Region-specific KMS key, or a multi-Region key.\" The key is needed only for an encrypted snapshot. Related: q014 Why-not 'KMS keys are specific to the AWS Region ... so the us-east-1 key cannot encrypt the replica' ignores multi-Region keys (same fact); the option is still wrong because it names the us-east-1 ARN.",
+   "status": "fixed",
+   "resolution": "fix-26: step 3 now reads 'You can [copy both automatic and manual DB snapshots] to another Region. An encrypted copy needs a [KMS key valid in the destination AWS Region].' The q014 why-not was not edited: the option stays wrong (it names the us-east-1 key ARN), and an edit would reset a verified question (R5)."
+  },
+  {
+   "id": "claims-19",
+   "file": "26-rds/2-deep.md",
+   "section": "The instance class sets compute and the storage type sets IOPS (table); 5-quiz.md Question 12 (rds-q015)",
+   "quote": "| io2 Block Express | [High-performance OLTP workloads](...) | [Sub-millisecond, provided consistently 99.9% of the time](../facts/rds.md#rds-storage-latency-by-type) |",
+   "type": "technical: condition not stated",
+   "severity": "note",
+   "evidence": "full:amazonrds-userguide line 4273 [io2 Block Express storage (recommended)]: \"All RDS io2 volumes based on the AWS Nitro System are io2 Block Express volumes and provide sub-millisecond average latency. DB instances not based on the AWS Nitro System are io2 volumes.\" Sub-millisecond latency needs a Nitro-based instance class; q015 says 'a general-purpose instance class' without it. Low exam risk; one clause fixes it.",
+   "status": "rejected",
+   "resolution": "fix-26 (note): no verified fact holds the Nitro condition for io2 latency (the only Nitro fact, rds-storage-io2-iops-ratio, is about the IOPS ratio), so the clause cannot be added as a grounded claim. The table cell is a verbatim display of the AWS storage table (rds-storage-latency-by-type). q015's key does not depend on the Nitro detail, and an edit would reset a verified question."
+  },
+  {
+   "id": "claims-20",
+   "file": "data/26-rds/cards.json",
+   "section": "rds-c008 and rds-c006",
+   "quote": "\"front\": \"In Amazon RDS, an IAM database authentication token has a lifetime of {{c1::15 minutes}}.\", \"section\": \"2-deep.md#encryption-at-rest-is-chosen-at-creation-and-covers-every-copy\"",
+   "type": "claims: card teaches a fact that its section does not teach",
+   "severity": "note",
+   "evidence": "IAM database authentication appears nowhere in 1-fast.md or 2-deep.md (the fact rds-iam-auth-token-lifetime is verified, so the card is correct but orphaned). Card c006 (7 consecutive days) points to the instance class section, which never mentions stopping; the fact is only in the Numbers table. Point c006 to the Numbers section and either teach IAM DB authentication in one line or move c008 to the chapter that does.",
+   "status": "fixed",
+   "resolution": "fix-26: rds-c008 replaced (cards add --replace) by a core 'cannot' card on a fact the chapter teaches: 'can a Multi-AZ DB cluster run RDS for SQL Server?' (rds-multi-az-cluster-engines-mysql-postgresql, section: the Multi-AZ DB cluster subsection, new step 4). Card c006 keeps its section: the instance class subsection now teaches stopping in step 5 ('After [7 consecutive days], RDS starts it again')."
+  },
+  {
+   "id": "claims-21",
+   "file": "26-rds/5-quiz.md (rds-q019)",
+   "section": "Extended / Question 13, Why",
+   "quote": "The switch has [short, predictable downtime](../facts/rds.md#rds-faq-blue-green-use-cases), and RDS keeps the green copy in sync, so the team runs no replication of its own.",
+   "type": "claims: claim without a link although a verified fact exists",
+   "severity": "note",
+   "evidence": "'RDS keeps the green copy in sync' is the deciding reason of the key and has no link; verified fact rds-blue-green-staging-in-sync exists in facts/rds.md. Link it.",
+   "status": "rejected",
+   "resolution": "fix-26 (note): rds-q019 is a verified, ready question; adding a link to its explanation is a --replace that resets verification (R5). The claim is true and is now taught with the link in the chapter: the Multi-AZ DB instance trap says a blue/green deployment is 'a copy that [stays in sync with the current production environment]' (rds-blue-green-staging-in-sync), which is the subsection q019's Review link points to."
+  },
+  {
+   "id": "claims-22",
+   "file": "data/26-rds/tasks.json (rds-t02)",
+   "section": "Build a DB subnet group and watch RDS refuse one zone, step 6",
+   "quote": "\"text\": \"Fix it: keep a subnet in each of two zones, even for a DB instance in one zone. Read the group again.\"",
+   "type": "technical: a 'fix' step that changes nothing",
+   "severity": "note",
+   "evidence": "Step 6 only repeats the read of step 4; nothing is fixed, and it cannot fail. Call it 'Check that the refused request changed nothing' (its expect already says so). The cleanup and the verify (DBSubnetGroupNotFoundFault after delete) are correct and can fail if the group still exists; default subnets are public, but no DB instance is created and the text warns to use private subnets.",
+   "status": "fixed",
+   "resolution": "fix-26: rds-t02 step 6 text is now 'Check that the refused request changed nothing: read the group again. Keep a subnet in each of two zones, even for a DB instance in one zone.' Commands unchanged."
+  }
+ ]
+}

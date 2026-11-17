@@ -1,0 +1,568 @@
+[
+ {
+  "id": "efs-fsx-q002",
+  "section": "2-deep.md#each-client-reaches-efs-through-the-mount-target-in-its-own-availability-zone",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.1",
+  "bullets": [
+   "3.1.K2"
+  ],
+  "topics": [
+   "storage",
+   "networking",
+   "security"
+  ],
+  "services": [
+   "efs",
+   "vpc"
+  ],
+  "concept": "efs-on-premises-mount",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs Linux applications on Amazon EC2 instances that share an Amazon EFS file system. The company's on-premises data center connects to the VPC through an AWS Site-to-Site VPN connection. Linux servers in the data center must now mount the same file system, but every mount attempt times out. The security group of the mount targets allows inbound traffic only from the security group of the EC2 instances. Which solution will meet these requirements in the MOST secure way?",
+  "keywords": [
+   "every mount attempt times out",
+   "allows inbound traffic only from the security group of the EC2 instances",
+   "MOST secure"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an inbound rule to the mount target security group that allows NFS traffic on TCP port 2049 from 0.0.0.0/0, and mount the file system by a mount target IP address.",
+    "correct": false,
+    "why": "It works, but every address that can reach the VPC can then try the NFS port, which is less secure than the data center's range.",
+    "concept": "nfs-rule-open-to-all",
+    "trap": null,
+    "misconception": "a rule that is open to every address is acceptable because the mount targets have no public IP addresses",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Attach an internet gateway to the VPC, give each mount target a public IP address, and allow TCP port 2049 from the public IP addresses of the data center.",
+    "correct": false,
+    "why": "Servers on premises mount EFS when they connect over [AWS Direct Connect or Site-to-Site VPN](../facts/efs.md#efs-onpremises-mount-via-direct-connect-or-vpn), which the company has, so internet exposure adds risk.",
+    "concept": "efs-over-internet",
+    "trap": null,
+    "misconception": "servers on premises reach EFS mount targets over the internet through public IP addresses",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Add an inbound rule to the mount target security group that allows NFS traffic on TCP port 2049 from the data center's address range, and mount by a mount target IP address.",
+    "correct": true,
+    "why": "The [mount target security group](../facts/efs.md#efs-onpremises-security-group-allow-nfs-port-2049) must allow the [NFS port (2049)](../facts/efs.md#efs-onpremises-security-group-allow-nfs-port-2049) from the servers, and AWS recommends a [mount target IP address instead of](../facts/efs.md#efs-onpremises-use-mount-target-ip-instead-of-dns) a DNS name.",
+    "concept": "nfs-rule-from-data-center-range",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Add an inbound rule to the mount target security group that allows HTTPS traffic on TCP port 443 from the data center's address range, and mount by a mount target IP address.",
+    "correct": false,
+    "why": "An NFS client [can only mount a file system](../facts/efs.md#efs-nfs-client-needs-network-connection-to-port-2049) when it reaches the [NFS port (TCP port 2049)](../facts/efs.md#efs-nfs-client-needs-network-connection-to-port-2049), so a rule for HTTPS leaves the mount blocked.",
+    "concept": "https-rule-for-efs",
+    "trap": "efs-fsx-trap-nfs-over-https-port",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The timeout shows a network block: an NFS client [can only mount a file system](../facts/efs.md#efs-nfs-client-needs-network-connection-to-port-2049) when it reaches the [NFS port (TCP port 2049)](../facts/efs.md#efs-nfs-client-needs-network-connection-to-port-2049) of a mount target. AWS says to [allow inbound traffic](../facts/efs.md#efs-onpremises-security-group-allow-nfs-port-2049) to the [NFS port (2049)](../facts/efs.md#efs-onpremises-security-group-allow-nfs-port-2049) from the server, and to mount by a [mount target IP address instead of](../facts/efs.md#efs-onpremises-use-mount-target-ip-instead-of-dns) a DNS name. The data center's range keeps other networks out.",
+  "takeaway": "Servers on premises mount EFS over VPN or Direct Connect after the mount target security group allows NFS from their range.",
+  "twin": "If the stem said \"Windows servers in the data center\" instead: no EFS rule helps, because an on-premises server [must have a Linux-based operating system](../facts/efs.md#efs-onpremises-server-must-be-linux); use FSx for Windows File Server.",
+  "say": "Allow the NFS port from the data center range in the mount target security group, and mount by IP address.",
+  "facts": [
+   "efs-nfs-client-needs-network-connection-to-port-2049",
+   "efs-onpremises-security-group-allow-nfs-port-2049",
+   "efs-onpremises-use-mount-target-ip-instead-of-dns",
+   "efs-onpremises-mount-via-direct-connect-or-vpn",
+   "efs-onpremises-server-must-be-linux"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-on-premises",
+   "ee-most-secure"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "efs-fsx-q004",
+  "section": "2-deep.md#cold-files-move-to-cheaper-classes-and-stay-there-unless-you-ask",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.1",
+  "bullets": [
+   "4.1.K7",
+   "4.1.S10"
+  ],
+  "topics": [
+   "storage",
+   "cost"
+  ],
+  "services": [
+   "efs",
+   "s3"
+  ],
+  "concept": "efs-lifecycle-ia-and-back-on-access",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A media company stores project files on an Amazon EFS file system that Linux editing servers mount. The files of each project are read often for about one month and then become infrequently accessed. Months later, an old project is sometimes reopened, and its files are then read many times each day by editors who need low latency. The company wants to reduce storage cost without changing the application. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "infrequently accessed",
+   "read many times each day by editors who need low latency",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a lifecycle policy that moves files to EFS Infrequent Access (EFS IA) after 30 days without access and moves files back to EFS Standard on their first access.",
+    "correct": true,
+    "why": "EFS IA fits data read [a few times a quarter](../facts/efs.md#efs-faq-ia-quarter-archive-year-designed-for), and a policy can [transition files into Standard storage](../facts/efs.md#efs-lifecycle-transition-to-standard-on-first-access) on first access, so reopened projects get low latency.",
+    "concept": "ia-plus-transition-to-standard",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Create a lifecycle policy that moves files to EFS Infrequent Access (EFS IA) after 30 days without access, because files that are read again return to EFS Standard by default.",
+    "correct": false,
+    "why": "By default, read files are [not moved back to the Standard storage class](../facts/efs.md#efs-lifecycle-default-no-move-back-to-standard), so reopened projects stay in EFS IA with [tens of milliseconds](../facts/efs.md#efs-latency-ia-archive-first-byte) of first-byte latency.",
+    "concept": "ia-without-transition-to-standard",
+    "trap": "efs-fsx-trap-ia-moves-back-by-default",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Copy files older than 30 days to an Amazon S3 bucket, and add an S3 Lifecycle rule that moves objects back to S3 Standard when an editor reads them again.",
+    "correct": false,
+    "why": "The servers read files through a mounted file system, and Amazon S3 is an [object storage service](../facts/efs.md#efs-faq-use-case-file-vs-block-vs-object), so this changes the application.",
+    "concept": "move-cold-files-to-s3",
+    "trap": "s3-trap-lifecycle-back-to-standard",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Keep every file in the EFS Standard storage class and create no lifecycle policy, so that the files of reopened projects keep the lowest latency for every read.",
+    "correct": false,
+    "why": "It works, but cold files stay in the most expensive class, while EFS IA offers [up to 95% lower cost](../facts/efs.md#efs-faq-ia-cost-95-percent) for files that are read rarely.",
+    "concept": "keep-all-in-standard",
+    "trap": null,
+    "misconception": "only the Standard storage class can give the files of a reopened project low latency",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Files turn cold after a month, but a reopened project needs low latency again. EFS IA offers [up to 95% lower cost](../facts/efs.md#efs-faq-ia-cost-95-percent) than EFS Standard for data read [a few times a quarter](../facts/efs.md#efs-faq-ia-quarter-archive-year-designed-for). By default, read files are [not moved back to the Standard storage class](../facts/efs.md#efs-lifecycle-default-no-move-back-to-standard), so the policy also needs to [transition files into Standard storage](../facts/efs.md#efs-lifecycle-transition-to-standard-on-first-access) on first access.",
+  "takeaway": "EFS IA cuts the cost of cold files; add Transition into Standard when old files can become hot again.",
+  "twin": "If the stem said \"old projects are never reopened, and a slow first read is acceptable\" instead: also move files to EFS Archive, which is designed for data read [a few times a year or less](../facts/efs.md#efs-faq-ia-quarter-archive-year-designed-for).",
+  "say": "Move cold files to IA after a month, and set the policy to bring them back to Standard on first access.",
+  "facts": [
+   "efs-faq-ia-quarter-archive-year-designed-for",
+   "efs-faq-ia-cost-95-percent",
+   "efs-lifecycle-default-no-move-back-to-standard",
+   "efs-lifecycle-transition-to-standard-on-first-access",
+   "efs-latency-ia-archive-first-byte",
+   "efs-faq-use-case-file-vs-block-vs-object"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-infrequently-accessed",
+   "ee-most-cost-effective",
+   "ee-without-changing-the-application"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "efs-fsx-q008",
+  "section": "2-deep.md#fsx-for-windows-file-server-serves-smb-shares-that-join-your-active-directory",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.S7"
+  ],
+  "topics": [
+   "storage",
+   "identity"
+  ],
+  "services": [
+   "fsx",
+   "directory-service",
+   "direct-connect"
+  ],
+  "concept": "fsx-windows-self-managed-ad",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company is moving its Windows file shares from a file server in the company's data center to Amazon FSx for Windows File Server. Employees must keep signing in with their existing accounts, which live in the company's own Active Directory domain on domain controllers in the same data center. The data center connects to the VPC through AWS Direct Connect, and the domain controllers are reachable from the VPC. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "existing accounts",
+   "the domain controllers are reachable from the VPC",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create an AD Connector directory that points to the on-premises domain, and join the file system to the domain through the AD Connector directory.",
+    "correct": false,
+    "why": "[Amazon FSx does not support](../facts/fsx.md#fsx-windows-ad-connector-simple-ad-not-supported) AD Connector or Simple AD, so the file system cannot join the domain through an AD Connector directory.",
+    "concept": "fsx-through-ad-connector",
+    "trap": "efs-fsx-trap-ad-connector-works",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Join the file system directly to the existing on-premises domain as a self-managed Active Directory, using the domain's DNS servers and a service account.",
+    "correct": true,
+    "why": "FSx for Windows File Server can join an [existing, self-managed Active Directory domain](../facts/fsx.md#fsx-windows-ad-options-aws-managed-or-self-managed) on premises, so employees keep their accounts and no new directory is created.",
+    "concept": "fsx-join-self-managed-ad",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Create a Simple AD directory in the VPC, copy the employees' user accounts into it, and join the file system to the Simple AD domain.",
+    "correct": false,
+    "why": "[Amazon FSx does not support](../facts/fsx.md#fsx-windows-ad-connector-simple-ad-not-supported) Simple AD, and a copy of the user accounts is a second directory that the company keeps in sync.",
+    "concept": "fsx-with-simple-ad",
+    "trap": "efs-fsx-trap-ad-connector-works",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Create an AWS Managed Microsoft AD directory with a one-way forest trust to the on-premises domain, and join the file system to the managed directory.",
+    "correct": false,
+    "why": "It works through a [one-way forest trust relationship](../facts/fsx.md#fsx-windows-resource-forest-one-way-trust), but the company then runs and pays for a second directory, which adds overhead.",
+    "concept": "fsx-managed-ad-with-trust",
+    "trap": null,
+    "misconception": "FSx for Windows File Server has to join AWS Managed Microsoft AD, so an on-premises domain is reached through a trust",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Employees keep their on-premises accounts, and the domain controllers are reachable over Direct Connect. An FSx for Windows File Server file system can join an [existing, self-managed Active Directory domain](../facts/fsx.md#fsx-windows-ad-options-aws-managed-or-self-managed), on premises or in the cloud, so the direct join adds no directory to run. [Amazon FSx does not support](../facts/fsx.md#fsx-windows-ad-connector-simple-ad-not-supported) AD Connector or Simple AD.",
+  "takeaway": "FSx for Windows File Server joins AWS Managed Microsoft AD or your self-managed domain directly; AD Connector is not an option.",
+  "twin": "If the stem said \"the company has no Active Directory and wants AWS to run one\" instead: create AWS Managed Microsoft AD, because you can [integrate your Amazon FSx file system](../facts/fsx.md#fsx-windows-ad-options-aws-managed-or-self-managed) with it.",
+  "say": "Join FSx directly to the on-premises domain as a self-managed AD; FSx does not work with AD Connector.",
+  "facts": [
+   "fsx-windows-ad-options-aws-managed-or-self-managed",
+   "fsx-windows-ad-connector-simple-ad-not-supported",
+   "fsx-windows-resource-forest-one-way-trust"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-on-premises",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "efs-fsx-q010",
+  "section": "2-deep.md#amazon-efs-gives-many-linux-clients-one-shared-file-system-over-nfs",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K13"
+  ],
+  "topics": [
+   "storage",
+   "resilience"
+  ],
+  "services": [
+   "efs",
+   "elb",
+   "ec2-auto-scaling",
+   "ebs"
+  ],
+  "concept": "shared-file-system-vs-sticky-sessions",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs a reporting web application on Linux Amazon EC2 instances in an Auto Scaling group that spans three Availability Zones behind an Application Load Balancer. The application saves each generated report as a file in a local directory. Users share report links with colleagues, and many downloads fail because the request reaches an instance that does not hold the file. Instances are added and removed during the day. The fix must need minimal code changes. What should a solutions architect do?",
+  "keywords": [
+   "the request reaches an instance that does not hold the file",
+   "Instances are added and removed during the day",
+   "minimal code changes"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Turn on sticky sessions for the target group, so that the load balancer sends each user's requests to the instance that created that user's reports.",
+    "correct": false,
+    "why": "Stickiness can [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what), but a colleague's request can reach another instance, and a removed instance takes its reports with it.",
+    "concept": "sticky-sessions-for-files",
+    "trap": "elb-trap-sticky-sessions-keep-state",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Create one Amazon EBS io2 volume with Multi-Attach turned on, and attach the volume at the report directory of every instance in the group.",
+    "correct": false,
+    "why": "Multi-Attach attaches one volume to instances [in the same Availability Zone](../facts/ebs.md#ebs-multi-attach-provisioned-iops-same-az), so it cannot serve a group that spans three zones.",
+    "concept": "multi-attach-for-shared-reports",
+    "trap": "ebs-trap-multi-attach-as-shared-file-system",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Increase the deregistration delay of the target group, so that each instance finishes its open downloads before the group removes the instance.",
+    "correct": false,
+    "why": "A longer delay lets open requests finish, but each report still lives on one instance, so requests that reach other instances still fail.",
+    "concept": "deregistration-delay-for-files",
+    "trap": null,
+    "misconception": "a longer deregistration delay makes the files of one instance available to requests that reach other instances",
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "d",
+    "text": "Create an Amazon EFS file system with a mount target in each Availability Zone, and mount it at the report directory on every instance.",
+    "correct": true,
+    "why": "Instances in all three zones share one EFS file system [concurrently from multiple NFS clients](../facts/efs.md#efs-concurrent-access-multiple-clients-multiple-azs), and the application keeps writing to its directory.",
+    "concept": "efs-shared-report-directory",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Each report lives on one instance, and [data is not automatically copied](../facts/ec2-auto-scaling.md#ec2-auto-scaling-faq-data-not-copied-to-new-instances) to instances that the group launches. An EFS file system mounted at the report directory is shared [concurrently from multiple NFS clients](../facts/efs.md#efs-concurrent-access-multiple-clients-multiple-azs) in several Availability Zones, so every instance sees every report. EFS [requires no changes to your existing applications](../facts/efs.md#efs-overview-regional-linux-shared-access), because the application still writes to a directory.",
+  "takeaway": "Files that every instance of an Auto Scaling group reads belong on a shared EFS file system, not on one instance.",
+  "twin": "If the stem said \"each user downloads only the reports that the user created, and instances are never removed\" instead: sticky sessions could work, because they [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what).",
+  "say": "Mount one EFS file system at the report folder on every instance, so every instance sees every report.",
+  "facts": [
+   "efs-concurrent-access-multiple-clients-multiple-azs",
+   "efs-overview-regional-linux-shared-access",
+   "ec2-auto-scaling-faq-data-not-copied-to-new-instances",
+   "elb-alb-sticky-sessions-what",
+   "ebs-multi-attach-provisioned-iops-same-az"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-minimal-code-changes"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "efs-fsx-q012",
+  "section": "2-deep.md#amazon-efs-gives-many-linux-clients-one-shared-file-system-over-nfs",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.1",
+  "bullets": [
+   "4.1.K11",
+   "4.1.S10"
+  ],
+  "topics": [
+   "storage",
+   "cost"
+  ],
+  "services": [
+   "efs",
+   "ebs",
+   "ec2"
+  ],
+  "concept": "block-vs-file-storage-types",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company is migrating an application to AWS. A PostgreSQL database runs on one Amazon EC2 instance and needs durable, low-latency block storage for a moderate, steady I/O load. Six Linux web instances in three Availability Zones must read and write the same set of uploaded files. The company does not want to copy files between instances. Which combination of actions will meet these requirements in the MOST cost-effective way? (Select TWO.)",
+  "keywords": [
+   "runs on one Amazon EC2 instance",
+   "moderate, steady I/O load",
+   "three Availability Zones must read and write the same set of uploaded files",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Store the database files on the Amazon EFS file system that the web instances also mount for the uploaded files.",
+    "correct": false,
+    "why": "The database runs on one instance, and EBS gives the [lowest-latency access to data](../facts/efs.md#efs-faq-efs-vs-ebs-vs-s3) from a single instance; the database gains nothing from sharing.",
+    "concept": "database-on-efs",
+    "trap": "efs-fsx-trap-efs-for-single-instance-database",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Store the database on an Amazon EBS General Purpose SSD (gp3) volume that is attached to the database instance.",
+    "correct": true,
+    "why": "Block storage is for durable, low-latency storage [attached to single Amazon EC2 instances or containers](../facts/efs.md#efs-decision-guide-block-row-single-instance), such as databases, and gp3 fits a moderate, steady load.",
+    "concept": "database-on-gp3",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Store the uploaded files on one Amazon EBS io2 volume with Multi-Attach turned on and attached to all six web instances.",
+    "correct": false,
+    "why": "Multi-Attach attaches a volume to instances [in the same Availability Zone](../facts/ebs.md#ebs-multi-attach-provisioned-iops-same-az), so one volume cannot serve web instances in three zones.",
+    "concept": "uploads-on-multi-attach",
+    "trap": "ebs-trap-multi-attach-as-shared-file-system",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Store the database on an Amazon EBS Provisioned IOPS SSD (io2) volume with the highest IOPS level that the instance supports.",
+    "correct": false,
+    "why": "It works, but a moderate, steady load does not need the highest provisioned IOPS level, so io2 at that level costs more than gp3.",
+    "concept": "database-on-max-io2",
+    "trap": null,
+    "misconception": "every production database needs the highest provisioned IOPS level",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Store the uploaded files on one Amazon EFS file system with a mount target in each of the three Availability Zones.",
+    "correct": true,
+    "why": "File system storage gives [shared read and write access](../facts/efs.md#efs-decision-guide-file-system-row-shared-access) across instances, and one EFS file system serves clients in all three Availability Zones.",
+    "concept": "uploads-on-efs",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The database needs block storage on one instance; the uploads need one set of files that six instances share across three zones. EBS is a [block-level storage service](../facts/efs.md#efs-faq-use-case-file-vs-block-vs-object), and EFS is a [file storage service](../facts/efs.md#efs-faq-use-case-file-vs-block-vs-object) that instances use [concurrently from multiple NFS clients](../facts/efs.md#efs-concurrent-access-multiple-clients-multiple-azs).",
+  "takeaway": "One instance with a database: EBS block storage. Many instances in several zones that share files: EFS.",
+  "twin": "If the stem said \"the database needs sustained IOPS far above what gp3 delivers\" instead: choose io2 for the database, because the IOPS need then decides the volume type.",
+  "say": "A gp3 volume for the single database instance, and one EFS file system for the shared uploads.",
+  "facts": [
+   "efs-faq-efs-vs-ebs-vs-s3",
+   "efs-decision-guide-block-row-single-instance",
+   "efs-decision-guide-file-system-row-shared-access",
+   "efs-faq-use-case-file-vs-block-vs-object",
+   "ebs-multi-attach-provisioned-iops-same-az",
+   "efs-concurrent-access-multiple-clients-multiple-azs"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-select-two",
+   "ee-which-combination",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "efs-fsx-q020",
+  "section": "2-deep.md#fsx-for-openzfs-moves-zfs-and-linux-nfs-servers-with-snapshots-and-clones",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.1",
+  "bullets": [
+   "4.1.K4"
+  ],
+  "topics": [
+   "storage"
+  ],
+  "services": [
+   "fsx",
+   "efs"
+  ],
+  "concept": "openzfs-for-zfs-snapshots-clones",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs on-premises ZFS file servers that Linux applications access over NFS. Several times each day, test teams create writable copies of production volumes from ZFS snapshots, and scripts automate this workflow. The company wants to migrate the file servers to AWS without changing the application code or the way the teams create these copies. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "ZFS file servers",
+   "writable copies of production volumes from ZFS snapshots",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Migrate the data to Amazon EFS, back up the file system with AWS Backup, and restore a recovery point to a new file system each time a team needs a copy.",
+    "correct": false,
+    "why": "It works, but each copy is a full restore with a wait and an extra file system, and AWS recommends [FSx for OpenZFS](../facts/fsx.md#fsx-when-to-choose-openzfs-from-zfs) for ZFS servers.",
+    "concept": "efs-backup-restore-copies",
+    "trap": "efs-fsx-trap-efs-for-any-nfs-migration",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Migrate the data to Amazon FSx for OpenZFS, and create a writable clone volume from a point-in-time snapshot each time a team needs a copy.",
+    "correct": true,
+    "why": "FSx for OpenZFS offers [point-in-time snapshots, in-place data cloning](../facts/fsx.md#fsx-faq-openzfs-snapshots-clones-replication), and a clone is a [writable copy](../facts/fsx.md#fsx-openzfs-clone-volume-writable-instant-depends-on-snapshot) that is [created almost instantly](../facts/fsx.md#fsx-openzfs-clone-volume-writable-instant-depends-on-snapshot).",
+    "concept": "openzfs-clone-volumes",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Migrate the data to Amazon FSx for NetApp ONTAP with NetApp SnapMirror, and create a volume from a SnapMirror copy each time a team needs a copy.",
+    "correct": false,
+    "why": "AWS recommends SnapMirror to [migrate your NetApp ONTAP file systems](../facts/fsx.md#fsx-ontap-snapmirror-recommended-for-migrating-onprem-netapp), but the source is ZFS, and the teams would change their snapshot and clone workflow.",
+    "concept": "snapmirror-from-zfs",
+    "trap": null,
+    "misconception": "NetApp SnapMirror migrates data from any file server, including ZFS servers",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Migrate the data to Amazon FSx for Lustre linked to an Amazon S3 bucket, and copy a production folder to a new directory each time a team needs a copy.",
+    "correct": false,
+    "why": "FSx for Lustre is built for [machine learning, high performance computing (HPC)](../facts/fsx.md#fsx-decision-guide-lustre-speed-workloads), and a folder copy replaces the teams' snapshot and clone workflow.",
+    "concept": "lustre-folder-copies",
+    "trap": null,
+    "misconception": "FSx for Lustre is the general replacement for Linux NFS file servers",
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "ZFS servers and writable copies from snapshots decide this question. AWS recommends [FSx for OpenZFS](../facts/fsx.md#fsx-when-to-choose-openzfs-from-zfs) when the current storage is ZFS, and it lets you migrate [without changing your applications](../facts/fsx.md#fsx-overview-openzfs-migrate-without-changing-apps). It offers [point-in-time snapshots, in-place data cloning](../facts/fsx.md#fsx-faq-openzfs-snapshots-clones-replication), and a clone is a [writable copy](../facts/fsx.md#fsx-openzfs-clone-volume-writable-instant-depends-on-snapshot), so the teams keep their workflow.",
+  "takeaway": "ZFS servers with snapshots and clones move to FSx for OpenZFS; NetApp systems move to FSx for NetApp ONTAP.",
+  "twin": "If the stem said \"a NetApp ONTAP system that serves NFS and SMB clients\" instead: choose FSx for NetApp ONTAP, because AWS recommends SnapMirror to [migrate your NetApp ONTAP file systems](../facts/fsx.md#fsx-ontap-snapmirror-recommended-for-migrating-onprem-netapp).",
+  "say": "FSx for OpenZFS keeps ZFS snapshots and instant writable clones, so the teams keep their workflow.",
+  "facts": [
+   "fsx-when-to-choose-openzfs-from-zfs",
+   "fsx-faq-openzfs-snapshots-clones-replication",
+   "fsx-openzfs-clone-volume-writable-instant-depends-on-snapshot",
+   "fsx-overview-openzfs-migrate-without-changing-apps",
+   "fsx-ontap-snapmirror-recommended-for-migrating-onprem-netapp",
+   "fsx-decision-guide-lustre-speed-workloads",
+   "efs-faq-nfs-v4-protocol"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-migrate",
+   "ee-without-changing-the-application",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the migration with the LEAST operational overhead.",
+    "I mark the constraints: ZFS file servers, Linux clients over NFS, writable copies from snapshots several times a day, and no change to the applications or to the copy workflow.",
+    "Before I look at the options, I predict Amazon EFS, because it is the shared NFS file system for Linux clients on AWS.",
+    "I remove FSx for Lustre, because a folder copy is not a snapshot clone, and Lustre is built for machine learning and HPC. I remove FSx for NetApp ONTAP with SnapMirror, because AWS recommends SnapMirror to migrate NetApp ONTAP file systems, and these servers run ZFS.",
+    "Between Amazon EFS with AWS Backup and FSx for OpenZFS the difference is the copy workflow. My first idea breaks because each EFS copy becomes a full restore, while FSx for OpenZFS offers point-in-time snapshots and in-place data cloning, and AWS recommends it for ZFS servers.",
+    "Check: FSx for OpenZFS keeps NFS for the applications, and a clone is a writable copy created almost instantly from a snapshot. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ }
+]

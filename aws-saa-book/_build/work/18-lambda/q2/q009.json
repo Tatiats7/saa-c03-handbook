@@ -1,0 +1,77 @@
+[
+ {
+  "id": "lambda-q009",
+  "section": "2-deep.md#short-event-driven-work-fits-lambda-and-long-or-steady-work-fits-containers-or-instances",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.S5"],
+  "topics": ["compute", "patterns"],
+  "services": ["lambda", "fargate", "s3", "eventbridge"],
+  "concept": "function-or-container-by-duration",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A media company receives video files in an Amazon S3 bucket at unpredictable times, sometimes several files in one minute and sometimes none for hours. Each new file must be converted to a smaller format for mobile users. Each file is long-running: it takes about 40 minutes to process. The company has a small operations team. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["at unpredictable times", "it takes about 40 minutes to process", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Configure an S3 event notification that invokes an AWS Lambda function for each new file, and convert the file inside the function before the function returns.",
+    "correct": false,
+    "why": "A function stops at [15 minutes per invocation](../facts/lambda.md#lambda-fargate-no-execution-time-limit), so every 40-minute file times out, however the event arrives.",
+    "concept": "s3-event-invokes-function",
+    "trap": "ec2-trap-lambda-runs-any-job",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Configure an Amazon EventBridge rule for new S3 objects that runs an Amazon ECS task on AWS Fargate for each file, and convert the file in the task.",
+    "correct": true,
+    "why": "Fargate has [no hard limit on execution time](../facts/lambda.md#lambda-fargate-no-execution-time-limit), and you [run containers without having to manage servers](../facts/ec2.md#ec2-compute-guide-fargate-no-servers-for-containers), one task for each file.",
+    "concept": "fargate-task-per-file",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Run Amazon EC2 instances in an Auto Scaling group with a minimum size of one, and have the instances check the bucket for new files every minute.",
+    "correct": false,
+    "why": "It works for long files, but the team patches and scales instances that run between files, which is more work than one task for each file.",
+    "concept": "ec2-workers-poll-bucket",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Configure an S3 event notification that invokes an AWS Lambda function for each new file, and request a function timeout above 15 minutes in Service Quotas.",
+    "correct": false,
+    "why": "The timeout is a function configuration quota, and of those quotas AWS says [except as noted, they can't be changed](../facts/lambda.md#lambda-config-quotas-not-changeable).",
+    "concept": "timeout-quota-request",
+    "trap": "lambda-trap-timeout-raisable",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   }
+  ],
+  "explanation": "A 40-minute job does not fit in a function, because the maximum timeout is [900 seconds](../facts/lambda.md#lambda-timeout-max). AWS positions Fargate for [long-running applications, microservices, or batch processing](../facts/lambda.md#lambda-fargate-long-running-lambda-short). An EventBridge rule starts one task for each new file, and the task stops when its file is done, so nothing runs between files.",
+  "takeaway": "A job longer than the function timeout runs as a container task on AWS Fargate, not in a Lambda function.",
+  "twin": "If the stem said \"Each file takes about 30 seconds to process.\" instead: an S3 event notification and a Lambda function, because AWS suggests functions for [event-driven tasks, unpredictable workloads](../facts/lambda.md#lambda-choose-functions-event-driven-unpredictable).",
+  "say": "Forty minutes is more than a function can run, so each file starts a Fargate task instead.",
+  "facts": [
+   "lambda-fargate-no-execution-time-limit",
+   "ec2-compute-guide-fargate-no-servers-for-containers",
+   "lambda-config-quotas-not-changeable",
+   "lambda-timeout-max",
+   "lambda-fargate-long-running-lambda-short",
+   "lambda-choose-functions-event-driven-unpredictable"
+  ],
+  "sources": [],
+  "exam_english": ["ee-unpredictable", "ee-long-running", "ee-least-operational-overhead"],
+  "twin_of": "lambda-q002"
+ }
+]

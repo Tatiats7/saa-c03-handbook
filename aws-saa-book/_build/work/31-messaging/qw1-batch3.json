@@ -1,0 +1,814 @@
+[
+ {
+  "id": "messaging-q003",
+  "section": "2-deep.md#a-received-message-stays-hidden-until-it-is-deleted-or-the-timeout-ends",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K11"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "sqs"
+  ],
+  "concept": "receive-does-not-delete",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs a consumer application on Amazon EC2 instances. The application receives messages from an Amazon SQS standard queue and writes the results to a database. A developer finds a bug: the application processes each message successfully, but the code that calls the DeleteMessage action never runs. The queue uses its default settings. What happens to a message after the application receives and processes it?",
+  "keywords": [
+   "the code that calls the DeleteMessage action never runs",
+   "The queue uses its default settings"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Amazon SQS deleted the message when the application received it, so the bug has no effect on the queue.",
+    "correct": false,
+    "why": "A received message is [temporarily invisible to other consumers](../facts/sqs.md#sqs-receive-keeps-message-hidden), but it stays in the queue until a consumer deletes it.",
+    "concept": "receive-deletes",
+    "trap": "messaging-trap-receive-deletes",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "The message stays hidden from all consumers until the retention period of the queue ends, and then Amazon SQS deletes the message from the queue.",
+    "correct": false,
+    "why": "The message is hidden for the visibility timeout, not for the retention period; after the timeout it [becomes visible again in the queue](../facts/sqs.md#sqs-undeleted-message-visible-again).",
+    "concept": "retention-vs-visibility",
+    "trap": null,
+    "misconception": "the visibility timeout lasts as long as the retention period",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "The message stays in the queue, and it becomes visible again when the visibility timeout ends, so a consumer receives it again.",
+    "correct": true,
+    "why": "The message was never deleted, so it [becomes visible again in the queue](../facts/sqs.md#sqs-undeleted-message-visible-again) after the visibility timeout, and a consumer processes it a second time.",
+    "concept": "visibility-timeout-return",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Amazon SQS moves the message to a dead-letter queue when the visibility timeout ends, so no consumer receives it again.",
+    "correct": false,
+    "why": "A move to a dead-letter queue comes from a redrive policy, after the [number of times a consumer can receive](../facts/sqs.md#sqs-dlq-max-receive-count-meaning) the message, not after one timeout.",
+    "concept": "dlq-move",
+    "trap": "messaging-trap-dlq-without-redrive-policy",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Receiving a message does not remove it: [it remains in the queue](../facts/sqs.md#sqs-receive-keeps-message-hidden) and is hidden from other consumers for the visibility timeout. A consumer removes it with a separate call: [you explicitly delete messages](../facts/sqs.md#sqs-manual-delete-after-processing) with DeleteMessage. Without that call, the message returns to the queue and is processed again.",
+  "takeaway": "Receiving hides a message, and [you explicitly delete messages](../facts/sqs.md#sqs-manual-delete-after-processing) with DeleteMessage.",
+  "twin": "If the stem said \"the application calls DeleteMessage after it processes each message\" instead: the message is removed, because [you explicitly delete messages](../facts/sqs.md#sqs-manual-delete-after-processing) with that call.",
+  "say": "Receiving only hides the message; if nobody deletes it, it comes back when the visibility timeout ends.",
+  "facts": [
+   "sqs-receive-keeps-message-hidden",
+   "sqs-undeleted-message-visible-again",
+   "sqs-manual-delete-after-processing",
+   "sqs-dlq-max-receive-count-meaning"
+  ],
+  "sources": [],
+  "exam_english": [],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q005",
+  "section": "2-deep.md#an-sns-topic-pushes-each-published-message-to-all-its-subscribers",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.K3"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "sns",
+   "sqs",
+   "eventbridge"
+  ],
+  "concept": "pub-sub-topic-basics",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company is splitting an application into microservices. When a customer places an order, the order service creates an order event. The billing, shipping and email microservices must each receive every order event at the same time, and each microservice handles the event in its own way. The order service must not wait for the other microservices or know their addresses. Which AWS service provides this publish/subscribe model?",
+  "keywords": [
+   "must each receive every order event at the same time",
+   "publish/subscribe model"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "One Amazon SQS standard queue that the order service sends each event to, polled by all three microservices",
+    "correct": false,
+    "why": "A queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss): the three microservices split the events between them, and none of them receives every event.",
+    "concept": "shared-queue",
+    "trap": "messaging-trap-queue-broadcasts",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "One Amazon SQS FIFO queue that the order service sends each event to, with one message group ID per microservice",
+    "correct": false,
+    "why": "A message group ID orders messages inside one queue; each message still goes to one consumer, so the order service would have to send three copies itself.",
+    "concept": "fifo-message-groups",
+    "trap": null,
+    "misconception": "message group IDs give each consumer its own copy of every message",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Amazon EventBridge Scheduler, with one schedule for each microservice that passes on the new order events",
+    "correct": false,
+    "why": "EventBridge Scheduler runs [rate-based, cron-based, and one-time schedules](../facts/eventbridge.md#eventbridge-scheduler-three-schedule-types): a schedule starts at a set time, not when an order event appears.",
+    "concept": "eventbridge-scheduler",
+    "trap": null,
+    "misconception": "a scheduler forwards events as they happen",
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "d",
+    "text": "An Amazon SNS topic that the order service publishes each event to, with one subscription for each microservice",
+    "correct": true,
+    "why": "A published message goes to [all applicable subscribers](../facts/sns.md#sns-faq-publish-triggers-delivery-to-all-subscribers) of the topic, so each microservice gets its own copy of every event.",
+    "concept": "sns-topic",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Publish/subscribe is the job of SNS: it is built for [pub/sub messaging](../facts/sns.md#sns-decision-typical-use). When the order service publishes an event to the topic, SNS delivers it to [all applicable subscribers](../facts/sns.md#sns-faq-publish-triggers-delivery-to-all-subscribers) at once. The order service knows the topic, not the microservices, and each microservice has its own subscription.",
+  "takeaway": "Every consumer needs every message: publish to an SNS topic, not to one shared queue.",
+  "twin": "If the stem said \"each order event must be handled by one of three identical workers\" instead: one SQS queue, because a queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss).",
+  "say": "Every service needs every event, so I publish to an SNS topic and give each service a subscription.",
+  "facts": [
+   "sns-decision-typical-use",
+   "sns-faq-publish-triggers-delivery-to-all-subscribers",
+   "sqs-typically-single-subscriber-order-and-loss",
+   "eventbridge-scheduler-three-schedule-types"
+  ],
+  "sources": [],
+  "exam_english": [],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q011",
+  "section": "2-deep.md#a-fifo-queue-keeps-order-inside-each-message-group-and-drops-duplicates",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.K3",
+   "3.2.S1"
+  ],
+  "topics": [
+   "integration",
+   "performance"
+  ],
+  "services": [
+   "sqs"
+  ],
+  "concept": "fifo-group-id-per-customer",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company sends account events for many customers to Amazon SQS. The events of each customer must be processed exactly once and in the order they were sent. Events of different customers must be processed in parallel by many consumers, so that a slow customer does not delay the others. Which combination of actions should a solutions architect take to meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "processed exactly once and in the order they were sent",
+   "Events of different customers must be processed in parallel",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Give each event a random message group ID, because the FIFO queue keeps one order across all of its messages.",
+    "correct": false,
+    "why": "Order holds inside a group, but [messages with different message group IDs](../facts/sqs.md#sqs-fifo-no-order-across-groups) can arrive or be processed out of order, so random IDs break each customer's order.",
+    "concept": "random-group-id",
+    "trap": "messaging-trap-fifo-global-order",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Use an Amazon SQS standard queue, because a standard queue delivers each message once and in the order it was sent.",
+    "correct": false,
+    "why": "A standard queue gives [at-least-once message delivery](../facts/sqs.md#sqs-standard-at-least-once-duplicates), so [more than one copy of a message](../facts/sqs.md#sqs-standard-at-least-once-duplicates) can arrive.",
+    "concept": "standard-queue",
+    "trap": "messaging-trap-standard-exactly-once",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Create an Amazon SQS FIFO queue, and have the producers send the account events of all customers to that one queue.",
+    "correct": true,
+    "why": "A FIFO queue gives [exactly-once processing](../facts/sqs.md#sqs-faq-fifo-exactly-once-processing), and one queue serves every customer without extra queues to manage.",
+    "concept": "fifo-queue",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a separate Amazon SQS FIFO queue for each customer, and run a dedicated group of consumers for each of those queues.",
+    "correct": false,
+    "why": "It works, but every new customer needs a new queue and new consumers, while one queue with a group for each customer does the same job.",
+    "concept": "queue-per-customer",
+    "trap": null,
+    "misconception": "parallel work needs a separate queue for each customer",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Set the message group ID of each event to the ID of the customer that the event belongs to.",
+    "correct": true,
+    "why": "Order is strict [within a message group ID](../facts/sqs.md#sqs-fifo-order-strict-within-group), and different groups allow [parallel processing of messages](../facts/sqs.md#sqs-fifo-groups-processed-in-parallel) by many consumers.",
+    "concept": "message-group-id",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "A FIFO queue gives [exactly-once processing](../facts/sqs.md#sqs-faq-fifo-exactly-once-processing). The message group ID decides the rest: order is kept [within a message group ID](../facts/sqs.md#sqs-fifo-order-strict-within-group), and the queue allows parallel work [across different message group IDs](../facts/sqs.md#sqs-fifo-groups-processed-in-parallel). With the customer ID as the group ID, each customer keeps its order, and many consumers work on different customers at the same time.",
+  "takeaway": "In a FIFO queue, the message group ID sets the unit of order and the unit of parallel work.",
+  "twin": "If the stem said \"all events must be processed in one strict order\" instead: use one message group ID for all events, because order is strict [within a message group ID](../facts/sqs.md#sqs-fifo-order-strict-within-group).",
+  "say": "One FIFO queue, and the customer ID as the message group ID: order per customer, parallel across customers.",
+  "facts": [
+   "sqs-faq-fifo-exactly-once-processing",
+   "sqs-fifo-order-strict-within-group",
+   "sqs-fifo-groups-processed-in-parallel",
+   "sqs-fifo-no-order-across-groups",
+   "sqs-standard-at-least-once-duplicates"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-select-two",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q013",
+  "section": "2-deep.md#an-eventbridge-rule-matches-event-content-and-sends-each-match-to-its-targets",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.S3",
+   "2.1.K5"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "eventbridge",
+   "sns",
+   "sqs"
+  ],
+  "concept": "eventbridge-vs-sns-routing",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company is building an event-driven platform for its online store. Services that several teams own must react to events, and each service needs only some of the events. The teams do not want to write or run routing code. The events come from AWS services, from the company's own applications, and from a SaaS partner's application. Each service selects events by fields inside the event detail. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "from a SaaS partner's application",
+   "by fields inside the event detail",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Write the events to an Amazon Kinesis data stream, and have every service read all records of the stream and discard the events that it does not need.",
+    "correct": false,
+    "why": "A stream is built for [real-time processing of streaming big data](../facts/sqs.md#sqs-faq-kinesis-streams-realtime-and-replay); every service would need its own code to read and filter events that a rule matches for it.",
+    "concept": "kinesis-stream",
+    "trap": null,
+    "misconception": "a data stream is the managed way to route events to many services",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Send the events to one Amazon SQS queue, and have every service poll the queue and discard the events that it does not need.",
+    "correct": false,
+    "why": "A queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss): services that poll one queue split the events, so each service misses events it needs.",
+    "concept": "shared-queue",
+    "trap": "messaging-trap-queue-broadcasts",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Send the events to an Amazon EventBridge event bus, and create one rule for each service with an event pattern that matches the events it needs.",
+    "correct": true,
+    "why": "EventBridge takes events from all three kinds of sources, and each rule's pattern can test [event metadata, and/or event detail values](../facts/eventbridge.md#eventbridge-pattern-matches-metadata-data-content).",
+    "concept": "eventbridge-rules",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Publish the events to an Amazon SNS topic, and subscribe each service to the topic with a filter policy that matches the events it needs.",
+    "correct": false,
+    "why": "EventBridge is the [only event-based service](../facts/eventbridge.md#eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners) with a direct SaaS partner link, so the SaaS events would need extra parts before they reach the topic.",
+    "concept": "sns-filter-policies",
+    "trap": "messaging-trap-topic-receives-saas-events",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The SaaS source decides it: EventBridge is the [only event-based service](../facts/eventbridge.md#eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners) that integrates directly with [third-party SaaS partners](../facts/eventbridge.md#eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners). The [default event bus](../facts/eventbridge.md#eventbridge-default-bus-receives-aws-service-events) also [automatically receives events from AWS services](../facts/eventbridge.md#eventbridge-default-bus-receives-aws-service-events), and a rule for each service selects events by fields in the event detail, with no routing code.",
+  "takeaway": "Events from AWS services, your applications and SaaS partners, matched on content: an EventBridge event bus with rules.",
+  "twin": "If the stem said \"All events come from the company's own order application. Every event must also reach the mobile phones of thousands of field agents by SMS\" instead: an SNS topic with filter policies.",
+  "say": "SaaS events plus AWS events plus content matching: that is an EventBridge event bus with one rule per service.",
+  "facts": [
+   "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners",
+   "eventbridge-default-bus-receives-aws-service-events",
+   "eventbridge-pattern-matches-metadata-data-content",
+   "sqs-typically-single-subscriber-order-and-loss",
+   "sqs-faq-kinesis-streams-realtime-and-replay"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q015",
+  "section": "2-deep.md#after-too-many-failed-receives-sqs-moves-a-message-to-a-dead-letter-queue",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K2",
+   "2.1.K11"
+  ],
+  "topics": [
+   "integration",
+   "operations"
+  ],
+  "services": [
+   "sqs"
+  ],
+  "concept": "dlq-retention-longer-than-source",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company uses an Amazon SQS standard queue with a dead-letter queue. Both queues keep the default message retention period. A message moves to the dead-letter queue after it fails several times, usually within one hour of the first send. Failed messages disappear from the dead-letter queue before the support team reviews them. The company must retain each failed message for at least 10 days after it was first sent. Which solution meets this requirement with the LEAST operational overhead?",
+  "keywords": [
+   "Both queues keep the default message retention period",
+   "at least 10 days after it was first sent",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Set the message retention period of the source queue to 14 days, and keep the retention period of the dead-letter queue at its default.",
+    "correct": false,
+    "why": "The messages leave the source queue within an hour; the dead-letter queue still deletes them [4 days](../facts/sqs.md#sqs-message-retention-default) after the first send.",
+    "concept": "source-retention",
+    "trap": null,
+    "misconception": "the source queue's retention controls a message after it moves",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Set the message retention period of the dead-letter queue to 14 days, and keep the retention period of the source queue unchanged.",
+    "correct": true,
+    "why": "The dead-letter queue's own retention deletes the failed messages, and [14 days](../facts/sqs.md#sqs-message-retention-range) after the first send covers the 10 days.",
+    "concept": "dlq-retention",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Lower the maximum receives of the redrive policy, so that failed messages move sooner and get more time in the dead-letter queue.",
+    "correct": false,
+    "why": "In a standard queue [the enqueue timestamp is unchanged](../facts/sqs.md#sqs-dlq-standard-enqueue-timestamp-unchanged) by the move, so an earlier move gives no extra time.",
+    "concept": "max-receive-count",
+    "trap": "messaging-trap-dlq-fresh-retention",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Create a scheduled AWS Lambda function that copies the messages in the dead-letter queue to an Amazon S3 bucket every day.",
+    "correct": false,
+    "why": "It works, but the company writes and runs copy code when one queue setting keeps the messages long enough.",
+    "concept": "copy-to-s3",
+    "trap": null,
+    "misconception": "a queue cannot keep messages long enough, so they need a second store",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "In a standard queue, [the enqueue timestamp is unchanged](../facts/sqs.md#sqs-dlq-standard-enqueue-timestamp-unchanged) when a message moves, so the dead-letter queue counts its retention from the first send. Its default of [4 days](../facts/sqs.md#sqs-message-retention-default) is too short. AWS advises a dead-letter queue retention [longer than the retention period](../facts/sqs.md#sqs-dlq-retention-longer-than-source-queue) of the source queue, and the maximum of [14 days](../facts/sqs.md#sqs-message-retention-range) covers 10 days.",
+  "takeaway": "A dead-letter queue counts retention from the first send, so give it the longer retention.",
+  "twin": "If the stem said \"for at least 30 days after it was first sent\" instead: copy the failed messages to Amazon S3, because a queue keeps a message for at most [14 days](../facts/sqs.md#sqs-message-retention-range).",
+  "say": "The move does not reset the clock, so I raise the retention of the dead-letter queue itself to fourteen days.",
+  "facts": [
+   "sqs-dlq-standard-enqueue-timestamp-unchanged",
+   "sqs-dlq-retention-longer-than-source-queue",
+   "sqs-message-retention-range",
+   "sqs-message-retention-default"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-retain",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q017",
+  "section": "2-deep.md#failed-deliveries-are-retried-and-then-dropped-unless-a-dead-letter-queue-catches-them",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K5",
+   "2.1.S1"
+  ],
+  "topics": [
+   "integration",
+   "resilience"
+  ],
+  "services": [
+   "eventbridge",
+   "lambda"
+  ],
+  "concept": "eventbridge-archive-and-replay",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company publishes order events to a custom Amazon EventBridge event bus. A rule on the bus sends the events to an AWS Lambda function. Last week, a bug made the function process orders wrongly for several hours. After the fix, the company could not process those events again. After any future bug, the company must be able to process the events of the last 30 days again. Which solution meets this requirement with the LEAST operational overhead?",
+  "keywords": [
+   "process orders wrongly for several hours",
+   "process the events of the last 30 days again",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "After each fix, configure the Lambda function to read the events of the affected time window again from the custom event bus.",
+    "correct": false,
+    "why": "EventBridge [doesn't persist events](../facts/eventbridge.md#eventbridge-decision-no-persistence-at-least-once), so the bus has no past events for the function to read.",
+    "concept": "read-from-bus",
+    "trap": "messaging-trap-bus-stores-events",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Configure an Amazon SQS dead-letter queue for the rule target, and after each fix send the events in that dead-letter queue to the function again.",
+    "correct": false,
+    "why": "A target's dead-letter queue stores [events that couldn't successfully be delivered](../facts/eventbridge.md#eventbridge-dlq-is-standard-sqs-queue); these events were delivered, and the function processed them wrongly.",
+    "concept": "target-dlq",
+    "trap": "messaging-trap-target-dlq-keeps-processed-events",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Add a rule that sends every event through Amazon Data Firehose to Amazon S3, and write a tool that publishes the stored events again.",
+    "correct": false,
+    "why": "It works, but the company builds and runs a copy pipeline and a resend tool that an archive and a replay already provide.",
+    "concept": "firehose-copy",
+    "trap": null,
+    "misconception": "past events can be sent again only with a custom store and tool",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create an archive of the event bus that keeps events for 30 days, and after each fix start a replay of the affected time window.",
+    "correct": true,
+    "why": "The archive keeps the events for the days you set, and a replay sends the events of the chosen window back to the bus.",
+    "concept": "archive-replay",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The bus keeps nothing by itself: EventBridge [doesn't persist events](../facts/eventbridge.md#eventbridge-decision-no-persistence-at-least-once). An archive keeps them, and you set the [days to retain events in the archive](../facts/eventbridge.md#eventbridge-archive-retention-indefinite-by-default). After a fix, a replay lets you [reprocess past events](../facts/eventbridge.md#eventbridge-faq-event-replay-reprocesses-past-events-to-bus-or-rule) of the affected window, and the rule sends them to the fixed function.",
+  "takeaway": "To process EventBridge events again later, archive them first and replay them after the fix.",
+  "twin": "If the stem said \"the rule could not deliver the events to the function\" instead: a dead-letter queue on the target, because it stores [events that couldn't successfully be delivered](../facts/eventbridge.md#eventbridge-dlq-is-standard-sqs-queue).",
+  "say": "The bus keeps nothing, so I archive the events and replay the bad window after the fix.",
+  "facts": [
+   "eventbridge-decision-no-persistence-at-least-once",
+   "eventbridge-archive-retention-indefinite-by-default",
+   "eventbridge-faq-event-replay-reprocesses-past-events-to-bus-or-rule",
+   "eventbridge-dlq-is-standard-sqs-queue",
+   "eventbridge-classic-bus-does-not-retain-events"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q018",
+  "section": "2-deep.md#an-sns-topic-pushes-each-published-message-to-all-its-subscribers",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.S1",
+   "2.1.S3"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "sns",
+   "eventbridge",
+   "sqs"
+  ],
+  "concept": "eventbridge-vs-sns-routing",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company is building an event-driven platform for its online store. Services that several teams own must react to events, and each service needs only some of the events. The teams do not want to write or run routing code. All events come from the company's own order application. Every event must also reach the mobile phones of thousands of field agents by SMS within seconds. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "All events come from the company's own order application",
+   "mobile phones of thousands of field agents by SMS",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Write the events to an Amazon Kinesis data stream, and have every service read all records of the stream and discard the events that it does not need.",
+    "correct": false,
+    "why": "A stream is built for [real-time processing of streaming big data](../facts/sqs.md#sqs-faq-kinesis-streams-realtime-and-replay); each service needs its own filter code, and the SMS messages still need another service.",
+    "concept": "kinesis-stream",
+    "trap": null,
+    "misconception": "a data stream is the managed way to route events to many services",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Send the events to one Amazon SQS queue, and have every service poll the queue and discard the events that it does not need.",
+    "correct": false,
+    "why": "A queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss): services that poll one queue split the events, and a queue sends no SMS.",
+    "concept": "shared-queue",
+    "trap": "messaging-trap-queue-broadcasts",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Send the events to an Amazon EventBridge event bus, and create one rule for each service with an event pattern that matches the events it needs.",
+    "correct": false,
+    "why": "It works for the services, but the SMS messages still need an SNS topic as a rule target: two services where SNS alone covers both needs.",
+    "concept": "eventbridge-rules",
+    "trap": null,
+    "misconception": "an event bus is the better router even when every event comes from one application",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Publish the events to an Amazon SNS topic, and subscribe each service to the topic with a filter policy that matches the events it needs.",
+    "correct": true,
+    "why": "Each service filters with [subscription filter policies](../facts/sns.md#sns-decision-filter-policies), and the agents' phone numbers subscribe to the same topic without a filter.",
+    "concept": "sns-filter-policies",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "One service covers both needs. An SNS topic delivers to [mobile applications, mobile phone numbers, and email addresses](../facts/sns.md#sns-a2p-subscriber-types) as well as to services, and SNS is recommended for [thousands or millions of endpoints](../facts/sns.md#sns-faq-sns-recommended-for-high-fan-out-thousands-or-millions). Each service picks its events with a filter policy, and the field agents' phones receive every event.",
+  "takeaway": "Events from your own application that also go to many phones: an SNS topic with filter policies.",
+  "twin": "If the stem said \"The events come from AWS services, from the company's own applications, and from a SaaS partner's application\" instead: an EventBridge event bus, because it integrates directly with [third-party SaaS partners](../facts/eventbridge.md#eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners).",
+  "say": "One source and thousands of phones by SMS: an SNS topic, with filter policies for the services.",
+  "facts": [
+   "sns-a2p-subscriber-types",
+   "sns-faq-sns-recommended-for-high-fan-out-thousands-or-millions",
+   "sns-decision-filter-policies",
+   "sqs-typically-single-subscriber-order-and-loss",
+   "sqs-faq-kinesis-streams-realtime-and-replay",
+   "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": "messaging-q013"
+ },
+ {
+  "id": "messaging-q019",
+  "section": "2-deep.md#failed-deliveries-are-retried-and-then-dropped-unless-a-dead-letter-queue-catches-them",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.K3",
+   "3.2.S1"
+  ],
+  "topics": [
+   "integration",
+   "resilience"
+  ],
+  "services": [
+   "sns",
+   "sqs"
+  ],
+  "concept": "sns-subscription-dead-letter-queue",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "An Amazon SNS standard topic delivers order events to a partner's HTTPS endpoint and to an Amazon SQS queue of the company. The partner endpoint is sometimes unavailable for several hours, and the events for the partner are lost. The company must keep each undelivered event for the partner so that it can send the event again later. Which combination of actions meets these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "unavailable for several hours",
+   "keep each undelivered event for the partner",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Attach the new queue as the dead-letter queue of the SNS topic itself, so that the queue catches the failed deliveries of every subscription of the topic.",
+    "correct": false,
+    "why": "A topic has no dead-letter queue, because [message deliveries happen at the subscription level](../facts/sns.md#sns-dlq-attached-to-subscription-not-topic).",
+    "concept": "topic-dlq",
+    "trap": "messaging-trap-dlq-on-topic",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Create an Amazon SQS standard queue in the same AWS account and Region as the partner's subscription, with a policy that allows the topic to send.",
+    "correct": true,
+    "why": "The dead-letter queue must be in the [same AWS account and Region](../facts/sns.md#sns-dlq-same-account-and-region-as-subscription) as the subscription, and SNS sends to it after you [set a policy on the Amazon SQS queue](../facts/sns.md#sns-sqs-queue-needs-policy-allowing-topic).",
+    "concept": "dlq-queue",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Change the delivery policy of the HTTPS subscription so that Amazon SNS keeps retrying each failed delivery to the partner endpoint for 24 hours.",
+    "correct": false,
+    "why": "The total retry time of an HTTP/S delivery policy cannot exceed [3,600 seconds](../facts/sns.md#sns-retry-http-total-retry-time-max), so the topic cannot hold an event for a whole day.",
+    "concept": "http-retry-policy",
+    "trap": "messaging-trap-topic-stores-messages",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Replace the HTTPS subscription with an AWS Lambda function that calls the partner endpoint and stores each failed event in Amazon S3.",
+    "correct": false,
+    "why": "It works, but the company writes and runs delivery and retry code that a dead-letter queue on the subscription already gives.",
+    "concept": "lambda-delivery",
+    "trap": null,
+    "misconception": "keeping failed deliveries needs custom delivery code",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Attach the new queue as the dead-letter queue of the partner's HTTPS subscription, and send the stored events again when the partner is back.",
+    "correct": true,
+    "why": "Deliveries happen per subscription, so the dead-letter queue is [attached to an Amazon SNS subscription](../facts/sns.md#sns-dlq-attached-to-subscription-not-topic) and keeps the partner's failed events for a later resend.",
+    "concept": "subscription-dlq",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "When its retries end, SNS [stops retrying the delivery and discards the message](../facts/sns.md#sns-retry-exhausted-discards-unless-dlq) unless [a dead-letter queue is attached to the subscription](../facts/sns.md#sns-retry-exhausted-discards-unless-dlq). So the company creates a standard queue that SNS can write to and attaches it to the partner's subscription. The queue keeps each undelivered event until the company sends it again.",
+  "takeaway": "An SNS dead-letter queue belongs to one subscription, in the same account and Region.",
+  "twin": "If the stem said \"each event must wait in a queue until the partner pulls it\" instead: subscribe an SQS queue for the partner, which prevents loss [when subscribers are offline](../facts/sns.md#sns-with-sqs-prevents-loss-for-offline-subscribers).",
+  "say": "SNS drops a message when its retries end, so I attach a dead-letter queue to the partner's subscription.",
+  "facts": [
+   "sns-retry-exhausted-discards-unless-dlq",
+   "sns-dlq-attached-to-subscription-not-topic",
+   "sns-dlq-same-account-and-region-as-subscription",
+   "sns-sqs-queue-needs-policy-allowing-topic",
+   "sns-retry-http-total-retry-time-max",
+   "sns-with-sqs-prevents-loss-for-offline-subscribers",
+   "sns-dlq-queue-type-matches-topic-type"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-select-two",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q021",
+  "section": "2-deep.md#an-eventbridge-rule-matches-event-content-and-sends-each-match-to-its-targets",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K2",
+   "2.1.K5"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "eventbridge",
+   "sqs",
+   "lambda"
+  ],
+  "concept": "scheduler-vs-delay-queue",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs the sign-up process of its web application on AWS Lambda. The company must send a reminder email to each new user 3 days after the user signs up. Each reminder is a one-time action for that user, and many users sign up every day. An existing Lambda function already sends one reminder email when it is invoked with a user ID. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "3 days after the user signs up",
+   "one-time action",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "When a user signs up, send the user ID to an Amazon SQS delay queue with a delay of 3 days, and have the reminder function read the queue.",
+    "correct": false,
+    "why": "A delay queue holds a message for at most [15 minutes](../facts/sqs.md#sqs-delay-queue-range), so a delay of 3 days is not possible.",
+    "concept": "delay-queue",
+    "trap": "messaging-trap-delay-queue-days",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Run a cron job on an Amazon EC2 instance every hour that reads the user table and invokes the reminder function for users who signed up 3 days ago.",
+    "correct": false,
+    "why": "It works, but the company patches and runs an instance and writes scanning code for a job that a schedule does by itself.",
+    "concept": "ec2-cron",
+    "trap": null,
+    "misconception": "timed jobs need a server that runs a cron table",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "When a user signs up, create an Amazon EventBridge Scheduler one-time schedule that invokes the reminder function with the user ID 3 days later.",
+    "correct": true,
+    "why": "A one-time schedule [invokes a target only once](../facts/eventbridge.md#eventbridge-scheduler-one-time-schedule-invokes-once), at the time set during sign-up, with no server and no polling code.",
+    "concept": "scheduler-one-time",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "When a user signs up, send the user ID to an Amazon SQS queue with a message timer of 3 days, and have the reminder function read the queue.",
+    "correct": false,
+    "why": "A message timer has the same limit as a delay queue: at most [15 minutes](../facts/sqs.md#sqs-message-timer-range) for each message.",
+    "concept": "message-timer",
+    "trap": "messaging-trap-delay-queue-days",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "SQS delay queues and message timers schedule delivery [up to 15 minutes in the future](../facts/sqs.md#sqs-eventbridge-scheduler-for-advanced-scheduling), far short of 3 days. For longer waits, [EventBridge Scheduler is the recommended solution](../facts/sqs.md#sqs-eventbridge-scheduler-for-advanced-scheduling). A one-time schedule per user [invokes a target only once](../facts/eventbridge.md#eventbridge-scheduler-one-time-schedule-invokes-once), at the reminder time, and nothing runs in between.",
+  "takeaway": "A wait longer than [15 minutes](../facts/sqs.md#sqs-delay-queue-range) is a job for EventBridge Scheduler, not for an SQS delay.",
+  "twin": "If the stem said \"10 minutes after the user signs up\" instead: an SQS delay queue fits, because it delays delivery for at most [15 minutes](../facts/sqs.md#sqs-delay-queue-range).",
+  "say": "SQS can delay a message for fifteen minutes at most, so for three days I create a one-time schedule in EventBridge Scheduler.",
+  "facts": [
+   "sqs-eventbridge-scheduler-for-advanced-scheduling",
+   "eventbridge-scheduler-one-time-schedule-invokes-once",
+   "sqs-delay-queue-range",
+   "sqs-message-timer-range"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-one-time"
+  ],
+  "twin_of": null
+ }
+]

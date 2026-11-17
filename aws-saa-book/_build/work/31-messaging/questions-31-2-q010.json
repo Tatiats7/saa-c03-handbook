@@ -1,0 +1,74 @@
+[
+ {
+  "id": "messaging-q010",
+  "section": "2-deep.md#workers-scale-on-the-backlog-per-instance-and-not-on-queue-length",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": ["3.2.S2", "3.2.S1"],
+  "topics": ["integration", "operations"],
+  "services": ["sqs", "cloudwatch"],
+  "concept": "age-of-oldest-message-alarm",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs an order system in which Amazon EC2 instances process messages from an Amazon SQS queue. On some nights the consumers stop working for a while, and customers notice late orders the next morning. The operations team wants to monitor the queue and receive an alarm when messages wait too long before a consumer processes them. Which Amazon CloudWatch metric should the alarm use?",
+  "keywords": ["messages wait too long before a consumer processes them", "the consumers stop working"],
+  "options": [
+   {
+    "id": "a",
+    "text": "The ApproximateNumberOfMessagesNotVisible metric of the queue",
+    "correct": false,
+    "why": "It counts messages [received but not yet deleted or expired](../facts/sqs.md#sqs-metric-not-visible-messages-is-in-flight), so it shows work in progress, and stopped consumers receive nothing.",
+    "concept": "in-flight-metric",
+    "trap": "messaging-trap-in-flight-is-backlog",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "The NumberOfMessagesSent metric of the queue",
+    "correct": false,
+    "why": "It counts the messages that producers add to the queue, so it shows arrivals, not how long any message waits.",
+    "concept": "messages-sent-metric",
+    "trap": null,
+    "misconception": "The number of arriving messages shows how long messages wait.",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "The ApproximateAgeOfOldestMessage metric of the queue",
+    "correct": true,
+    "why": "It reports the age of the [oldest unprocessed message in the queue](../facts/sqs.md#sqs-metric-age-of-oldest-message-measures-lag), which is the wait that the team wants to watch.",
+    "concept": "age-of-oldest-message",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "The CPUUtilization metric of the consumer instances",
+    "correct": false,
+    "why": "CPU shows how busy the instances are; stopped consumers use little CPU, so the alarm stays quiet when orders wait.",
+    "concept": "cpu-metric",
+    "trap": null,
+    "misconception": "Instance CPU shows how long messages wait in a queue.",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "The team cares about how long messages wait, not how many arrive. [ApproximateAgeOfOldestMessage](../facts/sqs.md#sqs-metric-age-of-oldest-message-measures-lag) reports the age of the oldest unprocessed message. When the consumers stop, that age grows, so an alarm on it fires whatever the number of instances.",
+  "takeaway": "To alarm on waiting time, watch ApproximateAgeOfOldestMessage; to scale workers, use the backlog per instance.",
+  "twin": "If the stem said \"scale the consumers so that the backlog stays small\" instead: the [backlog per instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-backlog-per-instance), because a target tracking policy needs a value that moves with the group size.",
+  "say": "Wait time is the age of the oldest message, so I'd alarm on ApproximateAgeOfOldestMessage.",
+  "facts": [
+   "sqs-metric-age-of-oldest-message-measures-lag",
+   "sqs-metric-not-visible-messages-is-in-flight",
+   "ec2-auto-scaling-sqs-backlog-per-instance"
+  ],
+  "sources": [],
+  "exam_english": ["ee-monitor"],
+  "twin_of": null
+ }
+]

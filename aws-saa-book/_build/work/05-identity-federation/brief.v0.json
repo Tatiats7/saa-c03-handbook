@@ -1,0 +1,3647 @@
+{
+ "chapter": "05",
+ "title": "IAM Identity Center, Directory Service and Cognito",
+ "template": "medium",
+ "services": [
+  "iam-identity-center",
+  "directory-service",
+  "cognito"
+ ],
+ "written_by": "plan-05",
+ "written_at": "2026-10-12",
+ "note": "Security block chapter (reader's weakest domain). The docs host has Crawl-delay 5 shared by every agent, so the plan fetched a focused set (medium template: about 40 guide pages) plus every registry source; pages named in demand `sources` that are not yet saved are listed in `sources_missing` and in mine-plan `on_demand`, and miners fetch them with `saa.py fetch`. Facts already mined by chapter 03 in the iam-identity-center and cognito namespaces are named in `facts` (status mech-pass, not yet verified). Displays of number-free facts are verbatim phrases of at most 8 words (RULINGS 2026-10-11).",
+ "adjudicate_note": "adjudicate-05 (2026-10-12): 34 disputed facts after the first votes; 33 repaired once with facts amend (patches in _build/work/05-identity-federation/adj/), 1 rejected (directory-service-change-privatelink-2023-03, named by no demand). Repaired facts await fresh votes in batches 05-entail-012 and 05-currency-004. Demand statuses checked: every fact id named in demand exists and none is rejected; no status changes (d012 stays partial: launch date still unquotable).",
+ "sources_fetched": 39,
+ "fetch_failures": [],
+ "guides": {
+  "singlesignon-userguide": "aws-saa-book/_build/corpus/index/singlesignon-userguide.json",
+  "directoryservice-admin-guide": "aws-saa-book/_build/corpus/index/directoryservice-admin-guide.json",
+  "cognito-developerguide": "aws-saa-book/_build/corpus/index/cognito-developerguide.json"
+ },
+ "feeds": {
+  "faq": [
+   "aws-saa-book/_build/corpus/faq/iam-identity-center.jsonl",
+   "aws-saa-book/_build/corpus/faq/directoryservice.jsonl",
+   "aws-saa-book/_build/corpus/faq/cognito.jsonl"
+  ],
+  "changes": [
+   "aws-saa-book/_build/corpus/changes/iam-identity-center.jsonl",
+   "aws-saa-book/_build/corpus/changes/directory-service.jsonl",
+   "aws-saa-book/_build/corpus/changes/cognito.jsonl"
+  ],
+  "work_files": [
+   "changes-iam-identity-center.txt",
+   "changes-directory-service.txt",
+   "changes-cognito.txt",
+   "faq-iam-identity-center.txt",
+   "faq-directory-service.txt",
+   "faq-cognito.txt",
+   "cases-cognito.txt",
+   "cases-sso.txt",
+   "cases-directory-service.txt",
+   "fetch-1.txt",
+   "fetch-2.txt"
+  ]
+ },
+ "story": {
+  "stage": "3 First bank customer, month 18, order 21",
+  "trigger": "7 accounts for each engineer; the bank wants its 400 supervisors to sign in with the bank's identity provider",
+  "decision": "IAM users in every account / IAM users in one account who assume roles / CHOSEN: IAM Identity Center for engineers, Cognito federation for the bank",
+  "accepts": "all access depends on the identity provider; one tested emergency path",
+  "stage4": "AWS Directory Service for Peldon",
+  "question": "Ben: What is the difference between IAM Identity Center and Cognito? Both look like sign-in to me.",
+  "diagrams": [
+   "identity-federation-before",
+   "identity-federation-after: two sign-in paths, engineers through IAM Identity Center, bank supervisors through a Cognito user pool"
+  ],
+  "demand": [
+   "d120",
+   "d121",
+   "d122",
+   "d123"
+  ]
+ },
+ "orchestrator_focus": [
+  "can-or-cannot completeness: d007, d051, d054, d058, d075, d076, d078, d091, d099",
+  "neighbour comparisons: IdC vs Cognito (d067, d106), IdC vs direct IAM SAML federation (d066), user pool vs identity pool (d090, d092), AD Connector vs Managed AD vs Simple AD (d085), Managed AD vs self-managed (d083), AssumeRoleWithWebIdentity vs identity pool (d108)",
+  "changes since mid-2022: d009-d018, d028-d030, d037-d046 (GA after 2026-07-15 is not examinable yet)",
+  "numbers: d001-d008, d020-d027, d032-d035"
+ ],
+ "demand": [
+  {
+   "id": "d001",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "How many AWS accounts and how many applications can one IAM Identity Center instance configure by default, and can these quotas be increased?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-quota-accounts-or-applications"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/limits"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-quota-accounts-or-applications"
+   ]
+  },
+  {
+   "id": "d002",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "How many users and groups does the IAM Identity Center identity store support by default?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-quota-users",
+    "iam-identity-center-quota-groups"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/limits"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-quota-users",
+    "iam-identity-center-quota-groups"
+   ]
+  },
+  {
+   "id": "d003",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "How many permission sets per instance, provisioned permission sets per account, inline policies and managed policies per permission set does IAM Identity Center allow?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-quota-permission-sets",
+    "iam-identity-center-quota-provisioned-permission-sets-per-account",
+    "iam-identity-center-quota-inline-policy-per-permission-set",
+    "iam-identity-center-quota-inline-policy-size",
+    "iam-identity-center-quota-groups-per-permission-set-per-account"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/limits",
+    "docs/singlesignon/latest/userguide/permissionsetsconcept"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-quota-permission-sets",
+    "iam-identity-center-quota-provisioned-permission-sets-per-account",
+    "iam-identity-center-quota-inline-policy-per-permission-set",
+    "iam-identity-center-quota-inline-policy-size",
+    "iam-identity-center-quota-groups-per-permission-set-per-account"
+   ]
+  },
+  {
+   "id": "d004",
+   "bullet": "1.2.S3",
+   "lens": "numbers+changes",
+   "kind": "default",
+   "question": "What is the default session duration of a permission set (the role session in the AWS account), and what range can it be set to?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-permission-set-session-duration",
+    "iam-identity-center-role-sessions-persist-up-to-12-hours"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/howtosessionduration"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-permission-set-session-duration",
+    "iam-identity-center-role-sessions-persist-up-to-12-hours"
+   ]
+  },
+  {
+   "id": "d005",
+   "bullet": "1.2.S3",
+   "lens": "numbers+changes",
+   "kind": "default",
+   "question": "What is the default and the allowed range of the AWS access portal (user interactive) session duration?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-user-interactive-session-default-8-hours",
+    "iam-identity-center-user-interactive-session-max-90-days"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/configure-user-session",
+    "docs/singlesignon/latest/userguide/authconcept"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/configure-user-session",
+    "docs/singlesignon/latest/userguide/authconcept"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-user-interactive-session-default-8-hours",
+    "iam-identity-center-user-interactive-session-max-90-days"
+   ]
+  },
+  {
+   "id": "d006",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "How long are the AWS CLI credentials that a user gets from the AWS access portal valid?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-permission-set-session-duration"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs",
+    "docs/singlesignon/latest/userguide/howtogetcredentials"
+   ],
+   "sources_missing": [],
+   "registrar_note": "The FAQ sentence (CLI credentials valid for 60 minutes) was rejected as outdated (register-05, as register-03 did for iam-idc-faq-cli-credentials-60-minutes); the guide answer is the permission set session duration, default 1 hour, up to 12 hours. Chapter 03 fact iam-idc-cli-and-console-use-permission-set-duration states that the CLI uses it.",
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-permission-set-session-duration"
+   ]
+  },
+  {
+   "id": "d007",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "restriction",
+   "question": "How many identity sources can be connected to IAM Identity Center at one time?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-one-identity-source-at-a-time",
+    "iam-identity-center-quota-connected-directories"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/manage-your-identity-source",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-one-identity-source-at-a-time",
+    "iam-identity-center-quota-connected-directories"
+   ]
+  },
+  {
+   "id": "d008",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "restriction",
+   "question": "How many IAM Identity Center instances can an account have, and in which account must an organization instance be enabled?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-quota-one-instance-per-account",
+    "iam-identity-center-account-instance-one-per-account",
+    "iam-identity-center-org-instance-enabled-from-management-account"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/limits",
+    "docs/singlesignon/latest/userguide/organization-instances-identity-center",
+    "docs/singlesignon/latest/userguide/identity-center-instances"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-quota-one-instance-per-account",
+    "iam-identity-center-account-instance-one-per-account",
+    "iam-identity-center-org-instance-enabled-from-management-account"
+   ]
+  },
+  {
+   "id": "d009",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS (FRESHNESS): IAM Identity Center became multi-Region on 2026-02-02 (expanded 2026-07-28 to the Identity Center directory, 2026-08-06 one-click, 2026-09-30 more Regions). What does an additional Region provide (account access, applications, failover), what does it require, and which parts are GA after 2026-07-15 (not examinable yet)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-change-multi-region-2026-02",
+    "iam-identity-center-change-multi-region-identity-center-directory-2026-07",
+    "iam-identity-center-change-one-click-multi-region-2026-08",
+    "iam-identity-center-quota-regions-per-instance",
+    "iam-identity-center-admin-only-from-primary-region",
+    "iam-identity-center-throttle-limits-per-enabled-region",
+    "iam-identity-center-replication-to-additional-regions",
+    "iam-identity-center-multi-region-not-with-active-directory"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/multi-region-iam-identity-center",
+    "docs/singlesignon/latest/userguide/resiliency-regional-behavior",
+    "docs/singlesignon/latest/userguide/doc-history"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/multi-region-iam-identity-center",
+    "docs/singlesignon/latest/userguide/resiliency-regional-behavior"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-change-multi-region-2026-02",
+    "iam-identity-center-change-multi-region-identity-center-directory-2026-07",
+    "iam-identity-center-change-one-click-multi-region-2026-08",
+    "iam-identity-center-quota-regions-per-instance",
+    "iam-identity-center-admin-only-from-primary-region",
+    "iam-identity-center-throttle-limits-per-enabled-region",
+    "iam-identity-center-replication-to-additional-regions",
+    "iam-identity-center-multi-region-not-with-active-directory"
+   ]
+  },
+  {
+   "id": "d010",
+   "bullet": "1.2.S3",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: the maximum AWS access portal session duration increased from 7 days to 90 days on 2023-09-12. Confirm old value, new value and date.",
+   "status": "partial-verified",
+   "facts": [
+    "iam-identity-center-user-interactive-session-max-90-days"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/doc-history",
+    "docs/singlesignon/latest/userguide/configure-user-session"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/configure-user-session"
+   ],
+   "gap": "Old value (7 days) and date (2023-09-12) only in a What's New post refused by robots.txt; IdC document history has no row. Current maximum 90 days is a fact. Re-checked by register-05: no history row; no other saved page states the old value.",
+   "status_found": "partial",
+   "verified_facts": [
+    "iam-identity-center-user-interactive-session-max-90-days"
+   ]
+  },
+  {
+   "id": "d011",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "AWS Single Sign-On was renamed AWS IAM Identity Center on 2022-07-26. Confirm the rename statement and date (former name may appear once).",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-change-renamed-from-aws-sso-2022-07"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/doc-history",
+    "docs/singlesignon/latest/userguide/what-is"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-change-renamed-from-aws-sso-2022-07"
+   ]
+  },
+  {
+   "id": "d012",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "When were account instances of IAM Identity Center introduced (2023-11-17 hypothesis), and what are they for?",
+   "status": "partial-verified",
+   "facts": [
+    "iam-identity-center-account-instance-creation-nov-2023",
+    "iam-identity-center-account-instance-one-per-account"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/account-instances-identity-center",
+    "docs/singlesignon/latest/userguide/doc-history"
+   ],
+   "sources_missing": [],
+   "gap": "Launch date (What's New 2023-11-17) refused by robots.txt; only the 2023-11-15 boundary is quotable.",
+   "status_found": "partial",
+   "verified_facts": [
+    "iam-identity-center-account-instance-creation-nov-2023",
+    "iam-identity-center-account-instance-one-per-account"
+   ]
+  },
+  {
+   "id": "d013",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: on 2026-06-22 the single quota for accounts plus applications became separate quotas (7,000 each). What was the old combined quota?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-quota-accounts-or-applications",
+    "iam-identity-center-change-separate-account-application-quotas-2026-06"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/doc-history",
+    "docs/singlesignon/latest/userguide/limits"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-quota-accounts-or-applications",
+    "iam-identity-center-change-separate-account-application-quotas-2026-06"
+   ]
+  },
+  {
+   "id": "d014",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: since 2026-08-04 management of AWS account access is optional for new organization instances. Confirm; GA after 2026-07-15, so label not examinable yet.",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-change-multi-account-permissions-optional-2026-08"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/doc-history",
+    "docs/singlesignon/latest/userguide/enable-identity-center"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/enable-identity-center"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-change-multi-account-permissions-optional-2026-08"
+   ]
+  },
+  {
+   "id": "d015",
+   "bullet": "1.2.S3",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Since when (2025-09-17 hypothesis) can an organization instance use a customer managed KMS key for encryption at rest, and what does it encrypt?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-change-customer-managed-kms-keys-2025-09"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/identity-center-customer-managed-keys",
+    "docs/singlesignon/latest/userguide/encryption-at-rest",
+    "docs/singlesignon/latest/userguide/doc-history"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/identity-center-customer-managed-keys",
+    "docs/singlesignon/latest/userguide/encryption-at-rest"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-change-customer-managed-kms-keys-2025-09"
+   ]
+  },
+  {
+   "id": "d016",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: IAM Identity Center AD Sync was deprecated on 2025-04-17 in favour of configurable AD sync. What does configurable AD sync do?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-change-ad-sync-deprecated-2025-04",
+    "iam-identity-center-configurable-ad-sync-scope"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/doc-history",
+    "docs/singlesignon/latest/userguide/provision-users-from-ad-configurable-ADsync"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/provision-users-from-ad-configurable-ADsync"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-change-ad-sync-deprecated-2025-04",
+    "iam-identity-center-configurable-ad-sync-scope"
+   ]
+  },
+  {
+   "id": "d017",
+   "bullet": "1.2.S3",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "What MFA default do new IAM Identity Center instances get (change 2023-11-16 hypothesis)?",
+   "status": "partial-verified",
+   "facts": [
+    "iam-identity-center-mfa-on-by-default",
+    "iam-identity-center-mfa-devices-per-user"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/enable-mfa",
+    "docs/singlesignon/latest/userguide/mfa-types",
+    "docs/singlesignon/latest/userguide/doc-history"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/enable-mfa",
+    "docs/singlesignon/latest/userguide/mfa-types"
+   ],
+   "gap": "Current default (MFA on) is a fact; the date of the change (What's New 2023-11-16) is refused by robots.txt.",
+   "status_found": "partial",
+   "verified_facts": [
+    "iam-identity-center-mfa-on-by-default",
+    "iam-identity-center-mfa-devices-per-user"
+   ]
+  },
+  {
+   "id": "d018",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Since 2022-07-14 permission sets can use customer managed policies and permissions boundaries. Confirm and state the rule that the customer managed policy must exist in each account.",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-change-customer-managed-policies-2022-07",
+    "iam-identity-center-customer-managed-policy-must-preexist"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/doc-history",
+    "docs/singlesignon/latest/userguide/howtocmp",
+    "docs/singlesignon/latest/userguide/permissionsetsconcept"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/howtocmp"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-change-customer-managed-policies-2022-07",
+    "iam-identity-center-customer-managed-policy-must-preexist"
+   ]
+  },
+  {
+   "id": "d019",
+   "bullet": "1.1.K2",
+   "lens": "numbers+changes",
+   "kind": "pricing",
+   "question": "What does IAM Identity Center cost?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-no-extra-charge"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-no-extra-charge"
+   ]
+  },
+  {
+   "id": "d020",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "default",
+   "question": "How many domain controllers does AWS Managed Microsoft AD create by default, where are they placed, and what is the maximum per directory?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-minimum-two-domain-controllers",
+    "directory-service-managed-ad-two-azs-default",
+    "directory-service-quota-domain-controllers-per-directory"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_microsoft_ad",
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created",
+    "docs/directoryservice/latest/admin-guide/ms_ad_limits",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-minimum-two-domain-controllers",
+    "directory-service-managed-ad-two-azs-default",
+    "directory-service-quota-domain-controllers-per-directory"
+   ]
+  },
+  {
+   "id": "d021",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "What are the Standard and Enterprise Editions of AWS Managed Microsoft AD sized for (objects, users), per the FAQ and guide?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-standard-object-capacity",
+    "directory-service-managed-ad-enterprise-object-capacity"
+   ],
+   "sources": [
+    "www/directoryservice/faqs",
+    "docs/directoryservice/latest/admin-guide/directory_microsoft_ad"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-standard-object-capacity",
+    "directory-service-managed-ad-enterprise-object-capacity"
+   ]
+  },
+  {
+   "id": "d022",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "What is the default quota of AWS Managed Microsoft AD directories per account (Standard and Enterprise; Hybrid Edition)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-quota-managed-ad-directories"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_limits"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-quota-managed-ad-directories"
+   ]
+  },
+  {
+   "id": "d023",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "How many accounts can a directory be shared with (Standard, Enterprise, Hybrid)? HYPOTHESIS: sharing limits increased on 2025-08-15; find the old values only if stated.",
+   "status": "verified",
+   "facts": [
+    "directory-service-quota-shared-accounts-per-edition",
+    "directory-service-change-sharing-limits-2025-08"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_limits",
+    "docs/directoryservice/latest/admin-guide/ms_ad_directory_sharing"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_directory_sharing"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-quota-shared-accounts-per-edition",
+    "directory-service-change-sharing-limits-2025-08"
+   ]
+  },
+  {
+   "id": "d024",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "restriction",
+   "question": "Which edition supports multi-Region replication, and how many Regions can one directory span? (2026-04-01: opt-in Regions added.)",
+   "status": "verified",
+   "facts": [
+    "directory-service-multi-region-replication-enterprise-only",
+    "directory-service-multi-region-two-dcs-per-new-region",
+    "directory-service-multi-region-opt-in-primary-restriction",
+    "directory-service-change-multi-region-opt-in-2026-04",
+    "directory-service-quota-regions-per-enterprise-directory"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_configure_multi_region_replication",
+    "docs/directoryservice/latest/admin-guide/ms_ad_limits",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_configure_multi_region_replication"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-multi-region-replication-enterprise-only",
+    "directory-service-multi-region-two-dcs-per-new-region",
+    "directory-service-multi-region-opt-in-primary-restriction",
+    "directory-service-change-multi-region-opt-in-2026-04",
+    "directory-service-quota-regions-per-enterprise-directory"
+   ]
+  },
+  {
+   "id": "d025",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "How many manual snapshots per Managed Microsoft AD directory, and how old can a manual snapshot be?",
+   "status": "verified",
+   "facts": [
+    "directory-service-quota-managed-ad-manual-snapshots",
+    "directory-service-managed-ad-snapshot-max-age-180-days"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_limits"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-quota-managed-ad-manual-snapshots",
+    "directory-service-managed-ad-snapshot-max-age-180-days"
+   ]
+  },
+  {
+   "id": "d026",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "What sizes does AD Connector come in, what is each sized for, and what is the default quota of AD Connector directories?",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-two-sizes",
+    "directory-service-ad-connector-not-shareable-not-multi-vpc",
+    "directory-service-quota-ad-connector-directories"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_ad_connector",
+    "docs/directoryservice/latest/admin-guide/ad_connector_limits"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-two-sizes",
+    "directory-service-ad-connector-not-shareable-not-multi-vpc",
+    "directory-service-quota-ad-connector-directories"
+   ]
+  },
+  {
+   "id": "d027",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "What sizes does Simple AD come in (users, objects) and what is its directory quota?",
+   "status": "verified",
+   "facts": [
+    "directory-service-simple-ad-two-sizes",
+    "directory-service-simple-ad-user-sizing",
+    "directory-service-quota-simple-ad-directories"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_simple_ad",
+    "docs/directoryservice/latest/admin-guide/simple_ad_limits"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/directory_simple_ad"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-simple-ad-two-sizes",
+    "directory-service-simple-ad-user-sizing",
+    "directory-service-quota-simple-ad-directories"
+   ]
+  },
+  {
+   "id": "d028",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS (FRESHNESS): Simple AD availability change announced 2026-06-30; since 2026-07-30 Simple AD is no longer open to new customers. What can existing customers still do, and which alternatives does AWS name?",
+   "status": "verified",
+   "facts": [
+    "directory-service-simple-ad-closed-to-new-customers",
+    "directory-service-simple-ad-existing-customers-keep-it",
+    "directory-service-change-simple-ad-closed-2026-07",
+    "directory-service-change-simple-ad-announced-2026-06"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/simple-ad-availability-change",
+    "docs/directoryservice/latest/admin-guide/document_history"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/simple-ad-availability-change"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-simple-ad-closed-to-new-customers",
+    "directory-service-simple-ad-existing-customers-keep-it",
+    "directory-service-change-simple-ad-closed-2026-07",
+    "directory-service-change-simple-ad-announced-2026-06"
+   ]
+  },
+  {
+   "id": "d029",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Can a Managed Microsoft AD directory be upgraded from Standard to Enterprise Edition? (API 2025-10-02; console 2026-07-30 is after the cutoff.) Can it be downgraded?",
+   "status": "verified",
+   "facts": [
+    "directory-service-change-edition-upgrade-api-2025-10",
+    "directory-service-edition-upgrade-one-way"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_upgrade_edition",
+    "docs/directoryservice/latest/admin-guide/document_history"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_upgrade_edition"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-change-edition-upgrade-api-2025-10",
+    "directory-service-edition-upgrade-one-way"
+   ]
+  },
+  {
+   "id": "d030",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "What is AWS Managed Microsoft AD (Hybrid Edition), added 2025-07-30?",
+   "status": "verified",
+   "facts": [
+    "directory-service-change-hybrid-edition-2025-07",
+    "directory-service-hybrid-edition-extends-existing-forest"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/aws-hybrid-directory",
+    "docs/directoryservice/latest/admin-guide/document_history"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/aws-hybrid-directory"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-change-hybrid-edition-2025-07",
+    "directory-service-hybrid-edition-extends-existing-forest"
+   ]
+  },
+  {
+   "id": "d031",
+   "bullet": "1.1.S6",
+   "lens": "numbers+changes",
+   "kind": "pricing",
+   "question": "What are the pricing dimensions of AWS Directory Service (Managed AD per edition and domain controller hour, extra domain controllers, directory sharing, AD Connector size, free trial)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-pricing-type-and-size-no-minimum",
+    "directory-service-pricing-sharing-per-account-hour",
+    "directory-service-pricing-multi-region-data-transfer",
+    "directory-service-free-trial-1500-dc-hours",
+    "directory-service-price-example-enterprise-ohio",
+    "directory-service-price-example-sharing-hour"
+   ],
+   "sources": [
+    "www/directoryservice/pricing",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-pricing-type-and-size-no-minimum",
+    "directory-service-pricing-sharing-per-account-hour",
+    "directory-service-pricing-multi-region-data-transfer",
+    "directory-service-free-trial-1500-dc-hours",
+    "directory-service-price-example-enterprise-ohio",
+    "directory-service-price-example-sharing-hour"
+   ]
+  },
+  {
+   "id": "d032",
+   "bullet": "1.2.K5",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "What are the key user pool resource quotas: user pools per Region, app clients per pool, identity providers per pool, groups per pool, groups per user?",
+   "status": "verified",
+   "facts": [
+    "cognito-quota-user-pools-per-region",
+    "cognito-quota-app-clients-per-user-pool",
+    "cognito-quota-identity-providers-per-user-pool",
+    "cognito-quota-groups-per-user-pool",
+    "cognito-quota-groups-per-user",
+    "cognito-quota-users-per-user-pool"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/quotas"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-quota-user-pools-per-region",
+    "cognito-quota-app-clients-per-user-pool",
+    "cognito-quota-identity-providers-per-user-pool",
+    "cognito-quota-groups-per-user-pool",
+    "cognito-quota-groups-per-user",
+    "cognito-quota-users-per-user-pool"
+   ]
+  },
+  {
+   "id": "d033",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "default",
+   "question": "What are the default and allowed validity periods of the ID token, the access token and the refresh token in a user pool?",
+   "status": "verified",
+   "facts": [
+    "cognito-id-token-validity-range",
+    "cognito-access-token-validity-range",
+    "cognito-refresh-token-validity-range",
+    "cognito-refresh-token-default-30-days"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/quotas",
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-refresh-token"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-refresh-token"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-id-token-validity-range",
+    "cognito-access-token-validity-range",
+    "cognito-refresh-token-validity-range",
+    "cognito-refresh-token-default-30-days"
+   ]
+  },
+  {
+   "id": "d034",
+   "bullet": "1.2.K5",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "What are the identity pool resource quotas (identity pools per account, identity providers per pool, role mapping rules)?",
+   "status": "verified",
+   "facts": [
+    "cognito-quota-identity-pools-per-account",
+    "cognito-quota-user-pool-providers-per-identity-pool",
+    "cognito-quota-role-mapping-identity-providers",
+    "cognito-quota-rbac-rules",
+    "cognito-quota-identities-per-identity-pool-unlimited"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/quotas"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-quota-identity-pools-per-account",
+    "cognito-quota-user-pool-providers-per-identity-pool",
+    "cognito-quota-role-mapping-identity-providers",
+    "cognito-quota-rbac-rules",
+    "cognito-quota-identities-per-identity-pool-unlimited"
+   ]
+  },
+  {
+   "id": "d035",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "number",
+   "question": "Which user pool API request-rate quotas matter (for example UserAuthentication RPS), are they adjustable, and what is provisioned capacity (2024-01-25; self-service 2026-07-02)?",
+   "status": "verified",
+   "facts": [
+    "cognito-quota-user-authentication-rps",
+    "cognito-quota-user-creation-rps",
+    "cognito-quota-user-federation-rps",
+    "cognito-quota-client-authentication-rps",
+    "cognito-request-quotas-per-region-per-account",
+    "cognito-request-quotas-two-million-mau",
+    "cognito-change-purchase-quota-capacity-2024-01",
+    "cognito-change-provisioned-limit-apis-2026-07",
+    "cognito-pricing-higher-rps-per-rps-month"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/quotas",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-quota-user-authentication-rps",
+    "cognito-quota-user-creation-rps",
+    "cognito-quota-user-federation-rps",
+    "cognito-quota-client-authentication-rps",
+    "cognito-request-quotas-per-region-per-account",
+    "cognito-request-quotas-two-million-mau",
+    "cognito-change-purchase-quota-capacity-2024-01",
+    "cognito-change-provisioned-limit-apis-2026-07",
+    "cognito-pricing-higher-rps-per-rps-month"
+   ]
+  },
+  {
+   "id": "d036",
+   "bullet": "1.2.K5",
+   "lens": "numbers+changes",
+   "kind": "pricing",
+   "question": "How are Cognito user pools priced (monthly active users, feature plans Lite / Essentials / Plus, SAML or OIDC federated users, machine-to-machine), and what is in the free tier?",
+   "status": "verified",
+   "facts": [
+    "cognito-pricing-three-tiers-essentials-default",
+    "cognito-pricing-no-free-tier-plus",
+    "cognito-pricing-federated-free-tier-50-mau",
+    "cognito-price-example-essentials-mau",
+    "cognito-price-example-plus-mau",
+    "cognito-pricing-m2m-per-token-no-app-client-charge",
+    "cognito-free-tier-10000-mau",
+    "cognito-feature-plan-per-user-pool-default-essentials"
+   ],
+   "sources": [
+    "www/cognito/pricing",
+    "www/cognito/faqs",
+    "docs/cognito/latest/developerguide/cognito-sign-in-feature-plans"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-sign-in-feature-plans"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-pricing-three-tiers-essentials-default",
+    "cognito-pricing-no-free-tier-plus",
+    "cognito-pricing-federated-free-tier-50-mau",
+    "cognito-price-example-essentials-mau",
+    "cognito-price-example-plus-mau",
+    "cognito-pricing-m2m-per-token-no-app-client-charge",
+    "cognito-free-tier-10000-mau",
+    "cognito-feature-plan-per-user-pool-default-essentials"
+   ]
+  },
+  {
+   "id": "d037",
+   "bullet": "1.2.K5",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: feature plans Lite, Essentials and Plus replaced the old pricing model on 2024-11-22, together with managed login and passwordless sign-in. Which features need Essentials and which need Plus?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-feature-plans-2024-11",
+    "cognito-change-managed-login-2024-11",
+    "cognito-change-passkeys-otp-2024-11",
+    "cognito-pricing-lite-is-pre-2024-capabilities",
+    "cognito-tier-passkeys-essentials-plus",
+    "cognito-tier-adaptive-auth-plus-only",
+    "cognito-tier-compromised-credentials-plus-only",
+    "cognito-managed-login-essentials-plus-hosted-ui-all"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-sign-in-feature-plans",
+    "docs/cognito/latest/developerguide/feature-plans-features-essentials",
+    "docs/cognito/latest/developerguide/feature-plans-features-plus",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-sign-in-feature-plans",
+    "docs/cognito/latest/developerguide/feature-plans-features-essentials",
+    "docs/cognito/latest/developerguide/feature-plans-features-plus"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-feature-plans-2024-11",
+    "cognito-change-managed-login-2024-11",
+    "cognito-change-passkeys-otp-2024-11",
+    "cognito-pricing-lite-is-pre-2024-capabilities",
+    "cognito-tier-passkeys-essentials-plus",
+    "cognito-tier-adaptive-auth-plus-only",
+    "cognito-tier-compromised-credentials-plus-only",
+    "cognito-managed-login-essentials-plus-hosted-ui-all"
+   ]
+  },
+  {
+   "id": "d038",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: user pool multi-Region replication arrived 2026-05-28 (What's New 2026-06-04). What is replicated, how does failover work, and which plan does it need?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-multi-region-replication-2026-05",
+    "cognito-tier-multi-region-addon-essentials-plus",
+    "cognito-multi-region-replication-failover"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/user-pool-multi-region",
+    "docs/cognito/latest/developerguide/cognito-document-history",
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/user-pool-multi-region"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-multi-region-replication-2026-05",
+    "cognito-tier-multi-region-addon-essentials-plus",
+    "cognito-multi-region-replication-failover"
+   ]
+  },
+  {
+   "id": "d039",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Since 2026-05-28 can a user pool use a customer managed KMS key for encryption at rest?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-customer-managed-kms-key-2026-05",
+    "cognito-customer-managed-kms-multi-region-keys"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-document-history",
+    "docs/cognito/latest/developerguide/data-protection"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/data-protection"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-customer-managed-kms-key-2026-05",
+    "cognito-customer-managed-kms-multi-region-keys"
+   ]
+  },
+  {
+   "id": "d040",
+   "bullet": "1.2.K5",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "HYPOTHESIS: Amazon Cognito Sync is no longer open to new customers since 2026-07-30. Which services does AWS name instead?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-sync-closed-to-new-customers-2026-07",
+    "cognito-change-sync-closure-announced-2026-06"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-sync-availability-change",
+    "docs/cognito/latest/developerguide/cognito-document-history",
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-sync-availability-change"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-sync-closed-to-new-customers-2026-07",
+    "cognito-change-sync-closure-announced-2026-06"
+   ]
+  },
+  {
+   "id": "d041",
+   "bullet": "1.2.S3",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Since when can AWS WAF protect a user pool (2022-08 hypothesis) and managed login (2025-06-24)? Which endpoints does the web ACL cover?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-waf-user-pool-2022-08",
+    "cognito-change-waf-managed-login-2025-06",
+    "cognito-waf-covers-managed-login-and-public-apis",
+    "cognito-waf-all-plans-billed-separately"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/user-pool-waf",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/user-pool-waf"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-waf-user-pool-2022-08",
+    "cognito-change-waf-managed-login-2025-06",
+    "cognito-waf-covers-managed-login-and-public-apis",
+    "cognito-waf-all-plans-billed-separately"
+   ]
+  },
+  {
+   "id": "d042",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Refresh token rotation (2025-04-22): what changes when it is on?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-refresh-token-rotation-2025-04",
+    "cognito-tier-refresh-token-rotation-essentials-plus",
+    "cognito-refresh-token-rotation-behavior",
+    "cognito-refresh-token-rotation-not-with-refresh-token-auth"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-refresh-token",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-refresh-token"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-refresh-token-rotation-2025-04",
+    "cognito-tier-refresh-token-rotation-essentials-plus",
+    "cognito-refresh-token-rotation-behavior",
+    "cognito-refresh-token-rotation-not-with-refresh-token-auth"
+   ]
+  },
+  {
+   "id": "d043",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "AWS PrivateLink for user pools (2025-11-04) and identity pools (2025-12-10): which operations can go through an interface endpoint?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-privatelink-user-pools-2025-11",
+    "cognito-change-privatelink-identity-pools-2025-12",
+    "cognito-privatelink-user-pool-apis-not-domain-endpoints",
+    "cognito-privatelink-identity-pools-all-operations"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/vpc-interface-endpoints",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/vpc-interface-endpoints"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-privatelink-user-pools-2025-11",
+    "cognito-change-privatelink-identity-pools-2025-12",
+    "cognito-privatelink-user-pool-apis-not-domain-endpoints",
+    "cognito-privatelink-identity-pools-all-operations"
+   ]
+  },
+  {
+   "id": "d044",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Which MFA factors do user pools support now (SMS, TOTP, email since 2024-09), and what plan does email MFA need?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-email-mfa-2024-09",
+    "cognito-tier-email-mfa-essentials-plus",
+    "cognito-tier-sms-totp-mfa-all-tiers"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/user-pool-settings-mfa",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/user-pool-settings-mfa"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-email-mfa-2024-09",
+    "cognito-tier-email-mfa-essentials-plus",
+    "cognito-tier-sms-totp-mfa-all-tiers"
+   ]
+  },
+  {
+   "id": "d045",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "What does user pool deletion protection do (2022-10-20)?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-deletion-protection-default-2022-10"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/user-pool-settings-deletion-protection",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/user-pool-settings-deletion-protection"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-deletion-protection-default-2022-10"
+   ]
+  },
+  {
+   "id": "d046",
+   "bullet": "1.2.K4",
+   "lens": "numbers+changes",
+   "kind": "change",
+   "question": "Can users be imported with their password hashes (history 2026-07-13, What's New 2026-07-15: borderline cutoff)? Before that, could imported users keep their passwords?",
+   "status": "verified",
+   "facts": [
+    "cognito-change-password-hash-import-2026-07",
+    "cognito-bulk-import-new-password-required"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-import-users",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-import-users"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-change-password-hash-import-2026-07",
+    "cognito-bulk-import-new-password-required"
+   ]
+  },
+  {
+   "id": "d050",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is IAM Identity Center in one sentence: workforce single sign-on to AWS accounts and applications?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-workforce-sso-to-accounts-and-applications"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/what-is",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-workforce-sso-to-accounts-and-applications"
+   ]
+  },
+  {
+   "id": "d051",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "Does IAM Identity Center create IAM users? What does it create in each member account when a permission set is assigned (IAM roles, the reserved AWSReservedSSO_ name)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-creates-roles-per-permission-set-not-iam-users",
+    "iam-identity-center-permission-set-change-updates-roles",
+    "iam-identity-center-roles-named-awsreservedsso"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/identity-center-and-iam-roles",
+    "docs/singlesignon/latest/userguide/permissionsetsconcept",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-creates-roles-per-permission-set-not-iam-users",
+    "iam-identity-center-permission-set-change-updates-roles",
+    "iam-identity-center-roles-named-awsreservedsso"
+   ]
+  },
+  {
+   "id": "d052",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is a permission set, what can it contain (AWS managed, customer managed and inline policies, permissions boundary), and what happens when it is changed after assignment?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-customer-managed-policy-must-preexist",
+    "iam-identity-center-permission-set-change-updates-roles",
+    "iam-identity-center-permission-set-is-policy-template",
+    "iam-identity-center-permission-set-policy-types",
+    "iam-identity-center-permission-sets-need-organization-instance"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/permissionsetsconcept",
+    "docs/singlesignon/latest/userguide/howtocmp"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/howtocmp"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-customer-managed-policy-must-preexist",
+    "iam-identity-center-permission-set-change-updates-roles",
+    "iam-identity-center-permission-set-is-policy-template",
+    "iam-identity-center-permission-set-policy-types",
+    "iam-identity-center-permission-sets-need-organization-instance"
+   ]
+  },
+  {
+   "id": "d053",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "Organization instance vs account instance: which one can grant access to AWS accounts, and what are account instances limited to?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-account-instance-bound-to-one-account",
+    "iam-identity-center-account-instances-not-for-resiliency",
+    "iam-identity-center-instance-compare-customer-managed-kms-key",
+    "iam-identity-center-instance-compare-delegated-admin",
+    "iam-identity-center-instance-compare-multi-account-permissions",
+    "iam-identity-center-instance-compare-multi-region-replication",
+    "iam-identity-center-instance-compare-saml-apps",
+    "iam-identity-center-one-org-instance-per-management-account",
+    "iam-identity-center-org-instance-controls-account-instances",
+    "iam-identity-center-org-instance-only-one-for-account-access",
+    "iam-identity-center-permission-sets-need-organization-instance"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/identity-center-instances",
+    "docs/singlesignon/latest/userguide/organization-instances-identity-center",
+    "docs/singlesignon/latest/userguide/account-instances-identity-center"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-account-instance-bound-to-one-account",
+    "iam-identity-center-account-instances-not-for-resiliency",
+    "iam-identity-center-instance-compare-customer-managed-kms-key",
+    "iam-identity-center-instance-compare-delegated-admin",
+    "iam-identity-center-instance-compare-multi-account-permissions",
+    "iam-identity-center-instance-compare-multi-region-replication",
+    "iam-identity-center-instance-compare-saml-apps",
+    "iam-identity-center-one-org-instance-per-management-account",
+    "iam-identity-center-org-instance-controls-account-instances",
+    "iam-identity-center-org-instance-only-one-for-account-access",
+    "iam-identity-center-permission-sets-need-organization-instance"
+   ]
+  },
+  {
+   "id": "d054",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "restriction",
+   "question": "Does multi-account access need AWS Organizations, where is the organization instance enabled, and can a member account be the delegated administrator (and what can it not manage)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-delegated-admin-not-management-account",
+    "iam-identity-center-delegated-admin-cannot-alter-management-permission-sets",
+    "iam-identity-center-delegated-admin-member-account",
+    "iam-identity-center-instance-compare-delegated-admin",
+    "iam-identity-center-management-account-assign-users-not-groups",
+    "iam-identity-center-needs-organizations-all-features",
+    "iam-identity-center-one-org-instance-per-management-account",
+    "iam-identity-center-org-instance-enabled-from-management-account",
+    "iam-identity-center-organizations-recommended-not-required"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/identity-center-and-orgs",
+    "docs/singlesignon/latest/userguide/delegated-admin",
+    "docs/singlesignon/latest/userguide/identity-center-prerequisites"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/delegated-admin"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-delegated-admin-not-management-account",
+    "iam-identity-center-delegated-admin-cannot-alter-management-permission-sets",
+    "iam-identity-center-delegated-admin-member-account",
+    "iam-identity-center-instance-compare-delegated-admin",
+    "iam-identity-center-management-account-assign-users-not-groups",
+    "iam-identity-center-needs-organizations-all-features",
+    "iam-identity-center-one-org-instance-per-management-account",
+    "iam-identity-center-org-instance-enabled-from-management-account",
+    "iam-identity-center-organizations-recommended-not-required"
+   ]
+  },
+  {
+   "id": "d055",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which identity sources can IAM Identity Center use (Identity Center directory, Active Directory, external SAML 2.0 IdP), and what changes when the source changes?",
+   "status": "partial-verified",
+   "facts": [
+    "iam-identity-center-one-identity-source-at-a-time",
+    "iam-identity-center-change-source-may-remove-assignments",
+    "iam-identity-center-change-to-ad-changes-portal-url",
+    "iam-identity-center-default-identity-source-directory",
+    "iam-identity-center-multi-region-not-with-active-directory",
+    "iam-identity-center-simple-ad-not-identity-source"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/manage-your-identity-source",
+    "docs/singlesignon/latest/userguide/manage-your-identity-source-considerations",
+    "docs/singlesignon/latest/userguide/confirm-identity-source"
+   ],
+   "sources_missing": [],
+   "gap": "The identity source list is bold link lines that M4 cannot quote; covered by the one-source, default-source, Simple AD and AD facts.",
+   "status_found": "partial",
+   "verified_facts": [
+    "iam-identity-center-one-identity-source-at-a-time",
+    "iam-identity-center-change-source-may-remove-assignments",
+    "iam-identity-center-change-to-ad-changes-portal-url",
+    "iam-identity-center-default-identity-source-directory",
+    "iam-identity-center-multi-region-not-with-active-directory",
+    "iam-identity-center-simple-ad-not-identity-source"
+   ]
+  },
+  {
+   "id": "d056",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "How does IAM Identity Center use an on-premises Active Directory: through AD Connector or through AWS Managed Microsoft AD with a trust? What is needed for each?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-trust-access-via-identity-center",
+    "iam-identity-center-ad-connector-single-domain-no-portal-reset",
+    "iam-identity-center-ad-directory-in-management-or-delegated-account",
+    "iam-identity-center-ad-pass-through-no-passwords-synced",
+    "iam-identity-center-ad-via-trust-to-self-managed",
+    "iam-identity-center-managed-ad-same-region",
+    "iam-identity-center-needs-two-way-trust-not-one-way",
+    "iam-identity-center-one-ad-directory-managed-ad-for-multiple-forests"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/manage-your-identity-source-ad",
+    "docs/singlesignon/latest/userguide/connectonpremad",
+    "docs/singlesignon/latest/userguide/connectawsad",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/connectonpremad",
+    "docs/singlesignon/latest/userguide/connectawsad"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-trust-access-via-identity-center",
+    "iam-identity-center-ad-connector-single-domain-no-portal-reset",
+    "iam-identity-center-ad-directory-in-management-or-delegated-account",
+    "iam-identity-center-ad-pass-through-no-passwords-synced",
+    "iam-identity-center-ad-via-trust-to-self-managed",
+    "iam-identity-center-managed-ad-same-region",
+    "iam-identity-center-needs-two-way-trust-not-one-way",
+    "iam-identity-center-one-ad-directory-managed-ad-for-multiple-forests"
+   ]
+  },
+  {
+   "id": "d057",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "With an external IdP (Okta, Microsoft Entra ID), what does SAML 2.0 do and what does SCIM provisioning do? Are users created automatically without SCIM?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-no-outbound-sync-to-idp",
+    "iam-identity-center-saml-nameid-must-match-username",
+    "iam-identity-center-scim-automatic-provisioning",
+    "iam-identity-center-scim-changes-after-idp-sends"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/other-idps",
+    "docs/singlesignon/latest/userguide/provision-automatically",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-no-outbound-sync-to-idp",
+    "iam-identity-center-saml-nameid-must-match-username",
+    "iam-identity-center-scim-automatic-provisioning",
+    "iam-identity-center-scim-changes-after-idp-sends"
+   ]
+  },
+  {
+   "id": "d058",
+   "bullet": "1.2.K5",
+   "lens": "behavior+decisions",
+   "kind": "restriction",
+   "question": "Can a Cognito user pool be the identity source of IAM Identity Center?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-cognito-is-not-an-identity-source",
+    "iam-idc-cognito-not-an-identity-source"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "facts_other_chapters": [
+    "iam-idc-cognito-not-an-identity-source"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-cognito-is-not-an-identity-source",
+    "iam-idc-cognito-not-an-identity-source"
+   ]
+  },
+  {
+   "id": "d059",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "How does ABAC work with IAM Identity Center (attributes for access control passed as session tags)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-abac-attributes-as-session-tags",
+    "iam-identity-center-abac-fewer-permission-sets",
+    "iam-identity-center-abac-saml-attributes-directory-precedence"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/abac",
+    "docs/singlesignon/latest/userguide/attributesforaccesscontrol"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/abac",
+    "docs/singlesignon/latest/userguide/attributesforaccesscontrol"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-abac-attributes-as-session-tags",
+    "iam-identity-center-abac-fewer-permission-sets",
+    "iam-identity-center-abac-saml-attributes-directory-precedence"
+   ]
+  },
+  {
+   "id": "d060",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "In which Region does IAM Identity Center keep its data, what happens to sign-in if that Region is impaired, and what emergency access path does AWS recommend?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-account-instances-not-for-resiliency",
+    "iam-identity-center-accounts-global-any-region",
+    "iam-identity-center-admin-only-from-primary-region",
+    "iam-identity-center-break-glass-recommended",
+    "iam-identity-center-data-stored-in-enabled-region",
+    "iam-identity-center-emergency-access-direct-federation",
+    "iam-identity-center-instance-compare-multi-region-replication",
+    "iam-identity-center-multi-region-not-with-active-directory",
+    "iam-identity-center-operates-across-multiple-azs",
+    "iam-identity-center-opt-in-region-enable-in-all-accounts",
+    "iam-identity-center-primary-region-cannot-change",
+    "iam-identity-center-region-accessible-and-app-colocation",
+    "iam-identity-center-replication-keeps-access-in-regional-disruption",
+    "iam-identity-center-replication-to-additional-regions",
+    "iam-identity-center-change-multi-region-2026-02"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/regions",
+    "docs/singlesignon/latest/userguide/resiliency-regional-behavior",
+    "docs/singlesignon/latest/userguide/emergency-access",
+    "docs/singlesignon/latest/userguide/disaster-recovery-resiliency"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/resiliency-regional-behavior",
+    "docs/singlesignon/latest/userguide/emergency-access",
+    "docs/singlesignon/latest/userguide/disaster-recovery-resiliency"
+   ],
+   "gap": "Multi-Region replication GA date for IAM Identity Center is for the numbers+changes lens (iam-change-identity-center-multi-region-2026-02 exists in the iam namespace).",
+   "registrar_note": "The multi-Region GA date is iam-identity-center-change-multi-region-2026-02 (2026-02-02, examinable).",
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-account-instances-not-for-resiliency",
+    "iam-identity-center-accounts-global-any-region",
+    "iam-identity-center-admin-only-from-primary-region",
+    "iam-identity-center-break-glass-recommended",
+    "iam-identity-center-data-stored-in-enabled-region",
+    "iam-identity-center-emergency-access-direct-federation",
+    "iam-identity-center-instance-compare-multi-region-replication",
+    "iam-identity-center-multi-region-not-with-active-directory",
+    "iam-identity-center-operates-across-multiple-azs",
+    "iam-identity-center-opt-in-region-enable-in-all-accounts",
+    "iam-identity-center-primary-region-cannot-change",
+    "iam-identity-center-region-accessible-and-app-colocation",
+    "iam-identity-center-replication-keeps-access-in-regional-disruption",
+    "iam-identity-center-replication-to-additional-regions",
+    "iam-identity-center-change-multi-region-2026-02"
+   ]
+  },
+  {
+   "id": "d061",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which MFA types does IAM Identity Center support (authenticator apps, FIDO2 security keys and passkeys, built-in authenticators, RADIUS MFA for AD)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-mfa-context-aware-prompts",
+    "iam-identity-center-mfa-device-types",
+    "iam-identity-center-mfa-phishing-resistant-fido"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/mfa-types",
+    "docs/singlesignon/latest/userguide/enable-mfa",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/mfa-types",
+    "docs/singlesignon/latest/userguide/enable-mfa"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-mfa-context-aware-prompts",
+    "iam-identity-center-mfa-device-types",
+    "iam-identity-center-mfa-phishing-resistant-fido"
+   ]
+  },
+  {
+   "id": "d062",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "How do engineers use the AWS CLI with IAM Identity Center without long-term access keys (aws configure sso, short-term credentials)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-cli-v2-sign-in-short-term-credentials",
+    "iam-identity-center-portal-credentials-for-cli-sdk",
+    "iam-identity-center-users-get-temporary-credentials"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/howtogetcredentials",
+    "docs/singlesignon/latest/userguide/integrating-aws-cli"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/integrating-aws-cli"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-cli-v2-sign-in-short-term-credentials",
+    "iam-identity-center-portal-credentials-for-cli-sdk",
+    "iam-identity-center-users-get-temporary-credentials"
+   ]
+  },
+  {
+   "id": "d063",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Can IAM Identity Center give single sign-on to SAML 2.0 business applications (Salesforce, Microsoft 365) and to OIDC applications?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-app-assignments-required-by-default",
+    "iam-identity-center-saml-and-oauth-customer-apps",
+    "iam-identity-center-saml-customer-apps-public-url"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/customermanagedapps",
+    "docs/singlesignon/latest/userguide/awsapps",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/awsapps"
+   ],
+   "registrar_note": "iam-identity-center-faq-apps-saml-only rejected (outdated FAQ); use iam-identity-center-saml-and-oauth-customer-apps.",
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-app-assignments-required-by-default",
+    "iam-identity-center-saml-and-oauth-customer-apps",
+    "iam-identity-center-saml-customer-apps-public-url"
+   ]
+  },
+  {
+   "id": "d064",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is trusted identity propagation, in one sentence, and which services use it (Redshift, Athena, S3 Access Grants, Lake Formation)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-tip-built-on-oauth",
+    "iam-identity-center-tip-identity-context",
+    "iam-identity-center-tip-user-identity-audit"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/trustedidentitypropagation-overview",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/trustedidentitypropagation-overview"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-tip-built-on-oauth",
+    "iam-identity-center-tip-identity-context",
+    "iam-identity-center-tip-user-identity-audit"
+   ]
+  },
+  {
+   "id": "d065",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "When an assignment is removed or a user is disabled, do active sessions end at once? How does a Deny policy revoke active permissions?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-admin-can-end-user-session",
+    "iam-identity-center-deleted-user-sessions-continue",
+    "iam-identity-center-disabled-user-keeps-assuming-roles",
+    "iam-identity-center-revoke-keep-deny-12-hours",
+    "iam-identity-center-role-sessions-persist-up-to-12-hours",
+    "iam-identity-center-signout-app-sessions-end-within-30-minutes"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/authconcept",
+    "docs/singlesignon/latest/userguide/revoke-user-permissions",
+    "docs/singlesignon/latest/userguide/prereqs-revoking-user-permissions",
+    "docs/singlesignon/latest/userguide/disableuser"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/authconcept",
+    "docs/singlesignon/latest/userguide/revoke-user-permissions",
+    "docs/singlesignon/latest/userguide/prereqs-revoking-user-permissions",
+    "docs/singlesignon/latest/userguide/disableuser"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-admin-can-end-user-session",
+    "iam-identity-center-deleted-user-sessions-continue",
+    "iam-identity-center-disabled-user-keeps-assuming-roles",
+    "iam-identity-center-revoke-keep-deny-12-hours",
+    "iam-identity-center-role-sessions-persist-up-to-12-hours",
+    "iam-identity-center-signout-app-sessions-end-within-30-minutes"
+   ]
+  },
+  {
+   "id": "d066",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "IAM Identity Center vs direct SAML federation into IAM roles in each account (IAM identity providers): when is each the right answer?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-coexists-with-iam-federation",
+    "iam-identity-center-decision-guide-federation-with-iam",
+    "iam-identity-center-decision-guide-workforce-account-access-row",
+    "iam-identity-center-one-point-of-federation",
+    "iam-identity-center-wa-two-federation-approaches"
+   ],
+   "sources": [
+    "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose",
+    "docs/singlesignon/latest/userguide/what-is",
+    "docs/IAM/latest/UserGuide/id_roles_providers_saml"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-coexists-with-iam-federation",
+    "iam-identity-center-decision-guide-federation-with-iam",
+    "iam-identity-center-decision-guide-workforce-account-access-row",
+    "iam-identity-center-one-point-of-federation",
+    "iam-identity-center-wa-two-federation-approaches"
+   ]
+  },
+  {
+   "id": "d067",
+   "bullet": "1.2.K5",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "IAM Identity Center vs Amazon Cognito: workforce users vs customer (application) users. What does the decision guide say?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-cognito-is-not-an-identity-source",
+    "cognito-decision-guide-build-authentication-row",
+    "cognito-decision-guide-ciam-for-apps-you-build",
+    "cognito-wa-centralized-idp-for-application-users",
+    "directory-service-which-to-choose-saas-cognito-row"
+   ],
+   "sources": [
+    "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose",
+    "docs/cognito/latest/developerguide/what-is-amazon-cognito",
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-cognito-is-not-an-identity-source",
+    "cognito-decision-guide-build-authentication-row",
+    "cognito-decision-guide-ciam-for-apps-you-build",
+    "cognito-wa-centralized-idp-for-application-users",
+    "directory-service-which-to-choose-saas-cognito-row"
+   ]
+  },
+  {
+   "id": "d068",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "What categories does the AWS identity decision guide use (workforce identity, customer identity, permissions for workloads) and which service does it name for each?",
+   "status": "verified",
+   "facts": [
+    "cognito-decision-guide-build-authentication-row",
+    "cognito-decision-guide-ciam-for-apps-you-build",
+    "directory-service-decision-guide-ad-dependent-workloads-row",
+    "directory-service-decision-guide-join-on-premises-ad-row",
+    "iam-identity-center-decision-guide-workforce-account-access-row"
+   ],
+   "sources": [
+    "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-decision-guide-build-authentication-row",
+    "cognito-decision-guide-ciam-for-apps-you-build",
+    "directory-service-decision-guide-ad-dependent-workloads-row",
+    "directory-service-decision-guide-join-on-premises-ad-row",
+    "iam-identity-center-decision-guide-workforce-account-access-row"
+   ]
+  },
+  {
+   "id": "d069",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "What does the Well-Architected security pillar recommend about a centralized identity provider (SEC02-BP04) and about identity management?",
+   "status": "verified",
+   "facts": [
+    "cognito-wa-centralized-idp-for-application-users",
+    "iam-identity-center-wa-customer-rotates-scim-tokens-and-certificates",
+    "iam-identity-center-wa-remove-iam-users-after-federation",
+    "iam-identity-center-wa-two-federation-approaches",
+    "iam-identity-center-wa-workforce-centralized-idp"
+   ],
+   "sources": [
+    "docs/wellarchitected/latest/security-pillar/sec_identities_identity_provider",
+    "docs/wellarchitected/latest/security-pillar/identity-management",
+    "docs/prescriptive-guidance/latest/security-reference-architecture/introduction"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-wa-centralized-idp-for-application-users",
+    "iam-identity-center-wa-customer-rotates-scim-tokens-and-certificates",
+    "iam-identity-center-wa-remove-iam-users-after-federation",
+    "iam-identity-center-wa-two-federation-approaches",
+    "iam-identity-center-wa-workforce-centralized-idp"
+   ]
+  },
+  {
+   "id": "d070",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What can a temporary elevated access (just-in-time) setup do with IAM Identity Center, and is it built in or provided by partners?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-temporary-elevated-access-via-partners"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/temporary-elevated-access"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/temporary-elevated-access"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-temporary-elevated-access-via-partners"
+   ]
+  },
+  {
+   "id": "d071",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is AWS Directory Service and which directory types does it offer (AWS Managed Microsoft AD, AD Connector, Simple AD)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-decision-guide-managed-ad",
+    "directory-service-managed-ad-actual-windows-server-ad",
+    "directory-service-what-it-is"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/what_is",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-decision-guide-managed-ad",
+    "directory-service-managed-ad-actual-windows-server-ad",
+    "directory-service-what-it-is"
+   ]
+  },
+  {
+   "id": "d072",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is AWS Managed Microsoft AD (actual Microsoft AD on Windows Server, managed by AWS), and which admin rights do you get or not get (no Domain Admin)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-decision-guide-managed-ad",
+    "directory-service-managed-ad-actual-windows-server-ad",
+    "directory-service-managed-ad-admin-account-limited-to-ou",
+    "directory-service-managed-ad-no-domain-admin-for-customer"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_microsoft_ad",
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started_admin_account",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started_admin_account"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-decision-guide-managed-ad",
+    "directory-service-managed-ad-actual-windows-server-ad",
+    "directory-service-managed-ad-admin-account-limited-to-ou",
+    "directory-service-managed-ad-no-domain-admin-for-customer"
+   ]
+  },
+  {
+   "id": "d073",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which trust relationships can Managed Microsoft AD create with a self-managed AD (one-way, two-way, forest, external), and what network connectivity do they need?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-trust-access-via-identity-center",
+    "directory-service-managed-ad-trust-to-existing-ad",
+    "directory-service-trust-needs-network-connection-to-vpc",
+    "directory-service-trust-types-and-directions",
+    "directory-service-two-way-trust-for-aws-apps-one-way-for-ec2-rds-fsx",
+    "iam-identity-center-needs-two-way-trust-not-one-way"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_setup_trust",
+    "docs/directoryservice/latest/admin-guide/ms_ad_connect_existing_infrastructure",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_setup_trust",
+    "docs/directoryservice/latest/admin-guide/ms_ad_connect_existing_infrastructure"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-trust-access-via-identity-center",
+    "directory-service-managed-ad-trust-to-existing-ad",
+    "directory-service-trust-needs-network-connection-to-vpc",
+    "directory-service-trust-types-and-directions",
+    "directory-service-two-way-trust-for-aws-apps-one-way-for-ec2-rds-fsx",
+    "iam-identity-center-needs-two-way-trust-not-one-way"
+   ]
+  },
+  {
+   "id": "d074",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is AD Connector: a proxy that redirects directory requests to an on-premises AD without caching any information in the cloud? What does it need (VPN or Direct Connect, service account)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-is-a-proxy",
+    "directory-service-ad-connector-needs-vpn-or-direct-connect",
+    "directory-service-ad-connector-no-data-replicated",
+    "directory-service-ad-connector-no-directory-sync",
+    "directory-service-ad-connector-two-sizes"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_ad_connector",
+    "docs/directoryservice/latest/admin-guide/ad_connector_getting_started"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ad_connector_getting_started"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-is-a-proxy",
+    "directory-service-ad-connector-needs-vpn-or-direct-connect",
+    "directory-service-ad-connector-no-data-replicated",
+    "directory-service-ad-connector-no-directory-sync",
+    "directory-service-ad-connector-two-sizes"
+   ]
+  },
+  {
+   "id": "d075",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "restriction",
+   "question": "What can AD Connector not do (share the directory with other accounts, trusts, schema extensions, store users)? Which AWS applications work with it?",
+   "status": "partial-verified",
+   "facts": [
+    "directory-service-ad-connector-aws-apps-only-no-third-party",
+    "directory-service-ad-connector-no-transitive-trusts",
+    "directory-service-ad-connector-not-rds-sql-server",
+    "directory-service-ad-connector-not-shareable-not-multi-vpc",
+    "iam-identity-center-ad-connector-single-domain-no-portal-reset"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_ad_connector",
+    "docs/directoryservice/latest/admin-guide/ad_connector_app_compatibility"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ad_connector_app_compatibility"
+   ],
+   "gap": "AD Connector and schema extensions: no saved page states it (register-05 searched the Directory Service guide for schema extensions; hits are Managed AD and Simple AD only).",
+   "status_found": "partial",
+   "verified_facts": [
+    "directory-service-ad-connector-aws-apps-only-no-third-party",
+    "directory-service-ad-connector-no-transitive-trusts",
+    "directory-service-ad-connector-not-rds-sql-server",
+    "directory-service-ad-connector-not-shareable-not-multi-vpc",
+    "iam-identity-center-ad-connector-single-domain-no-portal-reset"
+   ]
+  },
+  {
+   "id": "d076",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is Simple AD (Samba 4 based, AD-compatible), and which features does it not support (trusts, MFA, schema extensions, PowerShell)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-simple-ad-samba-4-basic-features",
+    "directory-service-simple-ad-subset-of-managed-ad",
+    "directory-service-simple-ad-unsupported-features",
+    "iam-identity-center-simple-ad-not-identity-source"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/directory_simple_ad",
+    "docs/directoryservice/latest/admin-guide/simple_ad_app_compatibility"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/directory_simple_ad",
+    "docs/directoryservice/latest/admin-guide/simple_ad_app_compatibility"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-simple-ad-samba-4-basic-features",
+    "directory-service-simple-ad-subset-of-managed-ad",
+    "directory-service-simple-ad-unsupported-features",
+    "iam-identity-center-simple-ad-not-identity-source"
+   ]
+  },
+  {
+   "id": "d077",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which directory types support seamless domain join of EC2 Windows and Linux instances?",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-ec2-join-bypasses-connector",
+    "directory-service-managed-ad-seamless-join-at-launch"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_join_instance",
+    "docs/directoryservice/latest/admin-guide/ad_connector_join_instance",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_join_instance",
+    "docs/directoryservice/latest/admin-guide/ad_connector_join_instance"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-ec2-join-bypasses-connector",
+    "directory-service-managed-ad-seamless-join-at-launch"
+   ]
+  },
+  {
+   "id": "d078",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Can a Managed Microsoft AD directory be shared with other accounts (AWS Organizations or handshake), and which directory types cannot be shared?",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-not-shareable-not-multi-vpc",
+    "directory-service-pricing-sharing-per-account-hour",
+    "directory-service-sharing-across-accounts",
+    "directory-service-sharing-fee-charged-to-consumer",
+    "directory-service-sharing-methods-organizations-or-handshake",
+    "directory-service-sharing-needs-network-connectivity"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_directory_sharing",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_directory_sharing"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-not-shareable-not-multi-vpc",
+    "directory-service-pricing-sharing-per-account-hour",
+    "directory-service-sharing-across-accounts",
+    "directory-service-sharing-fee-charged-to-consumer",
+    "directory-service-sharing-methods-organizations-or-handshake",
+    "directory-service-sharing-needs-network-connectivity"
+   ]
+  },
+  {
+   "id": "d079",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What does multi-Region replication of Managed Microsoft AD replicate, and which settings are global vs Regional?",
+   "status": "verified",
+   "facts": [
+    "directory-service-multi-region-failover-other-regions-stay-up",
+    "directory-service-multi-region-replicates-all-directory-data",
+    "directory-service-pricing-multi-region-data-transfer"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_configure_multi_region_replication",
+    "docs/directoryservice/latest/admin-guide/multi-region-global-region-features",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_configure_multi_region_replication",
+    "docs/directoryservice/latest/admin-guide/multi-region-global-region-features"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-multi-region-failover-other-regions-stay-up",
+    "directory-service-multi-region-replicates-all-directory-data",
+    "directory-service-pricing-multi-region-data-transfer"
+   ]
+  },
+  {
+   "id": "d080",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "How do AD users sign in to the AWS Management Console with a Directory Service directory (access URL plus IAM roles assigned to AD users or groups)? This is 'federate a directory service with IAM roles'.",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-console-sign-in-and-radius-mfa",
+    "directory-service-ad-connector-console-without-saml",
+    "directory-service-console-access-iam-roles-access-url",
+    "directory-service-managed-ad-console-and-identity-center"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_management_console_access",
+    "docs/directoryservice/latest/admin-guide/ms_ad_manage_roles",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_management_console_access",
+    "docs/directoryservice/latest/admin-guide/ms_ad_manage_roles"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-console-sign-in-and-radius-mfa",
+    "directory-service-ad-connector-console-without-saml",
+    "directory-service-console-access-iam-roles-access-url",
+    "directory-service-managed-ad-console-and-identity-center"
+   ]
+  },
+  {
+   "id": "d081",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which AWS applications and services need or use a directory (WorkSpaces, FSx for Windows File Server, RDS for SQL Server, QuickSight, IAM Identity Center), and which directory types does each accept?",
+   "status": "partial-verified",
+   "facts": [
+    "directory-service-ad-connector-aws-apps-only-no-third-party",
+    "directory-service-ad-connector-not-rds-sql-server",
+    "directory-service-fsx-windows-needs-managed-ad-or-self-managed",
+    "directory-service-managed-ad-aws-and-third-party-apps",
+    "directory-service-rds-needs-managed-ad"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_app_compatibility",
+    "docs/directoryservice/latest/admin-guide/ad_connector_app_compatibility",
+    "docs/directoryservice/latest/admin-guide/simple_ad_app_compatibility",
+    "docs/fsx/latest/WindowsGuide/aws-ad-integration-fsxW"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_app_compatibility",
+    "docs/directoryservice/latest/admin-guide/ad_connector_app_compatibility",
+    "docs/directoryservice/latest/admin-guide/simple_ad_app_compatibility"
+   ],
+   "gap": "Service-to-directory lists are one-word list lines (M4); FSx and RDS rules are quoted; Amazon Quick mapping not quoted.",
+   "status_found": "partial",
+   "verified_facts": [
+    "directory-service-ad-connector-aws-apps-only-no-third-party",
+    "directory-service-ad-connector-not-rds-sql-server",
+    "directory-service-fsx-windows-needs-managed-ad-or-self-managed",
+    "directory-service-managed-ad-aws-and-third-party-apps",
+    "directory-service-rds-needs-managed-ad"
+   ]
+  },
+  {
+   "id": "d082",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "How is MFA added to Managed Microsoft AD and AD Connector (RADIUS server)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-console-sign-in-and-radius-mfa",
+    "directory-service-managed-ad-mfa-and-ldap",
+    "directory-service-managed-ad-mfa-needs-radius"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_mfa",
+    "docs/directoryservice/latest/admin-guide/ad_connector_mfa"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_mfa",
+    "docs/directoryservice/latest/admin-guide/ad_connector_mfa"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-console-sign-in-and-radius-mfa",
+    "directory-service-managed-ad-mfa-and-ldap",
+    "directory-service-managed-ad-mfa-needs-radius"
+   ]
+  },
+  {
+   "id": "d083",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "Managed Microsoft AD vs Active Directory on your own EC2 instances: what does AWS manage, what can you not do (schema extensions allowed, no Domain Admin), when to choose self-managed?",
+   "status": "partial-verified",
+   "facts": [
+    "directory-service-managed-ad-aws-provides-snapshots-recovery",
+    "directory-service-managed-ad-dc-pair-across-azs",
+    "directory-service-managed-ad-no-domain-admin-for-customer",
+    "directory-service-managed-ad-no-monitoring-agents-on-dcs"
+   ],
+   "sources": [
+    "www/directoryservice/faqs",
+    "docs/directoryservice/latest/admin-guide/ms_ad_best_practices",
+    "docs/directoryservice/latest/admin-guide/ms_ad_key_concepts"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_best_practices",
+    "docs/directoryservice/latest/admin-guide/ms_ad_key_concepts"
+   ],
+   "gap": "No saved page states when to choose self-managed AD on EC2 over AWS Managed Microsoft AD.",
+   "status_found": "partial",
+   "verified_facts": [
+    "directory-service-managed-ad-aws-provides-snapshots-recovery",
+    "directory-service-managed-ad-dc-pair-across-azs",
+    "directory-service-managed-ad-no-domain-admin-for-customer",
+    "directory-service-managed-ad-no-monitoring-agents-on-dcs"
+   ]
+  },
+  {
+   "id": "d084",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Can Managed Microsoft AD be the primary directory or a resource forest, and how are on-premises users migrated (ADMT)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-extend-on-prem-ad-trust-no-sync-or-admt",
+    "directory-service-managed-ad-resource-forest-trust"
+   ],
+   "sources": [
+    "www/directoryservice/faqs",
+    "docs/directoryservice/latest/admin-guide/ms_ad_migrate_users"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_migrate_users"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-extend-on-prem-ad-trust-no-sync-or-admt",
+    "directory-service-managed-ad-resource-forest-trust"
+   ]
+  },
+  {
+   "id": "d085",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "AD Connector vs Managed Microsoft AD vs Simple AD: which stem signals point to each ('users must stay on premises', 'AD-aware apps in AWS with a trust', 'small, low-cost, basic')? Use the guide's 'choose' text; Simple AD now closed to new customers.",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-when-to-use",
+    "directory-service-decision-guide-ad-dependent-workloads-row",
+    "directory-service-decision-guide-join-on-premises-ad-row",
+    "directory-service-decision-guide-managed-ad",
+    "directory-service-managed-ad-when-to-use",
+    "directory-service-simple-ad-unsupported-features",
+    "directory-service-simple-ad-when-to-use",
+    "directory-service-which-to-choose-row",
+    "directory-service-which-to-choose-saas-cognito-row",
+    "iam-identity-center-one-ad-directory-managed-ad-for-multiple-forests"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/what_is",
+    "docs/directoryservice/latest/admin-guide/directory_ad_connector",
+    "docs/directoryservice/latest/admin-guide/directory_microsoft_ad",
+    "docs/directoryservice/latest/admin-guide/directory_simple_ad",
+    "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/directory_simple_ad"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-when-to-use",
+    "directory-service-decision-guide-ad-dependent-workloads-row",
+    "directory-service-decision-guide-join-on-premises-ad-row",
+    "directory-service-decision-guide-managed-ad",
+    "directory-service-managed-ad-when-to-use",
+    "directory-service-simple-ad-unsupported-features",
+    "directory-service-simple-ad-when-to-use",
+    "directory-service-which-to-choose-row",
+    "directory-service-which-to-choose-saas-cognito-row",
+    "iam-identity-center-one-ad-directory-managed-ad-for-multiple-forests"
+   ]
+  },
+  {
+   "id": "d086",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "Do directory domain controllers run in your VPC, which subnets and Availability Zones do they need, and what security group does Directory Service create?",
+   "status": "verified",
+   "facts": [
+    "directory-service-ad-connector-needs-vpn-or-direct-connect",
+    "directory-service-managed-ad-dc-pair-across-azs",
+    "directory-service-managed-ad-eni-per-dc-never-delete",
+    "directory-service-managed-ad-security-group-local-vpc-only"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started",
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created",
+    "docs/directoryservice/latest/admin-guide/create_details_ad_connector"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started",
+    "docs/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created",
+    "docs/directoryservice/latest/admin-guide/create_details_ad_connector"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-ad-connector-needs-vpn-or-direct-connect",
+    "directory-service-managed-ad-dc-pair-across-azs",
+    "directory-service-managed-ad-eni-per-dc-never-delete",
+    "directory-service-managed-ad-security-group-local-vpc-only"
+   ]
+  },
+  {
+   "id": "d087",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Can Managed Microsoft AD provide SAML-based single sign-on to cloud applications such as Microsoft 365 (through IAM Identity Center)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-console-and-identity-center",
+    "directory-service-managed-ad-office-365-sign-in"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/usecase4",
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/usecase4"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-console-and-identity-center",
+    "directory-service-managed-ad-office-365-sign-in"
+   ]
+  },
+  {
+   "id": "d090",
+   "bullet": "1.2.K5",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is a user pool (user directory and OIDC identity provider that issues JWTs) and what is an identity pool (exchanges identities for temporary AWS credentials)?",
+   "status": "verified",
+   "facts": [
+    "cognito-user-pool-vs-identity-pool",
+    "cognito-identity-platform-definition",
+    "cognito-identity-pool-directory-of-federated-identities",
+    "cognito-user-pool-federation-independent-of-identity-pool"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/what-is-amazon-cognito",
+    "docs/cognito/latest/developerguide/cognito-user-pools",
+    "docs/cognito/latest/developerguide/cognito-identity",
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools",
+    "docs/cognito/latest/developerguide/cognito-identity"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-user-pool-vs-identity-pool",
+    "cognito-identity-platform-definition",
+    "cognito-identity-pool-directory-of-federated-identities",
+    "cognito-user-pool-federation-independent-of-identity-pool"
+   ]
+  },
+  {
+   "id": "d091",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Can an identity pool give guest (unauthenticated) users AWS credentials, and how are authenticated and unauthenticated roles used?",
+   "status": "verified",
+   "facts": [
+    "cognito-identity-pool-guest-credentials",
+    "cognito-identity-pool-directory-of-federated-identities",
+    "cognito-identity-pool-guest-and-authenticated-store",
+    "cognito-unauthenticated-role-more-restrictive"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/iam-roles",
+    "docs/cognito/latest/developerguide/identity-pools",
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/iam-roles",
+    "docs/cognito/latest/developerguide/identity-pools"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-identity-pool-guest-credentials",
+    "cognito-identity-pool-directory-of-federated-identities",
+    "cognito-identity-pool-guest-and-authenticated-store",
+    "cognito-unauthenticated-role-more-restrictive"
+   ]
+  },
+  {
+   "id": "d092",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "When are a user pool and an identity pool used together, and when is each enough alone?",
+   "status": "verified",
+   "facts": [
+    "cognito-pools-used-together-or-alone",
+    "cognito-user-pool-federation-independent-of-identity-pool"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-scenarios",
+    "docs/cognito/latest/developerguide/amazon-cognito-integrating-user-pools-with-identity-pools"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-scenarios",
+    "docs/cognito/latest/developerguide/amazon-cognito-integrating-user-pools-with-identity-pools"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-pools-used-together-or-alone",
+    "cognito-user-pool-federation-independent-of-identity-pool"
+   ]
+  },
+  {
+   "id": "d093",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which third-party IdPs can a user pool federate (social: Google, Facebook, Apple, Amazon; SAML 2.0; OIDC), and does the app or Cognito store the federated user's password?",
+   "status": "verified",
+   "facts": [
+    "cognito-federated-user-profile-maps-idp-claims",
+    "cognito-user-pool-federated-users-get-profile-and-jwt",
+    "cognito-user-pool-sp-and-idp-dual-role",
+    "cognito-user-pool-workforce-sso-in-your-app"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-identity-federation",
+    "docs/cognito/latest/developerguide/cognito-user-pools-identity-provider",
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-identity-federation",
+    "docs/cognito/latest/developerguide/cognito-user-pools-identity-provider"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-federated-user-profile-maps-idp-claims",
+    "cognito-user-pool-federated-users-get-profile-and-jwt",
+    "cognito-user-pool-sp-and-idp-dual-role",
+    "cognito-user-pool-workforce-sso-in-your-app"
+   ]
+  },
+  {
+   "id": "d094",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "SAML providers in a user pool: SP-initiated and IdP-initiated sign-in, signing and encryption (2024-02-01). What must the enterprise IdP be configured with?",
+   "status": "verified",
+   "facts": [
+    "cognito-saml-idp-must-support-saml-2",
+    "cognito-saml-idp-initiated-app-client-saml-only",
+    "cognito-saml-sign-requests-encrypt-responses",
+    "cognito-change-saml-signing-idp-initiated-2024-02"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-saml-idp",
+    "docs/cognito/latest/developerguide/cognito-user-pools-saml-idp-things-to-know"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-saml-idp",
+    "docs/cognito/latest/developerguide/cognito-user-pools-saml-idp-things-to-know"
+   ],
+   "registrar_note": "register-05 fetched cognito-user-pools-saml-idp-things-to-know and added the IdP-initiated restriction, signing and encryption, and the 2024-02-01 history row.",
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-saml-idp-must-support-saml-2",
+    "cognito-saml-idp-initiated-app-client-saml-only",
+    "cognito-saml-sign-requests-encrypt-responses",
+    "cognito-change-saml-signing-idp-initiated-2024-02"
+   ]
+  },
+  {
+   "id": "d095",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "How does an API Gateway REST API use a Cognito user pool authorizer (which token, which header), and can API Gateway authorize with IAM using identity pool credentials?",
+   "status": "verified",
+   "facts": [
+    "cognito-api-gateway-aws-iam-with-identity-pool",
+    "cognito-api-gateway-cognito-user-pools-authorizer",
+    "cognito-api-gateway-id-vs-access-token-scopes",
+    "cognito-api-gateway-validates-user-pool-token"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/user-pool-accessing-resources-api-gateway-and-lambda",
+    "docs/apigateway/latest/developerguide/apigateway-integrate-with-cognito"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/user-pool-accessing-resources-api-gateway-and-lambda",
+    "docs/apigateway/latest/developerguide/apigateway-integrate-with-cognito"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-api-gateway-aws-iam-with-identity-pool",
+    "cognito-api-gateway-cognito-user-pools-authorizer",
+    "cognito-api-gateway-id-vs-access-token-scopes",
+    "cognito-api-gateway-validates-user-pool-token"
+   ]
+  },
+  {
+   "id": "d096",
+   "bullet": "1.2.S3",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Can an Application Load Balancer authenticate users through a Cognito user pool before forwarding the request (authenticate-cognito action), and which listener protocol does it need?",
+   "status": "verified",
+   "facts": [
+    "cognito-alb-authenticate-cognito-https-only"
+   ],
+   "sources": [
+    "docs/elasticloadbalancing/latest/application/listener-authenticate-users"
+   ],
+   "sources_missing": [
+    "docs/elasticloadbalancing/latest/application/listener-authenticate-users"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-alb-authenticate-cognito-https-only"
+   ]
+  },
+  {
+   "id": "d097",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "How does an identity pool choose the IAM role (default roles, rules-based mapping from claims, token-based roles from user pool groups with cognito:preferred_role)?",
+   "status": "verified",
+   "facts": [
+    "cognito-group-precedence-preferred-role",
+    "cognito-identity-pool-role-selection-options",
+    "cognito-identity-pool-rules-first-match-then-role-resolution"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/role-based-access-control",
+    "docs/cognito/latest/developerguide/iam-roles"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/role-based-access-control",
+    "docs/cognito/latest/developerguide/iam-roles"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-group-precedence-preferred-role",
+    "cognito-identity-pool-role-selection-options",
+    "cognito-identity-pool-rules-first-match-then-role-resolution"
+   ]
+  },
+  {
+   "id": "d098",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "How does an identity pool support ABAC (attributes for access control mapped to principal tags)?",
+   "status": "verified",
+   "facts": [
+    "cognito-identity-pool-abac-principal-tags"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/attributes-for-access-control"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/attributes-for-access-control"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-identity-pool-abac-principal-tags"
+   ]
+  },
+  {
+   "id": "d099",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "restriction",
+   "question": "What must an identity pool role trust policy contain (cognito-identity.amazonaws.com principal, aud and amr conditions), per the 2025-08-01 update?",
+   "status": "verified",
+   "facts": [
+    "cognito-identity-pool-role-selection-options",
+    "cognito-identity-pool-role-trust-policy-aud-amr",
+    "cognito-identity-pool-trust-policy-aud-condition-enforced",
+    "cognito-change-identity-pool-trust-policy-aud-2025-08"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/iam-roles",
+    "docs/cognito/latest/developerguide/identity-pools-security-best-practices",
+    "docs/cognito/latest/developerguide/cognito-document-history"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/iam-roles",
+    "docs/cognito/latest/developerguide/identity-pools-security-best-practices"
+   ],
+   "registrar_note": "register-05 added the 2025-08-01 history row as a change fact.",
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-identity-pool-role-selection-options",
+    "cognito-identity-pool-role-trust-policy-aud-amr",
+    "cognito-identity-pool-trust-policy-aud-condition-enforced",
+    "cognito-change-identity-pool-trust-policy-aud-2025-08"
+   ]
+  },
+  {
+   "id": "d100",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "Which Lambda triggers can customize user pool flows (pre sign-up, pre authentication, pre token generation, user migration, custom auth challenge, inbound federation 2026-01-28)?",
+   "status": "verified",
+   "facts": [
+    "cognito-lambda-triggers-customize-auth",
+    "cognito-migrate-user-trigger-at-sign-in-or-forgot-password",
+    "cognito-change-inbound-federation-trigger-2026-01"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-working-with-lambda-triggers"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-working-with-lambda-triggers"
+   ],
+   "gap": "Trigger list is a table of link lines; the trigger facts plus the 2026-01-28 history row cover it.",
+   "registrar_note": "register-05 added the 2026-01-28 inbound federation trigger history row.",
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-lambda-triggers-customize-auth",
+    "cognito-migrate-user-trigger-at-sign-in-or-forgot-password",
+    "cognito-change-inbound-federation-trigger-2026-01"
+   ]
+  },
+  {
+   "id": "d101",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "How are existing users migrated into a user pool: user migration Lambda trigger (users keep passwords, migrate at sign-in) vs CSV import (users reset passwords)?",
+   "status": "verified",
+   "facts": [
+    "cognito-migrate-user-trigger-at-sign-in-or-forgot-password",
+    "cognito-migration-lambda-keeps-passwords-vs-csv-bulk"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-import-users",
+    "docs/cognito/latest/developerguide/user-pool-lambda-migrate-user",
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-import-users",
+    "docs/cognito/latest/developerguide/user-pool-lambda-migrate-user"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-migrate-user-trigger-at-sign-in-or-forgot-password",
+    "cognito-migration-lambda-keeps-passwords-vs-csv-bulk"
+   ]
+  },
+  {
+   "id": "d102",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "What does threat protection do (compromised-credentials detection, adaptive authentication), and which feature plan does it need?",
+   "status": "verified",
+   "facts": [
+    "cognito-compromised-credentials-not-srp-or-custom",
+    "cognito-threat-protection-plus-plan-audit-mode"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pool-settings-threat-protection",
+    "docs/cognito/latest/developerguide/managing-security",
+    "docs/cognito/latest/developerguide/feature-plans-features-plus"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pool-settings-threat-protection",
+    "docs/cognito/latest/developerguide/managing-security",
+    "docs/cognito/latest/developerguide/feature-plans-features-plus"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-compromised-credentials-not-srp-or-custom",
+    "cognito-threat-protection-plus-plan-audit-mode"
+   ]
+  },
+  {
+   "id": "d103",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "What is managed login (formerly hosted UI), and can a user pool use a custom domain with an ACM certificate?",
+   "status": "verified",
+   "facts": [
+    "cognito-custom-domain-acm-us-east-1-cloudfront",
+    "cognito-managed-login-custom-domain-instead-of-prefix",
+    "cognito-managed-login-functions-and-hosted-ui"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-managed-login",
+    "docs/cognito/latest/developerguide/cognito-user-pools-add-custom-domain"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-managed-login",
+    "docs/cognito/latest/developerguide/cognito-user-pools-add-custom-domain"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-custom-domain-acm-us-east-1-cloudfront",
+    "cognito-managed-login-custom-domain-instead-of-prefix",
+    "cognito-managed-login-functions-and-hosted-ui"
+   ]
+  },
+  {
+   "id": "d104",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "How does machine-to-machine authorization work in a user pool (client credentials grant, resource servers, custom scopes)?",
+   "status": "verified",
+   "facts": [
+    "cognito-api-gateway-id-vs-access-token-scopes",
+    "cognito-m2m-client-credentials-grant",
+    "cognito-resource-server-custom-scopes",
+    "cognito-m2m-app-client-needs-client-secret"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-define-resource-servers",
+    "docs/cognito/latest/developerguide/authentication"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-define-resource-servers",
+    "docs/cognito/latest/developerguide/authentication"
+   ],
+   "registrar_note": "register-05 fetched cognito-user-pools-define-resource-servers and added resource servers, custom scopes and the client secret rule.",
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-api-gateway-id-vs-access-token-scopes",
+    "cognito-m2m-client-credentials-grant",
+    "cognito-resource-server-custom-scopes",
+    "cognito-m2m-app-client-needs-client-secret"
+   ]
+  },
+  {
+   "id": "d105",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "Which token does an app send to an API (access token vs ID token), and how can tokens be revoked?",
+   "status": "verified",
+   "facts": [
+    "cognito-api-gateway-id-vs-access-token-scopes",
+    "cognito-id-token-vs-access-token-use",
+    "cognito-token-revocation-enabled-by-default",
+    "cognito-token-revocation-refresh-token-and-global-signout"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token",
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-id-token",
+    "docs/cognito/latest/developerguide/token-revocation"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token",
+    "docs/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-id-token",
+    "docs/cognito/latest/developerguide/token-revocation"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-api-gateway-id-vs-access-token-scopes",
+    "cognito-id-token-vs-access-token-use",
+    "cognito-token-revocation-enabled-by-default",
+    "cognito-token-revocation-refresh-token-and-global-signout"
+   ]
+  },
+  {
+   "id": "d106",
+   "bullet": "1.2.K5",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "Ben's question: what is the difference between IAM Identity Center and Cognito? Collect one clean sentence each from the guides (workforce access to AWS accounts vs sign-in for application customers).",
+   "status": "verified",
+   "facts": [
+    "cognito-decision-guide-ciam-for-apps-you-build",
+    "cognito-identity-platform-definition"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/what-is",
+    "docs/cognito/latest/developerguide/what-is-amazon-cognito",
+    "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-decision-guide-ciam-for-apps-you-build",
+    "cognito-identity-platform-definition"
+   ]
+  },
+  {
+   "id": "d107",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "Why should a mobile or web app never embed long-term AWS keys, and what does AWS recommend instead (Cognito identity pool temporary credentials)?",
+   "status": "verified",
+   "facts": [
+    "cognito-mobile-app-never-embed-access-keys",
+    "cognito-preferred-over-direct-web-identity-federation"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-identity",
+    "www/cognito/faqs",
+    "docs/IAM/latest/UserGuide/id_roles_providers_oidc"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-identity"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-mobile-app-never-embed-access-keys",
+    "cognito-preferred-over-direct-web-identity-federation"
+   ]
+  },
+  {
+   "id": "d108",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "comparison",
+   "question": "Web identity federation with AssumeRoleWithWebIdentity directly vs through a Cognito identity pool: what does the IAM guide recommend?",
+   "status": "verified",
+   "facts": [
+    "cognito-preferred-over-direct-web-identity-federation"
+   ],
+   "sources": [
+    "docs/IAM/latest/UserGuide/id_roles_providers_oidc",
+    "docs/cognito/latest/developerguide/authentication-flow"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/authentication-flow"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-preferred-over-direct-web-identity-federation"
+   ]
+  },
+  {
+   "id": "d109",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "Multi-tenant apps: per-tenant user pools vs app clients vs groups vs custom attributes. What does the guide say decides between them?",
+   "status": "verified",
+   "facts": [
+    "cognito-multi-tenant-quotas-shared-and-session-cookie"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/multi-tenant-application-best-practices"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/multi-tenant-application-best-practices"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-multi-tenant-quotas-shared-and-session-cookie"
+   ]
+  },
+  {
+   "id": "d110",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "capability",
+   "question": "How do user pool groups carry an IAM role that an identity pool can use (precedence)?",
+   "status": "verified",
+   "facts": [
+    "cognito-federated-idp-auto-group",
+    "cognito-group-precedence-preferred-role",
+    "cognito-identity-pool-role-selection-options"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-user-groups",
+    "docs/cognito/latest/developerguide/role-based-access-control"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-user-groups",
+    "docs/cognito/latest/developerguide/role-based-access-control"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-federated-idp-auto-group",
+    "cognito-group-precedence-preferred-role",
+    "cognito-identity-pool-role-selection-options"
+   ]
+  },
+  {
+   "id": "d111",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "behavior",
+   "question": "What is the identity pool authentication flow (enhanced vs basic), and which STS call issues the credentials?",
+   "status": "verified",
+   "facts": [
+    "cognito-identity-pool-credentials-from-sts",
+    "cognito-identity-pool-enhanced-flow-one-hour-credentials"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/authentication-flow",
+    "docs/cognito/latest/developerguide/getting-credentials"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/authentication-flow",
+    "docs/cognito/latest/developerguide/getting-credentials"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-identity-pool-credentials-from-sts",
+    "cognito-identity-pool-enhanced-flow-one-hour-credentials"
+   ]
+  },
+  {
+   "id": "d120",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "Callvale: can IAM Identity Center give 14 engineers one sign-in to 7 accounts with only short-term credentials (no IAM users, no access keys)? Facts: permission sets, access portal, CLI short-term credentials.",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-cli-v2-sign-in-short-term-credentials",
+    "iam-identity-center-configures-account-permissions-automatically",
+    "iam-identity-center-one-sign-in-all-assignments",
+    "iam-identity-center-portal-credentials-for-cli-sdk",
+    "iam-identity-center-users-get-temporary-credentials",
+    "iam-identity-center-wa-remove-iam-users-after-federation"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/what-is",
+    "docs/singlesignon/latest/userguide/useraccess",
+    "docs/singlesignon/latest/userguide/howtogetcredentials"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/useraccess"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-cli-v2-sign-in-short-term-credentials",
+    "iam-identity-center-configures-account-permissions-automatically",
+    "iam-identity-center-one-sign-in-all-assignments",
+    "iam-identity-center-portal-credentials-for-cli-sdk",
+    "iam-identity-center-users-get-temporary-credentials",
+    "iam-identity-center-wa-remove-iam-users-after-federation"
+   ]
+  },
+  {
+   "id": "d121",
+   "bullet": "1.2.K4",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "Callvale: can a Cognito user pool federate the bank's SAML IdP so that Callvale never stores the 400 supervisors' passwords, and how are federated users billed (MAU of SAML/OIDC users)?",
+   "status": "verified",
+   "facts": [
+    "cognito-federated-user-profile-maps-idp-claims",
+    "cognito-saml-idp-must-support-saml-2",
+    "cognito-user-pool-federated-users-get-profile-and-jwt",
+    "cognito-user-pool-sp-and-idp-dual-role",
+    "cognito-user-pool-workforce-sso-in-your-app"
+   ],
+   "sources": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-saml-idp",
+    "docs/cognito/latest/developerguide/cognito-user-pools-identity-federation",
+    "www/cognito/pricing"
+   ],
+   "sources_missing": [
+    "docs/cognito/latest/developerguide/cognito-user-pools-saml-idp",
+    "docs/cognito/latest/developerguide/cognito-user-pools-identity-federation"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-federated-user-profile-maps-idp-claims",
+    "cognito-saml-idp-must-support-saml-2",
+    "cognito-user-pool-federated-users-get-profile-and-jwt",
+    "cognito-user-pool-sp-and-idp-dual-role",
+    "cognito-user-pool-workforce-sso-in-your-app"
+   ]
+  },
+  {
+   "id": "d122",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "Callvale accepts 'all access depends on the identity provider; one tested emergency path'. What emergency access does the IAM Identity Center guide recommend when the IdP or Identity Center is unavailable?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-break-glass-recommended",
+    "iam-identity-center-emergency-access-direct-federation"
+   ],
+   "sources": [
+    "docs/singlesignon/latest/userguide/emergency-access",
+    "docs/singlesignon/latest/userguide/resiliency-regional-behavior"
+   ],
+   "sources_missing": [
+    "docs/singlesignon/latest/userguide/emergency-access",
+    "docs/singlesignon/latest/userguide/resiliency-regional-behavior"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-break-glass-recommended",
+    "iam-identity-center-emergency-access-direct-federation"
+   ]
+  },
+  {
+   "id": "d123",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "decision",
+   "question": "Callvale stage 4 (Peldon): Windows servers and FSx for Windows File Server need Active Directory. Which directory type fits when Peldon's on-premises AD must keep working until month 31 (Managed AD with a trust vs AD Connector)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-extend-on-prem-ad-trust-no-sync-or-admt",
+    "directory-service-fsx-windows-needs-managed-ad-or-self-managed",
+    "directory-service-managed-ad-resource-forest-trust",
+    "directory-service-managed-ad-trust-to-existing-ad",
+    "directory-service-two-way-trust-for-aws-apps-one-way-for-ec2-rds-fsx"
+   ],
+   "sources": [
+    "docs/directoryservice/latest/admin-guide/usecase5",
+    "docs/directoryservice/latest/admin-guide/ms_ad_setup_trust",
+    "docs/fsx/latest/WindowsGuide/aws-ad-integration-fsxW"
+   ],
+   "sources_missing": [
+    "docs/directoryservice/latest/admin-guide/usecase5",
+    "docs/directoryservice/latest/admin-guide/ms_ad_setup_trust"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-extend-on-prem-ad-trust-no-sync-or-admt",
+    "directory-service-fsx-windows-needs-managed-ad-or-self-managed",
+    "directory-service-managed-ad-resource-forest-trust",
+    "directory-service-managed-ad-trust-to-existing-ad",
+    "directory-service-two-way-trust-for-aws-apps-one-way-for-ec2-rds-fsx"
+   ]
+  },
+  {
+   "id": "d130",
+   "bullet": "1.2.K5",
+   "lens": "behavior+decisions",
+   "kind": "case",
+   "question": "Dynata case study: what did Dynata use Amazon Cognito for, and which numbers does the page state (200 websites)?",
+   "status": "verified",
+   "facts": [
+    "cognito-case-olx-ciam-on-cognito",
+    "cognito-case-olx-waf-bot-control-protects-sign-up"
+   ],
+   "sources": [
+    "www/solutions/case-studies/dynata-amazon-cognito-case-study"
+   ],
+   "sources_missing": [
+    "www/solutions/case-studies/dynata-amazon-cognito-case-study"
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-case-olx-ciam-on-cognito",
+    "cognito-case-olx-waf-bot-control-protects-sign-up"
+   ]
+  },
+  {
+   "id": "d131",
+   "bullet": "1.1.K2",
+   "lens": "behavior+decisions",
+   "kind": "case",
+   "question": "Behavox or Sophos case study: how did a company use IAM Identity Center (formerly AWS SSO) and Organizations for workforce access, and which numbers are stated?",
+   "status": "not-found",
+   "facts": [],
+   "sources": [
+    "www/solutions/case-studies/behavox-case-study",
+    "www/solutions/case-studies/sophos"
+   ],
+   "sources_missing": [
+    "www/solutions/case-studies/behavox-case-study",
+    "www/solutions/case-studies/sophos"
+   ],
+   "gap": "Behavox and Sophos case pages redirect to the generic customer stories page. An IAM Identity Center case exists in chapter 03: iam-case-navan-identity-center-provisioning-minutes (verified).",
+   "status_found": "not-found",
+   "verified_facts": []
+  },
+  {
+   "id": "d132",
+   "bullet": "1.1.S6",
+   "lens": "behavior+decisions",
+   "kind": "case",
+   "question": "Banco Davivienda case study: how was AWS Directory Service used (with Amazon WorkSpaces), and which numbers are stated?",
+   "status": "not-found",
+   "facts": [],
+   "sources": [
+    "www/solutions/case-studies/davivienda-case-study"
+   ],
+   "sources_missing": [
+    "www/solutions/case-studies/davivienda-case-study"
+   ],
+   "gap": "Banco Davivienda case page redirects to the generic customer stories page; no newer Directory Service case in the cases index.",
+   "status_found": "not-found",
+   "verified_facts": []
+  },
+  {
+   "id": "d140",
+   "bullet": "1.1.K2",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: Will enabling IAM Identity Center modify any existing IAM roles, users or policies?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-does-not-modify-existing-iam"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-does-not-modify-existing-iam"
+   ]
+  },
+  {
+   "id": "d141",
+   "bullet": "1.1.K2",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: Can I connect more than one identity source?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-one-identity-source-at-a-time"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-one-identity-source-at-a-time"
+   ]
+  },
+  {
+   "id": "d142",
+   "bullet": "1.1.K2",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: Does IAM Identity Center create IAM users and groups in my accounts?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-creates-roles-per-permission-set-not-iam-users",
+    "iam-identity-center-external-idp-no-passwords-stored"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-creates-roles-per-permission-set-not-iam-users",
+    "iam-identity-center-external-idp-no-passwords-stored"
+   ]
+  },
+  {
+   "id": "d143",
+   "bullet": "1.1.K2",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: Which AWS accounts can I connect (accounts in the organization)?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-accounts-need-organizations-all-features"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-accounts-need-organizations-all-features"
+   ]
+  },
+  {
+   "id": "d144",
+   "bullet": "1.1.K2",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: Can I migrate gradually, and how do existing roles move?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-phased-migration-existing-iam-keeps-working",
+    "iam-identity-center-migrate-roles-attach-same-policies"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-phased-migration-existing-iam-keeps-working",
+    "iam-identity-center-migrate-roles-attach-same-policies"
+   ]
+  },
+  {
+   "id": "d145",
+   "bullet": "1.2.S3",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: Does IAM Identity Center support single sign-on to native mobile and desktop applications?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-apps-sso-browser-only"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-apps-sso-browser-only"
+   ]
+  },
+  {
+   "id": "d146",
+   "bullet": "1.2.S3",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "IdC FAQ: What data does IAM Identity Center store, and how is it encrypted?",
+   "status": "verified",
+   "facts": [
+    "iam-identity-center-stores-attributes-assignments-permissions",
+    "iam-identity-center-encryption-at-rest-kms",
+    "iam-identity-center-encryption-in-transit-tls"
+   ],
+   "sources": [
+    "www/iam/identity-center/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "iam-identity-center-stores-attributes-assignments-permissions",
+    "iam-identity-center-encryption-at-rest-kms",
+    "iam-identity-center-encryption-in-transit-tls"
+   ]
+  },
+  {
+   "id": "d147",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: Can I configure the storage, CPU or memory of a Managed Microsoft AD directory?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-resources-by-edition"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-resources-by-edition"
+   ]
+  },
+  {
+   "id": "d148",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: Does Managed Microsoft AD support schema extensions?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-schema-extend-not-modify"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-schema-extend-not-modify"
+   ]
+  },
+  {
+   "id": "d149",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: Can I add domain controllers manually?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-no-manual-dc-promotion"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-no-manual-dc-promotion"
+   ]
+  },
+  {
+   "id": "d150",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: How are Managed Microsoft AD directories deployed (Availability Zones, domain controllers)?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-two-azs-default",
+    "directory-service-managed-ad-daily-backup-encrypted-ebs",
+    "directory-service-managed-ad-failed-dc-replaced-same-az-ip",
+    "directory-service-multi-az-auto-replace-snapshots"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-two-azs-default",
+    "directory-service-managed-ad-daily-backup-encrypted-ebs",
+    "directory-service-managed-ad-failed-dc-replaced-same-az-ip",
+    "directory-service-multi-az-auto-replace-snapshots"
+   ]
+  },
+  {
+   "id": "d151",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: How does Directory Service enable single sign-on to the AWS Management Console?",
+   "status": "verified",
+   "facts": [
+    "directory-service-console-sso-iam-roles"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-console-sso-iam-roles"
+   ]
+  },
+  {
+   "id": "d152",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: Can I use Microsoft 365 with users managed in Managed Microsoft AD?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-office-365-via-ad-connect-adfs"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-office-365-via-ad-connect-adfs"
+   ]
+  },
+  {
+   "id": "d153",
+   "bullet": "1.1.S6",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "DS FAQ: Can I encrypt LDAP traffic (LDAPS) between applications and Managed Microsoft AD?",
+   "status": "verified",
+   "facts": [
+    "directory-service-managed-ad-ldaps-ports"
+   ],
+   "sources": [
+    "www/directoryservice/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "directory-service-managed-ad-ldaps-ports"
+   ]
+  },
+  {
+   "id": "d154",
+   "bullet": "1.2.K5",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: What is a user pool?",
+   "status": "verified",
+   "facts": [
+    "cognito-user-pool-is-user-directory"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-user-pool-is-user-directory"
+   ]
+  },
+  {
+   "id": "d155",
+   "bullet": "1.2.K5",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: Can I set password policies?",
+   "status": "verified",
+   "facts": [
+    "cognito-user-pool-password-policies",
+    "cognito-compromised-credentials-check"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-user-pool-password-policies",
+    "cognito-compromised-credentials-check"
+   ]
+  },
+  {
+   "id": "d156",
+   "bullet": "1.2.K4",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: How can I keep authentication available during a Regional disruption, and what happens to users during failover?",
+   "status": "verified",
+   "facts": [
+    "cognito-multi-region-replication-failover",
+    "cognito-multi-region-sessions-stay-valid",
+    "cognito-multi-region-client-credentials-synced",
+    "cognito-customer-managed-kms-multi-region-keys"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-multi-region-replication-failover",
+    "cognito-multi-region-sessions-stay-valid",
+    "cognito-multi-region-client-credentials-synced",
+    "cognito-customer-managed-kms-multi-region-keys"
+   ]
+  },
+  {
+   "id": "d157",
+   "bullet": "1.2.K4",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: When using public identity providers, does Cognito identity pools store users' credentials?",
+   "status": "verified",
+   "facts": [
+    "cognito-identity-pool-no-user-credentials-stored"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-identity-pool-no-user-credentials-stored"
+   ]
+  },
+  {
+   "id": "d158",
+   "bullet": "1.2.K4",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: What are unauthenticated users?",
+   "status": "verified",
+   "facts": [
+    "cognito-identity-pool-unauthenticated-guest-role"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-identity-pool-unauthenticated-guest-role"
+   ]
+  },
+  {
+   "id": "d159",
+   "bullet": "1.2.K5",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: What are monthly active users (MAUs), and is Cognito in the AWS Free Tier?",
+   "status": "verified",
+   "facts": [
+    "cognito-user-pools-billed-by-mau",
+    "cognito-free-tier-10000-mau",
+    "cognito-identity-pools-no-charge"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-user-pools-billed-by-mau",
+    "cognito-free-tier-10000-mau",
+    "cognito-identity-pools-no-charge"
+   ]
+  },
+  {
+   "id": "d160",
+   "bullet": "1.2.K5",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: What is the Amazon Cognito sync store (and its current status)?",
+   "status": "verified",
+   "facts": [
+    "cognito-sync-store-key-value-per-identity",
+    "cognito-change-sync-closed-to-new-customers-2026-07",
+    "cognito-change-sync-closure-announced-2026-06"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "registrar_note": "Current status of Cognito Sync is in the history rows (no longer open to new customers since 2026-07-31; existing customers continue).",
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-sync-store-key-value-per-identity",
+    "cognito-change-sync-closed-to-new-customers-2026-07",
+    "cognito-change-sync-closure-announced-2026-06"
+   ]
+  },
+  {
+   "id": "d161",
+   "bullet": "1.2.K4",
+   "lens": "faq",
+   "kind": "faq",
+   "question": "Cognito FAQ: Can I remember the devices of my users in a user pool?",
+   "status": "verified",
+   "facts": [
+    "cognito-remember-devices-suppress-mfa"
+   ],
+   "sources": [
+    "www/cognito/faqs"
+   ],
+   "sources_missing": [],
+   "status_found": "found",
+   "verified_facts": [
+    "cognito-remember-devices-suppress-mfa"
+   ]
+  }
+ ],
+ "registrar": {
+  "by": "register-05",
+  "date": "2026-10-12",
+  "demand_statuses": {
+   "found": 126,
+   "partial": 7,
+   "not-found": 2
+  },
+  "note": "status: 'found' = the named live facts answer the demand question (mech-pass, verification pending); 'partial' = a gap remains (see 'gap'); 'not-found' = nothing quotable (see 'gap'). Superseded ids were replaced by the kept fact; rejected ids were dropped. Details: reg-notes.json."
+ },
+ "verify_facts": {
+  "closed": {
+   "by": "close-facts-05",
+   "date": "2026-10-12",
+   "final_finalize": {
+    "verified": 409,
+    "rejected": 3,
+    "superseded": 8,
+    "disputed": 0,
+    "pending": 0
+   },
+   "open_conflicts_on_chapter_facts": 0,
+   "demand_statuses": {
+    "verified": 126,
+    "partial-verified": 7,
+    "not-found": 2
+   },
+   "note": "status: 'verified' = registrar status found and every named fact verified; 'partial-verified' = gap remains (see 'gap'), named facts verified; 'not-found' = nothing quotable (see 'gap'). 'verified_facts' lists the ids the brief may name now; 'status_found' keeps the registrar's found/partial/not-found value. Final finalize (after the second vote) changed 33 facts to verified, rejected none; no chapter-05 fact sat in an open conflict, none pending."
+  }
+ }
+}

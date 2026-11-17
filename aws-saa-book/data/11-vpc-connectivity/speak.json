@@ -1,0 +1,359 @@
+{
+ "v": 1,
+ "chapter": "vpc-connectivity",
+ "items": [
+  {
+   "id": "vpc-connectivity-s01",
+   "chapter": "vpc-connectivity",
+   "kind": "explain",
+   "prompt": "With a peering connection, the two networks would be joined. How does PrivateLink limit the bank to the API?",
+   "persona": "Chen, security lead of Callvale",
+   "ten_second": "The bank gets a private endpoint to our API and nothing else. Only the bank can start a connection, not us.",
+   "sixty_second": [
+    "The short answer is: the bank reaches our API and nothing else.",
+    "It works like this. We put a Network Load Balancer in front of the API.",
+    "We create an endpoint service that points to it.",
+    "The bank creates an interface endpoint in its own VPC.",
+    "The endpoint gets private IP addresses in the bank's subnets.",
+    "Only the bank's side can start a connection. It's a one-way service.",
+    "And nobody connects until we allow the bank's account. We can accept each request by hand.",
+    "The thing to watch is encryption. PrivateLink adds no default encryption, so keep TLS.",
+    "In your case, peering would join both networks, and both VPCs use the same CIDR block.",
+    "Peering can't work with that overlap. PrivateLink can, because the endpoint sits in the bank's VPC.",
+    "Which of our other services must the bank call, besides the API?"
+   ],
+   "skeleton": [
+    "the API and nothing else",
+    "bank's endpoint, bank starts connections",
+    "no default encryption: keep TLS",
+    "same CIDR block rules out peering"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A peering connection gives full bidirectional connectivity between the two VPCs, and it cannot be created between VPCs with matching or overlapping CIDR blocks.",
+     "accept": [
+      "peering joins both networks both ways",
+      "peering does not work with the same CIDR block"
+     ],
+     "facts": [
+      "vpc-peering-wp-full-bidirectional-point-to-point",
+      "vpc-peering-no-overlap-ipv4-ipv6"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "The provider puts a Network Load Balancer in front of the service and creates an endpoint service; the consumer creates an interface endpoint with a private IP.",
+     "accept": [
+      "a load balancer in front of our API",
+      "the bank creates an endpoint in its own VPC"
+     ],
+     "facts": [
+      "privatelink-wp-provider-nlb-consumer-endpoint-steps",
+      "privatelink-endpoint-service-needs-load-balancer"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Only consumer VPCs initiate connections to the provider VPC; PrivateLink is a one-way service.",
+     "accept": [
+      "only the bank can start a connection",
+      "it works in one direction"
+     ],
+     "facts": [
+      "privatelink-wp-only-consumer-initiates",
+      "privatelink-faq-consumer-initiates-allowlisted-customers"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "An endpoint service is not available to consumers until the provider allows specific principals, and the provider can accept connection requests manually.",
+     "accept": [
+      "we must allow the bank's account first",
+      "we accept the bank's request"
+     ],
+     "facts": [
+      "privatelink-endpoint-service-not-available-by-default",
+      "privatelink-permissions-and-acceptance-control-access"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "must",
+     "point": "PrivateLink does not provide any encryption by default for data in transit, so the API keeps its own TLS.",
+     "accept": [
+      "PrivateLink does not encrypt the traffic",
+      "keep TLS on the API"
+     ],
+     "facts": [
+      "privatelink-faq-no-encryption-by-default"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Consumer and provider VPCs can have overlapping IP address ranges, because the endpoint network interfaces sit in the consumer VPC.",
+     "accept": [
+      "the same CIDR block is fine with PrivateLink"
+     ],
+     "facts": [
+      "privatelink-wp-consumer-and-provider-may-overlap",
+      "privatelink-wp-unidirectional-overlapping-ips"
+     ]
+    },
+    {
+     "id": "kp7",
+     "kind": "nice",
+     "point": "If the Network Load Balancer has a security group, it must allow inbound traffic from the IP addresses of the clients.",
+     "accept": [
+      "the load balancer's security group allows the bank's clients"
+     ],
+     "facts": [
+      "privatelink-nlb-security-group-must-allow-clients"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "PrivateLink encrypts the bank's traffic for us.",
+     "correct": "PrivateLink does not provide any encryption by default for data in transit. The API keeps its own TLS.",
+     "fact": "privatelink-faq-no-encryption-by-default"
+    },
+    {
+     "error": "The bank's endpoint is on the internet, but only the bank knows its name.",
+     "correct": "The endpoint's DNS names resolve to local IP addresses in the bank's VPC.",
+     "fact": "privatelink-faq-endpoint-dns-resolves-to-local-ip"
+    },
+    {
+     "error": "After the bank connects, our services can call into the bank's VPC too.",
+     "correct": "Only consumer VPCs initiate connections to the service provider VPC. The connection works in one direction.",
+     "fact": "privatelink-wp-only-consumer-initiates"
+    }
+   ],
+   "terms": [
+    {
+     "say": "Network Load Balancer",
+     "avoid": [
+      "NLB"
+     ]
+    },
+    {
+     "say": "interface endpoint",
+     "avoid": [
+      "VPCE"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "If we remove the bank's account from the allowed principals, does its traffic stop?",
+     "answer": "No. Removing permissions does not affect existing connections that we accepted before.",
+     "facts": [
+      "privatelink-remove-permission-keeps-existing-connections"
+     ]
+    },
+    {
+     "question": "Can the bank call the API from its data center too?",
+     "answer": "Yes. The bank's on-premises application can connect over Direct Connect to the endpoint in the bank's VPC.",
+     "facts": [
+      "privatelink-faq-over-direct-connect"
+     ]
+    }
+   ],
+   "facts": [
+    "vpc-peering-wp-full-bidirectional-point-to-point",
+    "vpc-peering-no-overlap-ipv4-ipv6",
+    "privatelink-wp-provider-nlb-consumer-endpoint-steps",
+    "privatelink-endpoint-service-needs-load-balancer",
+    "privatelink-wp-only-consumer-initiates",
+    "privatelink-faq-consumer-initiates-allowlisted-customers",
+    "privatelink-endpoint-service-not-available-by-default",
+    "privatelink-permissions-and-acceptance-control-access",
+    "privatelink-faq-no-encryption-by-default",
+    "privatelink-wp-consumer-and-provider-may-overlap",
+    "privatelink-wp-unidirectional-overlapping-ips",
+    "privatelink-nlb-security-group-must-allow-clients",
+    "privatelink-faq-endpoint-dns-resolves-to-local-ip",
+    "privatelink-remove-permission-keeps-existing-connections",
+    "privatelink-faq-over-direct-connect"
+   ],
+   "section": "2-deep.md#privatelink-lets-consumers-reach-one-service-and-only-consumers-start-connections",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "status": "candidate",
+   "rev": 2
+  },
+  {
+   "id": "vpc-connectivity-s02",
+   "chapter": "vpc-connectivity",
+   "kind": "compare",
+   "prompt": "We have twelve VPCs in five accounts, and next year we will have about forty. Should we peer them or use a transit gateway?",
+   "persona": "a startup CTO in office hours",
+   "ten_second": "Both connect VPCs privately. Peering links one pair at a time and isn't transitive. For that many VPCs, use a transit gateway hub.",
+   "sixty_second": [
+    "Both connect VPCs privately. The difference is how they grow.",
+    "It works like this. A peering connection links one pair of VPCs.",
+    "Peering is not transitive, so traffic can't pass through a middle VPC.",
+    "Every pair that talks needs its own connection.",
+    "And each VPC has a peering quota, adjustable up to one hundred twenty-five.",
+    "A transit gateway is a hub. Each VPC connects once, and the hub routes between them.",
+    "Route tables on the hub can keep groups apart, like dev and prod.",
+    "The thing to watch is cost. A transit gateway charges per hour for each attachment, plus per gigabyte of traffic.",
+    "Creating a peering connection is free. You pay for data transfer across it.",
+    "In your case, with that many VPCs in several accounts, I'd use one transit gateway.",
+    "Which pair of VPCs sends the most data to each other?"
+   ],
+   "skeleton": [
+    "both private, they grow differently",
+    "peering: one pair, not transitive",
+    "hub: hourly attachment plus traffic",
+    "many VPCs: one transit gateway"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A VPC peering connection is a one to one relationship between two VPCs, and VPC peering does not support transitive peering relationships.",
+     "accept": [
+      "peering links two VPCs",
+      "traffic cannot pass through a middle VPC"
+     ],
+     "facts": [
+      "vpc-peering-one-to-one-relationship",
+      "vpc-peering-no-transitive-example"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "A full mesh grows by n(n-1)/2, for example 4,950 peering connections, and active peering connections per VPC are adjustable up to 125.",
+     "accept": [
+      "a full mesh grows very fast",
+      "each VPC has a peering quota"
+     ],
+     "facts": [
+      "vpc-peering-wp-full-mesh-4950-connections",
+      "vpc-peering-quota-active-connections-per-vpc"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "With a transit gateway, each spoke VPC only needs to connect to the transit gateway, and multiple route tables keep groups of VPCs isolated.",
+     "accept": [
+      "each VPC connects once to the hub",
+      "separate route tables keep dev and prod apart"
+     ],
+     "facts": [
+      "transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway",
+      "transit-gateway-faq-route-tables-segment"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A transit gateway is charged for its connections per hour and for its traffic; creating a peering connection has no charge, but data transfer is charged.",
+     "accept": [
+      "a transit gateway has an hourly cost per attachment",
+      "peering costs only data transfer"
+     ],
+     "facts": [
+      "transit-gateway-pricing-hourly-attachment-and-data-processing",
+      "vpc-peering-faq-no-creation-charge"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "The whitepaper suggests peering when the number of VPCs to be connected is less than 10.",
+     "accept": [
+      "peering suits a few VPCs"
+     ],
+     "facts": [
+      "vpc-peering-wp-best-for-few-controlled-vpcs"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Designs often mix the technologies: PrivateLink for API-style connectivity, peering for direct connectivity, and Transit Gateway to simplify connectivity of VPCs at scale.",
+     "accept": [
+      "you can combine peering and a transit gateway"
+     ],
+     "facts": [
+      "privatelink-wp-mix-of-technologies"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Peer every VPC with one hub VPC, and route through the hub.",
+     "correct": "VPC peering does not support transitive peering relationships. Traffic cannot pass through a middle VPC.",
+     "fact": "vpc-peering-no-transitive-example"
+    },
+    {
+     "error": "A transit gateway is free; you pay only for the traffic.",
+     "correct": "Transit Gateway is charged for the number of connections that you make to it per hour and for the traffic that flows through it.",
+     "fact": "transit-gateway-pricing-hourly-attachment-and-data-processing"
+    }
+   ],
+   "terms": [
+    {
+     "say": "transit gateway",
+     "avoid": [
+      "TGW"
+     ]
+    },
+    {
+     "say": "peering connection",
+     "avoid": [
+      "peer link"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can our other accounts use one transit gateway?",
+     "answer": "Yes. Share it with AWS Resource Access Manager, across accounts or across your organization. An account that gets an invitation must accept the resource share first.",
+     "facts": [
+      "transit-gateway-share-with-ram-accounts-or-org",
+      "transit-gateway-share-accept-in-ram"
+     ]
+    },
+    {
+     "question": "Can we keep development away from production on the same transit gateway?",
+     "answer": "Yes. Give each group its own route table. Attachments of one isolated route table cannot route packets to or receive packets from the other group.",
+     "facts": [
+      "transit-gateway-isolated-vpcs-scenario"
+     ]
+    }
+   ],
+   "facts": [
+    "vpc-peering-one-to-one-relationship",
+    "vpc-peering-no-transitive-example",
+    "vpc-peering-wp-full-mesh-4950-connections",
+    "vpc-peering-quota-active-connections-per-vpc",
+    "transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway",
+    "transit-gateway-faq-route-tables-segment",
+    "transit-gateway-pricing-hourly-attachment-and-data-processing",
+    "vpc-peering-faq-no-creation-charge",
+    "vpc-peering-wp-best-for-few-controlled-vpcs",
+    "privatelink-wp-mix-of-technologies",
+    "transit-gateway-share-with-ram-accounts-or-org",
+    "transit-gateway-share-accept-in-ram",
+    "transit-gateway-isolated-vpcs-scenario"
+   ],
+   "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "status": "candidate",
+   "rev": 2
+  }
+ ]
+}

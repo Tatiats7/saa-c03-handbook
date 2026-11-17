@@ -1,0 +1,75 @@
+[
+ {
+  "id": "lambda-q014",
+  "section": "2-deep.md#provisioned-concurrency-keeps-environments-initialized-and-you-pay-for-them-while-idle",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": ["3.2.K5"],
+  "topics": ["compute", "performance"],
+  "services": ["lambda", "api-gateway", "ec2"],
+  "concept": "provisioned-needs-alias",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a latency-sensitive API on Amazon API Gateway with an AWS Lambda function. To remove cold starts, a developer published a version of the function, created an alias named live that points to the version, and configured provisioned concurrency on the alias. However, users still see slow responses after quiet periods. The API Gateway integration invokes the function by its unqualified ARN. The API must respond with low latency. Which change will fix the problem with the LEAST operational overhead?",
+  "keywords": ["configured provisioned concurrency on the alias", "invokes the function by its unqualified ARN", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Configure reserved concurrency on the function equal to the provisioned concurrency, so that the function keeps its environments warm.",
+    "correct": false,
+    "why": "Reserved concurrency is a cap that you set to [reserve a subset of your account concurrency limit](../facts/lambda.md#lambda-faq-per-function-concurrency-control); it prepares no environment, so the cold starts stay.",
+    "concept": "reserved-concurrency-warmth",
+    "trap": "lambda-trap-reserved-keeps-warm",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Configure provisioned concurrency on the $LATEST version of the function, so that calls to the unqualified ARN use initialized environments.",
+    "correct": false,
+    "why": "Provisioned concurrency applies to a published version or an alias, [not the $LATEST version](../facts/lambda.md#lambda-pc-not-latest-no-cold-start).",
+    "concept": "provisioned-on-latest",
+    "trap": "lambda-trap-provisioned-on-latest",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Update the API Gateway integration so that it invokes the live alias of the function instead of the unqualified function ARN.",
+    "correct": true,
+    "why": "Provisioned environments serve a caller that [points to the correct function alias or version](../facts/lambda.md#lambda-pc-event-source-alias), so the integration has to invoke the live alias.",
+    "concept": "invoke-the-alias",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Move the API code to Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer, with instances that keep running.",
+    "correct": false,
+    "why": "It works, because running instances need no start-up for each request, but moving the API to servers is far more work than changing one integration setting.",
+    "concept": "move-api-to-ec2",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The provisioned environments belong to the live alias. If a function has an event source, the source has to call the alias or version that has them, or the function [won't use provisioned concurrency environments](../facts/lambda.md#lambda-pc-event-source-alias). The unqualified ARN does not use the alias, so requests still get new environments. Pointing the integration at live fixes this with one change.",
+  "takeaway": "Provisioned concurrency helps callers that invoke its version or alias; an unqualified ARN gets new environments.",
+  "twin": "If the stem said \"configured reserved concurrency on the function\" instead: configure provisioned concurrency on an alias, because provisioned concurrency gives [pre-initialized execution environments](../facts/lambda.md#lambda-pc-scales-beyond-setting).",
+  "say": "The warm environments sit on the alias, so API Gateway has to call the alias, not the plain function name.",
+  "facts": [
+   "lambda-pc-event-source-alias",
+   "lambda-pc-not-latest-no-cold-start",
+   "lambda-faq-per-function-concurrency-control",
+   "lambda-pc-scales-beyond-setting"
+  ],
+  "sources": [],
+  "exam_english": ["ee-however", "ee-lowest-latency", "ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ }
+]

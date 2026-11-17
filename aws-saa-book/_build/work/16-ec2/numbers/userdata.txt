@@ -1,0 +1,140 @@
+[docs/AWSEC2/latest/UserGuide/user-data] lines 1-139 of 834 | https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html | fetched 2026-10-12T17:47:02Z
+
+
+# Run commands when you launch an EC2 instance with user data input
+<a name="user-data"></a>
+
+When you launch an Amazon EC2 instance, you can pass user data to the instance that is used to perform automated configuration tasks, or to run scripts after the instance starts.
+
+If you're interested in more complex automation scenarios, you might consider CloudFormation. For more information, see [Deploying applications on Amazon EC2 with CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/deploying.applications.html) in the *AWS CloudFormation User Guide*.
+
+On Linux instances, you can pass two types of user data to Amazon EC2: shell scripts and cloud-init directives. You can also pass this data into the launch instance wizard as plain text, as a file (this is useful for launching instances with the command line tools), or as base64-encoded text (for API calls).
+
+On Windows instances, the launch agents handle your user data scripts.
+
+**Considerations**
++ User data is treated as opaque data: what you give is what you get back. It is up to the instance to interpret it.
++ User data must be base64-encoded. The Amazon EC2 console can perform the base64-encoding for your or accept base64-encoded input. If you retrieve the user data using instance metadata or the console, it's base64-decoded for you automatically.
++ User data is limited to 16 KB, in raw form, before it is base64-encoded. The size of a string of length *n* after base64-encoding is ceil(*n*/3)\*4.
++ User data is an instance attribute. If you create an AMI from an instance, the instance user data is not included in the AMI.
+
+## User data in the AWS Management Console
+<a name="user-data-console"></a>
+
+You can specify instance user data when you launch the instance. If the root volume of the instance is an EBS volume, you can also stop the instance and update its user data.
+
+### Specify instance user data at launch with the Launch Wizard
+<a name="user-data-launch-instance-wizard"></a>
+
+You can specify user data when you launch an instance with the Launch Wizard in the EC2 console. To specify user data on launch, follow the procedure for [launching an instance](ec2-launch-instance-wizard.md). The **User data** field is located in the [Advanced details](ec2-instance-launch-parameters.md#liw-advanced-details) section of the launch instance wizard. Enter your PowerShell script in the **User data** field, and then complete the instance launch procedure.
+
+In the following screenshot of the **User data** field, the example script creates a file in the Windows temporary folder, using the current date and time in the file name. When you include `<persist>true</persist>`, the script is run every time you reboot or start the instance. If you leave the **User data has already been base64 encoded** checkbox empty, the Amazon EC2 console performs the base64 encoding for you.
+
+![Advance Details user data text field.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/images/configure_ec2config_userdata.png)
+
+
+For more information, see [Specify instance user data at launch with the Launch Wizard](#user-data-launch-instance-wizard). For a Linux example that uses the AWS CLI, see [User data and the AWS CLI](#user-data-api-cli). For a Windows example that uses the Tools for Windows PowerShell, see [User data and the Tools for Windows PowerShell](#user-data-powershell).
+
+### View and update the instance user data
+<a name="user-data-view-change"></a>
+
+You can view the instance user data for any instance, and you can update the instance user data for a stopped instance.
+
+**To update the user data for an instance using the console**
+
+1. Open the Amazon EC2 console at [https://console.aws.amazon.com/ec2/](https://console.aws.amazon.com/ec2/).
+
+1. In the navigation pane, choose **Instances**.
+
+1. Select the instance and choose **Actions**, **Instance state**, **Stop instance**.
+**Warning**  
+When you stop an instance, the data on instance store volumes is lost. To preserve this data, back it up to persistent storage.
+
+1. When prompted for confirmation, choose **Stop**. It can take a few minutes for the instance to stop.
+
+1. With the instance still selected, choose **Actions**, **Instance settings**, **Edit user data**. You can't change the user data if the instance is running, but you can view it.
+
+1. In the **Edit user data** dialog box, update the user data, and then choose **Save**. To run user data scripts every time you reboot or start the instance, add `<persist>true</persist>`, as shown in the following example:  
+![Edit User Data dialog box.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/images/view-change-user-data.png)
+
+1. Start the instance. If you enabled user data execution for subsequent reboots or starts, the updated user data scripts are run as part of the instance start process.
+
+## How Amazon EC2 handles user data for Linux instances
+<a name="userdata-linux"></a>
+
+The following examples use user data to run commands that set up a LAMP server when the instance launches. In each example, the following tasks are performed:
++ The distribution software packages are updated.
++ The web server, `php`, and `mariadb` packages are installed.
++ The `httpd` service is started and turned on.
++ The user `ec2-user` is added to the apache group.
++ The appropriate ownership and file permissions are set for the web directory and the files contained within it.
++ A simple web page is created to test the web server and PHP engine.
+
+**Topics**
++ [Prerequisites](#user-data-requirements)
++ [User data and shell scripts](#user-data-shell-scripts)
++ [Update the instance user data](#user-data-modify)
++ [User data and cloud-init directives](#user-data-cloud-init)
++ [User data and the AWS CLI](#user-data-api-cli)
++ [Combine shell scripts and cloud-init directives](#user-data-mime-multi)
+
+### Prerequisites
+<a name="user-data-requirements"></a>
+
+The examples in this topic assume the following:
++ Your instance has a public DNS name that is reachable from the internet.
++ The security group associated with your instance is configured to allow SSH (port 22) traffic so that you can connect to the instance to view the output log files.
++ Your instance is launched using an Amazon Linux AMI. The commands and directives might not work for other Linux distributions. For more information about other distributions, such as their support for cloud-init, see documentation for the specific distribution.
+
+### User data and shell scripts
+<a name="user-data-shell-scripts"></a>
+
+If you are familiar with shell scripting, this is the easiest and most complete way to send instructions to an instance at launch. Adding these tasks at boot time adds to the amount of time it takes to boot the instance. You should allow a few minutes of extra time for the tasks to complete before you test that the user script has finished successfully.
+
+**Important**  
+By default, user data scripts and cloud-init directives run only during the boot cycle when you first launch an instance. You can update your configuration to ensure that your user data scripts and cloud-init directives run every time you restart your instance. For more information, see [How can I utilize user data to automatically run a script with every restart of my Amazon EC2 Linux instance?](https://repost.aws/knowledge-center/execute-user-data-ec2) in the AWS Knowledge Center.
+
+User data shell scripts must start with the `#!` characters and the path to the interpreter you want to read the script (commonly **/bin/bash)**. For an introduction on shell scripting, see the [Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html) on the *GNU Operating System* website.
+
+Scripts entered as user data are run as the root user, so do not use the **sudo** command in the script. Remember that any files you create will be owned by the root user; if you need a non-root user to have file access, you should modify the permissions accordingly in the script. Also, because the script is not run interactively, you cannot include commands that require user feedback (such as **yum update** without the `-y` flag).
+
+If you use an AWS API, including the AWS CLI, in a user data script, you must use an instance profile when launching the instance. An instance profile provides the appropriate AWS credentials required by the user data script to issue the API call. For more information, see [Use instance profiles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) in the IAM User Guide. The permissions you assign to the IAM role depend on which services you are calling with the API. For more information, see [IAM roles for Amazon EC2](iam-roles-for-amazon-ec2.md).
+
+The cloud-init output log file captures console output so it is easy to debug your scripts following a launch if the instance does not behave the way you intended. To view the log file, [connect to the instance](connect-to-linux-instance.md) and open `/var/log/cloud-init-output.log`.
+
+When a user data script is processed, it is copied to and run from `/var/lib/cloud/instances/{{instance-id}}/`. The script is not deleted after it is run. Be sure to delete the user data scripts from `/var/lib/cloud/instances/{{instance-id}}/` before you create an AMI from the instance. Otherwise, the script will exist in this directory on any instance launched from the AMI.
+
+### Update the instance user data
+<a name="user-data-modify"></a>
+
+To update the instance user data, you must first stop the instance. If the instance is running, you can view the user data but you cannot modify it.
+
+**Warning**  
+When you stop an instance, the data on instance store volumes is lost. To preserve this data, back it up to persistent storage.
+
+**To modify instance user data**
+
+1. Open the Amazon EC2 console at [https://console.aws.amazon.com/ec2/](https://console.aws.amazon.com/ec2/).
+
+1. In the navigation pane, choose **Instances**.
+
+1. Select the instance and choose **Instance state**, **Stop instance**. If this option is disabled, either the instance is already stopped or its root volume is an instance store volume.
+
+1. When prompted for confirmation, choose **Stop**. It can take a few minutes for the instance to stop.
+
+1. With the instance still selected, choose **Actions**, **Instance settings**, **Edit user data**.
+
+1. Modify the user data as needed, and then choose **Save**.
+
+1. Start the instance. The new user data is visible on your instance after you start it; however, user data scripts are not run.
+
+### User data and cloud-init directives
+<a name="user-data-cloud-init"></a>
+
+The cloud-init package configures specific aspects of a new Amazon Linux instance when it is launched; most notably, it configures the `.ssh/authorized_keys` file for the ec2-user so you can log in with your own private key. For more information about the configuration tasks that the cloud-init package performs for Amazon Linux instances, see the following documentation:
++ **Amazon Linux 2023** – [Customized cloud-init](https://docs.aws.amazon.com/linux/al2023/ug/cloud-init.html)
++ **Amazon Linux 2** – [Using cloud-init on Amazon Linux 2](https://docs.aws.amazon.com/linux/al2/ug/amazon-linux-cloud-init.html)
+
+The cloud-init user directives can be passed to an instance at launch the same way that a script is passed, although the syntax is different. For more information about cloud-init, see [https://cloudinit.readthedocs.org/en/latest/index.html](https://cloudinit.readthedocs.org/en/latest/index.html).
+
+**Important**  

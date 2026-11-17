@@ -1,0 +1,76 @@
+[
+ {
+  "id": "lambda-q010",
+  "section": "2-deep.md#a-failed-batch-returns-to-its-queue-but-blocks-its-stream-shard",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.S1"],
+  "topics": ["integration", "resilience"],
+  "services": ["lambda", "sqs", "s3"],
+  "concept": "sqs-poison-message",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company uses an Amazon SQS standard queue to decouple an order service from an AWS Lambda function. An event source mapping invokes the function with batches of messages. A few malformed messages make the function fail on every attempt. These messages return to the queue again and again and fill the function logs with errors. The company wants to keep the malformed messages for later analysis and stop the repeated processing. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["Amazon SQS standard queue", "keep the malformed messages for later analysis", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add code to the function that copies each malformed message to an Amazon S3 bucket and then deletes the message from the queue.",
+    "correct": false,
+    "why": "It works, but parsing, copying and deleting code is more to build and maintain than one redrive policy on the queue.",
+    "concept": "custom-copy-and-delete",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Configure a dead-letter queue on the function, so that Lambda sends each message that fails every attempt to a second SQS queue.",
+    "correct": false,
+    "why": "A function's [dead letter queue](../facts/lambda.md#lambda-faq-dlq-after-retries) serves asynchronous invocations; for an SQS source, the redrive policy of the source queue decides where failed messages go.",
+    "concept": "function-dead-letter-queue",
+    "trap": "lambda-trap-function-dlq-for-sqs",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Set the visibility timeout of the source queue lower than the function timeout, so that failed messages return to the queue sooner.",
+    "correct": false,
+    "why": "Lambda refuses that setting, because the function timeout [must be less than or equal to](../facts/lambda.md#lambda-sqs-timeout-not-above-visibility) the visibility timeout, and it keeps no message.",
+    "concept": "short-visibility-timeout",
+    "trap": null,
+    "misconception": "believes that a shorter visibility timeout clears messages that keep failing",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Configure a redrive policy on the source queue that moves a message to an SQS dead-letter queue after a maxReceiveCount of 5.",
+    "correct": true,
+    "why": "For a queue source, the [visibility timeout and redrive policy](../facts/lambda.md#lambda-queue-esm-retry-set-on-queue) decide where failed messages go, and AWS suggests a maxReceiveCount of [at least 5](../facts/lambda.md#lambda-sqs-dlq-maxreceivecount-5).",
+    "concept": "source-queue-redrive-policy",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "With an SQS event source mapping, a failed message becomes visible again and is retried. The [visibility timeout and redrive policy](../facts/lambda.md#lambda-queue-esm-retry-set-on-queue) of the source queue decide the retries and where failed messages go. A redrive policy moves a message that keeps failing to a dead-letter queue, where it waits for analysis.",
+  "takeaway": "For an SQS event source, failed messages reach a dead-letter queue through the redrive policy of the source queue.",
+  "twin": "If the stem said \"an Amazon Kinesis data stream\" instead: an on-failure destination on the event source mapping, because it sends discarded records to an [Amazon SQS queue or Amazon SNS topic](../facts/lambda.md#lambda-kinesis-failure-destination-sqs-sns).",
+  "say": "For an SQS source, the queue's own redrive policy moves the bad messages to a dead-letter queue.",
+  "facts": [
+   "lambda-queue-esm-retry-set-on-queue",
+   "lambda-sqs-dlq-maxreceivecount-5",
+   "lambda-faq-dlq-after-retries",
+   "lambda-sqs-timeout-not-above-visibility",
+   "lambda-kinesis-failure-destination-sqs-sns"
+  ],
+  "sources": [],
+  "exam_english": ["ee-decouple", "ee-least-operational-overhead"],
+  "twin_of": null
+ }
+]

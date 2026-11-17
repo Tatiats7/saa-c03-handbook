@@ -1,0 +1,104 @@
+[
+ {
+  "id": "auto-scaling-q015",
+  "section": "2-deep.md#scheduled-and-predictive-scaling-add-capacity-before-the-load-arrives",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.S2"
+  ],
+  "topics": [
+   "cost",
+   "compute",
+   "performance"
+  ],
+  "services": [
+   "ec2-auto-scaling"
+  ],
+  "concept": "predictive-needs-dynamic",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs an application on Amazon EC2 instances in an Auto Scaling group. Traffic follows a predictable daily pattern with a peak every morning; after the peak, the load falls to a level that changes from day to day. The group has one predictive scaling policy in forecast and scale mode and no other scaling policy. The instances are ready before each morning peak, but the group keeps its peak capacity for the rest of the day and through the night, and the monthly cost has grown. The application must stay ready for the morning peak. Which change will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "one predictive scaling policy",
+   "keeps its peak capacity for the rest of the day",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Switch the predictive scaling policy to forecast only mode, so that the policy removes the extra instances when the forecast falls.",
+    "correct": false,
+    "why": "In [forecast only](../facts/ec2-auto-scaling.md#ec2-auto-scaling-predictive-forecast-only-mode-first) mode the policy forecasts capacity but does not scale the group, so it removes nothing and also stops the morning scale-out.",
+    "concept": "forecast-only-mode",
+    "trap": "auto-scaling-trap-predictive-scales-in",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Add a scheduled action each evening that sets the desired capacity to the night level, and keep the predictive scaling policy.",
+    "correct": false,
+    "why": "It works, but capacity stays at the peak level until the evening, and a fixed night level stays the same while the load changes each day.",
+    "concept": "evening-scheduled-action",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Add a target tracking scaling policy on average CPU utilization, and keep the predictive scaling policy in forecast and scale mode.",
+    "correct": true,
+    "why": "Target tracking removes instances when the metric falls below the target, and the predictive policy keeps [launching capacity in advance of forecasted load](../facts/ec2-auto-scaling.md#ec2-auto-scaling-predictive-long-initialization-fit).",
+    "concept": "predictive-plus-target-tracking",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Let predictive scaling raise and lower the maximum capacity of the group automatically when the forecast changes.",
+    "correct": false,
+    "why": "A maximum that predictive scaling raised [does not automatically decrease back](../facts/ec2-auto-scaling.md#ec2-auto-scaling-predictive-raised-max-stays) to the original value, so this setting cannot lower it.",
+    "concept": "predictive-max-capacity",
+    "trap": null,
+    "misconception": "believes that predictive scaling lowers the maximum capacity again after it raised it",
+    "distractor_type": "impossible-feature"
+   }
+  ],
+  "explanation": "Predictive scaling adds instances ahead of the forecast, but [it will not scale in to remove capacity](../facts/ec2-auto-scaling.md#ec2-auto-scaling-predictive-does-not-scale-in). You can [combine predictive scaling and dynamic scaling](../facts/ec2-auto-scaling.md#ec2-auto-scaling-combine-policy-types-predictive-plus-dynamic): the predictive policy keeps the mornings ready, and the target tracking policy removes instances when the load falls.",
+  "takeaway": "Pair predictive scaling with target tracking: predictive scaling adds capacity early, but [it will not scale in to remove capacity](../facts/ec2-auto-scaling.md#ec2-auto-scaling-predictive-does-not-scale-in).",
+  "twin": "If the stem said \"traffic has no daily or weekly pattern\" instead: target tracking without the predictive policy, because dynamic scaling fits when [you don't know when the traffic will change](../facts/ec2-auto-scaling.md#ec2-auto-scaling-scheduled-vs-dynamic-when-to-use).",
+  "say": "Predictive scaling only scales out, so I'd add target tracking to bring capacity down at night.",
+  "facts": [
+   "ec2-auto-scaling-predictive-forecast-only-mode-first",
+   "ec2-auto-scaling-predictive-long-initialization-fit",
+   "ec2-auto-scaling-predictive-raised-max-stays",
+   "ec2-auto-scaling-predictive-does-not-scale-in",
+   "ec2-auto-scaling-combine-policy-types-predictive-plus-dynamic",
+   "ec2-auto-scaling-scheduled-vs-dynamic-when-to-use",
+   "ec2-auto-scaling-target-tracking-scale-in-gradual"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-predictable",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the change that is MOST cost-effective.",
+    "I mark the constraints: one predictive policy in forecast and scale mode, the mornings must stay ready, and capacity stays at the peak level for the rest of the day and through the night.",
+    "Before I look at the options, I predict forecast only mode, because I think that mode lets the forecast remove the extra instances at night.",
+    "I remove the option that raises and lowers the maximum automatically, because a maximum that predictive scaling raised does not go back down automatically.",
+    "Between forecast only mode and a target tracking policy the difference is what scales in. My first idea breaks because forecast only mode does not scale the group at all, in either direction, and predictive scaling does not scale in. So the group needs a dynamic policy, and target tracking follows the load, which costs less than a fixed evening action.",
+    "Check: target tracking plus the predictive policy keeps the mornings ready and removes capacity at night. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ }
+]

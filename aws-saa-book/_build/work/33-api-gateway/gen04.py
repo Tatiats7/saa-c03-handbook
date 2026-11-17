@@ -1,0 +1,158 @@
+import sys; sys.path.insert(0, "/Users/tatiatsmindashvili/Desktop/tatia/2026-plans/aws-saa-book/_build/work/33-api-gateway")
+from fh import *
+R = "api-gateway-request-throttling"; H = "http-api-throttling"; U = "api-gateway-api-usage-plans"
+fs = []
+fs.append(F("throttling-best-effort-targets-rest", "restriction",
+ "For REST APIs, throttles and quotas are applied on a best-effort basis and should be thought of as targets rather than guaranteed request ceilings.",
+ "Are API Gateway throttling and quota limits guaranteed ceilings?",
+ ["best-effort basis", "targets rather than guaranteed request ceilings"],
+ [ev(R, "You can configure throttling and quotas for your APIs to help protect them from being overwhelmed by too many requests. Both throttles and quotas are applied on a best-effort basis and should be thought of as targets rather than guaranteed request ceilings.")],
+ scope="REST APIs", bullets=["4.4.S6"], tier0=True))
+fs.append(F("throttling-best-effort-targets-http", "restriction",
+ "For HTTP APIs, throttles are applied on a best-effort basis and should be thought of as targets rather than guaranteed request ceilings.",
+ "Are HTTP API throttles guaranteed ceilings?",
+ ["best-effort basis", "targets rather than guaranteed request ceilings"],
+ [ev(H, "You can configure throttling for your APIs to help protect them from being overwhelmed by too many requests. Throttles are applied on a best-effort basis and should be thought of as targets rather than guaranteed request ceilings.")],
+ scope="HTTP APIs", bullets=["4.4.S6"]))
+fs.append(F("throttling-token-bucket-per-account-region", "behavior",
+ "API Gateway throttles requests using the token bucket algorithm, where a token counts for a request, and it examines the rate and a burst of request submissions against all APIs in your account, per Region.",
+ "Which algorithm does API Gateway use for throttling and against what scope does it measure requests?",
+ ["token bucket algorithm", "all APIs in your account, per Region"],
+ [ev(R, "API Gateway throttles requests to your API using the token bucket algorithm, where a token counts for a request. Specifically, API Gateway examines the rate and a burst of request submissions against all APIs in your account, per Region. In the token bucket algorithm, a burst can allow pre-defined overrun of those limits, but other factors can also cause limits to be overrun in some cases.")],
+ scope="per account, per Region", bullets=["4.4.S6"], tier0=True))
+fs.append(F("throttling-429-too-many-requests-retry", "behavior",
+ "When request submissions exceed the steady-state request rate and burst limits, API Gateway begins to throttle requests, clients may receive 429 Too Many Requests error responses, and the client can resubmit the failed requests in a way that is rate limiting.",
+ "What error does a client get when it exceeds the throttling limits, and what can it do?",
+ ["429 Too Many Requests", "resubmit the failed requests"],
+ [ev(R, "When request submissions exceed the steady-state request rate and burst limits, API Gateway begins to throttle requests. Clients may receive `429 Too Many Requests` error responses at this point. Upon catching such exceptions, the client can resubmit the failed requests in a way that is rate limiting.")],
+ scope="REST APIs", bullets=["4.4.S6"], tier0=True))
+fs.append(F("throttling-aws-limits-not-changeable", "restriction",
+ "AWS throttling limits are applied across all accounts and clients in a Region, are set by AWS, and cannot be changed by a customer.",
+ "Can a customer change the AWS throttling limits that apply across a Region?",
+ ["applied across all accounts and clients in a Region", "can't be changed by a customer"],
+ [ev(R, "AWS throttling limits are applied across all accounts and clients in a Region. These limit settings exist to prevent your API—and your account—from being overwhelmed by too many requests. These limits are set by AWS and can't be changed by a customer.")],
+ scope="per Region, all accounts and clients", bullets=["4.4.S6"]))
+fs.append(F("throttling-account-limit-increase-on-request", "behavior",
+ "Per-account throttling limits apply to all APIs in an account in a specified Region; the account-level rate limit can be increased upon request, and these limits cannot be higher than the AWS throttling limits.",
+ "Can the account-level API Gateway rate limit be increased, and what caps it?",
+ ["increased upon request", "can't be higher than the AWS throttling limits"],
+ [ev(R, "Per-account limits are applied to all APIs in an account in a specified Region. The account-level rate limit can be increased upon request - higher limits are possible with APIs that have shorter timeouts and smaller payloads. To request an increase of account-level throttling limits per Region, contact the AWS Support Center. For more information, see Amazon API Gateway quotas. Note that these limits can't be higher than the AWS throttling limits.")],
+ scope="per account, per Region", bullets=["4.4.S6"], tier0=True, hard=True))
+fs.append(F("throttling-stage-method-limits-cap", "restriction",
+ "Per-API, per-stage throttling limits are applied at the API method level for a stage, can be the same for all methods or different for each method, and cannot be higher than the AWS throttling limits.",
+ "Can a per-stage or per-method throttling limit be set above the AWS throttling limits?",
+ ["applied at the API method level for a stage", "can't be higher than the AWS throttling limits"],
+ [ev(R, "Per-API, per-stage throttling limits are applied at the API method level for a stage. You can configure the same settings for all methods, or configure different throttle settings for each method. Note that these limits can't be higher than the AWS throttling limits.")],
+ scope="per API, per stage, per method", bullets=["4.4.S6"], tier0=True))
+fs.append(F("throttling-per-client-limit-cap", "restriction",
+ "Per-client throttling limits apply to clients that use API keys associated with your usage plan as client identifier, and cannot be higher than the per-account limits.",
+ "Can a per-client throttling limit be higher than the per-account limit?",
+ ["applied to clients that use API keys", "can't be higher than the per-account limits"],
+ [ev(R, "Per-client throttling limits are applied to clients that use API keys associated with your usage plan as client identifier. Note that these limits can't be higher than the per-account limits.")],
+ scope="per client API key, usage plan", bullets=["4.4.S6"], tier0=True))
+fs.append(F("throttling-application-order", "behavior",
+ "API Gateway applies throttling-related settings in this order: per-client or per-method limits in a usage plan, then per-method limits set for an API stage, then account-level throttling per Region, then AWS Regional throttling.",
+ "In which order does API Gateway apply its throttling settings?",
+ ["per-client or per-method throttling limits", "AWS Regional throttling"],
+ [ev(R, "API Gateway applies your throttling-related settings in the following order: Per-client or per-method throttling limits that you set for an API stage in a usage plan Per-method throttling limits that you set for an API stage Account-level throttling per Region AWS Regional throttling")],
+ scope="REST APIs", bullets=["4.4.S6"], tier0=True))
+fs.append(F("throttling-account-level-default-rps-burst", "default",
+ "By default, API Gateway limits the steady-state requests per second (RPS) and the burst (the maximum bucket size) across all APIs within an AWS account, per Region; the burst limit is the target maximum number of concurrent request submissions API Gateway fulfills before returning 429 errors.",
+ "What does the default account-level throttling limit in API Gateway cover?",
+ ["steady-state requests per second (RPS)", "across all APIs within an AWS account, per Region"],
+ [ev(R, "By default, API Gateway limits the steady-state requests per second (RPS) across all APIs within an AWS account, per Region. It also limits the burst (that is, the maximum bucket size) across all APIs within an AWS account, per Region. In API Gateway, the burst limit represents the target maximum number of concurrent request submissions that API Gateway will fulfill before returning `429 Too Many Requests` error responses.")],
+ scope="per account, per Region, all APIs", dm="default", bullets=["4.4.S6"]))
+fs.append(F("throttling-usage-plan-rate-and-burst", "behavior",
+ "In a usage plan you can set a per-method throttling target for all methods at the API or stage level, with a throttling rate (requests per second that tokens are added to the token bucket) and a throttling burst (the capacity of the token bucket).",
+ "What do the throttling rate and burst mean in a usage plan?",
+ ["throttling rate", "capacity of the token bucket"],
+ [ev(R, "In a usage plan, you can set a per-method throttling target for all methods at the API or stage level. You can specify a throttling rate, which is the rate, in requests per second, that tokens are added to the token bucket. You can also specify a throttling burst, which is the capacity of the token bucket.")],
+ scope="usage plans", bullets=["4.4.S6"]))
+fs.append(F("throttling-stage-or-usage-plan-options", "behavior",
+ "An API developer can set target limits for individual API stages or methods, or enable usage plans to set throttles on client request submissions based on specified request rates and quotas.",
+ "Which two ways can an API developer limit request rates besides the account limit?",
+ ["target limits for individual API stages or methods", "usage plans to set throttles on client request submissions"],
+ [ev(R, "As an API developer, you can set the target limits for individual API stages or methods to improve overall performance across all APIs in your account. Alternatively, you can enable usage plans to set throttles on client request submissions based on specified requests rates and quotas.")],
+ scope="REST APIs", bullets=["4.4.S6"]))
+fs.append(F("http-throttling-route-level", "behavior",
+ "For HTTP APIs, route-level throttling overrides the account-level request throttling limits for a specific stage or individual routes, and the default route throttling limits cannot exceed account-level rate limits.",
+ "Can an HTTP API route-level throttling limit exceed the account-level rate limit?",
+ ["route-level throttling", "can't exceed account-level rate limits"],
+ [ev(H, "You can set route-level throttling to override the account-level request throttling limits for a specific stage or for individual routes in your API. The default route throttling limits can't exceed account-level rate limits.")],
+ scope="HTTP APIs, per stage and per route", bullets=["4.4.S6"], hard=True))
+fs.append(F("usage-plan-definition", "behavior",
+ "A usage plan specifies who can access one or more deployed API stages and methods, and optionally sets the target request rate to start throttling requests; the plan uses API keys to identify API clients.",
+ "What is a usage plan?",
+ ["who can access one or more deployed API stages and methods", "uses API keys to identify API clients"],
+ [ev(U, "A usage plan specifies who can access one or more deployed API stages and methods—and optionally sets the target request rate to start throttling requests. The plan uses API keys to identify API clients and who can access the associated API stages for each key.")],
+ scope="REST APIs", bullets=["4.4.S6"], tier0=True))
+fs.append(F("usage-plan-rest-or-websocket", "capability",
+ "A usage plan provides selected API clients with access to one or more deployed REST or WebSocket APIs, and configures throttling and quota limits that are enforced on individual client API keys.",
+ "Which API types can a usage plan cover?",
+ ["deployed REST or WebSocket APIs", "enforced on individual client API keys"],
+ [ev("api-gateway-basic-concept", "A usage plan provides selected API clients with access to one or more deployed REST or WebSocket APIs. You can use a usage plan to configure throttling and quota limits, which are enforced on individual client API keys.")],
+ scope="usage plans", bullets=["4.4.S6", "2.1.K1"], tier0=True))
+fs.append(F("usage-plan-throttle-limit-vs-quota-limit", "behavior",
+ "A usage plan throttling limit sets the target point at which request throttling should start, at the API or API method level, while a quota limit sets the target maximum number of requests with a given API key that can be submitted within a specified time interval.",
+ "What is the difference between a throttling limit and a quota limit in a usage plan?",
+ ["target point at which request throttling should start", "within a specified time interval"],
+ [ev(U, "A throttling limit sets the target point at which request throttling should start. This can be set at the API or API method level."),
+  ev(U, "A quota limit sets the target maximum number of requests with a given API key that can be submitted within a specified time interval. You can configure individual API methods to require API key authorization based on usage plan configuration.")],
+ scope="usage plans", bullets=["4.4.S6"]))
+fs.append(F("usage-plan-limits-aggregate-across-stages", "behavior",
+ "Throttling and quota limits apply to requests for individual API keys that are aggregated across all API stages within a usage plan.",
+ "Are usage plan limits counted per stage or across all stages for a key?",
+ ["individual API keys that are aggregated", "across all API stages within a usage plan"],
+ [ev(U, "Throttling and quota limits apply to requests for individual API keys that are aggregated across all API stages within a usage plan.")],
+ scope="per API key, usage plan", bullets=["4.4.S6"]))
+fs.append(F("usage-plan-not-hard-limits-use-budgets-waf", "restriction",
+ "Usage plan throttling and quotas are not hard limits and are applied on a best-effort basis, so clients can exceed the quotas; AWS says not to rely on them to control costs or block access to an API, and to consider AWS Budgets to monitor costs and AWS WAF to manage API requests.",
+ "Are usage plan throttling limits and quotas hard limits, and what should you use to control costs or block abuse?",
+ ["not hard limits", "AWS Budgets to monitor costs and AWS WAF to manage API requests"],
+ [ev(U, "Usage plan throttling and quotas are not hard limits, and are applied on a best-effort basis. In some cases, clients can exceed the quotas that you set. Don’t rely on usage plan quotas or throttling to control costs or block access to an API. Consider using AWS Budgets to monitor costs and AWS WAF to manage API requests.")],
+ scope="usage plans, REST APIs", bullets=["4.4.S6", "1.2.K4"], tier0=True))
+fs.append(F("api-keys-not-for-authentication", "restriction",
+ "AWS says not to use API keys for authentication or authorization to control access to your APIs; instead use an IAM role, a Lambda authorizer, or an Amazon Cognito user pool.",
+ "Should API keys be used for authentication or authorization?",
+ ["Don't use API keys for authentication or authorization", "use an IAM role, a Lambda authorizer, or an Amazon Cognito user pool"],
+ [ev(U, "Don't use API keys for authentication or authorization to control access to your APIs. If you have multiple APIs in a usage plan, a user with a valid API key for one API in that usage plan can access all APIs in that usage plan. Instead, to control access to your API, use an IAM role, a Lambda authorizer, or an Amazon Cognito user pool.")],
+ scope="REST APIs, API keys", bullets=["1.2.K4", "4.4.S6"], tier0=True))
+fs.append(F("api-keys-shared-usage-plan-access-all-apis", "behavior",
+ "If you have multiple APIs in a usage plan, a user with a valid API key for one API in that usage plan can access all APIs in that usage plan.",
+ "What risk arises when several APIs share one usage plan?",
+ ["valid API key for one API in that usage plan can access all APIs", "multiple APIs in a usage plan"],
+ [ev(U, "If you have multiple APIs in a usage plan, a user with a valid API key for one API in that usage plan can access all APIs in that usage plan.")],
+ scope="usage plans, API keys", bullets=["1.2.K4"]))
+fs.append(F("api-keys-generated-no-confidential-info", "behavior",
+ "AWS recommends using API keys that API Gateway generates; API keys should not include confidential information because clients typically transmit them in headers that can be logged.",
+ "Why should an API key not contain confidential information?",
+ ["Use API keys that API Gateway generates", "headers that can be logged"],
+ [ev(U, "Use API keys that API Gateway generates. API keys shouldn't include confidential information; clients typically transmit them in headers that can be logged.")],
+ scope="REST APIs, API keys", bullets=["1.2.K4"], exam="extended"))
+fs.append(F("api-keys-with-authorizers-iam-cognito", "capability",
+ "API keys are alphanumeric string values that you distribute to application developer customers; you can use them together with Lambda authorizers, IAM roles, or Amazon Cognito to control access to your APIs.",
+ "What are API keys, and what can they be combined with?",
+ ["alphanumeric string values", "together with Lambda authorizers, IAM roles, or Amazon Cognito"],
+ [ev(U, "API keys are alphanumeric string values that you distribute to application developer customers to grant access to your API. You can use API keys together with Lambda authorizers, IAM roles, or Amazon Cognito to control access to your APIs.")],
+ scope="REST APIs, API keys", bullets=["1.2.K4", "4.4.S6"], exam="extended"))
+fs.append(F("api-key-one-usage-plan-per-stage", "restriction",
+ "An API key can be associated with more than one usage plan, but a given API key can only be associated with one usage plan for each stage of your API.",
+ "How many usage plans can one API key have for a single stage?",
+ ["only be associated with one usage plan for each stage", "associated with more than one usage plan"],
+ [ev(U, "An API key can be associated with more than one usage plan. A usage plan can be associated with more than one stage. However, a given API key can only be associated with one usage plan for each stage of your API.")],
+ scope="per API key, per stage", bullets=["4.4.S6"], exam="extended"))
+fs.append(F("api-key-request-must-contain-key-else-403", "behavior",
+ "When a usage plan is associated with an API and API keys are enabled on API methods, every incoming request must contain an API key; API Gateway compares it with the keys in the usage plan, throttles on a match, and otherwise returns a 403 Forbidden response.",
+ "What happens when a request to an API-key-protected method has no valid API key?",
+ ["every incoming request to the API must contain an API key", "403 Forbidden"],
+ [ev("api-gateway-api-key-source", "When you associate a usage plan with an API and enable API keys on API methods, every incoming request to the API must contain an API key. API Gateway reads the key and compares it against the keys in the usage plan. If there is a match, API Gateway throttles the requests based on the plan's request limit and quota. Otherwise, it throws an `InvalidKeyParameter` exception. As a result, the caller receives a `403 Forbidden` response.")],
+ scope="REST APIs, methods that require an API key", bullets=["4.4.S6"], tier0=True))
+fs.append(F("api-key-source-header-or-authorizer", "behavior",
+ "An API Gateway API can receive API keys from one of two sources: HEADER, where clients pass the key as the X-API-Key header of each request, or AUTHORIZER, where a Lambda authorizer returns the key in its authorization response.",
+ "Where does API Gateway read the API key from?",
+ ["X-API-Key header", "Lambda authorizer return the API key"],
+ [ev("api-gateway-api-key-source", "Your API Gateway API can receive API keys from one of two sources:"),
+  ev("api-gateway-api-key-source", "You distribute API keys to your customers and require them to pass the API key as the `X-API-Key` header of each incoming request."),
+  ev("api-gateway-api-key-source", "You have a Lambda authorizer return the API key as part of the authorization response.")],
+ scope="REST APIs", bullets=["4.4.S6"]))
+write("facts-behavior-04.json", fs)

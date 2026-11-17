@@ -1,0 +1,3224 @@
+{
+ "v": 1,
+ "chapter": "s3",
+ "items": [
+  {
+   "id": "s3-q003",
+   "section": "2-deep.md#a-presigned-url-lends-the-permission-of-its-signer-until-the-url-expires",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.K1"
+   ],
+   "topics": [
+    "storage",
+    "security"
+   ],
+   "services": [
+    "s3",
+    "iam"
+   ],
+   "concept": "presigned-url-browser-upload",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST secure",
+   "stem": "A company runs a photo-sharing mobile app. The app's backend runs on Amazon EC2 instances that use an IAM role. Users must upload photos from the app directly to a private Amazon S3 bucket, without sending the photos through the backend. The users do not have AWS credentials. Each upload must be allowed for a short, temporary period. Which solution will allow the uploads in the MOST secure way?",
+   "keywords": [
+    "directly to a private Amazon S3 bucket",
+    "do not have AWS credentials",
+    "short, temporary period",
+    "MOST secure"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an IAM user that can call s3:PutObject on the bucket, and store the user's access key in the app to sign each upload.",
+     "correct": false,
+     "why": "Every copy of the app would hold a long-term key, and AWS advises that you [use an IAM role to manage temporary credentials](../facts/s3.md#s3-best-practice-iam-roles-not-stored-credentials) instead.",
+     "concept": "access-key-in-app",
+     "trap": null,
+     "misconception": "puts a long-term AWS access key into an app that anyone can download",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Add a bucket policy that allows s3:PutObject for every principal on an uploads prefix, and turn off Block Public Access for the bucket.",
+     "correct": false,
+     "why": "The uploads work, but a wildcard principal [which effectively means \"anyone\"](../facts/s3.md#s3-best-practice-wildcard-principal-means-anyone) lets anyone write, so the bucket is no longer private.",
+     "concept": "public-write-policy",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Have the backend use its IAM role to presign a URL for one object key with a short expiry, and return the URL to the app.",
+     "correct": true,
+     "why": "A presigned URL allows [an upload without requiring another party](../facts/s3.md#s3-presigned-url-upload-no-credentials-needed) to have AWS credentials, and it gives [time-limited access](../facts/s3.md#s3-presigned-url-time-limited-creator-credentials) with the role's permission.",
+     "concept": "presigned-url-from-role",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Let a developer presign upload URLs with the longest expiry from the developer's IAM user, and ship the URLs inside the app.",
+     "correct": false,
+     "why": "It works, but a presigned URL can be used [multiple times, up to the expiration date](../facts/s3.md#s3-presigned-url-reusable-until-expiry), so a shipped URL lets anyone upload for days.",
+     "concept": "long-lived-shared-presigned-url",
+     "trap": null,
+     "misconception": "treats one long-lived shared upload link as safe as a short link for each upload",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The backend signs each URL with its role, so no user needs AWS credentials. A presigned URL gives [time-limited access to objects in Amazon S3](../facts/s3.md#s3-presigned-url-time-limited-creator-credentials) without a change to the bucket policy, and it is [limited by the permissions of the user](../facts/s3.md#s3-presigned-url-creator-needs-permission) or role that signed it. A short expiry for one object key keeps each link narrow.",
+   "takeaway": "Users without AWS credentials upload to a private bucket through a short-lived presigned URL from the backend.",
+   "twin": "If the stem said \"users download a private photo\" instead: the backend presigns a GET URL, because a presigned URL gives [time-limited access to objects in Amazon S3](../facts/s3.md#s3-presigned-url-time-limited-creator-credentials) for reads too.",
+   "say": "The backend presigns one short-lived URL per upload, so users never hold AWS keys and the bucket stays private.",
+   "facts": [
+    "s3-presigned-url-upload-no-credentials-needed",
+    "s3-presigned-url-time-limited-creator-credentials",
+    "s3-presigned-url-creator-needs-permission",
+    "s3-best-practice-wildcard-principal-means-anyone",
+    "s3-best-practice-iam-roles-not-stored-credentials",
+    "s3-presigned-url-reusable-until-expiry",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-secure",
+    "ee-temporary"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for the MOST secure way to allow the uploads.",
+     "I mark the constraints: the bucket stays private, the photos skip the backend, the users have no AWS credentials, and each upload is allowed for a short time.",
+     "Before I look at the options, I predict a presigned URL, because it lets someone upload one object without AWS credentials of their own.",
+     "I remove the public bucket policy, because a wildcard principal means anyone and the bucket must stay private. I remove the IAM user, because its access key is a long-term credential inside every copy of the app.",
+     "Between the two presigned URL options the difference is who signs and for how long; the stem says a short, temporary period, so the backend signs one URL for each upload with its role and a short expiry.",
+     "Check: the presigned URL from the backend meets every constraint and keeps the bucket private. Time: 90 seconds."
+    ],
+    "wrong_path": false
+   },
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "The backend, using its own IAM role credentials, generates a presigned PUT URL for a single object key with a short expiry and returns it to the app; the app uploads directly to S3. No long-term credentials in the app, no public bucket."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-best-practice-bucket-not-public",
+       "s3-best-practice-iam-roles-not-stored-credentials",
+       "s3-best-practice-wildcard-principal-means-anyone",
+       "s3-presign-cli-sdk-expiration",
+       "s3-presign-ec2-role-duration",
+       "s3-presigned-url-reusable-until-expiry",
+       "s3-presigned-url-upload-no-credentials-needed"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q009",
+   "section": "2-deep.md#replication-copies-new-objects-asynchronously-and-needs-versioning-on-both-buckets",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.S5"
+   ],
+   "topics": [
+    "storage",
+    "resilience"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "batch-replication-existing-objects",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company turned on S3 Cross-Region Replication from a bucket in one AWS Region to a bucket in a second Region. Versioning is turned on for both buckets. The source bucket already held 2 years of objects when the replication rule was created. New objects now appear in the destination bucket, but the older objects do not. The company must replicate the older objects too. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "already held 2 years of objects",
+    "New objects now appear in the destination bucket",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Suspend versioning on the destination bucket and turn it on again, so that the replication rule starts again for all objects.",
+     "correct": false,
+     "why": "Versioning is already on, and while it is off [on the destination bucket, replication fails](../facts/s3.md#s3-replication-requires-versioning-both-buckets); a restart copies no older objects.",
+     "concept": "versioning-reset",
+     "trap": null,
+     "misconception": "believes that turning versioning off and on restarts replication for existing objects",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Turn on S3 Replication Time Control for the replication rule, so that S3 replicates the older objects to the destination within a set time.",
+     "correct": false,
+     "why": "RTC sets a time target for live replication, which [replicates newly uploaded objects as they are written](../facts/s3.md#s3-batch-replication-for-existing-objects); it does not reach older objects.",
+     "concept": "rtc-for-existing-objects",
+     "trap": "s3-trap-replication-copies-existing",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Write a script that lists every object in the source bucket and copies each object to the destination bucket with the AWS CLI.",
+     "correct": false,
+     "why": "It works, but a script is code to write, run and check, while Batch Replication [allows you to replicate existing objects](../facts/s3.md#s3-batch-replication-for-existing-objects) as a managed job.",
+     "concept": "copy-script",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Create an S3 Batch Replication job for the replication rule, so that S3 replicates the objects that existed before the rule was created.",
+     "correct": true,
+     "why": "Live replication [replicates newly uploaded objects as they are written](../facts/s3.md#s3-batch-replication-for-existing-objects), and Batch Replication [allows you to replicate existing objects](../facts/s3.md#s3-batch-replication-for-existing-objects) as a managed job.",
+     "concept": "batch-replication",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "The rule works for new objects, so versioning and permissions are in place. Live replication [replicates newly uploaded objects as they are written](../facts/s3.md#s3-batch-replication-for-existing-objects). The objects that existed before the rule need S3 Batch Replication, which [allows you to replicate existing objects](../facts/s3.md#s3-batch-replication-for-existing-objects) through S3 Batch Operations jobs.",
+   "takeaway": "Replication copies new objects; S3 Batch Replication copies the objects that were in the bucket before the rule.",
+   "twin": "If the stem said \"new objects must replicate within a predictable time\" instead: turn on S3 Replication Time Control, which is [enabled as an option for each replication rule](../facts/s3.md#s3-replication-time-control-15-minutes).",
+   "say": "Replication starts with new objects; for the old ones, run a Batch Replication job.",
+   "facts": [
+    "s3-batch-replication-for-existing-objects",
+    "s3-replication-requires-versioning-both-buckets",
+    "s3-replication-time-control-15-minutes"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-cross-region",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Replication rules only cover objects written after the rule exists; use S3 Batch Replication (a Batch Operations job tied to the replication rule) to replicate the existing objects."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-batch-replication-for-existing-objects",
+       "s3-faq-batch-replication-existing",
+       "s3-replication-requires-versioning-both",
+       "s3-replication-time-control-15-minutes",
+       "s3-versioning-suspend-keeps-existing-versions"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q011",
+   "section": "2-deep.md#block-public-access-overrides-any-policy-or-acl-that-would-make-data-public",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.K1"
+   ],
+   "topics": [
+    "security",
+    "storage"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "account-level-block-public-access",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has 200 Amazon S3 buckets in one AWS account. Developers sometimes add bucket policies that allow public reads, and the security team finds them weeks later. Only the security team can change account-level settings. The company must ensure that no bucket in the account can be made public by a bucket policy, now or in the future. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "must ensure that no bucket in the account can be made public",
+    "now or in the future",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an AWS Config rule that checks each bucket policy for public access, and report the noncompliant buckets to the security team.",
+     "correct": false,
+     "why": "A Config rule evaluates a bucket after the change and does not block the bucket policy, so a bucket can still become public.",
+     "concept": "config-rule-public-bucket",
+     "trap": "detection-trap-config-rule-prevents",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Turn on IAM Access Analyzer for S3, and send an alert to the security team when a bucket policy allows public access.",
+     "correct": false,
+     "why": "[IAM Access Analyzer for S3](../facts/s3.md#s3-access-analyzer-public-or-other-accounts) reports a public bucket after the policy exists; an alert does not stop the policy.",
+     "concept": "access-analyzer-alert",
+     "trap": "how-the-exam-asks-trap-detect-meets-ensure",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Turn on all four S3 Block Public Access settings at the account level, so that the settings apply to every bucket in the account.",
+     "correct": true,
+     "why": "An account setting [applies to all buckets and access points](../facts/s3.md#s3-block-public-access-account-level-recommended) of the account, and Block Public Access [settings override these policies and permissions](../facts/s3.md#s3-block-public-access-overrides-policies).",
+     "concept": "account-bpa",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Turn on all four S3 Block Public Access settings on each bucket, and turn them on for each new bucket after it is created.",
+     "correct": false,
+     "why": "It works for today's buckets, but every new bucket adds a step, while an account setting [applies to all buckets and access points](../facts/s3.md#s3-block-public-access-account-level-recommended) at once.",
+     "concept": "bucket-level-bpa",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "Block Public Access stops a public policy instead of reporting it. At the account level, the setting [applies to all buckets and access points](../facts/s3.md#s3-block-public-access-account-level-recommended) that the account owns, and Block Public Access [settings override these policies and permissions](../facts/s3.md#s3-block-public-access-overrides-policies). The developers have no access to account settings, so the protection holds for buckets created later.",
+   "takeaway": "To prevent public buckets in an account, turn on Block Public Access at the account level; alerts detect but do not prevent.",
+   "twin": "If the stem said \"every account in an organization\" instead: use [organization-level enforcement through AWS Organizations](../facts/s3.md#s3-block-public-access-centralized-controls) for Block Public Access.",
+   "say": "Turn on Block Public Access for the whole account: it overrides any public bucket policy.",
+   "facts": [
+    "s3-block-public-access-account-level-recommended",
+    "s3-block-public-access-overrides-policies",
+    "s3-access-analyzer-public-or-other-accounts",
+    "s3-block-public-access-centralized-controls"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-ensure",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Turn on S3 Block Public Access at the account level (all four settings, in particular BlockPublicPolicy and RestrictPublicBuckets); it covers all current and future buckets and only the security team can change it."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-access-analyzer-public-or-other-accounts",
+       "s3-block-public-access-account-level-recommended",
+       "s3-block-public-access-overrides-policies"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q013",
+   "section": "2-deep.md#a-single-put-stops-at-5-gb-so-large-uploads-use-multipart-upload",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.1",
+   "bullets": [
+    "3.1.K2"
+   ],
+   "topics": [
+    "storage",
+    "performance"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "large-object-multipart",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A research team creates data files of about 2 TB each in its data center. The team must store each file as one object in an Amazon S3 bucket. The team uploads the files with the AWS CLI over an internet connection that sometimes drops. When the connection drops, the team must not have to send the whole file again. What should a solutions architect do to meet these requirements?",
+   "keywords": [
+    "about 2 TB each",
+    "as one object",
+    "must not have to send the whole file again"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Upload each file with one PUT request, and set a long timeout in the AWS CLI so that the large request can finish.",
+     "correct": false,
+     "why": "One PUT request uploads an object of [5 GB](../facts/s3.md#s3-single-put-max) at most, so a 2 TB file needs multipart upload.",
+     "concept": "single-put-large-file",
+     "trap": "s3-trap-single-put-any-size",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Upload each file with multipart upload, so that the parts travel in parallel and a failed part is sent again on its own.",
+     "correct": true,
+     "why": "Multipart upload sends a file [as a set of parts](../facts/s3.md#s3-multipart-upload-parts-parallel), and S3 lets you [retransmit that part without affecting other parts](../facts/s3.md#s3-multipart-upload-parts-parallel).",
+     "concept": "multipart-upload",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Upload each file through the Amazon S3 console in a browser, which shows the progress of each file during the upload.",
+     "correct": false,
+     "why": "The S3 console uploads a file of [160 GB](../facts/s3.md#s3-console-upload-max) at most, so a 2 TB file needs the AWS CLI, an SDK or the API.",
+     "concept": "console-upload",
+     "trap": null,
+     "misconception": "believes that the S3 console can upload a file of any size",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Split each file into objects of 5 GB, and upload each object with one PUT request to the same bucket prefix.",
+     "correct": false,
+     "why": "Many smaller objects break the requirement of one object for each file, and multipart upload already stores the file [as a set of parts](../facts/s3.md#s3-multipart-upload-parts-parallel) of one object.",
+     "concept": "split-into-objects",
+     "trap": null,
+     "misconception": "believes that S3 cannot store an object larger than one PUT request",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "A single PUT uploads an object of [5 GB](../facts/s3.md#s3-single-put-max) at most, so a 2 TB file needs multipart upload. Multipart upload sends the object [as a set of parts](../facts/s3.md#s3-multipart-upload-parts-parallel), and when a part fails you [retransmit that part without affecting other parts](../facts/s3.md#s3-multipart-upload-parts-parallel). S3 then assembles the parts into one object.",
+   "takeaway": "A file larger than one PUT allows goes to S3 with multipart upload, which resends failed parts on their own.",
+   "twin": "If the stem said \"files of about 50 MB each\" instead: one PUT request is enough, although AWS suggests multipart upload for objects of [100 MB or larger](../facts/s3.md#s3-multipart-upload-parts-parallel).",
+   "say": "Use multipart upload: the file goes up in parts, and a failed part is sent again on its own.",
+   "facts": [
+    "s3-single-put-max",
+    "s3-multipart-upload-parts-parallel",
+    "s3-console-upload-max"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-these-requirements"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "verified",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Use multipart upload: the file is sent as parts that can upload in parallel, and a failed part is retried alone instead of the whole 2 TB object."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-console-upload-max",
+       "s3-mpu-object-size-range",
+       "s3-multipart-upload-parallel-parts-throughput",
+       "s3-single-put-max"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": "fix-21: swapped out for s3-q021 (21-exam-08, 21-exam-16); kept verified in the pool"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q017",
+   "section": "2-deep.md#versioning-turns-a-delete-into-a-delete-marker-and-keeps-every-version",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.S5"
+   ],
+   "topics": [
+    "storage",
+    "resilience"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "versioning-recover-deleted-object",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company stores customer contracts in an Amazon S3 bucket and relies on the durability of Amazon S3 to protect them. Last month, an employee deleted several contracts by mistake, and another employee overwrote a contract with the wrong file. The company could not recover any of them. The company must be able to recover from accidental deletes and overwrites in the future. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "relies on the durability",
+    "accidental deletes and overwrites",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Run a nightly script that copies every object in the bucket to a second bucket in another AWS Region for recovery.",
+     "correct": false,
+     "why": "It helps after a delete, but a script is more work to run, and changes made during the day are lost before the next copy.",
+     "concept": "nightly-copy-script",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Make no change to the bucket, because S3 durability already keeps several copies of every object across Availability Zones.",
+     "correct": false,
+     "why": "Durability [does not protect against accidental or malicious deletes](../facts/s3.md#s3-faq-durability-not-delete-protection), and a deleted object [cannot be recovered by AWS](../facts/s3.md#s3-faq-delete-is-immediate).",
+     "concept": "durability-as-backup",
+     "trap": "s3-trap-durability-is-backup",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Turn on S3 Versioning for the bucket, and add a lifecycle rule that expires noncurrent versions after a set number of days.",
+     "correct": true,
+     "why": "Versioning keeps [every version of every object](../facts/s3.md#s3-data-protection-mechanisms), so a delete leaves a delete marker and an overwrite leaves the older version to restore.",
+     "concept": "versioning",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Add a bucket policy that denies the s3:DeleteObject action to every principal in the account, except the security team.",
+     "correct": false,
+     "why": "The policy stops deletes, but an overwrite is a PUT request, so a wrong file still replaces a contract and leaves no older copy.",
+     "concept": "deny-delete-policy",
+     "trap": null,
+     "misconception": "believes that blocking deletes also protects against overwrites",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "Durability protects against hardware loss, but it [does not protect against accidental or malicious deletes](../facts/s3.md#s3-faq-durability-not-delete-protection). S3 Versioning keeps [every version of every object](../facts/s3.md#s3-data-protection-mechanisms), so you can [recover from both unintended user actions](../facts/s3.md#s3-data-protection-mechanisms) and application failures. A delete adds a delete marker, an overwrite keeps the older version, and a lifecycle rule limits the cost of old versions.",
+   "takeaway": "Durability is not a backup; turn on versioning to recover from deletes and overwrites.",
+   "twin": "If the stem said \"no user, including administrators, can delete a contract for 7 years\" instead: S3 Object Lock in compliance mode, because a locked version [can't be overwritten or deleted by any user](../facts/s3.md#s3-object-lock-compliance-mode).",
+   "say": "Durability doesn't undo a delete; turn on versioning so every old version can be restored.",
+   "facts": [
+    "s3-faq-durability-not-delete-protection",
+    "s3-faq-delete-is-immediate",
+    "s3-data-protection-mechanisms",
+    "s3-object-lock-compliance-mode",
+    "s3-delete-marker-soft-delete",
+    "s3-lifecycle-noncurrent-version-expiration"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-durable",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for the solution with the LEAST operational overhead that recovers from deletes and overwrites.",
+     "I mark the constraints: the company relies on durability, both deletes and overwrites happened, and recovery must work from now on.",
+     "Before I look at the options, I predict no change, because S3 durability already keeps several copies of every object.",
+     "I remove the bucket policy, because an overwrite is a PUT request and the policy stops deletes only. I remove the nightly script, because it adds work and loses the changes of each day.",
+     "Between making no change and turning on versioning, the difference is what durability protects. My first idea breaks because durability does not protect against accidental or malicious deletes, and a deleted object cannot be recovered by AWS, so I choose versioning, which keeps every version of every object.",
+     "Check: versioning meets every constraint, and the lifecycle rule stops old versions from growing without limit. Time: 90 seconds."
+    ],
+    "wrong_path": true
+   },
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Turn on S3 Versioning so deletes create delete markers and overwrites keep the prior version; add a lifecycle rule to expire noncurrent versions after some days to control cost."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-faq-delete-protection-features",
+       "s3-faq-durability-not-delete-protection",
+       "s3-faq-versioning-rollback-window",
+       "s3-lifecycle-noncurrent-version-expiration",
+       "s3-versioning-preserves-on-overwrite-and-delete"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q019",
+   "section": "2-deep.md#a-single-put-stops-at-5-gb-so-large-uploads-use-multipart-upload",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.1",
+   "bullets": [
+    "3.1.S1"
+   ],
+   "topics": [
+    "storage",
+    "performance",
+    "networking"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "transfer-acceleration-global-uploads",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a video editing service. Users around the world upload project files of 2 GB to 20 GB to one Amazon S3 bucket in the us-east-1 Region. Users who are far from the Region report slow uploads that do not use their full bandwidth. The company wants faster uploads to the same bucket. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Users around the world",
+    "do not use their full bandwidth",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a bucket in a Region near each group of users, and replicate each bucket to the us-east-1 bucket with Cross-Region Replication.",
+     "correct": false,
+     "why": "It works, but every new bucket and replication rule is more to manage, while Transfer Acceleration is one setting on the existing bucket.",
+     "concept": "regional-buckets-with-crr",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Turn on S3 Transfer Acceleration for the bucket, and change the upload clients to use the accelerate endpoint of the bucket.",
+     "correct": true,
+     "why": "Transfer Acceleration fits users who [upload to a centralized general purpose bucket](../facts/s3.md#s3-transfer-acceleration-when-to-use) from far away, and data travels [over an optimized network path](../facts/s3.md#s3-transfer-acceleration-how-it-works).",
+     "concept": "transfer-acceleration",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Order an AWS Direct Connect connection from each user location to the us-east-1 Region, and send the uploads over those connections.",
+     "correct": false,
+     "why": "Direct Connect suits private networking, and Transfer Acceleration suits [distributed client locations over the public internet](../facts/s3.md#s3-faq-ta-vs-direct-connect), such as these users.",
+     "concept": "direct-connect-for-users",
+     "trap": null,
+     "misconception": "uses a private network link for users who are spread across the internet",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "d",
+     "text": "Change the upload clients to send each file in one PUT request instead of many parts, to cut the number of round trips.",
+     "correct": false,
+     "why": "One PUT request uploads an object of [5 GB](../facts/s3.md#s3-single-put-max) at most, so a 20 GB file cannot go in one request.",
+     "concept": "single-put-for-speed",
+     "trap": "s3-trap-single-put-any-size",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "Transfer Acceleration is made for customers who [upload to a centralized general purpose bucket](../facts/s3.md#s3-transfer-acceleration-when-to-use) from all over the world. Uploads enter the [globally distributed edge locations in Amazon CloudFront](../facts/s3.md#s3-transfer-acceleration-how-it-works) and reach the bucket [over an optimized network path](../facts/s3.md#s3-transfer-acceleration-how-it-works). It is one bucket setting and a new endpoint in the clients.",
+   "takeaway": "Slow long-distance uploads to one bucket point to S3 Transfer Acceleration.",
+   "twin": "If the stem said \"files smaller than 1 GB\" instead: consider CloudFront PUT/POST, which AWS suggests for objects [smaller than 1 GB](../facts/s3.md#s3-transfer-acceleration-vs-cloudfront-small-objects).",
+   "say": "Turn on Transfer Acceleration: uploads enter at a nearby edge location and ride the AWS network to the bucket.",
+   "facts": [
+    "s3-transfer-acceleration-when-to-use",
+    "s3-transfer-acceleration-how-it-works",
+    "s3-faq-ta-vs-direct-connect",
+    "s3-single-put-max",
+    "s3-transfer-acceleration-vs-cloudfront-small-objects"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-users-around-the-world",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Turn on S3 Transfer Acceleration on the bucket and have clients use the accelerate endpoint, routing uploads through the nearest edge location over the AWS network (with multipart upload for large files)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-faq-replication-async",
+       "s3-faq-replication-pricing",
+       "s3-faq-ta-edge-locations",
+       "s3-faq-ta-vs-direct-connect",
+       "s3-multipart-upload-parallel-parts-throughput",
+       "s3-single-put-max",
+       "s3-transfer-acceleration-endpoint-and-naming",
+       "s3-transfer-acceleration-when-to-use"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q004",
+   "section": "2-deep.md#object-lock-compliance-mode-stops-every-user-from-deleting-a-version-until-its-date",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.K3"
+   ],
+   "topics": [
+    "security",
+    "storage"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "object-lock-mode-choice",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A financial services company stores trade records as objects in a new Amazon S3 bucket. An application uploads thousands of records each day. The company must retain each record in an immutable form for 7 years. No user, including the root user, can be allowed to delete or overwrite a record before the end of its retention period. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "including the root user",
+    "retain each record in an immutable form",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Turn on S3 Object Lock for the bucket, and change the application so that every upload request sets compliance mode and a retain-until date 7 years ahead.",
+     "correct": false,
+     "why": "It works, but changing the application to set [a unique retention period for individual objects](../facts/s3.md#s3-object-lock-retention-per-object-or-bucket-default) is more work than a bucket default.",
+     "concept": "compliance-mode-per-upload",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Turn on S3 Object Lock for the bucket, change the application so that every upload sets governance mode and a 7-year retain-until date, and let only the security team bypass it.",
+     "correct": false,
+     "why": "Governance mode stops users [unless they have special permissions](../facts/s3.md#s3-object-lock-governance-mode), so the security team can still delete, and the application change adds work.",
+     "concept": "governance-mode-per-upload",
+     "trap": "s3-trap-governance-stops-everyone",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Turn on S3 Object Lock for the bucket in compliance mode, and set a default retention period of 7 years that applies to every new object version.",
+     "correct": true,
+     "why": "In compliance mode a version [can't be overwritten or deleted by any user](../facts/s3.md#s3-object-lock-compliance-mode), and the bucket default sets [how long to protect every object version](../facts/s3.md#s3-object-lock-bucket-default-retention) without code.",
+     "concept": "compliance-mode-default-retention",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Turn on S3 Object Lock for the bucket in governance mode, set a default retention period of 7 years, and allow only the security team to bypass governance retention.",
+     "correct": false,
+     "why": "In governance mode, users cannot delete a locked version [unless they have special permissions](../facts/s3.md#s3-object-lock-governance-mode), so the security team could still delete records.",
+     "concept": "governance-mode-default-retention",
+     "trap": "s3-trap-governance-stops-everyone",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The deciding phrase is the root user. In compliance mode a locked version [can't be overwritten or deleted by any user](../facts/s3.md#s3-object-lock-compliance-mode), and [its retention period can't be shortened](../facts/s3.md#s3-object-lock-compliance-mode). A bucket default retention sets [how long to protect every object version](../facts/s3.md#s3-object-lock-bucket-default-retention) that arrives later, so the application needs no change.",
+   "takeaway": "Not even the root user can delete: use Object Lock compliance mode with a bucket default retention.",
+   "twin": "If the stem said \"the security team must be able to remove the protection when a legal request requires it\" instead: governance mode with the bypass permission, because it protects versions [unless they have special permissions](../facts/s3.md#s3-object-lock-governance-mode).",
+   "say": "Even the root user can't delete in compliance mode, and a bucket default covers every new record.",
+   "facts": [
+    "s3-object-lock-compliance-mode",
+    "s3-object-lock-bucket-default-retention",
+    "s3-object-lock-governance-mode",
+    "s3-object-lock-retention-per-object-or-bucket-default"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-immutable",
+    "ee-retain",
+    "ee-must",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "S3 Object Lock in compliance mode with a bucket default retention period of 7 years; compliance mode cannot be bypassed or shortened by any user, including root, and the default retention needs no application change."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-object-lock-bucket-default-retention",
+       "s3-object-lock-compliance-mode",
+       "s3-object-lock-governance-mode",
+       "s3-object-lock-mode-choice"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q006",
+   "section": "2-deep.md#every-new-object-is-encrypted-with-sse-s3-unless-you-choose-another-key",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.S2"
+   ],
+   "topics": [
+    "security",
+    "storage"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "keys-outside-aws-sse-c",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST development effort",
+   "stem": "A company stores signed contracts as objects in an Amazon S3 bucket. The company manages its own keys in a hardware security module in its data center. Company policy says that the encryption keys must never be stored in AWS. Amazon S3 itself must encrypt each object at rest and decrypt it when an authorized user downloads it. Which solution will meet these requirements with the LEAST development effort?",
+   "keywords": [
+    "keys must never be stored in AWS",
+    "Amazon S3 itself must encrypt each object at rest",
+    "LEAST development effort"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Use SSE-KMS with a customer managed key in AWS KMS, and let the company's security team control the key policy and the key rotation.",
+     "correct": false,
+     "why": "Customer managed does not mean kept by the company: the KMS key lives in AWS KMS, [in the same Region as the bucket](../facts/s3.md#s3-sse-kms-key-same-region-as-bucket).",
+     "concept": "sse-kms-customer-managed",
+     "trap": "s3-trap-kms-keys-on-premises",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Allow SSE-C in the bucket's default encryption settings, and send the company's key over HTTPS with every upload request and every download request.",
+     "correct": true,
+     "why": "With SSE-C, S3 performs the encryption, and [S3 never stores the encryption key](../facts/s3.md#s3-sse-c-key-never-stored-https-required), so the key stays in the company's hardware security module.",
+     "concept": "sse-c",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Encrypt each object in the data center with the company's key before upload, and decrypt it in the data center after download.",
+     "correct": false,
+     "why": "With client-side encryption, S3 [does not play a role in encrypting](../facts/s3.md#s3-client-side-encryption-not-exposed-to-aws) the data, but the stem asks S3 to encrypt and decrypt.",
+     "concept": "client-side-encryption",
+     "trap": null,
+     "misconception": "believes that client-side encryption counts as encryption by Amazon S3",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Encrypt each object in the data center before upload, and also allow SSE-C on the bucket and send the company's key with every request.",
+     "correct": false,
+     "why": "The SSE-C layer meets the policy, but the extra client-side encryption adds code and key handling that the stem does not need.",
+     "concept": "client-side-plus-sse-c",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The stem asks for encryption by Amazon S3 with a key that stays outside AWS. With SSE-C, S3 does the encryption and decryption while [you retain control of the encryption keys](../facts/s3.md#s3-faq-sse-c-keys). Because [S3 never stores the encryption key](../facts/s3.md#s3-sse-c-key-never-stored-https-required), each request carries the key, and [you must use HTTPS](../facts/s3.md#s3-sse-c-key-never-stored-https-required) for those requests.",
+   "takeaway": "S3 does the encryption but the key stays with the company: choose SSE-C.",
+   "twin": "If the stem said \"Each object must be encrypted before it leaves the data center\" instead: client-side encryption, because the objects [aren't exposed to any third party, including AWS](../facts/s3.md#s3-client-side-encryption-not-exposed-to-aws).",
+   "say": "S3 should do the encryption but never keep the key, so I would use SSE-C over HTTPS.",
+   "facts": [
+    "s3-sse-kms-key-same-region-as-bucket",
+    "s3-sse-c-key-never-stored-https-required",
+    "s3-client-side-encryption-not-exposed-to-aws",
+    "s3-faq-sse-c-keys",
+    "s3-sse-c-disabled-by-default-2026-04"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-manages-its-own-keys",
+    "ee-at-rest",
+    "ee-must",
+    "ee-least-development-effort"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "rejected",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r1",
+      "stem_only": "Use server-side encryption with customer-provided keys (SSE-C): the company sends its own key over HTTPS with each PUT and GET; S3 encrypts and decrypts the object but does not store the key (only a salted HMAC to validate it). Client-side encryption fails the 'S3 itself must encrypt' requirement, and SSE-KMS or SSE-S3 keep keys in AWS. Make sure the bucket does not block SSE-C requests."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r1",
+      "citations": [
+       "docs/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys#Therefore, you don't need to maintain an",
+       "docs/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys#With the encryption key that you provide",
+       "docs/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys#you must explicitly enable it by setting",
+       "docs/AmazonS3/latest/userguide/UsingEncryption#You encrypt your data client-side and up",
+       "docs/kms/latest/developerguide/overview#KMS keys are created, managed, used, and",
+       "s3-client-side-encryption-you-manage-keys",
+       "s3-server-side-vs-client-side-encryption",
+       "s3-sse-c-key-never-stored-https-required"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": "Option B says SSE-C is allowed in the bucket's default encryption settings, but SSE-C is chosen per request and is not a default-encryption option, so a careful candidate could call B technically wrong and A (the only other option where S3 encrypts with a key held outside AWS) defensible.",
+      "solver": "solve-21-ambiguity-r1",
+      "case_option": "d"
+     }
+    ],
+    "note": "ambiguity flag",
+    "edits": 1,
+    "checked": "2026-10-13"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-21-r0",
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q012",
+   "section": "2-deep.md#s3-allows-a-request-only-when-a-policy-allows-it-and-nothing-denies-it",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": [
+    "1.1.S5"
+   ],
+   "topics": [
+    "security",
+    "identity",
+    "storage"
+   ],
+   "services": [
+    "s3",
+    "iam",
+    "lambda"
+   ],
+   "concept": "cross-account-bucket-access",
+   "difficulty": 2,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "MOST securely",
+   "stem": "A company stores daily sales exports in an Amazon S3 bucket in account A. ACLs are disabled on the bucket, and the objects are encrypted with SSE-S3. A reporting application runs as an AWS Lambda function in account B and uses an execution role. The application must read the exports, and the security team requires least privilege. Which combination of steps will meet these requirements MOST securely? (Select TWO.)",
+   "keywords": [
+    "bucket in account A",
+    "Lambda function in account B",
+    "least privilege",
+    "MOST securely"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add the canonical user ID of account B to the ACL of each export object with read permission, and leave the bucket policy unchanged.",
+     "correct": false,
+     "why": "ACLs are disabled, so [you must use policies to grant access](../facts/s3.md#s3-acl-writes-fail-when-bucket-owner-enforced), and a request that sets an ACL fails.",
+     "concept": "object-acl-cross-account",
+     "trap": "s3-trap-acl-cross-account",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Add a statement to the bucket policy in account A that allows s3:GetObject on the export objects for the ARN of the execution role.",
+     "correct": true,
+     "why": "The bucket owner has to agree: S3 needs [permission from both the parent AWS account](../facts/s3.md#s3-authorization-both-accounts-must-allow) and account A, and this statement names one role.",
+     "concept": "bucket-policy-cross-account",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add a statement to the bucket policy in account A that allows s3:GetObject for the wildcard principal when the user agent names account B.",
+     "correct": false,
+     "why": "A wildcard principal with Allow reaches all users, [including anonymous users (public access)](../facts/iam.md#iam-principal-wildcard-is-public), and any caller can send that user agent.",
+     "concept": "wildcard-principal-condition",
+     "trap": "iam-trap-wildcard-principal-means-account",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Add a statement to the identity-based policy of the execution role in account B that allows s3:GetObject on the export objects.",
+     "correct": true,
+     "why": "The role's own account has to allow the action as well, because S3 needs [permission from both the parent AWS account](../facts/s3.md#s3-authorization-both-accounts-must-allow) and the bucket owner.",
+     "concept": "identity-policy-cross-account",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "e",
+     "text": "Create an IAM user in account A with read access to the bucket, and store the access key of the user in an environment variable of the function.",
+     "correct": false,
+     "why": "It works, but stored access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), which is less secure than the execution role.",
+     "concept": "iam-user-key-in-function",
+     "trap": null,
+     "misconception": "stores a long-term access key in the function instead of using the execution role",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The role is in account B and the bucket is in account A. A principal needs [permission from both the parent AWS account](../facts/s3.md#s3-authorization-both-accounts-must-allow) and the account that owns the bucket. So account A names the role in its bucket policy, and account B allows the action in the role's policy.",
+   "takeaway": "Cross-account S3 reads need an allow in the bucket policy and in the caller's identity-based policy.",
+   "twin": "If the stem said \"the objects are encrypted with SSE-KMS and the AWS managed key\" instead: re-encrypt them, because cross-account readers need you to [use a customer managed key](../facts/s3.md#s3-sse-kms-cross-account-needs-customer-managed-key).",
+   "say": null,
+   "facts": [
+    "s3-acl-writes-fail-when-bucket-owner-enforced",
+    "s3-authorization-both-accounts-must-allow",
+    "iam-principal-wildcard-is-public",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "s3-sse-kms-cross-account-needs-customer-managed-key"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-select-two",
+    "ee-which-combination",
+    "ee-least-privilege",
+    "ee-most-secure",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Cross-account access needs both sides: a bucket policy statement in account A that allows s3:GetObject to the Lambda execution role ARN, and an identity-based policy on the execution role in account B that allows s3:GetObject on those objects. SSE-S3 needs no KMS key policy change."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-acl-writes-fail-when-bucket-owner-enforced",
+       "s3-acls-not-recommended",
+       "s3-authorization-both-accounts-must-allow",
+       "s3-best-practice-iam-roles-not-stored-credentials",
+       "s3-best-practice-wildcard-principal-means-anyone",
+       "s3-bucket-policy-owner-only"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "e"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q020",
+   "section": "2-deep.md#a-single-put-stops-at-5-gb-so-large-uploads-use-multipart-upload",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.S1"
+   ],
+   "topics": [
+    "integration",
+    "storage"
+   ],
+   "services": [
+    "s3",
+    "eventbridge",
+    "sqs",
+    "lambda"
+   ],
+   "concept": "event-notification-fifo-destination",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST development effort",
+   "stem": "A company receives order files from partners in an Amazon S3 bucket. Each new file must start a processing job. The processing team runs workers that read from an existing Amazon SQS FIFO queue, and the team will not change the workers. The company wants to decouple the upload side from the processing side and does not need S3 to keep events in order. Which solution will meet these requirements with the LEAST development effort?",
+   "keywords": [
+    "an existing Amazon SQS FIFO queue",
+    "will not change the workers",
+    "LEAST development effort"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Configure an S3 event notification for object-created events that sends each event directly to the SQS FIFO queue as its destination.",
+     "correct": false,
+     "why": "An SQS FIFO queue is not a valid notification destination: [FIFO (First-In-First-Out) queues aren't supported](../facts/s3.md#s3-event-notifications-no-fifo-destinations).",
+     "concept": "event-notification-direct-fifo",
+     "trap": "s3-trap-event-notification-fifo",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Configure an S3 event notification that invokes an AWS Lambda function, and write code in the function that sends each event to the SQS FIFO queue.",
+     "correct": false,
+     "why": "It works, but the Lambda function is code to write and maintain, and an EventBridge rule reaches the FIFO queue without code.",
+     "concept": "lambda-forwarder",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Turn on Amazon EventBridge delivery for the bucket, and create an EventBridge rule that matches object-created events and targets the SQS FIFO queue.",
+     "correct": true,
+     "why": "With EventBridge delivery, [all events are sent to EventBridge](../facts/s3.md#s3-eventbridge-all-events-more-targets), and a rule can [route events to additional targets](../facts/s3.md#s3-eventbridge-all-events-more-targets) such as the FIFO queue, with no code.",
+     "concept": "eventbridge-rule-to-fifo",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Write an AWS Lambda function that lists the bucket every minute, finds the new files, and sends a message to the SQS FIFO queue for each one.",
+     "correct": false,
+     "why": "It works, but polling needs custom code and repeated list requests, and it reacts later than an event rule that fires for each new object.",
+     "concept": "lambda-polling",
+     "trap": null,
+     "misconception": "polls the bucket for new objects instead of reacting to events",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "S3 event notifications cannot target the queue, because [FIFO (First-In-First-Out) queues aren't supported](../facts/s3.md#s3-event-notifications-no-fifo-destinations). For that case AWS says [you can use Amazon EventBridge](../facts/s3.md#s3-event-notifications-no-fifo-destinations). EventBridge receives every event of the bucket, and a rule with the FIFO queue as its target forwards the object-created events. The setup is configuration, with no function to write.",
+   "takeaway": "S3 events for an SQS FIFO queue go through Amazon EventBridge and a rule.",
+   "twin": "If the stem said \"an existing Amazon SQS standard queue\" instead: an S3 event notification sent directly to the queue, because events can go to [Amazon EventBridge, Amazon SNS, Amazon SQS](../facts/s3.md#s3-faq-events-destinations).",
+   "say": "S3 can't notify a FIFO queue directly, so I'd turn on EventBridge and add a rule that targets the queue.",
+   "facts": [
+    "s3-eventbridge-all-events-more-targets",
+    "s3-event-notifications-no-fifo-destinations",
+    "s3-faq-events-destinations",
+    "s3-event-notifications-no-order-duplicates"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-decouple",
+    "ee-least-development-effort",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "S3 event notifications cannot target an SQS FIFO queue directly. Turn on Amazon EventBridge for the bucket and create a rule for Object Created events that targets the FIFO queue (with a message group ID); no code needed."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-event-notifications-no-fifo-destinations",
+       "s3-eventbridge-all-events-more-targets",
+       "s3-faq-events-destinations"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q022",
+   "section": "2-deep.md#access-points-and-requester-pays-control-who-reaches-shared-data-and-who-pays",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.K1"
+   ],
+   "topics": [
+    "storage",
+    "security",
+    "networking"
+   ],
+   "services": [
+    "s3",
+    "vpc-endpoints"
+   ],
+   "concept": "access-point-vpc-only",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "Several application teams in one AWS account read a shared dataset in one Amazon S3 bucket. The bucket policy is close to its size limit, and it already delegates access control to the access points of the account. A new analytics team must read the dataset privately from its own VPC, which has a gateway endpoint for Amazon S3. The company must restrict the analytics team's access to that VPC. Access for the other teams, including their console use, must not change. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "close to its size limit",
+    "restrict the analytics team's access to that VPC",
+    "Access for the other teams",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a statement to the bucket policy that denies every request that does not arrive through the analytics VPC endpoint, by using the aws:SourceVpce condition key.",
+     "correct": false,
+     "why": "The deny reaches every caller, so the other teams lose access, and such a policy also [disables console access to the specified bucket](../facts/s3.md#s3-bucket-policy-source-vpce-condition).",
+     "concept": "bucket-policy-source-vpce",
+     "trap": null,
+     "misconception": "believes that a bucket-wide endpoint condition affects only the team that uses the endpoint",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Attach a security group to the bucket that allows inbound HTTPS requests only from the CIDR range of the analytics VPC, and keep the bucket policy unchanged.",
+     "correct": false,
+     "why": "S3 access is controlled by IAM policies, [bucket policies, access point policies](../facts/s3.md#s3-faq-access-control-mechanisms) and similar settings, and a bucket has no security group to attach.",
+     "concept": "security-group-on-bucket",
+     "trap": "s3-trap-security-group-on-bucket",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Copy the dataset to a second bucket with S3 Replication, and give the second bucket a policy that allows reads only through the analytics VPC endpoint.",
+     "correct": false,
+     "why": "It works, but a second copy of the dataset adds a replication rule, a second policy and double storage cost, which is more overhead than one access point.",
+     "concept": "replicated-team-bucket",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Create an S3 access point with a VPC network origin for the analytics VPC, and give it a policy that allows the analytics team's role to read.",
+     "correct": true,
+     "why": "The access point rejects any request that [doesn't originate from that VPC](../facts/s3.md#s3-access-point-network-origin-vpc), and [its own access point policy](../facts/s3.md#s3-access-point-vpc-only) leaves the full bucket policy unchanged.",
+     "concept": "vpc-access-point",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Requests through the access point need [both the access point and the underlying bucket](../facts/s3.md#s3-access-point-needs-bucket-permission-too) to allow them, and the bucket already delegates to access points. The access point policy applies [only to requests made through that access point](../facts/s3.md#s3-access-point-policy-only-through-access-point), so direct requests from the other teams and the console behave as before.",
+   "takeaway": "One team, one VPC, one shared bucket: give that team an access point with a VPC network origin.",
+   "twin": "If the stem said \"every team must reach the bucket only from one VPC\" instead: a bucket policy with the [aws:SourceVpce](../facts/s3.md#s3-bucket-policy-source-vpce-condition) condition, because the rule then covers the whole bucket.",
+   "say": "I'd give the analytics team its own access point that accepts VPC traffic, so the other teams see no change.",
+   "facts": [
+    "s3-bucket-policy-source-vpce-condition",
+    "s3-faq-access-control-mechanisms",
+    "s3-access-point-network-origin-vpc",
+    "s3-access-point-vpc-only",
+    "s3-access-point-needs-bucket-permission-too",
+    "s3-access-point-policy-only-through-access-point"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-privately",
+    "ee-restrict",
+    "ee-must",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "verified",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Create an S3 access point restricted to the analytics VPC (network origin VPC) with its own access point policy granting the analytics role read access; the bucket policy already delegates to access points, so it and the other teams are unchanged."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-access-point-needs-bucket-permission-too",
+       "s3-access-point-network-origin-vpc",
+       "s3-access-point-policy-only-through-access-point",
+       "s3-access-point-vpc-only",
+       "s3-access-points-scale-policy-space",
+       "s3-bucket-policy-max-size",
+       "s3-bucket-policy-source-vpce-condition",
+       "s3-faq-access-control-mechanisms",
+       "s3-faq-replication-pricing"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q001",
+   "section": "2-deep.md#infrequent-access-classes-add-retrieval-fees-and-a-minimum-storage-duration",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.S8"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "ia-class-for-recreatable-data",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company stores product images in an Amazon S3 bucket. Each image is larger than 1 MB. The images are infrequently accessed: a user opens each image about once a month. When a user opens an image, the image must load in milliseconds. The images are thumbnails that the company can generate again from the original files at any time. Which storage class is the MOST cost-effective choice that meets these requirements?",
+   "keywords": [
+    "can generate again from the original files",
+    "must load in milliseconds",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Store the images in S3 Standard-IA, which stores data across multiple Availability Zones and charges a per-GB retrieval fee.",
+     "correct": false,
+     "why": "It works, but the thumbnails can be generated again, and S3 One Zone-IA costs [20% less than S3 Standard-IA](../facts/s3.md#s3-one-zone-ia-single-az-20-percent-cheaper).",
+     "concept": "standard-ia-for-recreatable-data",
+     "trap": null,
+     "misconception": "pays for zone resilience that data the company can re-create does not need",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Store the images in S3 One Zone-IA, which stores data in a single Availability Zone and charges a per-GB retrieval fee.",
+     "correct": true,
+     "why": "S3 One Zone-IA fits data when you can [re-create the data if the Availability Zone fails](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use), at a lower price than S3 Standard-IA.",
+     "concept": "one-zone-ia",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Store the images in S3 Glacier Deep Archive, which has the lowest storage price of all the S3 storage classes.",
+     "correct": false,
+     "why": "Before a read, you [retrieve data using the RestoreObject REST API](../facts/s3.md#s3-archive-restore-needed-flexible-deep), so no image loads in milliseconds.",
+     "concept": "deep-archive-for-live-reads",
+     "trap": "s3-trap-glacier-read-directly",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Store the images in S3 Standard, which stores data across multiple Availability Zones and charges no retrieval fee.",
+     "correct": false,
+     "why": "It works, but S3 Standard is for data read [more than once a month](../facts/s3.md#s3-class-standard-profile), so it costs more to store these images.",
+     "concept": "standard-for-monthly-reads",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The thumbnails can be generated again, so the loss of one Availability Zone is acceptable. S3 One Zone-IA fits data when you can [re-create the data if the Availability Zone fails](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use), keeps objects [available for millisecond access](../facts/s3.md#s3-ia-classes-millisecond-access-retrieval-fee), and costs less than S3 Standard-IA. Each image is larger than [128 KB](../facts/s3.md#s3-ia-min-billable-size), so the minimum billable size does not change the choice.",
+   "takeaway": "For infrequently read data, S3 One Zone-IA fits copies you can re-create, and S3 Standard-IA fits the primary copy.",
+   "twin": "If the stem said \"The images are the only copy, and they must remain available if an Availability Zone is lost\" instead: S3 Standard-IA, because it is for the [primary or only copy of data](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use).",
+   "say": "The thumbnails can be re-created, so One Zone-IA is enough and costs less than Standard-IA.",
+   "facts": [
+    "s3-standard-ia-vs-one-zone-ia-use",
+    "s3-ia-classes-millisecond-access-retrieval-fee",
+    "s3-one-zone-ia-single-az-20-percent-cheaper",
+    "s3-ia-min-billable-size",
+    "s3-archive-restore-needed-flexible-deep",
+    "s3-class-standard-profile"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-infrequently-accessed"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Re-creatable, infrequently accessed data needing millisecond access: S3 One Zone-IA (lower price than Standard-IA; single AZ is acceptable because the data can be regenerated)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-archive-restore-needed-flexible-deep",
+       "s3-faq-one-zone-ia-use-cases",
+       "s3-faq-standard-vs-ia-access-frequency",
+       "s3-one-zone-ia-single-az-20-percent-cheaper",
+       "s3-standard-ia-vs-one-zone-ia-use"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q007",
+   "section": "2-deep.md#a-lifecycle-rule-moves-objects-one-way-to-colder-classes-and-then-expires-them",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.S9"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "lifecycle-plan-transition-expire",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company stores application logs in an Amazon S3 bucket. Each log file is larger than 1 MB, and the bucket holds the only copy. Engineers read the logs often for 30 days and rarely from day 30 to day 90, when a log must still open in milliseconds. After 90 days, the logs are an archive: auditors read a few logs each year and can wait up to 24 hours for a log. The company must retain the logs for 7 years and then delete them. Which solution is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "must still open in milliseconds",
+    "can wait up to 24 hours",
+    "retain the logs for 7 years",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add one lifecycle rule that transitions the logs to S3 Glacier Deep Archive after 30 days, and moves a log back to S3 Standard when an auditor asks for it.",
+     "correct": false,
+     "why": "A lifecycle transition [can go only one way](../facts/s3.md#s3-lifecycle-no-transition-out-of-archive), so no rule moves a log from Deep Archive back to S3 Standard.",
+     "concept": "lifecycle-back-to-standard",
+     "trap": "s3-trap-lifecycle-back-to-standard",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Add one lifecycle rule that transitions the logs to S3 Standard-IA after 30 days and to S3 Glacier Deep Archive after 90 days, and expires them after 7 years.",
+     "correct": true,
+     "why": "Standard-IA keeps logs [available for millisecond access](../facts/s3.md#s3-ia-classes-millisecond-access-retrieval-fee) until day 90, and Deep Archive returns data [within 12 hours](../facts/s3.md#s3-archive-retrieval-times-deep) with a Standard retrieval, well inside the 24 hours of the auditors.",
+     "concept": "standard-ia-then-deep-archive",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add one lifecycle rule that transitions the logs to S3 Standard-IA after 30 days and to S3 One Zone-IA after 90 days, and expires them after 7 years.",
+     "correct": false,
+     "why": "S3 One Zone-IA is [not resilient to the physical loss](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use) of its zone, and the bucket holds the only copy of the logs.",
+     "concept": "one-zone-for-archive",
+     "trap": "s3-trap-one-zone-for-only-copy",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Add one lifecycle rule that transitions the logs to S3 Standard-IA after 30 days and to S3 Glacier Flexible Retrieval after 90 days, and expires them after 7 years.",
+     "correct": false,
+     "why": "It works, but S3 Glacier Deep Archive is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours) and still meets the wait of the auditors.",
+     "concept": "flexible-retrieval-for-yearly-reads",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "Each storage class matches one stage of the logs. Standard-IA serves the rare reads that need milliseconds. From day 90, S3 Glacier Deep Archive is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours), and a Standard retrieval finishes [within 12 hours](../facts/s3.md#s3-archive-retrieval-times-deep), which fits the wait of the auditors. The rule follows [a waterfall model for transitioning between storage classes](../facts/s3.md#s3-lifecycle-transition-waterfall) and then expires the logs.",
+   "takeaway": "Build a lifecycle rule from the access pattern: an IA class for rare fast reads, then the coldest class that meets the wait.",
+   "twin": "If the stem said \"auditors need a log within 5 hours\" instead: S3 Glacier Flexible Retrieval after 90 days, because a Standard retrieval there takes [3–5 hours](../facts/s3.md#s3-archive-retrieval-times-flexible).",
+   "say": "Standard-IA for the rare fast reads, Deep Archive after day ninety, and expire at seven years.",
+   "facts": [
+    "s3-ia-classes-millisecond-access-retrieval-fee",
+    "s3-archive-retrieval-times-deep",
+    "s3-lifecycle-no-transition-out-of-archive",
+    "s3-standard-ia-vs-one-zone-ia-use",
+    "s3-class-deep-archive-lowest-cost-twelve-hours",
+    "s3-lifecycle-transition-waterfall",
+    "s3-archive-retrieval-times-flexible"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-retain",
+    "ee-archive",
+    "ee-most-cost-effective"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "verified",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "edited-pass",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r1",
+      "stem_only": "One lifecycle rule: keep in S3 Standard for 30 days, transition to S3 Standard-IA at day 30 (millisecond access, infrequent reads, multi-AZ because it is the only copy, objects above the 128 KB billing minimum), transition to S3 Glacier Deep Archive at day 90 (lowest cost, retrieval within hours fits the 24-hour wait, 7 years exceeds the 180-day minimum), and expire the objects after 7 years."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r1",
+      "citations": [
+       "s3-archive-restore-needed-flexible-deep",
+       "s3-class-deep-archive-lowest-cost-twelve-hours",
+       "s3-faq-deep-archive-vs-flexible-cost",
+       "s3-faq-one-zone-az-loss",
+       "s3-ia-classes-millisecond-access-retrieval-fee",
+       "s3-lifecycle-no-transition-out-of-archive",
+       "s3-retrieval-standard-default-12-hours-deep-archive",
+       "www/s3/faqs#S3 Glacier Deep Archive is up to 75% les"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r1",
+      "case_option": "d"
+     }
+    ],
+    "note": null,
+    "edits": 1,
+    "checked": "2026-10-13"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-21-r0",
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q015",
+   "section": "2-deep.md#access-points-and-requester-pays-control-who-reaches-shared-data-and-who-pays",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.S10"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "requester-pays-shared-dataset",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A research institute stores a large genomics dataset in an Amazon S3 bucket. Partner organizations download parts of the dataset into their own AWS accounts in several AWS Regions. The institute's bill for requests and data transfer grows every month because of these downloads. The institute wants to avoid paying for the partners' requests and downloads, and the partners agree to pay for them. Which solution is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "wants to avoid paying for the partners' requests and downloads",
+    "their own AWS accounts",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Move the dataset to S3 Intelligent-Tiering, so that the cost of the partners' downloads goes down as access patterns change.",
+     "correct": false,
+     "why": "A storage class changes the storage price, not the payer; normal pricing applies unless the bucket is [Requester Pays](../facts/s3.md#s3-faq-cross-account-access-billing).",
+     "concept": "storage-class-for-download-cost",
+     "trap": null,
+     "misconception": "believes that a storage class changes who pays for downloads",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Generate presigned URLs with the institute's IAM role for the objects that each partner needs, and send the URLs to the partners.",
+     "correct": false,
+     "why": "The URLs work, but each one uses the credentials of the [principal who generated the URL](../facts/s3.md#s3-presigned-url-time-limited-creator-credentials), so the institute stays the payer.",
+     "concept": "presigned-url-sharing-cost",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Replicate the dataset with S3 Cross-Region Replication to a bucket in each partner's account in the partner's Region.",
+     "correct": false,
+     "why": "Each partner gets a copy, but in cross-account replication [the source account pays for all data transfer](../facts/s3.md#s3-faq-replication-cross-account-who-pays), so the institute pays for every copy.",
+     "concept": "replication-sharing-cost",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Turn on Requester Pays for the bucket, and allow the partner accounts to read the dataset in the bucket policy.",
+     "correct": true,
+     "why": "With Requester Pays, [the requester instead of the bucket owner pays](../facts/s3.md#s3-requester-pays-who-pays) for requests and downloads, and the partners have AWS accounts to sign their requests.",
+     "concept": "requester-pays",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "The bucket owner pays for requests and downloads unless the bucket is [Requester Pays](../facts/s3.md#s3-faq-cross-account-access-billing). With Requester Pays, [the requester instead of the bucket owner pays](../facts/s3.md#s3-requester-pays-who-pays) for the request and the download, and the institute keeps paying for storage. Because [anonymous access to that bucket is not allowed](../facts/s3.md#s3-requester-pays-no-anonymous), the partners sign requests with their AWS accounts.",
+   "takeaway": "To share a bucket and let other AWS accounts pay for their downloads, turn on Requester Pays.",
+   "twin": "If the stem said \"anyone on the internet downloads the dataset\" instead: Requester Pays does not fit, because [anonymous access to that bucket is not allowed](../facts/s3.md#s3-requester-pays-no-anonymous).",
+   "say": "Turn on Requester Pays: the partners pay for their own requests and downloads.",
+   "facts": [
+    "s3-faq-cross-account-access-billing",
+    "s3-requester-pays-who-pays",
+    "s3-requester-pays-no-anonymous",
+    "s3-presigned-url-time-limited-creator-credentials",
+    "s3-faq-replication-cross-account-who-pays"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-wants-to-avoid"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Enable Requester Pays on the bucket and grant the partner accounts read access; the requesters pay the request and data transfer charges."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-authorization-both-accounts-must-allow",
+       "s3-faq-data-transfer-billed-to-source",
+       "s3-faq-replication-pricing",
+       "s3-int-tiering-no-retrieval-fees",
+       "s3-requester-pays-share-without-paying-access",
+       "s3-requester-pays-who-pays"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q021",
+   "section": "2-deep.md#a-lifecycle-rule-moves-objects-one-way-to-colder-classes-and-then-expires-them",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.K7"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "lifecycle-small-objects",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company runs a batch job once a day that writes about 1 million JSON result files to an Amazon S3 bucket in S3 Standard. Each file is about 20 KB. An analytics job reads all the results of one day together. After the first week, the results are infrequently accessed, about once a month, and each read must return data in milliseconds. The company wants to lower the storage cost of results that are older than 30 days. Which solution is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "Each file is about 20 KB",
+    "reads all the results of one day together",
+    "must return data in milliseconds",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a lifecycle rule that moves each 20 KB result file to S3 Glacier Deep Archive after 30 days, which has the lowest storage price.",
+     "correct": false,
+     "why": "Before a read, you [retrieve data using the RestoreObject REST API](../facts/s3.md#s3-archive-restore-needed-flexible-deep), so no read returns data in milliseconds.",
+     "concept": "small-objects-to-deep-archive",
+     "trap": "s3-trap-glacier-read-directly",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Add a lifecycle rule that moves each 20 KB result file to S3 Standard-IA after 30 days, with an object size filter that includes the small files.",
+     "correct": false,
+     "why": "The files move, but S3 Standard-IA bills each object as at least [128 KB](../facts/s3.md#s3-ia-min-billable-size), more than six times the size of each file.",
+     "concept": "small-objects-to-standard-ia",
+     "trap": "s3-trap-ia-always-cheaper",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Add a lifecycle rule that moves each 20 KB result file to S3 Intelligent-Tiering after 30 days, so that unread files move to cheaper tiers.",
+     "correct": false,
+     "why": "S3 Intelligent-Tiering keeps an object smaller than [128 KB](../facts/s3.md#s3-int-tiering-small-objects) in the Frequent Access tier, so these files never reach a cheaper tier.",
+     "concept": "small-objects-to-intelligent-tiering",
+     "trap": null,
+     "misconception": "believes that S3 Intelligent-Tiering lowers the cost of any object that is not read",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Combine each day's results into one large object before upload, and add a lifecycle rule that moves these objects to S3 Standard-IA after 30 days.",
+     "correct": true,
+     "why": "A large object is far above the [128 KB](../facts/s3.md#s3-ia-min-billable-size) minimum billable size, so S3 Standard-IA bills the real data size at its lower storage price.",
+     "concept": "aggregate-then-transition",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "S3 Standard-IA and S3 One Zone-IA bill each object as at least [128 KB](../facts/s3.md#s3-ia-min-billable-size), so they suit larger objects. A 20 KB file is billed for more than six times its size there, and S3 Intelligent-Tiering keeps it in the Frequent Access tier. The analytics job reads one day at a time, so one object per day keeps the reads simple and lets the lifecycle rule lower the storage cost.",
+   "takeaway": "Small objects cost more in the IA classes; combine them into larger objects before a lifecycle transition.",
+   "twin": "If the stem said \"each file is about 5 MB\" instead: a lifecycle rule can move each file to S3 Standard-IA after 30 days, because the [128 KB](../facts/s3.md#s3-ia-min-billable-size) minimum adds no cost.",
+   "say": "Each tiny file is billed as one hundred twenty-eight kilobytes in Standard-IA, so combine them first, then transition.",
+   "facts": [
+    "s3-ia-min-billable-size",
+    "s3-int-tiering-small-objects",
+    "s3-archive-restore-needed-flexible-deep"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-infrequently-accessed"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Objects of 20 KB are poor candidates for IA classes (128 KB minimum billable size, per-object transition costs; Intelligent-Tiering does not auto-tier objects under 128 KB). Since a day's results are read together, aggregate them into one large object per day and then transition that object to S3 Standard-IA after 30 days."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-archive-restore-needed-flexible-deep",
+       "s3-faq-standard-vs-ia-access-frequency",
+       "s3-ia-classes-millisecond-access-retrieval-fee",
+       "s3-ia-min-billable-size",
+       "s3-int-tiering-small-objects",
+       "s3-intelligent-tiering-small-objects-frequent-tier",
+       "s3-lifecycle-small-object-default"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q005",
+   "section": "2-deep.md#infrequent-access-classes-add-retrieval-fees-and-a-minimum-storage-duration",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K11"
+   ],
+   "topics": [
+    "storage",
+    "resilience",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "ia-class-for-only-copy",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company stores product images in an Amazon S3 bucket. Each image is larger than 1 MB. The images are infrequently accessed: a user opens each image about once a month. When a user opens an image, the image must load in milliseconds. The images are the only copy, and they must remain available if an Availability Zone is lost. Which storage class is the MOST cost-effective choice that meets these requirements?",
+   "keywords": [
+    "the only copy",
+    "must remain available if an Availability Zone is lost",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Store the images in S3 Standard-IA, which stores data across multiple Availability Zones and charges a per-GB retrieval fee.",
+     "correct": true,
+     "why": "S3 Standard-IA is for the [primary or only copy of data](../facts/s3.md#s3-standard-ia-primary-copy), and it keeps objects [available for millisecond access](../facts/s3.md#s3-ia-classes-millisecond-access-retrieval-fee).",
+     "concept": "standard-ia-only-copy",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Store the images in S3 One Zone-IA, which stores data in a single Availability Zone and charges a per-GB retrieval fee.",
+     "correct": false,
+     "why": "S3 One Zone-IA is [not resilient to the physical loss](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use) of its zone, so the only copy can disappear with that zone.",
+     "concept": "one-zone-ia-only-copy",
+     "trap": "s3-trap-one-zone-for-only-copy",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Store the images in S3 Glacier Deep Archive, which has the lowest storage price of all the S3 storage classes.",
+     "correct": false,
+     "why": "Before a read, you [retrieve data using the RestoreObject REST API](../facts/s3.md#s3-archive-restore-needed-flexible-deep), so no image loads in milliseconds.",
+     "concept": "deep-archive-for-live-reads",
+     "trap": "s3-trap-glacier-read-directly",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Store the images in S3 Standard, which stores data across multiple Availability Zones and charges no retrieval fee.",
+     "correct": false,
+     "why": "It works, but S3 Standard is for data read [more than once a month](../facts/s3.md#s3-class-standard-profile), so it costs more to store these images.",
+     "concept": "standard-for-monthly-reads",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The stem makes the loss of an Availability Zone unacceptable. AWS recommends S3 Standard-IA for the [primary or only copy of data](../facts/s3.md#s3-standard-ia-primary-copy), and its objects stay [available for millisecond access](../facts/s3.md#s3-ia-classes-millisecond-access-retrieval-fee). Each image is larger than [128 KB](../facts/s3.md#s3-ia-min-billable-size), so the minimum billable size does not change the choice.",
+   "takeaway": "The primary copy of infrequently read data goes to S3 Standard-IA, not to S3 One Zone-IA.",
+   "twin": "If the stem said \"thumbnails that the company can generate again from the original files at any time\" instead: S3 One Zone-IA, because you can [re-create the data if the Availability Zone fails](../facts/s3.md#s3-standard-ia-vs-one-zone-ia-use).",
+   "say": "These images are the only copy, so Standard-IA, which survives the loss of a zone.",
+   "facts": [
+    "s3-standard-ia-primary-copy",
+    "s3-ia-classes-millisecond-access-retrieval-fee",
+    "s3-standard-ia-vs-one-zone-ia-use",
+    "s3-ia-min-billable-size",
+    "s3-archive-restore-needed-flexible-deep",
+    "s3-class-standard-profile"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-infrequently-accessed"
+   ],
+   "twin_of": "s3-q001",
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Infrequent (monthly) access, millisecond retrieval, must survive an AZ loss, only copy: S3 Standard-IA."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-archive-restore-needed-flexible-deep",
+       "s3-faq-one-zone-az-loss",
+       "s3-faq-standard-vs-ia-access-frequency",
+       "s3-standard-ia-vs-one-zone-ia-use"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-1"
+   ]
+  },
+  {
+   "id": "s3-q002",
+   "section": "2-deep.md#intelligent-tiering-moves-an-unread-object-to-cheaper-tiers-with-no-retrieval-fee",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.K10"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "intelligent-tiering-unknown-pattern",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company runs a media library in an Amazon S3 bucket. The bucket is the only copy of the files, and each file is larger than 10 MB. Some files are read many times each day for months. Other files are never read after their first week. Nobody can predict which files will stay popular, so the access pattern of each file is unpredictable. Which storage approach is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "the access pattern of each file is unpredictable",
+    "the only copy of the files",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Store the files in S3 Standard, and add a lifecycle rule that moves every file to S3 Standard-IA 30 days after upload.",
+     "correct": false,
+     "why": "Popular files are still read after day 30, and S3 Standard-IA adds a [per-GB retrieval charge](../facts/s3.md#s3-faq-standard-ia-retrieval-charge) to each of those reads.",
+     "concept": "standard-ia-lifecycle",
+     "trap": "s3-trap-ia-always-cheaper",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Store the files in S3 One Zone-IA, because it costs less than S3 Standard-IA and keeps the same eleven nines of durability.",
+     "correct": false,
+     "why": "The bucket is the only copy, and S3 One Zone-IA is [not resilient to the physical loss](../facts/s3.md#s3-one-zone-ia-az-loss) of its Availability Zone.",
+     "concept": "one-zone-ia",
+     "trap": "s3-trap-one-zone-for-only-copy",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Store the files in S3 Intelligent-Tiering, so that S3 moves each file between access tiers based on how often the file is read.",
+     "correct": true,
+     "why": "S3 Intelligent-Tiering fits [unknown, changing, or unpredictable access patterns](../facts/s3.md#s3-intelligent-tiering-ideal-for-unknown-access) and has [no retrieval fees](../facts/s3.md#s3-int-tiering-no-retrieval-fees), so reads of popular files add no retrieval charge.",
+     "concept": "intelligent-tiering",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Store the files in S3 Glacier Flexible Retrieval, and serve each file to users with a normal GET request when they ask for it.",
+     "correct": false,
+     "why": "A normal GET does not read this class: first you [retrieve data using the RestoreObject REST API](../facts/s3.md#s3-archive-restore-needed-flexible-deep), which takes hours.",
+     "concept": "glacier-flexible-get",
+     "trap": "s3-trap-glacier-read-directly",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "S3 Intelligent-Tiering [automatically stores objects in three access tiers](../facts/s3.md#s3-intelligent-tiering-automatic-tiers) and watches how often each object is read. A file that is read again is [automatically moved back to the Frequent Access tier](../facts/s3.md#s3-int-tiering-move-back), so a popular file returns to the fast tier. Objects smaller than [128 KB](../facts/s3.md#s3-int-tiering-small-objects) are not tiered, but every file here is larger.",
+   "takeaway": "An unknown or changing access pattern points to S3 Intelligent-Tiering, which charges no retrieval fee.",
+   "twin": "If the stem said \"every file is read about once a month\" instead: S3 Standard-IA, because the pattern is known and the class suits data read [once a month](../facts/s3.md#s3-class-standard-ia-profile).",
+   "say": "Nobody can predict the pattern, so I'd use Intelligent-Tiering: it moves each file for you and has no retrieval fee.",
+   "facts": [
+    "s3-faq-standard-ia-retrieval-charge",
+    "s3-one-zone-ia-az-loss",
+    "s3-intelligent-tiering-ideal-for-unknown-access",
+    "s3-int-tiering-no-retrieval-fees",
+    "s3-archive-restore-needed-flexible-deep",
+    "s3-intelligent-tiering-automatic-tiers",
+    "s3-int-tiering-move-back",
+    "s3-int-tiering-small-objects",
+    "s3-class-standard-ia-profile"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-unpredictable",
+    "ee-most-cost-effective"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Unknown or changing access patterns with objects larger than 128 KB: S3 Intelligent-Tiering, which moves each object between access tiers automatically with no retrieval fees."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-archive-restore-needed-flexible-deep",
+       "s3-class-flexible-retrieval-not-real-time",
+       "s3-faq-one-zone-az-loss",
+       "s3-faq-standard-ia-retrieval-charge",
+       "s3-faq-standard-vs-ia-access-frequency",
+       "s3-int-tiering-no-retrieval-fees",
+       "s3-intelligent-tiering-ideal-for-unknown-access",
+       "s3-standard-ia-vs-one-zone-ia-use"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q014",
+   "section": "2-deep.md#flexible-retrieval-and-deep-archive-objects-must-be-restored-before-anyone-reads-them",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.S6"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3",
+    "s3-glacier"
+   ],
+   "concept": "deep-archive-retrieval-choice",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company must keep recordings of customer calls for 10 years to meet a legal rule. The recordings are audio files of 20 MB to 200 MB each, and nobody reads them during normal operations. About twice a year, auditors ask for a few recordings. A wait of up to 48 hours for those recordings is acceptable. The company wants to archive the recordings in Amazon S3. Which solution is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "nobody reads them during normal operations",
+    "A wait of up to 48 hours",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Store the recordings in S3 Glacier Instant Retrieval, and read each requested recording directly with a GET request when the auditors ask.",
+     "correct": false,
+     "why": "It works with millisecond reads, but Deep Archive is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours), and the stem accepts a 48-hour wait.",
+     "concept": "glacier-instant-retrieval",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Store the recordings in S3 Glacier Deep Archive, and restore each requested recording with the Expedited retrieval option when the auditors ask.",
+     "correct": false,
+     "why": "From S3 Glacier Deep Archive, the Expedited retrieval option is [Not available](../facts/s3.md#s3-archive-retrieval-times-deep), so this restore request fails.",
+     "concept": "deep-archive-expedited",
+     "trap": "s3-trap-glacier-read-directly",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Store the recordings in S3 Standard-IA, and read each requested recording directly with a GET request when the auditors ask.",
+     "correct": false,
+     "why": "It works, but the S3 Glacier classes are [most effective for rarely accessed data](../facts/s3.md#s3-archive-classes-min-duration-and-retrieval-fees), and these recordings are read about twice a year.",
+     "concept": "standard-ia-archive",
+     "trap": null,
+     "misconception": "picks an infrequent-access class for data that is read only twice a year",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Store the recordings in S3 Glacier Deep Archive, and restore each requested recording with the Bulk retrieval option when the auditors ask.",
+     "correct": true,
+     "why": "Bulk is [the lowest-cost retrieval option](../facts/s3.md#s3-archive-retrieval-options-three), and from Deep Archive it finishes [within 48 hours](../facts/s3.md#s3-retrieval-bulk-lowest-cost-48-hours-deep-archive), which the auditors accept.",
+     "concept": "deep-archive-bulk",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "The recordings are not read in normal operations, so the storage price decides. S3 Glacier Deep Archive is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours) for long-lived archives. An auditor request starts a restore, and the restored copy is [available only for the duration that you specify](../facts/s3.md#s3-archive-restore-temporary-copy). Bulk is the cheapest restore, and its wait fits the 48 hours in the stem.",
+   "takeaway": "Rarely read archive and a wait of days accepted: S3 Glacier Deep Archive with Bulk restores.",
+   "twin": "If the stem said \"auditors need a recording within 12 hours\" instead: S3 Glacier Deep Archive with a Standard restore, because it finishes [within 12 hours](../facts/s3.md#s3-retrieval-standard-default-12-hours-deep-archive).",
+   "say": "Nobody reads the calls and auditors can wait two days, so Deep Archive with a Bulk restore is cheapest.",
+   "facts": [
+    "s3-class-deep-archive-lowest-cost-twelve-hours",
+    "s3-archive-retrieval-times-deep",
+    "s3-archive-classes-min-duration-and-retrieval-fees",
+    "s3-archive-retrieval-options-three",
+    "s3-retrieval-bulk-lowest-cost-48-hours-deep-archive",
+    "s3-archive-restore-temporary-copy",
+    "s3-retrieval-standard-default-12-hours-deep-archive"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-archive",
+    "ee-most-cost-effective",
+    "ee-acceptable",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "S3 Glacier Deep Archive (lowest storage price) and restore requested recordings with the Bulk retrieval option, which completes within 48 hours and is the cheapest restore."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-archive-retrieval-times-deep",
+       "s3-class-deep-archive-lowest-cost-twelve-hours",
+       "s3-faq-instant-retrieval-once-a-quarter",
+       "s3-retrieval-expedited-1-5-minutes-not-deep-archive"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q008",
+   "section": "2-deep.md#object-lock-compliance-mode-stops-every-user-from-deleting-a-version-until-its-date",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.S6"
+   ],
+   "topics": [
+    "security",
+    "storage"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "object-lock-mode-choice",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A financial services company stores trade records as objects in a new Amazon S3 bucket. An application uploads thousands of records each day. The company must retain each record in an immutable form for 7 years. Most users must not be able to delete or overwrite a record, but the security team must be able to remove the protection when a legal request requires it. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "the security team must be able to remove the protection",
+    "retain each record in an immutable form",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Turn on S3 Object Lock for the bucket, and change the application so that every upload request sets compliance mode and a retain-until date 7 years ahead.",
+     "correct": false,
+     "why": "Every upload sets compliance mode, and a version in that mode [can't be overwritten or deleted by any user](../facts/s3.md#s3-object-lock-compliance-mode), so the security team is locked out as well.",
+     "concept": "compliance-mode-per-upload",
+     "trap": "s3-trap-compliance-mode-admin-override",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Turn on S3 Object Lock for the bucket, change the application so that every upload sets governance mode and a 7-year retain-until date, and let only the security team bypass it.",
+     "correct": false,
+     "why": "It works, but changing the application to set [a unique retention period for individual objects](../facts/s3.md#s3-object-lock-retention-per-object-or-bucket-default) is more work than a bucket default.",
+     "concept": "governance-mode-per-upload",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Turn on S3 Object Lock for the bucket in compliance mode, and set a default retention period of 7 years that applies to every new object version.",
+     "correct": false,
+     "why": "A version in compliance mode [can't be overwritten or deleted by any user](../facts/s3.md#s3-object-lock-compliance-mode), so the security team cannot remove the protection for a legal request.",
+     "concept": "compliance-mode-default-retention",
+     "trap": "s3-trap-compliance-mode-admin-override",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Turn on S3 Object Lock for the bucket in governance mode, set a default retention period of 7 years, and allow only the security team to bypass governance retention.",
+     "correct": true,
+     "why": "Governance mode stops most users, and a user with [s3:BypassGovernanceRetention](../facts/s3.md#s3-object-lock-governance-mode) can remove the protection, so the security team alone gets that permission.",
+     "concept": "governance-mode-default-retention",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "AWS says to use governance mode when [some users with special permissions](../facts/s3.md#s3-object-lock-mode-choice) can alter the retention or delete objects. A user who holds [s3:BypassGovernanceRetention](../facts/s3.md#s3-object-lock-governance-mode) and sends the [x-amz-bypass-governance-retention:true](../facts/s3.md#s3-object-lock-governance-mode) header can remove the protection. The bucket default sets [how long to protect every object version](../facts/s3.md#s3-object-lock-bucket-default-retention), so the application needs no change.",
+   "takeaway": "When a privileged team needs to remove the lock, use governance mode and give that team the bypass permission.",
+   "twin": "If the stem said \"No user, including the root user, can be allowed to delete or overwrite a record\" instead: compliance mode, because a version [can't be overwritten or deleted by any user](../facts/s3.md#s3-object-lock-compliance-mode).",
+   "say": "Governance mode stops most users, and the bypass permission lets the security team remove the lock.",
+   "facts": [
+    "s3-object-lock-compliance-mode",
+    "s3-object-lock-governance-mode",
+    "s3-object-lock-retention-per-object-or-bucket-default",
+    "s3-object-lock-mode-choice",
+    "s3-object-lock-bucket-default-retention"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-immutable",
+    "ee-retain",
+    "ee-must",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": "s3-q004",
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "S3 Object Lock in governance mode with a bucket default retention of 7 years; grant only the security team s3:BypassGovernanceRetention so it can remove the protection when needed."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-object-lock-bucket-default-retention",
+       "s3-object-lock-compliance-mode",
+       "s3-object-lock-governance-mode",
+       "s3-object-lock-mode-choice"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q010",
+   "section": "2-deep.md#every-new-object-is-encrypted-with-sse-s3-unless-you-choose-another-key",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": [
+    "1.3.S2"
+   ],
+   "topics": [
+    "security",
+    "storage"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "keys-outside-aws-client-side",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST development effort",
+   "stem": "A company stores signed contracts as objects in an Amazon S3 bucket. The company manages its own keys in a hardware security module in its data center. Company policy says that the encryption keys must never be stored in AWS. Each object must be encrypted before it leaves the data center, so that AWS never sees unencrypted data in transit or at rest. Which solution will meet these requirements with the LEAST development effort?",
+   "keywords": [
+    "keys must never be stored in AWS",
+    "encrypted before it leaves the data center",
+    "LEAST development effort"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Use SSE-KMS with a customer managed key in AWS KMS, and let the company's security team control the key policy and the key rotation.",
+     "correct": false,
+     "why": "Customer managed does not mean kept by the company: the KMS key lives in AWS KMS, [in the same Region as the bucket](../facts/s3.md#s3-sse-kms-key-same-region-as-bucket).",
+     "concept": "sse-kms-customer-managed",
+     "trap": "s3-trap-kms-keys-on-premises",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Turn on SSE-C for the bucket, and send the company's key over HTTPS with every upload request and every download request.",
+     "correct": false,
+     "why": "With SSE-C, S3 receives the plaintext and encrypts it on arrival, so AWS sees unencrypted data, even though [S3 never stores the encryption key](../facts/s3.md#s3-sse-c-key-never-stored-https-required).",
+     "concept": "sse-c",
+     "trap": "s3-trap-sse-c-is-client-side",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Encrypt each object in the data center with the company's key before upload, and decrypt it in the data center after download.",
+     "correct": true,
+     "why": "The objects leave the data center encrypted, so they [aren't exposed to any third party, including AWS](../facts/s3.md#s3-client-side-encryption-not-exposed-to-aws), and the company keeps its keys.",
+     "concept": "client-side-encryption",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Encrypt each object in the data center before upload, and also turn on SSE-C and send the company's key with every request.",
+     "correct": false,
+     "why": "It works, because client-side encryption keeps plaintext away from AWS, but the extra SSE-C layer adds key handling on every request that the stem does not need.",
+     "concept": "client-side-plus-sse-c",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The stem keeps unencrypted data away from AWS, so the encryption happens before upload. With client-side encryption, [you manage the encryption process, the encryption keys](../facts/s3.md#s3-client-side-encryption-you-manage-keys) and the tools, and S3 [does not play a role in encrypting](../facts/s3.md#s3-client-side-encryption-not-exposed-to-aws) the objects. S3 stores ciphertext, and the key stays in the hardware security module.",
+   "takeaway": "Plaintext stays inside the company: encrypt client-side before upload.",
+   "twin": "If the stem said \"Amazon S3 must encrypt each object at rest and decrypt it\" instead: SSE-C, because S3 does the work and [S3 never stores the encryption key](../facts/s3.md#s3-sse-c-key-never-stored-https-required).",
+   "say": "AWS must never see the plain data, so I'd encrypt in the data center before the upload.",
+   "facts": [
+    "s3-sse-kms-key-same-region-as-bucket",
+    "s3-sse-c-key-never-stored-https-required",
+    "s3-client-side-encryption-not-exposed-to-aws",
+    "s3-client-side-encryption-you-manage-keys"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-manages-its-own-keys",
+    "ee-in-transit",
+    "ee-at-rest",
+    "ee-must",
+    "ee-least-development-effort"
+   ],
+   "twin_of": "s3-q006",
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Client-side encryption: encrypt each object in the data center with the on-premises key before upload and decrypt after download; AWS never sees plaintext or the key."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-client-side-encryption-not-exposed-to-aws",
+       "s3-server-side-vs-client-side-encryption",
+       "s3-sse-c-impractical-for-sharing",
+       "s3-sse-c-key-never-stored-https-required",
+       "s3-sse-kms-when-more-key-control"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q016",
+   "section": "2-deep.md#flexible-retrieval-and-deep-archive-objects-must-be-restored-before-anyone-reads-them",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.K9"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3",
+    "s3-glacier"
+   ],
+   "concept": "glacier-instant-retrieval-quarterly",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A hospital group stores medical images in Amazon S3. Each image is between 5 MB and 50 MB, and the images must be kept for many years. Doctors open a given image about once a quarter. When a doctor opens an image, the image must load in real time, within milliseconds. The hospital group wants to reduce its storage costs. Which storage class is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "about once a quarter",
+    "load in real time, within milliseconds",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "S3 Glacier Flexible Retrieval, with an Expedited retrieval request sent each time a doctor opens one of the images.",
+     "correct": false,
+     "why": "Flexible Retrieval data is [archived, and not available for real-time access](../facts/s3.md#s3-archive-classes-access-model), and an Expedited restore takes [1–5 minutes](../facts/s3.md#s3-archive-retrieval-times-flexible).",
+     "concept": "glacier-flexible-expedited",
+     "trap": "s3-trap-glacier-read-directly",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "S3 Glacier Instant Retrieval, with each image read directly by a normal GET request each time a doctor opens it.",
+     "correct": true,
+     "why": "For archive data that needs immediate access, [S3 Glacier Instant Retrieval](../facts/s3.md#s3-class-glacier-ir-lowest-cost-milliseconds) gives the lowest storage cost with millisecond reads.",
+     "concept": "glacier-instant-retrieval",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "S3 Standard-IA, with each image read directly by a normal GET request each time a doctor opens one of the images.",
+     "correct": false,
+     "why": "It works with the [same latency and throughput performance](../facts/s3.md#s3-class-glacier-ir-vs-standard-ia), but Glacier Instant Retrieval stores images that are read once a quarter for less.",
+     "concept": "standard-ia",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "S3 Intelligent-Tiering with the Deep Archive Access tier turned on, with each image read by a normal GET request.",
+     "correct": false,
+     "why": "Objects in the Deep Archive Access tier need you to [first restore the object by using RestoreObject](../facts/s3.md#s3-intelligent-tiering-archive-tiers-need-restore), so a GET cannot load them in milliseconds.",
+     "concept": "intelligent-tiering-deep-archive-tier",
+     "trap": null,
+     "misconception": "believes that every Intelligent-Tiering tier answers a GET in milliseconds",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "S3 Glacier Instant Retrieval suits data accessed about [once a quarter](../facts/s3.md#s3-faq-instant-retrieval-once-a-quarter) that still needs millisecond reads. Its objects are [immediately available using GET](../facts/s3.md#s3-archive-restore-needed-flexible-deep), with no restore step. Each image is larger than [128 KB](../facts/s3.md#s3-class-glacier-ir-min-size-and-duration), so the minimum billable size does not change the cost.",
+   "takeaway": "Read about once a quarter, but in milliseconds: S3 Glacier Instant Retrieval.",
+   "twin": "If the stem said \"Doctors open a given image about once a month\" instead: S3 Standard-IA, because Glacier Instant Retrieval has [lower storage costs but higher data access costs](../facts/s3.md#s3-class-glacier-ir-vs-standard-ia).",
+   "say": "Doctors need each image at once but rarely, so Glacier Instant Retrieval fits best.",
+   "facts": [
+    "s3-archive-classes-access-model",
+    "s3-archive-retrieval-times-flexible",
+    "s3-class-glacier-ir-lowest-cost-milliseconds",
+    "s3-class-glacier-ir-vs-standard-ia",
+    "s3-intelligent-tiering-archive-tiers-need-restore",
+    "s3-faq-instant-retrieval-once-a-quarter",
+    "s3-archive-restore-needed-flexible-deep",
+    "s3-class-glacier-ir-min-size-and-duration"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-real-time",
+    "ee-must"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Long-lived data accessed about once a quarter that needs millisecond retrieval: S3 Glacier Instant Retrieval."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-class-flexible-retrieval-not-real-time",
+       "s3-faq-instant-retrieval-no-restore",
+       "s3-faq-instant-retrieval-once-a-quarter",
+       "s3-intelligent-tiering-archive-tiers-need-restore",
+       "s3-retrieval-expedited-1-5-minutes-not-deep-archive"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  },
+  {
+   "id": "s3-q018",
+   "section": "2-deep.md#a-lifecycle-rule-moves-objects-one-way-to-colder-classes-and-then-expires-them",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.1",
+   "bullets": [
+    "4.1.S5"
+   ],
+   "topics": [
+    "storage",
+    "cost"
+   ],
+   "services": [
+    "s3"
+   ],
+   "concept": "lifecycle-cleanup-versions-and-mpu",
+   "difficulty": 3,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company stores build artifacts in an Amazon S3 bucket that has S3 Versioning turned on. The number of current objects stays about the same each month, but the storage bill grows every month. Most of the stored bytes belong to noncurrent object versions. S3 Storage Lens also shows that the bucket has no lifecycle rule to abort incomplete multipart uploads. The company needs every current version and wants to keep old versions for 30 days. Which combination of steps is the MOST cost-effective way to meet these requirements? (Select TWO.)",
+   "keywords": [
+    "noncurrent object versions",
+    "no lifecycle rule to abort incomplete multipart uploads",
+    "keep old versions for 30 days",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a lifecycle rule with the NoncurrentVersionExpiration action that permanently deletes object versions 30 days after they become noncurrent.",
+     "correct": true,
+     "why": "This action can [permanently delete noncurrent versions of objects](../facts/s3.md#s3-lifecycle-noncurrent-version-expiration), and the current versions stay untouched.",
+     "concept": "noncurrent-version-expiration",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Add a lifecycle rule with an Expiration action for current object versions, so that S3 also removes the parts of incomplete multipart uploads.",
+     "correct": false,
+     "why": "Expiration actions [don't remove incomplete multipart uploads](../facts/s3.md#s3-lifecycle-expiration-keeps-incomplete-mpu), and expiring current versions hides objects that the company needs.",
+     "concept": "expiration-current-versions",
+     "trap": null,
+     "misconception": "believes that an Expiration action also cleans up incomplete multipart uploads",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Suspend S3 Versioning on the bucket, so that S3 removes the noncurrent object versions that the bucket already stores.",
+     "correct": false,
+     "why": "When versioning is suspended, [existing objects in your bucket do not change](../facts/s3.md#s3-versioning-suspend-keeps-existing-versions), so the old versions keep their storage cost.",
+     "concept": "suspend-versioning",
+     "trap": null,
+     "misconception": "believes that suspending versioning deletes the versions that already exist",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Add a lifecycle rule that moves noncurrent object versions to S3 Glacier Deep Archive 30 days after they become noncurrent.",
+     "correct": false,
+     "why": "It works, but each archived version is billed for at least [180 days](../facts/s3.md#s3-archive-min-duration), and the company does not need versions after 30 days.",
+     "concept": "noncurrent-to-deep-archive",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "e",
+     "text": "Add a lifecycle rule with the AbortIncompleteMultipartUpload action that stops uploads that are not complete 7 days after they start.",
+     "correct": true,
+     "why": "This action [stops the multipart upload and deletes the parts](../facts/s3.md#s3-lifecycle-abort-incomplete-multipart), so the bytes of unfinished uploads stop growing.",
+     "concept": "abort-incomplete-mpu",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Two things grow. Normal S3 rates [apply for every version of an object](../facts/s3.md#s3-versioning-every-version-billed), so old versions cost money until a rule deletes them. The parts of unfinished uploads also stay stored until the abort action removes them, and [no objects are deleted by this lifecycle action](../facts/s3.md#s3-lifecycle-abort-incomplete-multipart).",
+   "takeaway": "A versioned bucket that keeps growing: expire noncurrent versions and abort incomplete multipart uploads.",
+   "twin": "If the stem said \"must keep old versions for 7 years for audits\" instead: move noncurrent versions to S3 Glacier Deep Archive, which is [the lowest cost storage in the cloud](../facts/s3.md#s3-class-deep-archive-lowest-cost-twelve-hours).",
+   "say": null,
+   "facts": [
+    "s3-lifecycle-noncurrent-version-expiration",
+    "s3-lifecycle-expiration-keeps-incomplete-mpu",
+    "s3-versioning-suspend-keeps-existing-versions",
+    "s3-archive-min-duration",
+    "s3-lifecycle-abort-incomplete-multipart",
+    "s3-versioning-every-version-billed",
+    "s3-class-deep-archive-lowest-cost-twelve-hours",
+    "s3-storage-lens-find-buckets-without-abort-mpu-rule"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-select-two",
+    "ee-which-combination",
+    "ee-most-cost-effective"
+   ],
+   "twin_of": null,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-closed-r0",
+      "stem_only": "Add lifecycle actions: NoncurrentVersionExpiration to permanently delete versions 30 days after they become noncurrent, and AbortIncompleteMultipartUpload to remove parts of uploads not completed within some days."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-open-r0",
+      "citations": [
+       "s3-faq-deep-archive-min-180-days",
+       "s3-lifecycle-abort-incomplete-multipart",
+       "s3-lifecycle-expiration-keeps-incomplete-mpu",
+       "s3-lifecycle-expiration-versioned-delete-marker",
+       "s3-lifecycle-noncurrent-version-expiration",
+       "s3-storage-lens-find-buckets-without-abort-mpu-rule",
+       "s3-versioning-every-version-billed",
+       "s3-versioning-suspend-keeps-existing-versions"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-21-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-13",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-21-2"
+   ]
+  }
+ ]
+}

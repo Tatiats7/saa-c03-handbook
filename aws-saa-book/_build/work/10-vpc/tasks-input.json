@@ -1,0 +1,387 @@
+{
+ "v": 1,
+ "chapter": "vpc",
+ "items": [
+  {
+   "id": "vpc-t01",
+   "type": "look",
+   "title": "Read the route that makes your default subnets public",
+   "kills": "\"A new AWS account starts with a private network that you must open yourself.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 3,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": ["ec2:DescribeVpcs", "ec2:DescribeRouteTables", "ec2:DescribeSubnets"],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Find the default VPC of the Region that CloudShell uses, and read its IPv4 CIDR block.",
+     "command": "aws ec2 describe-vpcs --filters Name=is-default,Values=true --query \"Vpcs[].[VpcId,CidrBlock]\"",
+     "expect": "One VPC ID and the CIDR block 172.31.0.0/16. An empty list means that someone deleted the default VPC in this Region: use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Copy the VPC ID from the output as <VPC_ID>. Read every route in the route tables of the default VPC.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=<VPC_ID> --query \"RouteTables[].Routes[].[DestinationCidrBlock,GatewayId]\"",
+     "expect": "Two routes: 172.31.0.0/16 with the target local, and 0.0.0.0/0 with a target that starts with igw-. The second route is the one that makes the default subnets public.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the default subnets: the Availability Zone of each one, and whether it gives each new instance a public IPv4 address.",
+     "command": "aws ec2 describe-subnets --filters Name=default-for-az,Values=true --query \"Subnets[].[AvailabilityZone,MapPublicIpOnLaunch]\"",
+     "expect": "One row for each default subnet, each in a different Availability Zone, and each with true. The account did not start with a private network.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "vpc-default-vpc-in-each-region",
+    "vpc-default-vpc-cidr",
+    "vpc-default-vpc-includes-igw",
+    "vpc-default-vpc-main-route-to-igw",
+    "vpc-subnet-public-ip-attribute-default",
+    "vpc-public-vs-private-subnet-by-igw-route",
+    "vpc-default-vpc-delete-and-recreate"
+   ],
+   "sources": [
+    {"title": "describe-vpcs (AWS CLI Command Reference, filter is-default)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpcs.html"},
+    {"title": "describe-route-tables (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-route-tables.html"},
+    {"title": "describe-subnets (AWS CLI Command Reference, filter default-for-az)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html"},
+    {"title": "Default VPCs", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/default-vpc.html"},
+    {"title": "Default VPC components", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/default-vpc-components.html"},
+    {"title": "Default subnets", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/default-subnet.html"}
+   ]
+  },
+  {
+   "id": "vpc-t02",
+   "type": "try",
+   "title": "Make a subnet public with one route",
+   "kills": "\"Attaching an internet gateway makes the subnet public.\"",
+   "trap": "vpc-trap-igw-attach-makes-public",
+   "section": "2-deep.md#a-subnet-is-public-only-when-its-route-table-points-to-an-internet-gateway",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": ["vpc-faq-no-charge-for-vpc-itself", "vpc-igw-no-charge"],
+   "permissions": [
+    "ec2:CreateVpc",
+    "ec2:CreateSubnet",
+    "ec2:CreateInternetGateway",
+    "ec2:CreateTags",
+    "ec2:AttachInternetGateway",
+    "ec2:DescribeRouteTables",
+    "ec2:CreateRoute",
+    "ec2:DeleteRoute",
+    "ec2:DetachInternetGateway",
+    "ec2:DeleteInternetGateway",
+    "ec2:DeleteSubnet",
+    "ec2:DeleteVpc",
+    "ec2:DescribeVpcs"
+   ],
+   "read_only_alternative": "This command creates nothing. It lists every route table in the Region with the target of each route: aws ec2 describe-route-tables --query \"RouteTables[].[RouteTableId,VpcId,Routes[].GatewayId]\" A route table with a target that starts with igw- makes the subnets that use it public. A route table with the target local and no igw- target makes its subnets private, even in a VPC that has an internet gateway attached.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a test VPC with the IPv4 CIDR block 10.0.0.0/16, tagged for this book and this task.",
+     "command": "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-vpc-t02},{Key=book,Value=saa},{Key=task,Value=vpc-t02}]'",
+     "capture": {"name": "VPC_ID", "query": "Vpc.VpcId"},
+     "expect": "No output. VPC_ID now holds the ID of the new VPC.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create one subnet in the VPC with the CIDR block 10.0.1.0/24.",
+     "command": "aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=saa-vpc-t02},{Key=book,Value=saa},{Key=task,Value=vpc-t02}]'",
+     "capture": {"name": "SUBNET_ID", "query": "Subnet.SubnetId"},
+     "expect": "No output. SUBNET_ID now holds the ID of the new subnet.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create an internet gateway.",
+     "command": "aws ec2 create-internet-gateway --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=saa-vpc-t02},{Key=book,Value=saa},{Key=task,Value=vpc-t02}]'",
+     "capture": {"name": "IGW_ID", "query": "InternetGateway.InternetGatewayId"},
+     "expect": "No output. IGW_ID now holds the ID of the new internet gateway.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Attach the internet gateway to the VPC.",
+     "command": "aws ec2 attach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read every route in the route tables of the test VPC.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_ID --query \"RouteTables[].Routes[].[DestinationCidrBlock,GatewayId]\"",
+     "expect": "One route: 10.0.0.0/16 with the target local. No route names the internet gateway, so the subnet is still private.",
+     "break_it": true,
+     "predict": "The internet gateway is attached to the VPC. Does the subnet now have a route to the internet gateway?",
+     "explain": "[Attaching an internet gateway to a VPC does not automatically make your instances accessible from the internet](../facts/vpc.md#vpc-igw-attach-not-enough). The subnet has no route table of its own, so [the subnet is implicitly associated with the main route table](../facts/vpc.md#vpc-route-table-implicit-main-association). In a VPC that you create, [the main route table contains only a local route](../facts/vpc.md#vpc-main-route-table-rules)."
+    },
+    {
+     "text": "Fix it: store the ID of the main route table. A real VPC should leave the main route table unchanged and use a custom route table. This test edits the main route table to stay at three resources.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_ID Name=association.main,Values=true",
+     "capture": {"name": "RTB_ID", "query": "RouteTables[0].RouteTableId"},
+     "expect": "No output. RTB_ID now holds the ID of the main route table.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Add a route that sends all IPv4 traffic for other addresses, 0.0.0.0/0, to the internet gateway.",
+     "command": "aws ec2 create-route --route-table-id $RTB_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_ID",
+     "expect": "The output shows \"Return\": true.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the routes again.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_ID --query \"RouteTables[].Routes[].[DestinationCidrBlock,GatewayId]\"",
+     "expect": "Two routes: 10.0.0.0/16 to local, and 0.0.0.0/0 to the internet gateway ID. The subnet is now public. An instance in it still needs a public IPv4 address and a security group that allows the traffic.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {"text": "Delete the route to the internet gateway.", "command": "aws ec2 delete-route --route-table-id $RTB_ID --destination-cidr-block 0.0.0.0/0"},
+    {"text": "Detach the internet gateway from the VPC.", "command": "aws ec2 detach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID"},
+    {"text": "Delete the internet gateway.", "command": "aws ec2 delete-internet-gateway --internet-gateway-id $IGW_ID"},
+    {"text": "Delete the subnet.", "command": "aws ec2 delete-subnet --subnet-id $SUBNET_ID"},
+    {"text": "Delete the VPC.", "command": "aws ec2 delete-vpc --vpc-id $VPC_ID"}
+   ],
+   "verify": {
+    "command": "aws ec2 describe-vpcs --filters Name=tag:task,Values=vpc-t02 --query \"Vpcs[].VpcId\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing: the VPC, the subnet and the internet gateway have no charge. Delete them anyway, so that no unused network stays in the account.",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the IDs again with describe-vpcs, describe-subnets and describe-internet-gateways filtered by the tag task=vpc-t02."
+   ],
+   "facts": [
+    "vpc-igw-attach-not-enough",
+    "vpc-route-table-implicit-main-association",
+    "vpc-main-route-table-rules",
+    "vpc-igw-route-destination",
+    "vpc-public-vs-private-subnet-by-igw-route",
+    "vpc-custom-route-table-delete-only-without-associations",
+    "vpc-nondefault-subnet-no-public-ip-by-default",
+    "vpc-faq-no-charge-for-vpc-itself",
+    "vpc-igw-no-charge"
+   ],
+   "sources": [
+    {"title": "Getting started with Amazon VPC using the AWS CLI", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/getting-started-with-amazon-vpc-using-the-aws-cli.html"},
+    {"title": "Create a VPC (Create a VPC using the AWS CLI)", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.html"},
+    {"title": "Example routing options (routes to an internet gateway)", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/route-table-options.html"},
+    {"title": "create-vpc (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc.html"},
+    {"title": "create-subnet (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-subnet.html"},
+    {"title": "create-internet-gateway (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-internet-gateway.html"},
+    {"title": "attach-internet-gateway (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/attach-internet-gateway.html"},
+    {"title": "describe-route-tables (AWS CLI Command Reference, filter association.main)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-route-tables.html"},
+    {"title": "create-route (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-route.html"},
+    {"title": "delete-route (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-route.html"},
+    {"title": "detach-internet-gateway (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/detach-internet-gateway.html"},
+    {"title": "delete-internet-gateway (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-internet-gateway.html"},
+    {"title": "delete-subnet (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-subnet.html"},
+    {"title": "delete-vpc (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc.html"}
+   ]
+  },
+  {
+   "id": "vpc-t03",
+   "type": "try",
+   "title": "Create an S3 gateway endpoint and read the route it adds",
+   "kills": "\"Private instances need a NAT gateway to reach Amazon S3.\"",
+   "trap": "vpc-trap-s3-needs-nat",
+   "section": "2-deep.md#aws-service-endpoints-are-public-but-a-vpc-endpoint-reaches-them-privately",
+   "pass_route": false,
+   "minutes": 12,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": ["vpc-faq-no-charge-for-vpc-itself", "vpc-gateway-endpoint-no-hourly-or-processing-charge"],
+   "permissions": [
+    "ec2:DescribeAvailabilityZones",
+    "ec2:CreateVpc",
+    "ec2:CreateTags",
+    "ec2:DescribeRouteTables",
+    "ec2:CreateVpcEndpoint",
+    "ec2:DeleteRoute",
+    "ec2:ModifyVpcEndpoint",
+    "ec2:DeleteVpcEndpoints",
+    "ec2:DeleteVpc",
+    "ec2:DescribeVpcs"
+   ],
+   "read_only_alternative": "These commands create nothing. First list the prefix lists of the Region: aws ec2 describe-prefix-lists --query \"PrefixLists[].[PrefixListName,PrefixListId]\" Expect the name com.amazonaws.<Region>.s3 with an ID that starts with pl-. Then list the routes that use a prefix list as destination: aws ec2 describe-route-tables --query \"RouteTables[].Routes[?DestinationPrefixListId].[DestinationPrefixListId,GatewayId]\" A route with a pl- destination and a vpce- target belongs to a gateway endpoint. Empty lists mean that no gateway endpoint uses a route table in this Region.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the code of the Region that CloudShell uses. The name of the endpoint service contains this code.",
+     "command": "aws ec2 describe-availability-zones",
+     "capture": {"name": "REGION", "query": "AvailabilityZones[0].RegionName"},
+     "expect": "No output. REGION now holds a Region code, for example us-east-1.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a test VPC with the IPv4 CIDR block 10.0.0.0/16, tagged for this book and this task. It has no internet gateway and no NAT gateway.",
+     "command": "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-vpc-t03},{Key=book,Value=saa},{Key=task,Value=vpc-t03}]'",
+     "capture": {"name": "VPC_ID", "query": "Vpc.VpcId"},
+     "expect": "No output. VPC_ID now holds the ID of the new VPC.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the ID of the main route table of the new VPC.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_ID Name=association.main,Values=true",
+     "capture": {"name": "RTB_ID", "query": "RouteTables[0].RouteTableId"},
+     "expect": "No output. RTB_ID now holds the ID of the main route table.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a gateway endpoint for Amazon S3 and give it the main route table.",
+     "command": "aws ec2 create-vpc-endpoint --vpc-id $VPC_ID --vpc-endpoint-type Gateway --service-name com.amazonaws.$REGION.s3 --route-table-ids $RTB_ID --tag-specifications 'ResourceType=vpc-endpoint,Tags=[{Key=Name,Value=saa-vpc-t03},{Key=book,Value=saa},{Key=task,Value=vpc-t03}]'",
+     "capture": {"name": "VPCE_ID", "query": "VpcEndpoint.VpcEndpointId"},
+     "expect": "No output. VPCE_ID now holds the ID of the new endpoint. It starts with vpce-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the routes of the main route table.",
+     "command": "aws ec2 describe-route-tables --route-table-ids $RTB_ID --query \"RouteTables[0].Routes[].[DestinationCidrBlock,DestinationPrefixListId,GatewayId]\"",
+     "expect": "Two routes. The first: 10.0.0.0/16 to local. The second: a destination that starts with pl- and a target that starts with vpce-. Amazon S3 traffic now goes to the endpoint, and no NAT gateway exists.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Copy the pl- ID from the previous output as <PL_ID>. Try to delete the endpoint route as you would delete any other route.",
+     "command": "aws ec2 delete-route --route-table-id $RTB_ID --destination-prefix-list-id <PL_ID>",
+     "expect": "An error message. The route stays in the route table.",
+     "break_it": true,
+     "predict": "You can delete a route that you added yourself. Can you delete the route that the endpoint added?",
+     "explain": "You [cannot explicitly delete or modify the endpoint route](../facts/vpc.md#vpc-gateway-endpoint-route-auto-added). To remove the route, you change the route tables that the endpoint uses. This VPC has no internet gateway, and the route still reaches Amazon S3. [Gateway VPC endpoints provide reliable connectivity to Amazon S3 and DynamoDB without requiring an internet gateway or a NAT device for your VPC](../facts/vpc.md#vpc-gateway-endpoint-s3-dynamodb-no-privatelink)."
+    },
+    {
+     "text": "Fix it: remove the main route table from the endpoint.",
+     "command": "aws ec2 modify-vpc-endpoint --vpc-endpoint-id $VPCE_ID --remove-route-table-ids $RTB_ID",
+     "expect": "The output shows \"Return\": true.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the routes of the main route table again.",
+     "command": "aws ec2 describe-route-tables --route-table-ids $RTB_ID --query \"RouteTables[0].Routes[].[DestinationCidrBlock,DestinationPrefixListId,GatewayId]\"",
+     "expect": "One route: 10.0.0.0/16 to local. The endpoint route is gone, although you never deleted it.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {"text": "Delete the gateway endpoint.", "command": "aws ec2 delete-vpc-endpoints --vpc-endpoint-ids $VPCE_ID"},
+    {"text": "Delete the VPC. If the command reports a dependency, wait one minute for the endpoint deletion to finish, then run it again.", "command": "aws ec2 delete-vpc --vpc-id $VPC_ID"}
+   ],
+   "verify": {
+    "command": "aws ec2 describe-vpcs --filters Name=tag:task,Values=vpc-t03 --query \"Vpcs[].VpcId\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing: the VPC and the gateway endpoint have no charge. Delete them anyway, so that no unused network stays in the account.",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the IDs again with describe-vpcs and describe-vpc-endpoints filtered by the tag task=vpc-t03."
+   ],
+   "facts": [
+    "vpc-gateway-endpoint-route-auto-added",
+    "vpc-gateway-endpoint-s3-dynamodb-no-privatelink",
+    "vpc-gateway-endpoint-applies-per-route-table",
+    "vpc-gateway-endpoint-no-hourly-or-processing-charge",
+    "vpc-main-route-table-rules",
+    "vpc-faq-no-charge-for-vpc-itself"
+   ],
+   "sources": [
+    {"title": "Create a VPC with private subnets and NAT gateways using the AWS CLI (Create a VPC endpoint for Amazon S3)", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/create-a-vpc-with-private-subnets-and-nat-gateways-using-aws-cli.html"},
+    {"title": "Gateway endpoints for Amazon S3 (Associate route tables)", "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html"},
+    {"title": "Example routing options (routes for a gateway endpoint)", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/route-table-options.html"},
+    {"title": "describe-availability-zones (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-availability-zones.html"},
+    {"title": "create-vpc (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc.html"},
+    {"title": "describe-route-tables (AWS CLI Command Reference, filter association.main)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-route-tables.html"},
+    {"title": "create-vpc-endpoint (AWS CLI Command Reference, example 1: a gateway endpoint)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-endpoint.html"},
+    {"title": "delete-route (AWS CLI Command Reference, option --destination-prefix-list-id)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-route.html"},
+    {"title": "modify-vpc-endpoint (AWS CLI Command Reference, option --remove-route-table-ids)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-endpoint.html"},
+    {"title": "delete-vpc-endpoints (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc-endpoints.html"},
+    {"title": "delete-vpc (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc.html"},
+    {"title": "describe-prefix-lists (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-prefix-lists.html"}
+   ]
+  },
+  {
+   "id": "vpc-t04",
+   "type": "look",
+   "title": "Read the default security group and network ACL side by side",
+   "kills": "\"A security group can block one IP address or range.\"",
+   "trap": "vpc-trap-sg-deny",
+   "section": "2-deep.md#security-groups-remember-connections-but-network-acls-check-every-packet",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": ["ec2:DescribeVpcs", "ec2:DescribeSecurityGroups", "ec2:DescribeNetworkAcls"],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Find the ID of the default VPC of the Region that CloudShell uses.",
+     "command": "aws ec2 describe-vpcs --filters Name=is-default,Values=true --query \"Vpcs[].VpcId\"",
+     "expect": "One VPC ID. An empty list means that this Region has no default VPC: use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Copy the VPC ID as <VPC_ID>. Read the inbound rules of the default security group of that VPC. Look for a field that says allow or deny.",
+     "command": "aws ec2 describe-security-groups --filters Name=vpc-id,Values=<VPC_ID> Name=group-name,Values=default --query \"SecurityGroups[0].IpPermissions\"",
+     "expect": "If nobody changed the group: one rule with IpProtocol -1, which means all traffic, and the ID of this same security group under UserIdGroupPairs. No field says allow or deny.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the outbound rules of the same security group.",
+     "command": "aws ec2 describe-security-groups --filters Name=vpc-id,Values=<VPC_ID> Name=group-name,Values=default --query \"SecurityGroups[0].IpPermissionsEgress\"",
+     "expect": "If nobody changed the group: one rule with IpProtocol -1 and the range 0.0.0.0/0. Again, no field says allow or deny.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the rules of the default network ACL of the same VPC: direction, number, action and range.",
+     "command": "aws ec2 describe-network-acls --filters Name=vpc-id,Values=<VPC_ID> Name=default,Values=true --query \"NetworkAcls[0].Entries[].[Egress,RuleNumber,RuleAction,CidrBlock]\"",
+     "expect": "If nobody changed the network ACL: rule 100 with allow and rule 32767 with deny, both for 0.0.0.0/0, once for outbound (true) and once for inbound (false). Each network ACL rule names its action. A security group rule names none.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "vpc-sg-allow-rules-only",
+    "vpc-sg-vs-nacl-rule-type",
+    "vpc-default-sg-inbound-self",
+    "vpc-default-sg-outbound-all",
+    "vpc-default-nacl-allows-all-traffic",
+    "vpc-nacl-asterisk-rule-denies-unmatched",
+    "vpc-nacl-rule-order-first-match",
+    "vpc-default-vpc-other-components"
+   ],
+   "sources": [
+    {"title": "describe-security-groups (AWS CLI Command Reference)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-security-groups.html"},
+    {"title": "describe-network-acls (AWS CLI Command Reference, example output of a default network ACL)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-network-acls.html"},
+    {"title": "describe-vpcs (AWS CLI Command Reference, filter is-default)", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpcs.html"},
+    {"title": "Default security groups for your VPCs", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/default-security-group.html"},
+    {"title": "Default network ACL for a VPC", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/default-network-acl.html"},
+    {"title": "Security group rules", "url": "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"}
+   ]
+  }
+ ]
+}

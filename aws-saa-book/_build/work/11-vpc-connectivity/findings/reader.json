@@ -1,0 +1,251 @@
+{
+ "lens": "reader",
+ "chapter": "11",
+ "reviewer": "review-11-reader",
+ "reviewed": "2026-10-23",
+ "scope_note": "Second review, after the orchestrator's repair of 2-deep.md (Spot the bug, Try it callout for t03, trim) and after verify-questions. sync 11: written=0 unchanged=12. 5-quiz.md renders 10 ready questions; 3-do.md and 4-say.md still render 'Nothing here yet' (tasks and speak items are status candidate), so tasks and spoken answers were read from data/11-vpc-connectivity/*.json. This file replaces the outdated findings of the previous run.",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+   "quote": "**Stop and answer.** VPC A has an **interface endpoint** for an AWS service. VPC B is peered with VPC A. Can VPC B use that endpoint?",
+   "type": "term-before-explained",
+   "severity": "should",
+   "evidence": "Rule READER.md 'Depth lives in short subsections with a time box and a Stop-and-answer': the Stop-and-answer of subsection 2 tests interface and gateway endpoints, which the deep file explains only in subsection 5 ('An interface endpoint puts an **endpoint network interface** in one subnet per Availability Zone'). On the pass route she meets the question before the concept. Move this prompt to subsection 5 and give subsection 2 a peering prompt (for example the edge-to-edge NAT case of step 2).",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-02",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+   "quote": "Yes. Unlike a **gateway endpoint**, you can [access AWS PrivateLink endpoints over VPC peering](../facts/privatelink.md#privatelink-wp-endpoints-reachable-over-peering-tgw-dx).",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "Fact vpc-endpoints-interface-private-dns-no-app-change: private DNS works through 'a hidden, AWS-managed private hosted zone' that AWS creates for the endpoint's own VPC; fact vpc-endpoints-wp-interface-endpoints-reachable-from-onprem shows that clients outside the VPC need DNS work: 'Use conditional forwarding rules to send all DNS traffic for the full-service endpoint names to Route 53 Resolver inbound endpoints'. A bare 'Yes' lets her tell a customer that VPC B calls the service by its usual name with no change. Add one clause: VPC B reaches the endpoint's private IP addresses or its endpoint-specific DNS name; the usual service name needs DNS set up. The bold 'gateway endpoint' here also has no explanation in this chapter (see reader-03).",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-03",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "3. A gateway endpoint will [add an entry to your route table you selected](../facts/vpc.md#vpc-faq-endpoint-types-gateway-interface) for Amazon S3.",
+   "type": "term-unexplained",
+   "severity": "should",
+   "evidence": "Lint W901 (ledger warnings): 'first use of the term `gateway endpoint` is not bold'. The fast Words table has rows for peering connection, transit gateway, interface endpoint and endpoint service, but none for gateway endpoint, and 2-deep.md has no subsection on it: the term appears only in a figure step, two compare tables and the subsection-2 answer. Chapter 10 teaches it (10-vpc/2-deep.md uses it 14 times), but chapter 11 never links there. Questions 1, 8, 9 and 10 turn on gateway endpoints. Add a Words row ('gateway endpoint | **associate** a gateway endpoint with a route table | A route-table target for S3 or DynamoDB | interface endpoint') and one link to the chapter 10 subsection.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-04",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+   "quote": "2. **Resolve.** With **private DNS**, applications reach the endpoint [without requiring that you make any changes](../facts/vpc-endpoints.md#vpc-endpoints-interface-private-dns-no-app-change).",
+   "type": "mechanism-not-explained",
+   "severity": "should",
+   "evidence": "Fact vpc-endpoints-interface-private-dns-no-app-change quote: 'The hosted zone contains a record set for the default DNS name for the service that resolves it to the private IP addresses of the endpoint network interfaces in your VPC. Therefore, if you have existing applications ... without requiring that you make any changes'. The step gives the effect and drops the cause (the usual service name now resolves to the endpoint's private IP addresses), and drops the condition in the same fact ('your VPC has both DNS hostnames and DNS resolution enabled'). Without the cause she cannot explain to a founder why no code changes.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-05",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "an-interface-endpoint-gives-the-service-a-private-ip-address-in-your-subnet",
+   "quote": "4. **Reach from outside.** The endpoint is [accessible from on-premises networks over VPN](../facts/vpc-endpoints.md#vpc-endpoints-wp-interface-endpoints-reachable-from-onprem) and Direct Connect.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "Fact vpc-endpoints-wp-interface-endpoints-reachable-from-onprem, next sentence of the same quote: 'Use conditional forwarding rules to send all DNS traffic for the full-service endpoint names to Route 53 Resolver inbound endpoints, which will resolve DNS requests according to the private hosted zone.' The step keeps the capability and drops the DNS step that makes it work from a data center, which is what a customer's network engineer asks first. Question 10's explanation needs it too ('its DNS names return the private IP address ... to on-premises clients'). Add the half sentence.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-06",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+   "quote": "3. **Combine.** The role's IAM policy and the bucket still decide.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "Fact vpc-endpoints-wp-one-policy-per-endpoint-no-override: 'An endpoint policy does not override or replace IAM user policies or service-specific policies (such as Amazon S3 bucket policies).' The step names no cause and effect: a request through the endpoint needs an allow from the endpoint policy AND from the role's IAM policy, and a bucket policy can still deny. 'the bucket' stands for 'the bucket policy'. The table row '| Leaves the bucket out | Allows the read | Denied |' then has no stated reason. Write the rule once in plain words: both must allow; either one can stop the request.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-07",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+   "quote": "4. **Lock the bucket.** A bucket policy with [aws:SourceVpce](../facts/s3.md#s3-bucket-policy-source-vpce-condition) refuses other paths",
+   "type": "unclear-english",
+   "severity": "should",
+   "evidence": "Fact s3-bucket-policy-source-vpce-condition quote: 'If the specified endpoint is not used, the policy denies all access to the bucket.' The AWS example is a Deny statement that applies when aws:SourceVpce is not the endpoint ID. 'refuses other paths' is a figure of speech (RULINGS hard rule 8) and suggests that any use of the key blocks other paths. Say: a Deny statement that applies when aws:SourceVpce is not the endpoint's ID.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-08",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "separate-route-tables-let-one-transit-gateway-isolate-groups-of-vpcs",
+   "quote": "Instead, [each isolated router has a single route table](../facts/transit-gateway.md#transit-gateway-isolated-vpcs-scenario)",
+   "type": "term-unexplained",
+   "severity": "should",
+   "evidence": "Fact transit-gateway-isolated-vpcs-scenario: 'isolated router' is AWS's name for one transit gateway set up as several isolated routers, one per route table. The chapter never explains it, so the trap that says isolation does not need a second transit gateway reads as if it talks about several routers. Say 'each group's route table' in the sentence, or explain the phrase in five words.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-09",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "check",
+   "quote": "**Check 1.** A hub VPC is peered with five other VPCs. Can two of them talk through the hub?",
+   "type": "check-answerable-from-skim",
+   "severity": "should",
+   "evidence": "Rule READER.md: 'Headings, tables and captions must give a correct gist on their own; questions must test what the gist misses.' Check 1 is answered by the bold trap line ('**Wrong belief:** VPC A reaches VPC C through peered VPC B') and the compare cell 'Through a third network? | No', and it restates Predict 1. Check 2 ('Two VPCs with 10.20.0.0/16 attach to one transit gateway') is answered by the compare cell 'No: it does not route identical CIDRs' and the third trap. Both pass from a skim. Use a case only the full text answers, for example the edge-to-edge NAT case or a gateway endpoint used from the data center (Signals 'But not if' column).",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-10",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "changed-recently",
+   "quote": "> **The exam probably expects:** same-Region endpoints; prefer an option right under both.<br>",
+   "type": "unclear-english",
+   "severity": "should",
+   "evidence": "RULINGS hard rule 8 (short sentences, no idioms) and READER.md (second-language reader who rushes). 'prefer an option right under both' is too compressed to parse at speed. Say: 'Older questions assume that an interface endpoint reaches AWS services only in its own Region. Choose the answer that is correct under both rules.'",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-11",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+   "quote": "> **Try it:** Limit a gateway endpoint to one bucket and watch other buckets refuse. See [3-do.md](3-do.md). <!-- task: vpc-connectivity-t03 -->",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "Task vpc-connectivity-t03 (data/11-vpc-connectivity/tasks.json) launches no instance and never creates the bucket saa-vpc-connectivity-t03-example; its steps only read and replace the policy document. Nothing in the task lets her 'watch other buckets refuse', and the last expect line ('Requests for other buckets stop passing the endpoint after a few minutes.') is an effect she cannot observe. The tasks stage note itself says the break-it 'observes the default policy instead'. Reword the callout to what the task does (read the default full-access policy, then replace it with a one-bucket policy) and move the 'after a few minutes' sentence into the explain text.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-12",
+   "file": "data/11-vpc-connectivity/tasks.json",
+   "section": "2-deep.md#a-peering-connection-works-only-after-both-owners-add-routes",
+   "quote": "Then each owner [must manually add a route](../facts/vpc-peering.md#vpc-peering-step-routes-manual), so VPC B also needs a route back to VPC A.",
+   "type": "task-teaches-little",
+   "severity": "should",
+   "evidence": "Task vpc-connectivity-t02 states the second half of the lesson (fact vpc-peering-step-routes-manual) but never does it: no step adds 10.0.0.0/16 to the main route table of VPC B, and the cleanup deletes only the route of VPC A. The subsection heading is 'A peering connection works only after both owners add routes'. Add one create-route step for VPC B (no cost) and its delete-route cleanup, so her hands do what the heading says.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-13",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "front-matter",
+   "quote": "minutes: {fast: 14, pass: 46, full: 82}",
+   "type": "time-box",
+   "severity": "should",
+   "evidence": "Lint W105 (ledger warnings): 'minutes.pass is 46; the formula gives 58' and 'minutes.full is 82; the formula gives 104'. READER.md: 'A file she can finish in 15 to 20 minutes gets opened'; she plans her 10 pages a day from these numbers, and the pass route is understated by 12 minutes (the task minutes of t02, 12, are missing). Set the values the formula gives.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-14",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "## In one breath (2 min)",
+   "type": "length",
+   "severity": "should",
+   "evidence": "Lint W201 (ledger warnings): '`In one breath` has 223 words; the section allows 0 to 200'. The section holds the Say-it line, a problem line, a figure with four numbered steps and the startup example; a 2-minute box should not be over budget. Cut the figure steps to the three that the caption does not already say, or move the startup example under the figure caption.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-15",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "> **Startup example:** The bank's application, in the bank's VPC, must call Callvale's API without using the internet.",
+   "type": "term-before-explained",
+   "severity": "note",
+   "evidence": "STARTUP.md: 'Ostell Bank (\"the bank\")'. The fast file never names the bank or says it is Callvale's first bank customer; the name appears only in the deep decision record ('Ostell Bank's application calls Callvale's public API'). A reader who opens chapter 11 first meets 'the bank' with no referent. Write 'Ostell Bank, Callvale's bank customer,' once here.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-16",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "add an entry to your route table you selected",
+   "type": "unclear-english",
+   "severity": "note",
+   "evidence": "The verbatim display makes an ungrammatical sentence ('your route table you selected') in a line she may say out loud. Fact vpc-endpoints-faq-gateway-endpoint-s3-ddb-route has the cleaner verbatim phrase 'add an entry to the route table you select' (used by Questions 1, 5 and 8).",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-17",
+   "file": "11-vpc-connectivity/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Question | Gateway endpoint | Interface endpoint | Gateway Load Balancer endpoint |",
+   "type": "term-unexplained",
+   "severity": "note",
+   "evidence": "Lint W901 lists 'Gateway Load Balancer endpoint' and 'inspection VPC' as first uses without bold. 'Gateway Load Balancer endpoint' (this table) and 'an inspection VPC' (Signals row 6, 'traffic needs inspection: an inspection VPC') appear nowhere else in the chapter and are not explained. Fact vpc-endpoints-gwlb-fleet-of-appliances-service gives a one-line meaning; add a Words row or a link to the chapter that teaches Gateway Load Balancer.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-18",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+   "quote": "A **transit gateway** (TRAN-zit) is a **hub-and-spoke** design that can",
+   "type": "imprecise-definition",
+   "severity": "note",
+   "evidence": "Fact transit-gateway-def-network-transit-hub: a transit gateway is a network transit hub (a resource); hub-and-spoke is the design it creates. 'A transit gateway is a design' gives her a wrong one-breath definition to repeat to customers. Say 'a Regional hub that ...; the design is called hub-and-spoke'.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-19",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "a-transit-gateway-routes-between-attachments-with-its-own-route-tables",
+   "quote": "The attachment's **association** names [a single route table](../facts/transit-gateway.md#transit-gateway-attachment-one-route-table-association), a **transit gateway route table**. It picks",
+   "type": "unclear-english",
+   "severity": "note",
+   "evidence": "STYLE plain English: 'It' can mean the attachment, the association or the route table. The thing that picks the most specific route is the transit gateway route table (fact transit-gateway-route-evaluation-most-specific-first). Write 'That route table picks ...'.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-20",
+   "file": "data/11-vpc-connectivity/speak.json",
+   "section": "2-deep.md#peering-is-not-transitive-so-many-vpcs-need-a-full-mesh",
+   "quote": "In your case, with that many VPCs in several accounts, I'd use one transit gateway.",
+   "type": "spoken-answer-gap",
+   "severity": "note",
+   "evidence": "Item vpc-connectivity-s02: the CTO says 'twelve VPCs in five accounts', but the 60-second answer never says how five accounts use one transit gateway; sharing through AWS RAM (fact transit-gateway-share-with-ram-accounts-or-org) appears only in a follow-up. One sentence ('We share it with the other accounts through Resource Access Manager.') answers the part of the question a founder checks.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-21",
+   "file": "11-vpc-connectivity/2-deep.md",
+   "section": "in-the-real-world",
+   "quote": "**Resilience, 2023.** Resilience transfers its lab data",
+   "type": "unclear-english",
+   "severity": "note",
+   "evidence": "The company name is an ordinary English word and an exam pillar word; a fast second-language reader can parse 'Resilience transfers its lab data' as a concept, not a company. Add 'the company' once: 'The company Resilience transfers ...'.",
+   "status": "open",
+   "resolution": null
+  },
+  {
+   "id": "reader-22",
+   "file": "11-vpc-connectivity/3-do.md",
+   "section": "do-it",
+   "quote": "Nothing here yet.",
+   "type": "process",
+   "severity": "note",
+   "evidence": "After sync 11 (written=0 unchanged=12), 3-do.md and 4-say.md are placeholders and the task block of 1-fast.md 'Look first' is empty, because tasks t01 to t03 and speak items s01, s02 are status candidate. Both Try it callouts ('See [3-do.md](3-do.md)') and the Look first prompt ('List them.') lead to nothing. Re-check the rendered files after finalize sets the items ready.",
+   "status": "open",
+   "resolution": null
+  }
+ ]
+}

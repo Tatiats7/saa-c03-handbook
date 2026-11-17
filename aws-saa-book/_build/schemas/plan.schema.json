@@ -1,0 +1,59 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "plan.schema.json",
+ "title": "Study plan: data/plan.json",
+ "description": "The three variants of the study calendar (Plan A, B, C) and the readiness gates, with stable day ids and task ids. The web app reads this file for the day-by-day checklist; `sync` generates the plan tables of 00-start-here/calendar.md from it (regions plan:start / plan:end). Written by the front-matter writer of chapter 00; study times are the book's own values, not AWS facts.",
+ "type": "object",
+ "required": ["v", "plans", "gates"],
+ "additionalProperties": false,
+ "properties": {
+  "v": {"const": 1},
+  "plans": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/plan"}},
+  "gates": {"type": "array", "items": {"$ref": "#/$defs/gate"}}
+ },
+ "$defs": {
+  "plan": {
+   "type": "object",
+   "required": ["id", "title", "days"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"enum": ["a", "b", "c"]},
+    "title": {"type": "string", "minLength": 3},
+    "note": {"type": ["string", "null"], "description": "for whom this variant is"},
+    "days": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/day"}}
+   }
+  },
+  "day": {
+   "type": "object",
+   "required": ["id", "minutes", "tasks"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^d[0-9]{2}$", "description": "d01 is Day 1; ids never change"},
+    "minutes": {"type": "integer", "minimum": 0},
+    "tasks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/task"}}
+   }
+  },
+  "task": {
+   "type": "object",
+   "required": ["id", "text"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^t[0-9]{1,2}$", "description": "unique inside the day"},
+    "text": {"type": "string", "minLength": 3, "description": "plain text; Day 1 of every plan holds the text 'request ESL +30 before booking'"},
+    "chapter": {"type": ["string", "null"], "pattern": "^[0-9]{2}$"},
+    "route": {"enum": [null, "fast", "pass", "full"]},
+    "minutes": {"type": ["integer", "null"], "minimum": 0}
+   }
+  },
+  "gate": {
+   "type": "object",
+   "required": ["id", "day", "text"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^g[0-9]{1,2}$"},
+    "day": {"type": "string", "pattern": "^d[0-9]{2}$"},
+    "text": {"type": "string", "minLength": 5, "description": "the readiness condition and what to do when it is not met"}
+   }
+  }
+ }
+}

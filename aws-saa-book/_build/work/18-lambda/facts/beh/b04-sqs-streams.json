@@ -1,0 +1,165 @@
+[
+ {
+  "id": "lambda-sqs-visibility-six-times-timeout",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "AWS recommends setting the source queue's visibility timeout to at least six times the function's configured timeout, so that Lambda has time to retry if the function is throttled while processing a previous batch.",
+  "question": "How long should the visibility timeout of an SQS queue that feeds a Lambda function be?",
+  "values": [
+   {"key": "ratio", "display": "at least six times", "spoken": "at least six times the function timeout"},
+   {"key": "setting", "display": "visibility timeout"}
+  ],
+  "qualifiers": {"scope": "Amazon SQS queue used as a Lambda event source", "default_or_max": "min", "adjustable": true, "condition": "a recommendation, not an enforced value"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/services-sqs-configure", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html", "quote": "To allow your function time to process each batch of records, set the source queue's visibility timeout to at least six times the configuration timeout on your function. The extra time allows Lambda to retry if your function is throttled while processing a previous batch.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["2.1.K5", "3.2.K5"]
+ },
+ {
+  "id": "lambda-sqs-timeout-not-above-visibility",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "A function's timeout must be less than or equal to the queue's visibility timeout; Lambda validates this when you create or update an SQS event source mapping and returns an error if the function timeout exceeds the visibility timeout.",
+  "question": "Can a Lambda function's timeout be longer than the visibility timeout of the SQS queue it reads from?",
+  "values": [
+   {"key": "rule", "display": "must be less than or equal to", "spoken": "the function timeout must not exceed the visibility timeout"},
+   {"key": "error", "display": "returns an error"}
+  ],
+  "qualifiers": {"scope": "Amazon SQS event source mapping", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/services-sqs-configure", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html", "quote": "Your function's timeout must be less than or equal to the queue's visibility timeout. Lambda validates this requirement when you create or update an event source mapping and returns an error if the function timeout exceeds the queue's visibility timeout.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-sqs-dlq-maxreceivecount-5",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "If the function fails to process a message multiple times, Amazon SQS can send it to a dead-letter queue; AWS recommends setting maxReceiveCount on the source queue's redrive policy to at least 5 so Lambda gets a few retries first.",
+  "question": "With an SQS event source, which service moves a repeatedly failing message to a dead-letter queue, and what maxReceiveCount is recommended?",
+  "values": [
+   {"key": "who", "display": "Amazon SQS can send it to a dead-letter queue", "spoken": "SQS moves it to the queue's dead-letter queue"},
+   {"key": "count", "display": "at least 5", "spoken": "at least five"}
+  ],
+  "qualifiers": {"scope": "Amazon SQS queue used as a Lambda event source", "default_or_max": "min", "adjustable": true, "condition": "a recommendation for the redrive policy"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/services-sqs-configure", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html", "quote": "In addition, if your function fails to process a message multiple times, Amazon SQS can send it to a dead-letter queue. We recommend setting the maxReceiveCount on your source queue's redrive policy to at least 5. This gives Lambda a few chances to retry before sending failed messages directly to the dead-letter queue.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-sqs-partial-batch-response",
+  "service": "lambda", "home_chapter": "18", "kind": "capability",
+  "claim": "With a partial batch response, turned on by specifying ReportBatchItemFailures in FunctionResponseTypes, an SQS event source mapping makes only the failed messages of a batch visible again instead of reprocessing the successful ones.",
+  "question": "How can an SQS event source mapping avoid reprocessing the messages that succeeded in a failed batch?",
+  "values": [
+   {"key": "name", "display": "partial batch response", "spoken": "a partial batch response"},
+   {"key": "setting", "display": "ReportBatchItemFailures"},
+   {"key": "effect", "display": "make only the failed messages visible again"}
+  ],
+  "qualifiers": {"scope": "Amazon SQS event source mapping", "default_or_max": "", "adjustable": false, "condition": "ReportBatchItemFailures is specified"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/services-sqs-errorhandling", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html", "quote": "To avoid reprocessing successfully processed messages in a failed batch, you can configure your event source mapping to make only the failed messages visible again. This is called a partial batch response. To turn on partial batch responses, specify ReportBatchItemFailures for the FunctionResponseTypes action when configuring your event source mapping.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-sqs-code-error-backoff",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "When the function code causes the error on an SQS batch, Lambda stops processing and retrying the invocation, gradually backs off by reducing the concurrency allocated to the SQS event source mapping, and the message reappears in the queue after the visibility timeout runs out.",
+  "question": "What does an SQS event source mapping do when the function code fails?",
+  "values": [
+   {"key": "backoff", "display": "Lambda gradually backs off", "spoken": "Lambda slowly reduces its concurrency"},
+   {"key": "reappear", "display": "the message reappears in the queue"}
+  ],
+  "qualifiers": {"scope": "Amazon SQS event source mapping", "default_or_max": "", "adjustable": false, "condition": "function code error"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/services-sqs-errorhandling", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html", "quote": "If your function code caused the error, Lambda stops processing and retrying the invocation. In the meantime, Lambda gradually backs off, reducing the amount of concurrency allocated to your Amazon SQS event source mapping. After your queue's visibility timeout runs out, the message reappears in the queue.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-sqs-throttle-drop-after-visibility",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "If an SQS invocation fails because of throttling, Lambda gradually backs off retries by reducing the concurrency of the event source mapping and keeps retrying the message until its timestamp exceeds the queue's visibility timeout, at which point Lambda drops the message.",
+  "question": "What happens to an SQS message whose Lambda invocations keep being throttled?",
+  "values": [
+   {"key": "retry", "display": "Lambda continues to retry the message", "spoken": "Lambda keeps retrying"},
+   {"key": "drop", "display": "Lambda drops the message"}
+  ],
+  "qualifiers": {"scope": "Amazon SQS event source mapping", "default_or_max": "", "adjustable": false, "condition": "throttling errors"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/services-sqs-errorhandling", "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html", "quote": "If the invocation fails due to throttling, Lambda gradually backs off retries by reducing the amount of concurrency allocated to your Amazon SQS event source mapping. Lambda continues to retry the message until the message's timestamp exceeds your queue's visibility timeout, at which point Lambda drops the message.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5", "2.2.K10"]
+ },
+ {
+  "id": "lambda-stream-bisect-batch-on-error",
+  "service": "lambda", "home_chapter": "18", "kind": "capability",
+  "claim": "For function errors on a Kinesis event source mapping, BisectBatchOnFunctionError splits a failed batch into two smaller batches to isolate bad records and avoid timeouts, and splitting does not consume the retry quota.",
+  "question": "How can a stream event source mapping isolate a bad record in a failed batch?",
+  "values": [
+   {"key": "setting", "display": "BisectBatchOnFunctionError", "spoken": "bisect batch on function error"},
+   {"key": "effect", "display": "splits a failed batch into two smaller batches"},
+   {"key": "quota", "display": "doesn't consume the retry quota"}
+  ],
+  "qualifiers": {"scope": "Kinesis event source mapping", "default_or_max": "", "adjustable": false, "condition": "function errors"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/kinesis-on-failure-destination", "url": "https://docs.aws.amazon.com/lambda/latest/dg/kinesis-on-failure-destination.html", "quote": "For function errors, you can also configure BisectBatchOnFunctionError, which splits a failed batch into two smaller batches, isolating bad records and avoiding timeouts. Splitting batches doesn't consume the retry quota.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-kinesis-bad-record-block-one-week",
+  "service": "lambda", "home_chapter": "18", "kind": "default",
+  "claim": "With the default settings, a bad record can block processing on its Kinesis shard for up to one week; when the error handling measures fail, Lambda discards the records and continues processing batches from the stream.",
+  "question": "With default settings, how long can one bad record block a Kinesis shard for a Lambda event source mapping?",
+  "values": [
+   {"key": "block", "display": "up to one week", "spoken": "up to one week"},
+   {"key": "discard", "display": "Lambda discards the records and continues processing batches"}
+  ],
+  "qualifiers": {"scope": "Kinesis event source mapping, per shard", "default_or_max": "default", "adjustable": true, "condition": "set a retry limit and a maximum record age to avoid this"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/kinesis-on-failure-destination", "url": "https://docs.aws.amazon.com/lambda/latest/dg/kinesis-on-failure-destination.html", "quote": "If the error handling measures fail, Lambda discards the records and continues processing batches from the stream. With the default settings, this means that a bad record can block processing on the affected shard for up to one week. To avoid this, configure your function's event source mapping with a reasonable number of retries and a maximum record age that fits your use case.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-kinesis-on-failure-destination-targets",
+  "service": "lambda", "home_chapter": "18", "kind": "capability",
+  "claim": "To retain records of failed invocations from a Kinesis event source mapping, you add a destination, which can be an Amazon SNS topic, an Amazon SQS queue, an Amazon S3 bucket, or Kafka.",
+  "question": "Which destinations can hold the records of failed Kinesis event source mapping invocations?",
+  "values": [
+   {"key": "targets", "display": "Amazon SNS topic, Amazon SQS queue, Amazon S3 bucket", "spoken": "an SNS topic, an SQS queue, an S3 bucket or Kafka"},
+   {"key": "kafka", "display": "or Kafka as a destination"}
+  ],
+  "qualifiers": {"scope": "Kinesis event source mapping", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/kinesis-on-failure-destination", "url": "https://docs.aws.amazon.com/lambda/latest/dg/kinesis-on-failure-destination.html", "quote": "To retain records of failed event source mapping invocations, add a destination to your Event Function's event source mapping. Each record sent to the destination is a JSON document containing metadata about the failed invocation. For Amazon S3 destinations, Lambda also sends the entire invocation record along with the metadata. You can configure any Amazon SNS topic, Amazon SQS queue, Amazon S3 bucket, or Kafka as a destination.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5"]
+ },
+ {
+  "id": "lambda-ddb-stream-partition-key-order",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "For a DynamoDB stream, a parallelization factor between 1 (default) and 10 lets Lambda poll several concurrent batches from one shard; records that share a partition key still go to the same concurrent batch and are processed in order.",
+  "question": "Does a parallelization factor on a DynamoDB stream event source break the order of records?",
+  "values": [
+   {"key": "factor", "display": "from 1 (default) to 10", "spoken": "from one, the default, to ten"},
+   {"key": "order", "display": "are processed in order"}
+  ],
+  "qualifiers": {"scope": "DynamoDB stream event source mapping, per shard", "default_or_max": "default", "adjustable": true, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/with-ddb", "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html", "quote": "You can specify the number of concurrent batches that Lambda polls from a shard by using a parallelization factor from 1 (default) to 10.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/with-ddb", "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html", "quote": "Within a shard, records that share a partition key go to the same concurrent batch and are processed in order.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["2.1.K5", "3.2.K5"]
+ }
+]

@@ -1,0 +1,624 @@
+{
+ "v": 1,
+ "chapter": "route53",
+ "items": [
+  {
+   "id": "route53-s01",
+   "kind": "explain",
+   "prompt": "Why can I not point an A record at the IP address of the load balancer?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "Because those IP addresses change when the load balancer scales. An alias record names the load balancer, and Amazon Route 53 follows the changes.",
+   "sixty_second": [
+    "The short answer is: those IP addresses change, so a fixed A record breaks.",
+    "It works like this. As traffic changes, Elastic Load Balancing scales the load balancer.",
+    "Then it updates the DNS entry, so the IP addresses can move.",
+    "An alias record points to the load balancer itself, not to an address.",
+    "Amazon Route 53 detects changes in the load balancer on its own.",
+    "So the answers hold the new addresses, and you change nothing.",
+    "An alias record also works at callvale.example, where a CNAME record is not allowed.",
+    "The thing to watch is customers who want fixed addresses for their firewalls.",
+    "An Application Load Balancer has no static addresses. A Network Load Balancer can have them.",
+    "In your case, callvale.example and app.callvale.example become alias records to your AWS resources.",
+    "Does any customer need fixed IP addresses for an allow list?"
+   ],
+   "skeleton": [
+    "addresses change when it scales",
+    "alias record names the resource",
+    "Route 53 follows the changes",
+    "fixed addresses need Network Load Balancer"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Elastic Load Balancing scales the load balancer as traffic changes and updates its DNS entry, so the IP addresses of the load balancer nodes change.",
+     "accept": [
+      "the addresses change when it scales",
+      "the load balancer gets new IP addresses"
+     ],
+     "facts": [
+      "route53-elb-dns-entry-updated-ttl-60",
+      "elb-dns-returns-node-ips"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "An alias record points to the AWS resource, and Route 53 detects changes in the resource on its own and answers with the new IP address.",
+     "accept": [
+      "Route 53 follows the load balancer",
+      "the alias record always has the current addresses"
+     ],
+     "facts": [
+      "route53-alias-follows-resource-ip-changes"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "You can create an alias record at the zone apex, where the DNS protocol does not allow a CNAME record.",
+     "accept": [
+      "alias record works at the bare domain",
+      "no CNAME record at callvale.example"
+     ],
+     "facts": [
+      "route53-alias-allowed-at-zone-apex",
+      "route53-cname-dns-protocol-forbids-zone-apex"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "nice",
+     "point": "Of the load balancer types, only the Network Load Balancer has a static or Elastic IP address.",
+     "accept": [
+      "fixed addresses need a Network Load Balancer"
+     ],
+     "facts": [
+      "elb-compare-static-elastic-ip-nlb-only"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Alias A and AAAA records that are mapped to Elastic Load Balancers do not incur a charge for queries.",
+     "accept": [
+      "alias queries to the load balancer are free"
+     ],
+     "facts": [
+      "route53-pricing-alias-free-for-listed-aws-services"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "the load balancer's IP addresses never change",
+     "correct": "Elastic Load Balancing scales the load balancer and updates its DNS entry, so the IP addresses change.",
+     "fact": "route53-elb-dns-entry-updated-ttl-60"
+    },
+    {
+     "error": "use a CNAME record at callvale.example",
+     "correct": "The DNS protocol does not allow a CNAME record at the zone apex. Use an alias record there.",
+     "fact": "route53-cname-dns-protocol-forbids-zone-apex"
+    },
+    {
+     "error": "an alias record is the same as a CNAME record",
+     "correct": "Unlike a CNAME record, an alias record can be created at the zone apex, and it follows the AWS resource.",
+     "fact": "route53-alias-allowed-at-zone-apex"
+    }
+   ],
+   "terms": [
+    {
+     "say": "zone apex",
+     "avoid": [
+      "naked domain"
+     ]
+    },
+    {
+     "say": "alias record to the load balancer",
+     "avoid": [
+      "hardcode the IP"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we use a CNAME record for app.callvale.example instead?",
+     "answer": "Yes, a CNAME record is allowed for a subdomain, but not for callvale.example itself. An alias record to the load balancer also works there, and its queries do not incur a charge.",
+     "facts": [
+      "route53-cname-dns-protocol-forbids-zone-apex",
+      "route53-pricing-alias-free-for-listed-aws-services"
+     ]
+    },
+    {
+     "question": "Which TTL does the alias record use?",
+     "answer": "You cannot set it. If an alias record points to an AWS resource, Route 53 uses the default TTL for the resource.",
+     "facts": [
+      "route53-alias-to-aws-resource-ttl-not-settable"
+     ]
+    }
+   ],
+   "facts": [
+    "route53-elb-dns-entry-updated-ttl-60",
+    "elb-dns-returns-node-ips",
+    "route53-alias-follows-resource-ip-changes",
+    "route53-alias-allowed-at-zone-apex",
+    "route53-cname-dns-protocol-forbids-zone-apex",
+    "elb-compare-static-elastic-ip-nlb-only",
+    "route53-pricing-alias-free-for-listed-aws-services",
+    "route53-alias-to-aws-resource-ttl-not-settable"
+   ],
+   "section": "2-deep.md#an-alias-record-follows-the-changing-addresses-of-the-aws-resource-it-names",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "route53-s02",
+   "kind": "compare",
+   "prompt": "Latency routing or geolocation routing: which one sends my users to the fastest Region?",
+   "persona": "a SaaS founder in office hours",
+   "ten_second": "Latency routing. It sends each user to the Region with the best latency. Geolocation routing decides by the user's location, not by speed.",
+   "sixty_second": [
+    "Both choose a Region for each user.",
+    "The difference is the goal: speed, or a fixed place for each location.",
+    "It works like this. Latency routing uses latency data between users and AWS data centers.",
+    "Amazon Route 53 then sends each user to the Region with the best latency.",
+    "Geolocation routing looks at where the DNS query comes from.",
+    "It matches that location to the records you create.",
+    "Location is sometimes a good guide to speed, and sometimes it is not.",
+    "The thing to watch is the default record in geolocation routing.",
+    "Without a default record, users from other locations get no answer.",
+    "In your case, use latency routing if speed is the goal.",
+    "Use geolocation routing when a rule keeps one country's users in one Region.",
+    "Do you have a rule like that for any of your customers?"
+   ],
+   "skeleton": [
+    "both pick a Region",
+    "latency routing: best latency",
+    "geolocation: user location",
+    "no default record, no answer"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Latency routing sends traffic to the Region that provides the best latency.",
+     "accept": [
+      "latency routing picks the fastest Region",
+      "lowest latency Region"
+     ],
+     "facts": [
+      "route53-choose-latency-routing-best-latency-region"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Geolocation routing chooses resources based on where users are located, meaning the location that DNS queries come from.",
+     "accept": [
+      "geolocation goes by country or continent",
+      "based on the user's location"
+     ],
+     "facts": [
+      "route53-geolocation-routing-by-query-location"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "To minimize latency AWS recommends latency routing; for compliance or localization that needs stable routing from a geography, geolocation routing.",
+     "accept": [
+      "geolocation is for compliance",
+      "latency routing is for speed"
+     ],
+     "facts": [
+      "route53-faq-lbr-for-latency-geo-for-compliance"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "If you do not create a default geolocation record, Route 53 returns a no answer response for locations without a record.",
+     "accept": [
+      "no default record means no answer",
+      "add a default record"
+     ],
+     "facts": [
+      "route53-geolocation-no-default-no-answer"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Latency data is based on traffic between users and AWS data centers, not on your own resources.",
+     "accept": [
+      "AWS measures latency to its Regions"
+     ],
+     "facts": [
+      "route53-latency-data-is-aws-traffic-not-your-resources"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Geography is a good proxy for latency in some cases, but not in others.",
+     "accept": [
+      "nearest is not always fastest"
+     ],
+     "facts": [
+      "route53-faq-geo-vs-latency-geography-not-latency"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "geolocation routing sends each user to the nearest Region",
+     "correct": "Geolocation routing matches the user's location to the records you create. Latency routing picks the Region with the best latency.",
+     "fact": "route53-geolocation-routing-by-query-location"
+    },
+    {
+     "error": "latency routing measures how fast your own servers respond",
+     "correct": "Latency data is based on traffic between users and AWS data centers, not on your own resources.",
+     "fact": "route53-latency-data-is-aws-traffic-not-your-resources"
+    }
+   ],
+   "terms": [
+    {
+     "say": "latency routing",
+     "avoid": [
+      "speed routing"
+     ]
+    },
+    {
+     "say": "geolocation routing",
+     "avoid": [
+      "geo-routing"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "And what is geoproximity routing?",
+     "answer": "Geoproximity routing uses the location of your resources. You can set a bias, which expands or shrinks the geographic region from which traffic goes to a resource.",
+     "facts": [
+      "route53-choose-geoproximity-routing-resource-location-bias",
+      "route53-geoproximity-bias-expands-or-shrinks-region"
+     ]
+    },
+    {
+     "question": "Can latency routing still send users to a Region that is down?",
+     "answer": "Not if you associate a health check with each record. If a health check finds the resource unhealthy, Route 53 routes traffic away from the associated record.",
+     "facts": [
+      "route53-dns-failover-routes-traffic-away-from-unhealthy-record"
+     ]
+    }
+   ],
+   "facts": [
+    "route53-choose-latency-routing-best-latency-region",
+    "route53-geolocation-routing-by-query-location",
+    "route53-faq-lbr-for-latency-geo-for-compliance",
+    "route53-geolocation-no-default-no-answer",
+    "route53-latency-data-is-aws-traffic-not-your-resources",
+    "route53-faq-geo-vs-latency-geography-not-latency",
+    "route53-choose-geoproximity-routing-resource-location-bias",
+    "route53-geoproximity-bias-expands-or-shrinks-region",
+    "route53-dns-failover-routes-traffic-away-from-unhealthy-record"
+   ],
+   "section": "2-deep.md#latency-records-follow-measured-latency-and-geolocation-records-follow-user-location",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "route53-s03",
+   "kind": "decide",
+   "prompt": "We run in two Regions. If the first Region fails, how does DNS move our users to the second one, and how fast?",
+   "persona": "a fintech CTO you advise",
+   "ten_second": "Use failover alias records. The primary gets its health from Evaluate Target Health or a health check. Users move when their cached answer expires.",
+   "sixty_second": [
+    "The short answer is: failover records, with a health signal on the primary Region.",
+    "It works like this. You create a primary record and a secondary record.",
+    "Health checkers test the primary endpoint every half minute by default.",
+    "By default, three failed checks in a row make the primary unhealthy.",
+    "Then Amazon Route 53 answers with the secondary record instead.",
+    "But resolvers keep the old answer until its TTL runs out.",
+    "So keep that TTL at a minute or less.",
+    "The thing to watch is your recovery path.",
+    "Create the records and health checks in advance. Do not plan to edit records during the outage.",
+    "If seconds matter, look at AWS Global Accelerator: its changes propagate in seconds.",
+    "In your case, use alias records for the load balancers, with Evaluate Target Health.",
+    "How long can your users wait during a failover?"
+   ],
+   "skeleton": [
+    "primary and secondary records",
+    "health check marks primary unhealthy",
+    "TTL decides how fast",
+    "build it before the outage"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Failover routing is for active-passive failover: Route 53 routes traffic to a different resource when the first one is unhealthy.",
+     "accept": [
+      "the secondary answers when the primary is unhealthy",
+      "active-passive"
+     ],
+     "facts": [
+      "route53-choose-failover-routing-active-passive",
+      "route53-failover-routing-primary-or-secondary"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "By default the request interval is 30 seconds and the failure threshold is three health checks.",
+     "accept": [
+      "three failed checks in a row",
+      "checks every half minute by default"
+     ],
+     "facts": [
+      "route53-hc-request-interval-default-30",
+      "route53-hc-failure-threshold-default-3"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Caching resolvers are outside Route 53's control and keep answers for their TTL; with a health check, AWS recommends a TTL of 60 seconds or less.",
+     "accept": [
+      "users move when the cached answer expires",
+      "keep the TTL short"
+     ],
+     "facts": [
+      "route53-faq-resolver-caches-by-ttl-outside-control",
+      "route53-ttl-health-check-60-seconds-or-less"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Do not rely on the Route 53 control plane in the recovery path; use the status of health checks to fail over.",
+     "accept": [
+      "set it up in advance",
+      "no record edits during the outage"
+     ],
+     "facts": [
+      "route53-fi-no-control-plane-in-recovery-path"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "With AWS Global Accelerator, change propagation takes a matter of seconds.",
+     "accept": [
+      "Global Accelerator does not wait for DNS caches"
+     ],
+     "facts": [
+      "route53-vs-ga-change-propagation-seconds"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "users move to the second Region instantly",
+     "correct": "Caching resolvers keep the old answer according to its TTL, so users move after their cached answer expires.",
+     "fact": "route53-faq-resolver-caches-by-ttl-outside-control"
+    },
+    {
+     "error": "we update the DNS records when the outage happens",
+     "correct": "Do not rely on the Route 53 control plane in the recovery path. Create failover records and health checks in advance.",
+     "fact": "route53-fi-no-control-plane-in-recovery-path"
+    },
+    {
+     "error": "Route 53 replaces the failed instances",
+     "correct": "Route 53 routes traffic away from the record of the unhealthy resource. It does not repair the resource.",
+     "fact": "route53-dns-failover-routes-traffic-away-from-unhealthy-record"
+    }
+   ],
+   "terms": [
+    {
+     "say": "fail over to the secondary",
+     "avoid": [
+      "switch over"
+     ]
+    },
+    {
+     "say": "health check",
+     "avoid": [
+      "heartbeat"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Our primary is behind a load balancer. Do we need a separate health check?",
+     "answer": "No. Create an alias record that points to the load balancer and set Evaluate Target Health to true.",
+     "facts": [
+      "route53-faq-elb-failover-alias-evaluate-target-health"
+     ]
+    },
+    {
+     "question": "What happens if both Regions fail their health checks?",
+     "answer": "Route 53 still answers. If none of the records in a group are healthy, Route 53 considers all of them healthy and selects one based on the routing policy.",
+     "facts": [
+      "route53-no-record-healthy-all-records-considered-healthy"
+     ]
+    }
+   ],
+   "facts": [
+    "route53-choose-failover-routing-active-passive",
+    "route53-failover-routing-primary-or-secondary",
+    "route53-hc-request-interval-default-30",
+    "route53-hc-failure-threshold-default-3",
+    "route53-faq-resolver-caches-by-ttl-outside-control",
+    "route53-ttl-health-check-60-seconds-or-less",
+    "route53-fi-no-control-plane-in-recovery-path",
+    "route53-vs-ga-change-propagation-seconds",
+    "route53-dns-failover-routes-traffic-away-from-unhealthy-record",
+    "route53-faq-elb-failover-alias-evaluate-target-health",
+    "route53-no-record-healthy-all-records-considered-healthy"
+   ],
+   "section": "2-deep.md#failover-records-answer-with-the-secondary-only-while-the-primary-is-unhealthy",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "route53-s04",
+   "kind": "explain",
+   "prompt": "Our domain is registered with another company. Do we have to move it to AWS to use Route 53?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "No. You keep the registration where it is. You create a hosted zone, and your registrar points the domain to the zone's name servers.",
+   "sixty_second": [
+    "The short answer is no: you can keep the domain at your registrar.",
+    "It works like this. You create a public hosted zone in Amazon Route 53.",
+    "You copy your DNS records into that hosted zone.",
+    "Amazon Route 53 gives the hosted zone a unique set of four name servers.",
+    "At your registrar, you replace the old name servers with those four.",
+    "After that, resolvers ask Amazon Route 53 for your records.",
+    "The thing to watch is caching during the switch.",
+    "Resolvers remember the old name servers for some time.",
+    "So first lower the TTL of the NS record at both DNS providers.",
+    "If something is missing, you can then go back with less downtime.",
+    "In your case, check that every record is in the hosted zone before the switch.",
+    "Who on your team can sign in to the registrar today?"
+   ],
+   "skeleton": [
+    "keep the registrar",
+    "hosted zone, copy records",
+    "registrar gets four name servers",
+    "lower NS TTL first"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Transferring the domain registration to Route 53 is not required to use other Route 53 features.",
+     "accept": [
+      "you can keep your registrar",
+      "no transfer needed"
+     ],
+     "facts": [
+      "route53-domain-transfer-not-required-for-other-features"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "If another registrar keeps the domain, you ask the registrar to update the name servers to the ones of your hosted zone.",
+     "accept": [
+      "change the name servers at the registrar",
+      "point the domain to the Route 53 name servers"
+     ],
+     "facts": [
+      "route53-faq-external-registrar-must-update-name-servers"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "By default, Route 53 assigns a unique set of four name servers to each hosted zone that you create.",
+     "accept": [
+      "the hosted zone gets four name servers",
+      "a delegation set"
+     ],
+     "facts": [
+      "route53-default-unique-delegation-set-per-zone"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Lowering the TTL for the NS record, both at the current DNS provider and in Route 53, reduces downtime if you find a problem during the migration.",
+     "accept": [
+      "lower the TTL before the switch",
+      "shorter NS TTL makes rollback faster"
+     ],
+     "facts": [
+      "route53-migrate-lower-ns-ttl-both-providers"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Before you change critical DNS entries, temporarily shorten the TTLs.",
+     "accept": [
+      "shorten the TTL before a big change"
+     ],
+     "facts": [
+      "route53-best-practice-shorten-ttl-before-critical-change"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "you must transfer the domain to AWS first",
+     "correct": "Transferring the domain registration to Route 53 is not required to use other Route 53 features.",
+     "fact": "route53-domain-transfer-not-required-for-other-features"
+    },
+    {
+     "error": "the switch reaches every user within a minute",
+     "correct": "Caching resolvers keep records according to their TTL, so lower the TTL of the NS record before the switch.",
+     "fact": "route53-faq-resolver-caches-by-ttl-outside-control"
+    }
+   ],
+   "terms": [
+    {
+     "say": "hosted zone",
+     "avoid": [
+      "DNS account"
+     ]
+    },
+    {
+     "say": "name servers",
+     "avoid": [
+      "DNS addresses"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we move the registration to Route 53 later?",
+     "answer": "Yes. If you registered the domain with another registrar, you can transfer the domain registration to Route 53. It is a separate step from moving DNS.",
+     "facts": [
+      "route53-domain-transfer-not-required-for-other-features"
+     ]
+    },
+    {
+     "question": "After the switch, does a record change in Route 53 reach users right away?",
+     "answer": "Changes generally propagate to all Route 53 servers within 60 seconds. Resolvers still keep the old answer until its TTL ends.",
+     "facts": [
+      "route53-changes-propagate-within-60-seconds",
+      "route53-faq-resolver-caches-by-ttl-outside-control"
+     ]
+    }
+   ],
+   "facts": [
+    "route53-domain-transfer-not-required-for-other-features",
+    "route53-faq-external-registrar-must-update-name-servers",
+    "route53-default-unique-delegation-set-per-zone",
+    "route53-migrate-lower-ns-ttl-both-providers",
+    "route53-best-practice-shorten-ttl-before-critical-change",
+    "route53-faq-resolver-caches-by-ttl-outside-control",
+    "route53-changes-propagate-within-60-seconds"
+   ],
+   "section": "2-deep.md#a-resolver-follows-the-delegation-to-the-name-servers-of-your-hosted-zone",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1
+  }
+ ]
+}

@@ -1,0 +1,167 @@
+[
+ {
+  "id": "organizations-q003",
+  "section": "2-deep.md#an-action-is-allowed-only-if-an-scp-at-every-level-allows-it",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": ["1.1.S4"],
+  "topics": ["identity", "security"],
+  "services": ["organizations", "athena"],
+  "concept": "scp-allow-at-every-level",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company uses AWS Organizations with all features enabled. The root of the organization has the FullAWSAccess SCP. In the Workloads organizational unit (OU), the company replaced FullAWSAccess with an allow-list SCP that allows only Amazon EC2, Amazon S3, and Amazon CloudWatch actions. One account in the Workloads OU now needs Amazon Athena and AWS Glue. The account has FullAWSAccess attached directly, and the IAM role of its analytics team allows Athena and AWS Glue actions. Every other account in the Workloads OU must keep the current allow list. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "allows only Amazon EC2, Amazon S3, and Amazon CloudWatch actions",
+   "Every other account in the Workloads OU must keep the current allow list",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Keep the account in the Workloads OU, and attach an SCP that allows Athena and AWS Glue actions directly to the account, next to FullAWSAccess.",
+    "correct": false,
+    "why": "The Workloads OU allows no Athena or AWS Glue actions, and an Allow is needed [at every level from the root](../facts/organizations.md#organizations-scp-allow-needed-at-every-level) through each OU to the account.",
+    "concept": "scp-allow-on-account",
+    "trap": "organizations-trap-account-level-allow-enough",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Keep the account in the Workloads OU, and add Athena and AWS Glue actions to the allow-list SCP that is attached to the Workloads OU.",
+    "correct": false,
+    "why": "It gives the account both services, but [accounts within the OU automatically inherit the policy](../facts/organizations.md#organizations-ou-policy-inherited-by-accounts), so the other Workloads accounts lose their current allow list.",
+    "concept": "scp-allow-on-ou",
+    "trap": null,
+    "misconception": "overlooks that every account in an OU inherits a change to the SCP of the OU",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Create a new account in a new OU whose SCPs allow Athena, and migrate the workloads and data of the account to the new account.",
+    "correct": false,
+    "why": "It works, but a migration is far more work, because AWS lets you [move accounts from one OU to another](../facts/organizations.md#organizations-ou-policy-inherited-by-accounts).",
+    "concept": "migrate-to-new-account",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create a new OU under the root with an SCP that allows Amazon EC2, Amazon S3, CloudWatch, Athena, and AWS Glue, and move the account there.",
+    "correct": true,
+    "why": "The new path allows Athena and AWS Glue at the root, at the new OU and at the account, and AWS lets you [move accounts from one OU to another](../facts/organizations.md#organizations-ou-policy-inherited-by-accounts).",
+    "concept": "move-account-to-new-ou",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "SCP evaluation follows [a deny-by-default model](../facts/organizations.md#organizations-scp-deny-by-default-model), and [there must be an explicit Allow statement](../facts/organizations.md#organizations-scp-allow-needed-at-every-level) at the root, at each OU in the path and at the account. The Workloads OU allows no Athena or AWS Glue actions, so the fix is a path without that OU. A new OU gives this one account both services and leaves the other accounts unchanged.",
+  "takeaway": "An Allow on the account does not help when an OU above it does not allow the action.",
+  "twin": "If the stem said \"every account in the Workloads OU needs Athena and AWS Glue\" instead: add both services to the allow-list SCP of the Workloads OU, because [accounts within the OU automatically inherit the policy](../facts/organizations.md#organizations-ou-policy-inherited-by-accounts).",
+  "say": null,
+  "facts": [
+   "organizations-scp-allow-needed-at-every-level",
+   "organizations-ou-policy-inherited-by-accounts",
+   "organizations-scp-deny-by-default-model"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-these-requirements"],
+  "twin_of": null
+ },
+ {
+  "id": "organizations-q009",
+  "section": "2-deep.md#a-control-tower-landing-zone-applies-preventive-and-detective-controls-to-registered-ous",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": ["1.1.S4"],
+  "topics": ["identity", "security", "storage"],
+  "services": ["control-tower", "organizations", "s3"],
+  "concept": "preventive-vs-detective-control",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company uses AWS Control Tower. The accounts in the Workloads organizational unit (OU) hold Amazon S3 buckets that store audit logs. Developers in these accounts deploy changes with the AWS Management Console and the AWS CLI. The company must prevent all IAM users and roles in the Workloads OU accounts from deleting the audit log buckets. An alert after a deletion is not enough. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "must prevent all IAM users and roles",
+   "An alert after a deletion is not enough",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Turn on a detective control for the Workloads OU in AWS Control Tower, so that an AWS Config rule reports the deletion of the audit log buckets.",
+    "correct": false,
+    "why": "[Detective controls detect specific events when they occur](../facts/control-tower.md#control-tower-preventive-detective-proactive-defined), so the bucket is already gone when the alert arrives.",
+    "concept": "detective-control",
+    "trap": "organizations-trap-detective-blocks",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Turn on a proactive control for the Workloads OU in AWS Control Tower, so that a CloudFormation hook checks the deletion of the audit log buckets.",
+    "correct": false,
+    "why": "Proactive controls check resources [by means of CloudFormation stack operations](../facts/control-tower.md#control-tower-proactive-only-cloudformation), so a deletion from the console or the CLI does not pass through the check.",
+    "concept": "proactive-control",
+    "trap": null,
+    "misconception": "believes that a proactive control checks every request, also console and CLI calls",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Create an SCP that denies the deletion of the audit log buckets, and attach the SCP in AWS Organizations to each account of the Workloads OU.",
+    "correct": false,
+    "why": "It works, but AWS advises attaching [policies to OUs rather than to individual accounts](../facts/organizations.md#organizations-attach-policies-to-ous-not-accounts); here each account, and each new account, needs its own attachment.",
+    "concept": "scp-per-account-deny",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create an SCP that denies the deletion of the audit log buckets, and attach the SCP in AWS Organizations to the Workloads OU that holds these accounts.",
+    "correct": true,
+    "why": "A Deny in an SCP on the OU is evaluated for [all the OUs and member accounts underneath it](../facts/organizations.md#organizations-scp-deny-at-any-level-applies-below), so one attachment stops the deletion from the console and the CLI.",
+    "concept": "scp-deny-on-ou",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The verb is prevent. An SCP Deny is a preventive guardrail: Control Tower implements [preventive guardrails using SCPs and RCPs](../facts/control-tower.md#control-tower-faq-built-on-organizations-scps-rcps). On the OU, one SCP reaches every account of the OU. A detective control reports after the event, and a proactive control checks CloudFormation stack operations.",
+  "takeaway": "Prevent points to an SCP Deny on the OU. Detect points to a detective control, which is an AWS Config rule.",
+  "twin": "If the stem said \"must receive an alert when an audit log bucket is deleted\" instead: a detective control, because [detective controls detect specific events when they occur](../facts/control-tower.md#control-tower-preventive-detective-proactive-defined).",
+  "say": "To stop the deletion, attach an SCP Deny to the OU; a detective control only reports it.",
+  "facts": [
+   "control-tower-preventive-detective-proactive-defined",
+   "control-tower-faq-built-on-organizations-scps-rcps",
+   "control-tower-proactive-only-cloudformation",
+   "organizations-attach-policies-to-ous-not-accounts",
+   "organizations-scp-deny-at-any-level-applies-below"
+  ],
+  "sources": [],
+  "exam_english": ["ee-must", "ee-least-operational-overhead"],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the solution with the LEAST operational overhead.",
+    "I mark the constraints: the company must prevent the deletion, an alert after the deletion is not enough, and developers use the console and the CLI.",
+    "Before I look at the options, I predict an SCP that denies the deletion, attached to the Workloads OU, because a Deny on an OU applies to the member accounts underneath it.",
+    "I remove the detective control, because it detects the event when it occurs, and then the bucket is already gone. I remove the proactive control, because it checks CloudFormation stack operations, and the developers use the console and the CLI.",
+    "Between the SCP on the OU and the SCP on each account, the difference is the work per account; the stem asks for the LEAST operational overhead, so one attachment on the OU wins.",
+    "Check: the SCP on the OU stops the deletion from the console and the CLI in every account of the OU, and it needs no step per account. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ }
+]

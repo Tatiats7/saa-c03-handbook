@@ -1,0 +1,76 @@
+[
+ {
+  "id": "lambda-q022",
+  "section": "2-deep.md#reserved-concurrency-guarantees-and-caps-the-concurrency-of-one-function-at-no-charge",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.K10"],
+  "topics": ["compute", "resilience"],
+  "services": ["lambda"],
+  "concept": "reserve-for-critical-function",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs many AWS Lambda functions in one AWS Region. Each night, a batch job invokes thousands of copies of one function at the same time and uses all of the concurrency that the account has in the Region. During the batch job, the mission-critical payment function is throttled. The company must ensure that the payment function can always scale to its usual peak of 200 concurrent executions. What should a solutions architect do?",
+  "keywords": ["uses all of the concurrency that the account has in the Region", "the mission-critical payment function is throttled"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Increase the memory setting of the payment function.",
+    "correct": false,
+    "why": "Memory changes CPU, because Lambda allocates CPU [in proportion to the amount of memory](../facts/lambda.md#lambda-cpu-proportional-to-memory), and it adds no concurrency to the payment function.",
+    "concept": "memory-for-concurrency",
+    "trap": null,
+    "misconception": "believes that a larger memory setting reserves capacity for a function",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Change nothing, because each function scales on demand without a limit.",
+    "correct": false,
+    "why": "All functions share the Regional pool, and requests above it fail with a [throttling error (429 status code)](../facts/lambda.md#lambda-throttle-429), as the payment function shows.",
+    "concept": "no-change-scales-forever",
+    "trap": "lambda-trap-scales-without-limit",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Configure provisioned concurrency for the batch function.",
+    "correct": false,
+    "why": "Provisioned concurrency sets no ceiling, because the batch function can scale [above and beyond your provisioned concurrency setting](../facts/lambda.md#lambda-pc-scales-beyond-setting).",
+    "concept": "provisioned-concurrency-capacity",
+    "trap": "lambda-trap-provisioned-caps",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Configure reserved concurrency of 200 for the payment function.",
+    "correct": true,
+    "why": "Reserved concurrency can [reserve a subset of your account concurrency limit](../facts/lambda.md#lambda-faq-per-function-concurrency-control) for one function, so the batch job leaves those 200 units free.",
+    "concept": "reserved-concurrency-guarantee",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "All functions in the Region draw from one pool, so the batch job can use it up. Reserved concurrency sets aside part of the pool for the payment function, and the setting [incurs no additional charges](../facts/lambda.md#lambda-reserved-concurrency-no-charge). It also caps the payment function at 200, which matches its usual peak.",
+  "takeaway": "To keep capacity for a critical function, give that function reserved concurrency.",
+  "twin": "If the stem said \"the batch job overloads a downstream database\" instead: set reserved concurrency on the batch function, because it can [cap traffic rates to downstream resources](../facts/lambda.md#lambda-faq-per-function-concurrency-control).",
+  "say": "Reserved concurrency sets aside two hundred for the payment function, so the batch job cannot take them.",
+  "facts": [
+   "lambda-faq-per-function-concurrency-control",
+   "lambda-throttle-429",
+   "lambda-pc-scales-beyond-setting",
+   "lambda-cpu-proportional-to-memory",
+   "lambda-reserved-concurrency-no-charge"
+  ],
+  "sources": [],
+  "exam_english": ["ee-mission-critical", "ee-ensure", "ee-must"],
+  "twin_of": null
+ }
+]

@@ -1,0 +1,1429 @@
+[
+ {
+  "n": 1,
+  "gate": "q add",
+  "title": "Control: two correct options on a single-answer question",
+  "did": "sample-q004 copy; option b also marked correct.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 1,
+    "msg": "Q102 2 correct options, select is 1"
+   }
+  ],
+  "through": false,
+  "note": "Q102 holds.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 2,
+  "gate": "q add",
+  "title": "Control: multiple-response question with one key",
+  "did": "sample-q003 copy (Select TWO); option b set to wrong.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 1,
+    "msg": "Q102 1 correct options, select is 2"
+   }
+  ],
+  "through": false,
+  "note": "Q102 holds.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 3,
+  "gate": "q add",
+  "title": "Two options with the same text, one marked correct and one marked wrong",
+  "did": "sample-q004 copy; option c gets the exact text of the key (option a). The question now has two correct answers in fact, and only one is keyed.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "No rule compares option texts; Q102 checks only that option ids are unique.",
+  "repro": "q add a single-answer question where options[0].text == options[2].text, options[0].correct true, options[2].correct false.",
+  "severity": "high"
+ },
+ {
+  "n": 4,
+  "gate": "q add",
+  "title": "Key leaked through option length (short options)",
+  "did": "sample-q004 copy; key has 17 words, the three wrong options 4, 3 and 4 words. Mean is 7 words, so Q104 (applies from a mean of 10 words) never runs.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Q104 is switched off below a mean of 10 words; Q202 (key is longest) is a chapter warning and needs 10 questions.",
+  "repro": "q add a difficulty-1 single question with option word counts 17 (key), 4, 3, 4.",
+  "severity": "high"
+ },
+ {
+  "n": 5,
+  "gate": "q add",
+  "title": "Key is the longest option, just inside the 30% spread",
+  "did": "sample-q004 copy; key has 15 words, every wrong option 11. Each option is within 30% of the mean (12), but the key is 36% longer than each distractor.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Q104 measures the distance to the mean, and the long key pulls the mean up. Only Q202 looks at 'key is longest', as a bank share.",
+  "repro": "q add a single question with option word counts 15 (key), 11, 11, 11.",
+  "severity": "low"
+ },
+ {
+  "n": 6,
+  "gate": "q add",
+  "title": "Key leaked through word overlap with the stem (long stem dilutes the Jaccard value)",
+  "did": "Key = 'A crate to send the partner the widgets next week from the shelf.' (6 of its 7 content words come from the stem); wrong options share no word with the stem. Step 1 with the short fixture stem (control), step 2 with one more story sentence of 26 words in the stem. SPEC margin set to the real value 0.25.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q-short.json> --by breaker",
+    "exit": 1,
+    "msg": "Q113 the stem repeats the words of the key (overlap 0.38, best wrong option 0.00)"
+   },
+   {
+    "cmd": "q add --chapter 99 --file <q-long.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "The short-stem control is rejected by Q113. Jaccard divides by the union, so a longer stem lowers the key overlap below the margin while the key still consists of stem words only.",
+  "repro": "q add a question whose key is built from stem words, whose distractors share none, and whose stem has about 30 content words (every real stem: the real minimum is 60 words).",
+  "severity": "high"
+ },
+ {
+  "n": 7,
+  "gate": "q add",
+  "title": "Explanation names options by position and letter without the word 'Option'",
+  "did": "Step 1 control: 'Option B' in the explanation. Step 2: 'The second option is wrong, and (C) is wrong too; B is the usual trap.'",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q-c.json> --by breaker",
+    "exit": 1,
+    "msg": "Q105 explanation names an option letter ('Option B')"
+   },
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "letter_reference_regex needs the word Option, Answer or Choice before the letter. Options print without letters and the app can shuffle them, so these references point at the wrong option.",
+  "repro": "q add with explanation text 'The second option is wrong, and (C) is wrong too; B is the usual trap.'",
+  "severity": "medium"
+ },
+ {
+  "n": 8,
+  "gate": "q add / q lint / gate questions",
+  "title": "Exact copy of an existing question under a new id",
+  "did": "sample-q001 copied without id, concept renamed. Then q lint 99, the questions gate, and q lint --all.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "q lint 99",
+    "exit": 0,
+    "msg": "{\"chapter\": \"99\", \"ok\": true, \"errors\": []}"
+   },
+   {
+    "cmd": "gate 99 --gate questions",
+    "exit": 0,
+    "msg": "{\"result\": \"PASS\", \"chapter\": \"99\", \"gates\": [{\"gate\": \"questions\", \"ok\": true, \"errors\": 0, \"warnings\": 0, \"record\": \"_build/ledger/gates/99.questions.json\"}], \"errors\": []}"
+   },
+   {
+    "cmd": "q lint --all",
+    "exit": 1,
+    "msg": "Q302 near-duplicate of sample-q001 (similarity 1.0) | Q302 near-duplicate of sample-q002 (similarity 1.0)"
+   },
+   {
+    "cmd": "q dedupe",
+    "exit": 1,
+    "msg": "{\"pairs\": [{\"a\": \"sample-q001\", \"b\": \"sample-q005\", \"similarity\": 1.0, \"kind\": \"duplicate\"}, {\"a\": \"sample-q002\", \"b\": \"sample-q005\", \"similarity\": 1.0, \"kind\": \"duplicate\"}]}"
+   }
+  ],
+  "through": true,
+  "note": "q add and the questions gate accept the copy; only q lint --all (exit 1) and q dedupe (exit 1) see it, and no ledger stage runs them for a chapter.",
+  "repro": "q add a copy of a stored question without its id and with another concept; run gate 99 --gate questions.",
+  "severity": "high"
+ },
+ {
+  "n": 9,
+  "gate": "q dedupe / q lint --all",
+  "title": "Near-duplicate with reordered words",
+  "did": "sample-q001 with the clauses of every sentence reordered (same facts, same options, same key). Then q dedupe, q lint --all and the questions gate.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "q dedupe",
+    "exit": 0,
+    "msg": "{\"pairs\": []}"
+   },
+   {
+    "cmd": "q lint --all",
+    "exit": 0,
+    "msg": "{\"chapter\": \"all\", \"ok\": true, \"errors\": []}"
+   },
+   {
+    "cmd": "gate 99 --gate questions",
+    "exit": 0,
+    "msg": "{\"result\": \"PASS\", \"chapter\": \"99\", \"gates\": [{\"gate\": \"questions\", \"ok\": true, \"errors\": 0, \"warnings\": 0, \"record\": \"_build/ledger/gates/99.questions.json\"}], \"errors\": []}"
+   }
+  ],
+  "through": true,
+  "note": "3-word shingle similarity of the two stems is 0.29 (threshold 0.6). Options are never compared.",
+  "repro": "q add sample-q001 (no id, other concept) with the stem 'On one shelf in the us-east-1 Region of Amazon Widget Store, a company keeps 400 widgets. Next month the company expects to add 300 more widgets. All widgets must stay in us-east-1, a compliance rule states. With the LEAST operational overhead, which solution will meet these requirements?'; run q dedupe.",
+  "severity": "high"
+ },
+ {
+  "n": 10,
+  "gate": "q add",
+  "title": "Negative stem written in lowercase",
+  "did": "Last sentence changed to 'Which Amazon Widget Store resource is not a way to send the 40 widgets?'",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "negative_stem_regex matches only NOT and EXCEPT in capitals. The lowercase form is the harder one for this reader.",
+  "repro": "q add with a stem that asks 'which ... is not ...' in lowercase.",
+  "severity": "low"
+ },
+ {
+  "n": 11,
+  "gate": "q add",
+  "title": "'None of these options.' as an option",
+  "did": "Option d text set to 'None of these options.' (banned list holds 'none of the above').",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "banned_in_options is a list of four literal phrases.",
+  "repro": "q add with an option text 'None of these options.'",
+  "severity": "low"
+ },
+ {
+  "n": 12,
+  "gate": "q add",
+  "title": "Control: status ready and a passed verification smuggled in the input file",
+  "did": "Input item carries status ready and verification.status pass.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "stored state",
+    "exit": "-",
+    "msg": "('candidate', 'candidate', 0)"
+   }
+  ],
+  "through": false,
+  "note": "q add resets status and verification.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 13,
+  "gate": "q pack",
+  "title": "Control: a pack holds no key, why or explanation",
+  "did": "All four questions set to candidate; q pack --lens closed; searched the file for correct, why, explanation, trap, facts.",
+  "steps": [
+   {
+    "cmd": "q pack --chapter 99 --lens closed --out pack-closed.json",
+    "exit": 0,
+    "msg": "wrote aws-saa-book/_build/tmp/breaker-practice/pack-closed.json (109 lines)"
+   },
+   {
+    "cmd": "search the pack",
+    "exit": "-",
+    "msg": "leaking keys found: []"
+   }
+  ],
+  "through": false,
+  "note": "Pack items hold only id, type, select, stem, options (label, text).",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 14,
+  "gate": "q pack",
+  "title": "Stored option order recovered from a pack (the shuffle is reversible)",
+  "did": "A solver reads data/book.json (mock_seed), recomputes random.Random(sha256('<seed>|<id>|<lens>|<round>')) on the positions 0..n-1 and maps each label back to the stored position. Then it answers 'the option stored first'.",
+  "steps": [
+   {
+    "cmd": "q pack --chapter 99 --lens closed --out pack-closed.json",
+    "exit": 0,
+    "msg": "wrote aws-saa-book/_build/tmp/breaker-practice/pack-closed.json (109 lines)"
+   },
+   {
+    "cmd": "unshuffle with the public seed",
+    "exit": "-",
+    "msg": "stored order recovered for 4 of 4 questions; 'first stored options' equals the key in 3 of 4"
+   }
+  ],
+  "through": "partial",
+  "note": "The seed is in data/book.json and the other inputs are in the pack, so the shuffle hides nothing from a solver that can read the book folder. It leaks the key as far as writers store the key first (fixture: 3 of 4). Q202 limits the position share only from 10 questions and only as a chapter warning.",
+  "repro": "python: order = qbank.permutation(book['book']['mock_seed'], item['id'], pack['lens'], pack['round'], range(len(item['options']))); the label at order.index(0) is the option stored first.",
+  "severity": "medium"
+ },
+ {
+  "n": 15,
+  "gate": "q adjudicate",
+  "title": "Control: only two answer files (one solver missing)",
+  "did": "Answer files of the closed and open lens only.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --answers closed open",
+    "exit": 3,
+    "msg": "error: q adjudicate needs --answers F1 F2 F3 or --select"
+   }
+  ],
+  "through": false,
+  "note": "Exit 3.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 16,
+  "gate": "q adjudicate",
+  "title": "Control: one lens has no answer for one question",
+  "did": "The ambiguity file leaves out sample-q004.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\"], \"needs_edit\": [{\"id\": \"sample-q004\", \"reasons\": [\"ambiguity missing\"]}], \"rejected\": [], \"below_min\": false}"
+   }
+  ],
+  "through": false,
+  "note": "The question goes to needs_edit ('ambiguity missing').",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 17,
+  "gate": "q adjudicate",
+  "title": "Answer files without a solver field",
+  "did": "Three answer files with no 'solver' key at all.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   },
+   {
+    "cmd": "stored solvers",
+    "exit": "-",
+    "msg": "['unknown', 'unknown', 'unknown']"
+   }
+  ],
+  "through": true,
+  "note": "A missing solver is stored as 'unknown' and the question passes.",
+  "repro": "q adjudicate with three answer files that have pack, lens, answers and no solver.",
+  "severity": "medium"
+ },
+ {
+  "n": 18,
+  "gate": "q adjudicate",
+  "title": "One solver (the question's author) signs all three lenses",
+  "did": "Three answer files, all with solver 'breaker', the label that wrote the questions with q add --by breaker.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   }
+  ],
+  "through": true,
+  "note": "Nothing requires three different solvers, and questions store no author, so the writer can be all three solvers (facts vote refuses the author; q adjudicate does not).",
+  "repro": "q adjudicate with three answer files whose solver is the same label for all lenses.",
+  "severity": "high"
+ },
+ {
+  "n": 19,
+  "gate": "q adjudicate",
+  "title": "Closed lens without stem_only, ambiguity lens without a case",
+  "did": "stem_only null in the closed file; case null in the ambiguity file.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   }
+  ],
+  "through": true,
+  "note": "The fields that make the lenses different are optional, so three identical 'pick the labels' runs count as three lenses.",
+  "repro": "q adjudicate with stem_only null and case null in every row.",
+  "severity": "medium"
+ },
+ {
+  "n": 20,
+  "gate": "q adjudicate",
+  "title": "Open-book citations: one unrelated fact id, or the one-word quote 'the', for every label",
+  "did": "Step 1: every label cites the fact widget-shelf-max-widgets (unrelated to most options). Step 2: every label cites {source_id, quote: 'the'}.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   },
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   },
+   {
+    "cmd": "stored citations_ok",
+    "exit": "-",
+    "msg": "True"
+   }
+  ],
+  "through": true,
+  "note": "A citation only has to exist: any verified fact, or any substring of any snapshot (no minimum length, no link to the option or to the question's facts).",
+  "repro": "open answer file with citations {A: [{source_id: 'docs/fixture/widget-store/limits', quote: 'the'}], B: same, ...}.",
+  "severity": "high"
+ },
+ {
+  "n": 21,
+  "gate": "q adjudicate",
+  "title": "Two rows for one question in one answer file (first agrees, second disagrees and flags)",
+  "did": "The ambiguity file holds sample-q004 twice: first the key, then a wrong answer with a flag.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   }
+  ],
+  "through": true,
+  "note": "Only the first row of an id is read; the flag in the second row is dropped silently.",
+  "repro": "answer file with two rows of the same id; the first row is the key.",
+  "severity": "low"
+ },
+ {
+  "n": 22,
+  "gate": "q adjudicate",
+  "title": "Old answer files applied to a question that was replaced after the packs went out",
+  "did": "Honest answer files built for the fixture questions. Then q add --replace swaps sample-q004 for the length-leak version (new option texts, same key id) while it is still a round-0 candidate. Then q adjudicate with the old files.",
+  "steps": [
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker --replace",
+    "exit": 0,
+    "msg": "{\"added\": [], \"replaced\": [\"sample-q004\"], \"rejected\": []}"
+   },
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\", \"sample-q004\"], \"needs_edit\": [], \"rejected\": [], \"below_min\": false}"
+   },
+   {
+    "cmd": "state of sample-q004",
+    "exit": "-",
+    "msg": "('verified', 'pass', 0)"
+   }
+  ],
+  "through": true,
+  "note": "Answer files carry no rev, keyRev or content hash, and a round-0 replace keeps rev. The stored text was never seen by a solver, yet it is 'verified, pass'.",
+  "repro": "q pack; solvers answer; q add --replace <same id, new stem or options, same key id>; q adjudicate with the old answer files.",
+  "severity": "high"
+ },
+ {
+  "n": 23,
+  "gate": "q add --replace",
+  "title": "More than one edit after a failed round",
+  "did": "Round 0 fails for sample-q004 (closed disagrees). Then q add --replace twice with different takeaways.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\"], \"needs_edit\": [{\"id\": \"sample-q004\", \"reasons\": [\"closed disagrees\"]}], \"rejected\": [], \"below_min\": false}"
+   },
+   {
+    "cmd": "q add --chapter 99 --file <e1.json> --by breaker --replace",
+    "exit": 0,
+    "msg": "{\"added\": [], \"replaced\": [\"sample-q004\"], \"rejected\": []}"
+   },
+   {
+    "cmd": "q add --chapter 99 --file <e2.json> --by breaker --replace",
+    "exit": 0,
+    "msg": "{\"added\": [], \"replaced\": [\"sample-q004\"], \"rejected\": []}"
+   },
+   {
+    "cmd": "state of sample-q004",
+    "exit": "-",
+    "msg": "rev=3 round=1 status=candidate"
+   }
+  ],
+  "through": true,
+  "note": "RULINGS: 'unanimous or one edit then reject'. The tool counts no edits in round 1; rev just goes up.",
+  "repro": "after a round-0 failure run q add --replace on the same id twice.",
+  "severity": "medium"
+ },
+ {
+  "n": 24,
+  "gate": "q add",
+  "title": "A rejected question comes back under a new id",
+  "did": "sample-q004 fails round 0 and round 1 and is rejected. The same content is then added again without an id.",
+  "steps": [
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 0,
+    "msg": "{\"pass\": [\"sample-q001\", \"sample-q002\", \"sample-q003\"], \"needs_edit\": [{\"id\": \"sample-q004\", \"reasons\": [\"closed disagrees\"]}], \"rejected\": [], \"below_min\": false}"
+   },
+   {
+    "cmd": "q adjudicate --chapter 99 --answers closed open ambiguity",
+    "exit": 1,
+    "msg": "{\"pass\": [], \"needs_edit\": [], \"rejected\": [\"sample-q004\"], \"below_min\": true}"
+   },
+   {
+    "cmd": "state of sample-q004",
+    "exit": "-",
+    "msg": "('rejected', 'rejected', 1)"
+   },
+   {
+    "cmd": "q add --chapter 99 --file <q.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-q005\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "q lint --all",
+    "exit": 0,
+    "msg": "{\"chapter\": \"all\", \"ok\": true, \"errors\": []}"
+   }
+  ],
+  "through": true,
+  "note": "q add does not look at rejected items or at _build/qbank/rejected.jsonl, and q dedupe skips rejected questions, so the copy is a fresh round-0 candidate.",
+  "repro": "let a question be rejected in round 1; q add the same JSON without its id.",
+  "severity": "high"
+ },
+ {
+  "n": 25,
+  "gate": "q set-status",
+  "title": "Mark a never-verified candidate as verified",
+  "did": "All questions candidate; q set-status --status verified sample-q004.",
+  "steps": [
+   {
+    "cmd": "q set-status --chapter 99 --status verified sample-q004 --by breaker",
+    "exit": 0,
+    "msg": "{\"set\": [\"sample-q004\"], \"refused\": []}"
+   },
+   {
+    "cmd": "state of sample-q004",
+    "exit": "-",
+    "msg": "('verified', 'candidate', 0)"
+   },
+   {
+    "cmd": "q lint 99",
+    "exit": 0,
+    "msg": "{\"chapter\": \"99\", \"ok\": true, \"errors\": []}"
+   }
+  ],
+  "through": "partial",
+  "note": "Status 'verified' is set without any solver (only 'ready' is checked). Downstream --select, mocks and Q206 read verification.status, so the damage is a wrong count in q lint and q list.",
+  "repro": "q set-status --chapter 99 --status verified <candidate id>",
+  "severity": "low"
+ },
+ {
+  "n": 26,
+  "gate": "mocks check",
+  "title": "Control: a mock question with the exact stem of a chapter question",
+  "did": "Assemble mock 50, then give one chosen single-answer question the exact stem of sample-q004.",
+  "steps": [
+   {
+    "cmd": "mocks assemble --mock 50",
+    "exit": 0,
+    "msg": "{\"mock\": \"50\", \"ok\": true, \"seed\": 20261054, \"spares\": 4}"
+   },
+   {
+    "cmd": "mocks check --mock 50",
+    "exit": 1,
+    "msg": "K04 near-duplicate of sample-q004 (similarity 1.0)"
+   }
+  ],
+  "through": false,
+  "note": "K04 holds for a verbatim stem.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 27,
+  "gate": "mocks assemble / mocks check",
+  "title": "A mock built from chapter questions under new ids (one padding sentence in front of the stem)",
+  "did": "Every mock question is sample-q004 or sample-q003 with a new id and one extra first sentence of 18 new words; options, key, why and explanation are the chapter question's. This is also what the tool's own mock tests use as their pool. Second step: only 12 padding words.",
+  "steps": [
+   {
+    "cmd": "mocks assemble --mock 50",
+    "exit": 0,
+    "msg": "{\"mock\": \"50\", \"ok\": true, \"seed\": 20261054, \"spares\": 4}"
+   },
+   {
+    "cmd": "mocks check --mock 50",
+    "exit": 0,
+    "msg": "{\"mocks\": [{\"mock\": \"50\", \"ok\": true, \"errors\": [], \"warnings\": [], \"counts\": {\"domains\": {\"1\": 1, \"2\": 3, \"3\": 1, \"4\": 1}, \"tasks\": {\"1.1\": 1, \"2.1\": 2, \"2.2\": 1, \"3.1\": 1, \"4.1\": 1}, \"multi\": 1, \"difficulty\": {\"1\": 6}, \"services\": {\"widget\": 6}}}]}"
+   },
+   {
+    "cmd": "mocks assemble --mock 50",
+    "exit": 0,
+    "msg": "{\"mock\": \"50\", \"ok\": true, \"seed\": 20261054, \"spares\": 4}"
+   },
+   {
+    "cmd": "mocks check --mock 50 (12 padding words)",
+    "exit": 0,
+    "msg": "{\"mocks\": [{\"mock\": \"50\", \"ok\": true, \"errors\": [], \"warnings\": [], \"counts\": {\"domains\": {\"1\": 1, \"2\": 3, \"3\": 1, \"4\": 1}, \"tasks\": {\"1.1\": 1, \"2.1\": 2, \"2.2\": 1, \"3.1\": 1, \"4.1\": 1}, \"multi\": 1, \"difficulty\": {\"1\": 6}, \"services\": {\"widget\": 6}}}]}"
+   }
+  ],
+  "through": true,
+  "note": "Stem similarity to the chapter question is 0.50 with 18 padding words and 0.59 with 12 (threshold 0.6). K04 compares stems only, never options or explanations.",
+  "repro": "copy a chapter question into data/50-.../questions.json with a new id, pool mock, and one unrelated first sentence of about 12 content words; mocks assemble; mocks check.",
+  "severity": "high"
+ },
+ {
+  "n": 28,
+  "gate": "mocks check",
+  "title": "Two questions of one mock with the same stem",
+  "did": "After assemble, one chosen single-answer question gets the stem of another chosen single-answer question of the same mock.",
+  "steps": [
+   {
+    "cmd": "mocks assemble --mock 50",
+    "exit": 0,
+    "msg": "{\"mock\": \"50\", \"ok\": true, \"seed\": 20261054, \"spares\": 4}"
+   },
+   {
+    "cmd": "mocks check --mock 50",
+    "exit": 0,
+    "msg": "{\"mocks\": [{\"mock\": \"50\", \"ok\": true, \"errors\": [], \"warnings\": [], \"counts\": {\"domains\": {\"1\": 1, \"2\": 3, \"3\": 1, \"4\": 1}, \"tasks\": {\"1.1\": 1, \"2.1\": 2, \"2.2\": 1, \"3.1\": 1, \"4.1\": 1}, \"multi\": 1, \"difficulty\": {\"1\": 6}, \"services\": {\"widget\": 6}}}]}"
+   },
+   {
+    "cmd": "q lint --all",
+    "exit": 1,
+    "msg": "Q302 near-duplicate of mock-exam-1-q002 (similarity 1.0)"
+   }
+  ],
+  "through": true,
+  "note": "K04 looks only at the other mock and at pool 'chapter'. q lint --all would report Q302 (exit 1), but mocks check and the ledger gates do not run it.",
+  "repro": "give two questions of one mock the same stem; mocks check.",
+  "severity": "medium"
+ },
+ {
+  "n": 29,
+  "gate": "mocks check",
+  "title": "A mock question that copies a drill-pool question",
+  "did": "sample-q004 is moved to pool drill in chapter 99; one mock question gets its exact stem.",
+  "steps": [
+   {
+    "cmd": "mocks assemble --mock 50",
+    "exit": 0,
+    "msg": "{\"mock\": \"50\", \"ok\": true, \"seed\": 20261054, \"spares\": 4}"
+   },
+   {
+    "cmd": "mocks check --mock 50",
+    "exit": 0,
+    "msg": "{\"mocks\": [{\"mock\": \"50\", \"ok\": true, \"errors\": [], \"warnings\": [], \"counts\": {\"domains\": {\"1\": 1, \"2\": 3, \"3\": 1, \"4\": 1}, \"tasks\": {\"1.1\": 1, \"2.1\": 2, \"2.2\": 1, \"3.1\": 1, \"4.1\": 1}, \"multi\": 1, \"difficulty\": {\"1\": 6}, \"services\": {\"widget\": 6}}}]}"
+   }
+  ],
+  "through": true,
+  "note": "K04 tests pool == 'chapter' only, so a drill question can be reused in a mock.",
+  "repro": "copy the stem of a pool-drill question into a mock question; mocks check.",
+  "severity": "medium"
+ },
+ {
+  "n": 30,
+  "gate": "mocks check",
+  "title": "Manifest edited by hand: minutes and counts changed",
+  "did": "After assemble, mock.json gets minutes 9999 and an invented counts object.",
+  "steps": [
+   {
+    "cmd": "mocks assemble --mock 50",
+    "exit": 0,
+    "msg": "{\"mock\": \"50\", \"ok\": true, \"seed\": 20261054, \"spares\": 4}"
+   },
+   {
+    "cmd": "mocks check --mock 50",
+    "exit": 0,
+    "msg": "{\"mocks\": [{\"mock\": \"50\", \"ok\": true, \"errors\": [], \"warnings\": [], \"counts\": {\"domains\": {\"1\": 1, \"2\": 3, \"3\": 1, \"4\": 1}, \"tasks\": {\"1.1\": 1, \"2.1\": 2, \"2.2\": 1, \"3.1\": 1, \"4.1\": 1}, \"multi\": 1, \"difficulty\": {\"1\": 6}, \"services\": {\"widget\": 6}}}]}"
+   }
+  ],
+  "through": true,
+  "note": "mocks check recomputes the split from the questions and ignores the stored minutes, seed and counts; the web app reads minutes from this file.",
+  "repro": "edit data/50-.../mock.json: minutes 9999, counts {}; mocks check.",
+  "severity": "low"
+ },
+ {
+  "n": 31,
+  "gate": "cards add",
+  "title": "Control: list answer with semicolons",
+  "did": "Back 'A shelf; a crate; a quota.'",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 1,
+    "msg": "C105 list answer: one fact per card"
+   }
+  ],
+  "through": false,
+  "note": "C105 holds.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 32,
+  "gate": "cards add",
+  "title": "List answer written with one comma and 'and', or with slashes",
+  "did": "Step 1: back 'A shelf, a crate and a quota.' Step 2: back 'shelf / crate / quota / Region'.",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-c004\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-c005\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "C105 looks for a line break, a semicolon or two commas. A three-item list in plain English has one comma.",
+  "repro": "cards add a decide card with back 'A shelf, a crate and a quota.'",
+  "severity": "high"
+ },
+ {
+  "n": 33,
+  "gate": "cards add",
+  "title": "Control: back of 14 words",
+  "did": "Back with 14 separate words.",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 1,
+    "msg": "C102 back has 14 words; at most 12"
+   }
+  ],
+  "through": false,
+  "note": "C102 holds.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 34,
+  "gate": "cards add",
+  "title": "Back far over the word limit, joined with hyphens",
+  "did": "Back 'No. Copy-the-shelf-to-the-other-Region-then-check-the-copy-then-delete-the-first-shelf-and-tell-the-team.' (20 words, counted as 2).",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-c004\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "lint.word_count splits on whitespace only. The same trick works for every word limit (speak scripts, step texts, options).",
+  "repro": "cards add with a back whose words are joined by hyphens (or slashes).",
+  "severity": "medium"
+ },
+ {
+  "n": 35,
+  "gate": "cards add",
+  "title": "Wrong number written as a word",
+  "did": "Back 'A crate. It holds ninety widgets.' with facts [widget-crate-capacity] (the fact says 50 widgets).",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-c004\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "C109 sees digits only (lint.number_with_unit does not match number words), so a number in words needs no fact and can be wrong.",
+  "repro": "cards add with back 'A crate. It holds ninety widgets.'",
+  "severity": "high"
+ },
+ {
+  "n": 36,
+  "gate": "cards add",
+  "title": "Card whose answer contradicts its own fact",
+  "did": "cannot card: front 'In Amazon Widget Store, is a new shelf readable by every user in the account?', back 'Yes. Every user reads it.', facts [widget-shelf-default-private].",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-c004\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "front and back are not strict text: no fact link, no absolute-word rule, and cards have no blind check. 'extra' can be null, so the card carries no grounded sentence at all.",
+  "repro": "cards add a cannot card with a back that states the opposite of the fact in facts.",
+  "severity": "high"
+ },
+ {
+  "n": 37,
+  "gate": "cards add",
+  "title": "Near-duplicate front with three filler words",
+  "did": "Front of sample-c002 plus ' Think first, please.'",
+  "steps": [
+   {
+    "cmd": "cards add --chapter 99 --file <card.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-c004\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "C106 needs a token Jaccard of 0.8; short fronts drop below it with two or three added words.",
+  "repro": "cards add a card whose front is an existing front plus three new words.",
+  "severity": "low"
+ },
+ {
+  "n": 38,
+  "gate": "speak add",
+  "title": "Control: a 60-second answer of 300 words",
+  "did": "Twelve lines of 25 plain words each.",
+  "steps": [
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 1,
+    "msg": "P102 sixty_second has 245 words; allowed 60 to 145 | P102 a sentence of sixty_second[1] has 22 words; at most 16 | P102 a sentence of sixty_second[2] has 22 words; at most 16"
+   }
+  ],
+  "through": false,
+  "note": "P102 holds for plain words.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 39,
+  "gate": "speak add",
+  "title": "A 60-second answer of about 300 words, with words joined by hyphens",
+  "did": "The eight fixture lines, each with one more 'sentence' of 28 words joined by hyphens. The tool counts 8 more words; a speaker says 224 more.",
+  "steps": [
+   {
+    "cmd": "words a speaker says",
+    "exit": "-",
+    "msg": "315"
+   },
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-s02\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Same cause as the card attempt: word_count splits on whitespace.",
+  "repro": "speak add with lines such as 'The short answer is: a shelf keeps your widgets in one Region. The-team-keeps-the-widgets-on-the-shelf-...'",
+  "severity": "medium"
+ },
+ {
+  "n": 40,
+  "gate": "speak add",
+  "title": "300 words outside the script: follow-up answer and key point",
+  "did": "follow_ups[0].answer and key_points[0].point each get 300 words.",
+  "steps": [
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-s02\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Only ten_second, sixty_second and the cues have word limits. 4-say.md prints the follow-up answers, and the app grades against key points.",
+  "repro": "speak add with a follow_ups[].answer of 300 words.",
+  "severity": "medium"
+ },
+ {
+  "n": 41,
+  "gate": "speak add",
+  "title": "Ungrounded absolute claims in the script",
+  "did": "Line 3 replaced by 'A shelf is always global and never private.' (contradicts widget-shelf-scope and widget-shelf-default-private).",
+  "steps": [
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-s02\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Scripts are checked for digits, number words with a unit, avoid words and banned words. There is no absolute-word rule and no tie between a script sentence and a fact (RULINGS hard rule 1).",
+  "repro": "speak add with a sixty_second line 'A shelf is always global and never private.'",
+  "severity": "high"
+ },
+ {
+  "n": 42,
+  "gate": "speak add",
+  "title": "Spoken numbers that P109 does not see",
+  "did": "Step 1 control: 'One shelf holds up to six hundred widgets.' Step 2: 'One shelf holds up to nine hundred of your widgets.' Step 3: 'One shelf holds up to nineteen widgets.'",
+  "steps": [
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 1,
+    "msg": "P109 'six hundred widgets' in sixty_second[4] is not a spoken form of a fact in facts"
+   },
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-s02\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "speak add --chapter 99 --file <speak.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-s02\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "number_word_regex has no one, seventeen, eighteen, nineteen, dozen, half or double; and the unit must follow the number word directly, so two words between number and noun switch P109 off.",
+  "repro": "speak add with the line 'One shelf holds up to nineteen widgets.' or '... nine hundred of your widgets.'",
+  "severity": "high"
+ },
+ {
+  "n": 43,
+  "gate": "tasks add",
+  "title": "Control: a Try without cleanup",
+  "did": "sample-t02 copy with cleanup [].",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 1,
+    "msg": "T103 a try needs cleanup steps | T107 no cleanup command undoes `create-shelf` (create command 1 of 2) | T107 no cleanup command undoes `copy-shelf` (create command 2 of 2)"
+   }
+  ],
+  "through": false,
+  "note": "T103 holds.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 44,
+  "gate": "tasks add",
+  "title": "A task that creates resources and deletes nothing (create verbs outside the list)",
+  "did": "Steps 'aws widget put-shelf --name saa-breaker-shelf' and 'aws widget import-shelf ...'; cleanup is 'aws widget list-shelves'. No tag anywhere.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "T103 wants a non-empty cleanup list, T106 and T107 act only on create|copy|run|allocate|launch. Any other creating verb needs no tag and no undo, and the cleanup can be a list command.",
+  "repro": "tasks add a Try whose creating steps use put-*, import-*, start-*, register-*, restore-*, request-* or 'aws s3 mb', with a cleanup list of one read-only command.",
+  "severity": "high"
+ },
+ {
+  "n": 45,
+  "gate": "tasks add",
+  "title": "Cleanup deletes a different resource, or only pretends (--dry-run)",
+  "did": "sample-t02 copy (create-shelf, copy-shelf); cleanup 'aws widget delete-shelf --name saa-some-other-shelf --dry-run' twice.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "T107 pairs verbs and nouns only. It does not compare the resource name or id, and it does not know --dry-run or --generate-cli-skeleton.",
+  "repro": "tasks add where each create has a delete-<noun> cleanup command that names another resource or carries --dry-run.",
+  "severity": "high"
+ },
+ {
+  "n": 46,
+  "gate": "tasks add",
+  "title": "run-instances undone by stop-instances",
+  "did": "Step 'aws ec2 run-instances ... --tag-specifications ...'; cleanup 'aws ec2 stop-instances --instance-ids <INSTANCE_ID>'.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "lab.UNDO accepts stop and delete for run, although cleanup_pairs maps run-instances to terminate-instances. A stopped instance keeps its EBS volume and its bill.",
+  "repro": "tasks add with run-instances and a cleanup of stop-instances.",
+  "severity": "medium"
+ },
+ {
+  "n": 47,
+  "gate": "tasks add (T105)",
+  "title": "Security group opened to the world: ::/0 written in full, prefix list, split ranges, rules in a file, other operations",
+  "did": "One tasks add per command. Controls first (must be rejected), then the variants.",
+  "steps": [
+   {
+    "cmd": "tasks add [c1 port 22 ::/0] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{CidrIpv6=::/0}]",
+    "exit": 1,
+    "msg": "T105 steps[0]: matches the banned pattern authorize-security-group-ingress.*FromPort=(22|3389)\\b | T105 steps[0]: opens SSH or RDP (port 22 or 3389) to the world (0.0.0.0/0 or ::/0)"
+   },
+   {
+    "cmd": "tasks add [c2 range 20-25 ::/0] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=tcp,FromPort=20,ToPort=25,Ipv6Ranges=[{CidrIpv6=::/0}]",
+    "exit": 1,
+    "msg": "T105 steps[0]: opens SSH or RDP (port 22 or 3389) to the world (0.0.0.0/0 or ::/0)"
+   },
+   {
+    "cmd": "tasks add [c3 all protocols ::/0] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=-1,Ipv6Ranges=[{CidrIpv6=::/0}]",
+    "exit": 1,
+    "msg": "T105 steps[0]: opens SSH or RDP (port 22 or 3389) to the world (0.0.0.0/0 or ::/0)"
+   },
+   {
+    "cmd": "tasks add [c4 --port=22 --cidr=0.0.0.0/0] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --protocol=tcp --port=22 --cidr=0.0.0.0/0",
+    "exit": 1,
+    "msg": "T105 steps[0]: opens SSH or RDP (port 22 or 3389) to the world (0.0.0.0/0 or ::/0)"
+   },
+   {
+    "cmd": "tasks add [v1 ::/0 written in full] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=tcp,FromPort=20,ToPort=25,Ipv6Ranges=[{CidrIpv6=0:0:0:0:0:0:0:",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v2 prefix list] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=tcp,FromPort=20,ToPort=25,PrefixListIds=[{PrefixListId=pl-0123",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v3 two halves of the internet] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=tcp,FromPort=20,ToPort=25,IpRanges=[{CidrIp=0.0.0.0/1},{CidrIp",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v4 modify-security-group-rules] aws ec2 modify-security-group-rules --group-id <SG_ID> --security-group-rules SecurityGroupRuleId=sgr-0123,SecurityGroupRule={IpProtocol=tcp,FromPort=",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v5 rules in a file] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions file://rules.json",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v6 --cli-input-json] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --cli-input-json file://open-ssh.json",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v7 port 443 to the world with --cidr=] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --protocol tcp --port 443 --cidr=0.0.0.0/0",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v8 all TCP ports, IPv4 range form] aws ec2 authorize-security-group-ingress --group-id <SG_ID> --ip-permissions IpProtocol=tcp,FromPort=0,ToPort=65535,IpRanges=[{CidrIp=0.0.0.0/0}]",
+    "exit": 1,
+    "msg": "T105 steps[0]: opens SSH or RDP (port 22 or 3389) to the world (0.0.0.0/0 or ::/0)"
+   },
+   {
+    "cmd": "tasks add [v9 network ACL entry] aws ec2 replace-network-acl-entry --network-acl-id <SG_ID> --ingress --rule-number 100 --protocol 6 --port-range From=22,To=22 --cidr-block 0.0.0.0/0 ",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Got through: ['v1 ::/0 written in full', 'v2 prefix list', 'v3 two halves of the internet', 'v4 modify-security-group-rules', 'v5 rules in a file', 'v6 --cli-input-json', 'v7 port 443 to the world with --cidr=', 'v9 network ACL entry']. Held: ['c1 port 22 ::/0', 'c2 range 20-25 ::/0', 'c3 all protocols ::/0', 'c4 --port=22 --cidr=0.0.0.0/0', 'v8 all TCP ports, IPv4 range form']. The world check is tied to the operation name authorize-security-group-ingress and to the literal strings 0.0.0.0/0 and ::/0.",
+  "repro": "tasks add with a step 'aws ec2 modify-security-group-rules --group-id <SG_ID> --security-group-rules SecurityGroupRuleId=sgr-0123,SecurityGroupRule={IpProtocol=tcp,FromPort=22,ToPort=22,CidrIpv4=0.0.0.0/0}' (or any 'got through' line of this entry).",
+  "severity": "high"
+ },
+ {
+  "n": 48,
+  "gate": "tasks add (T105)",
+  "title": "Public exposure by other commands",
+  "did": "One tasks add per command.",
+  "steps": [
+   {
+    "cmd": "tasks add [c1 public-read ACL] aws s3api put-bucket-acl --bucket saa-b --acl public-read",
+    "exit": 1,
+    "msg": "T105 steps[0]: matches the banned pattern --acl public-read | T105 steps[0]: sets a public ACL"
+   },
+   {
+    "cmd": "tasks add [c2 BlockPublicAcls=false] aws s3api put-public-access-block --bucket saa-b --public-access-block-configuration BlockPublicAcls=false,IgnorePublicAcls=true,BlockPublicPolicy=tru",
+    "exit": 1,
+    "msg": "T105 steps[0]: matches the banned pattern BlockPublicAcls=false | T105 steps[0]: turns a public access block setting off"
+   },
+   {
+    "cmd": "tasks add [v1 bucket policy Principal *] aws s3api put-bucket-policy --bucket saa-b --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"R",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v2 RDS publicly accessible] aws rds modify-db-instance --db-instance-identifier saa-db --publicly-accessible --apply-immediately",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v3 public EBS snapshot] aws ec2 modify-snapshot-attribute --snapshot-id snap-0123 --attribute createVolumePermission --operation-type add --group-names all",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v4 Lambda permission for everyone] aws lambda add-permission --function-name saa-fn --statement-id open --action lambda:InvokeFunction --principal '*'",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v5 function URL without auth] aws lambda put-function-url-config --function-name saa-fn --auth-type NONE",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v6 account-level public access block off] aws s3control delete-public-access-block --account-id 111122223333",
+    "exit": 1,
+    "msg": "T105 steps[0]: removes the public access block"
+   },
+   {
+    "cmd": "tasks add [v7 public AMI] aws ec2 modify-image-attribute --image-id ami-0123 --launch-permission Add=[{Group=all}]",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Got through: ['v1 bucket policy Principal *', 'v2 RDS publicly accessible', 'v3 public EBS snapshot', 'v4 Lambda permission for everyone', 'v5 function URL without auth', 'v7 public AMI']. Held: ['c1 public-read ACL', 'c2 BlockPublicAcls=false', 'v6 account-level public access block off']. T105 is a list of literal patterns for S3 ACLs and the public access block; a bucket policy and the public switches of other services are not in it.",
+  "repro": "tasks add with a step 'aws s3api put-bucket-policy --bucket saa-b --policy <a policy with \"Principal\":\"*\">' (or any 'got through' line of this entry).",
+  "severity": "high"
+ },
+ {
+  "n": 49,
+  "gate": "tasks add (T104, T105)",
+  "title": "Credentials and non-read-only helper commands",
+  "did": "One tasks add per command.",
+  "steps": [
+   {
+    "cmd": "tasks add [c1 create-access-key] aws iam create-access-key --user-name saa-user",
+    "exit": 1,
+    "msg": "T105 steps[0]: matches the banned pattern create-access-key | T106 steps[0]: `create-access-key` lacks the tag book=saa and task=sample-t03 | T107 no cleanup command undoes `create-access-key` (create command 1 of 1)"
+   },
+   {
+    "cmd": "tasks add [c2 curl -X POST] curl -X POST https://api.example.com/create",
+    "exit": 1,
+    "msg": "T104 steps[0]: curl is read-only here: -X is not allowed"
+   },
+   {
+    "cmd": "tasks add [v1 export-credentials] aws configure export-credentials --format env",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v2 role credentials from instance metadata] curl http://169.254.169.254/latest/meta-data/iam/security-credentials/saa-role",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v3 curl --json (a POST)] curl --json '{\"k\":\"v\"}' https://api.example.com/create",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v4 get-session-token] aws sts get-session-token --duration-seconds 129600",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Got through: ['v1 export-credentials', 'v2 role credentials from instance metadata', 'v3 curl --json (a POST)', 'v4 get-session-token']. Held: ['c1 create-access-key', 'c2 curl -X POST']. 'aws configure' is banned only for set, sso, import and the bare form; curl is checked against a list of flags, not for a GET of a public URL.",
+  "repro": "tasks add with a step 'aws configure export-credentials --format env'.",
+  "severity": "high"
+ },
+ {
+  "n": 50,
+  "gate": "tasks add (T104, T115)",
+  "title": "More than one command, redirects and uncaptured variables",
+  "did": "One tasks add per command.",
+  "steps": [
+   {
+    "cmd": "tasks add [c1 pipe] aws s3 ls | head",
+    "exit": 1,
+    "msg": "T104 steps[0]: more than one command (shell operator |)"
+   },
+   {
+    "cmd": "tasks add [c2 uncaptured $VPC_ID] aws ec2 describe-vpcs --vpc-ids $VPC_ID",
+    "exit": 1,
+    "msg": "T115 steps[0]: $VPC_ID is used, but no earlier step captures it"
+   },
+   {
+    "cmd": "tasks add [v1 two commands on two lines] aws s3 ls\naws iam list-users",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v2 process substitution] aws s3 cp <(curl -s https://example.com/payload) s3://saa-b/payload",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v3 redirect into a file] aws sts get-caller-identity > /home/cloudshell-user/.aws/config",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v4 uncaptured ${VPC_ID}] aws ec2 describe-vpcs --vpc-ids ${VPC_ID}",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v5 uncaptured lowercase $vpc_id] aws ec2 describe-vpcs --vpc-ids $vpc_id",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks add [v6 input redirect] aws s3api put-object --bucket saa-b --key k --body /dev/stdin < /etc/passwd",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "Got through: ['v1 two commands on two lines', 'v2 process substitution', 'v3 redirect into a file', 'v4 uncaptured ${VPC_ID}', 'v5 uncaptured lowercase $vpc_id', 'v6 input redirect']. Held: ['c1 pipe', 'c2 uncaptured $VPC_ID']. T104 flags a token only when it holds ; | or &; a line break, < > and <( ) pass. T115 knows $NAME in capitals only.",
+  "repro": "tasks add with a step command 'aws s3 ls\\naws iam list-users' (a line break inside the JSON string).",
+  "severity": "high"
+ },
+ {
+  "n": 51,
+  "gate": "tasks add (T106, T108)",
+  "title": "Tag text anywhere in the command instead of a tag",
+  "did": "create-shelf and copy-shelf carry --description \"book=saa task=sample-t03\" and no --tags; verify is 'aws widget list-shelves --name book=saa'.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "tag_patterns, tag_task_patterns and verify_tag_patterns are searched in the whole command string, not in the value of a tag option or filter.",
+  "repro": "tasks add with 'aws widget create-shelf --name saa-x --description \"book=saa task=<id>\"' and no tag option.",
+  "severity": "medium"
+ },
+ {
+  "n": 52,
+  "gate": "tasks add (T109)",
+  "title": "Cost hidden behind '$0'",
+  "did": "cost '$0 (the NAT gateway bills about 4.50 USD for each hour)'; cost_if_forgotten '$0, plus about 108 USD for each day'. No cost fact.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "T103 and T109 read only amounts written with a $ sign. A price as '4.50 USD', 'USD 4.50', '5 dollars' or 'a few cents' needs no fact and is not held against cost_usd_max or T119.",
+  "repro": "tasks add with cost '$0 (about 4.50 USD for each hour)' and cost_facts [].",
+  "severity": "high"
+ },
+ {
+  "n": 53,
+  "gate": "tasks add (T103)",
+  "title": "A Look task that deletes",
+  "did": "sample-t01 copy as sample-t03; step 2 command 'aws widget delete-shelf --name saa-prod-shelf'.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   }
+  ],
+  "through": true,
+  "note": "A Look is 'read-only' only in the sense that its operation does not match create_command_regex.",
+  "repro": "tasks add a look whose step command is a delete-*, terminate-*, put-* or modify-* operation.",
+  "severity": "high"
+ },
+ {
+  "n": 54,
+  "gate": "tasks add (T106, T116)",
+  "title": "Untaggable create with no tag and no saa- name",
+  "did": "Steps 'aws s3api create-bucket --bucket company-data-2026'; cleanup 'aws s3api delete-bucket --bucket company-data-2026'. No tagging step.",
+  "steps": [
+   {
+    "cmd": "tasks add --chapter 99 --file <task.json> --by breaker",
+    "exit": 0,
+    "msg": "{\"added\": [\"sample-t03\"], \"replaced\": [], \"rejected\": []}"
+   },
+   {
+    "cmd": "tasks lint 99",
+    "exit": 2,
+    "msg": "{\"chapter\": \"99\", \"ok\": true, \"errors\": []}"
+   },
+   {
+    "cmd": "warnings of tasks lint 99",
+    "exit": "-",
+    "msg": "['T116', 'T201', 'T201', 'T113']"
+   }
+  ],
+  "through": true,
+  "note": "untaggable_rule says the next step tags the resource or the name starts with saa-. Neither is enforced: T116 is a warning, and nothing looks for the tagging step. The verify-by-tag step then finds nothing and reports a clean account.",
+  "repro": "tasks add with create-bucket on a name without the saa- prefix and no put-bucket-tagging step.",
+  "severity": "medium"
+ },
+ {
+  "n": 55,
+  "gate": "tasks check-cli",
+  "title": "Misspelled options that the CLI model does not see",
+  "did": "tasks.json replaced by one Look. Run A (control): 'aws ec2 describe-instances --instance-id i-0123456789abcdef0' (the option is --instance-ids). Run B: a single-dash option, a bare word in place of an option, misspelled shorthand keys, a misspelled --output value, an unknown --query path.",
+  "steps": [
+   {
+    "cmd": "tasks check-cli 99 (run A, control)",
+    "exit": 1,
+    "msg": "{\"chapter\": \"99\", \"awscli\": \"1.46.1\", \"checked\": \"2026-10-05\", \"commands_sha256\": \"26c3f90326ef815b331f82139f95b89c515d959c0408035861ee78bd0078be9e\", \"ok\": false}"
+   },
+   {
+    "cmd": "tasks check-cli 99 (run B, five misspelled commands)",
+    "exit": 0,
+    "msg": "{\"chapter\": \"99\", \"awscli\": \"1.46.1\", \"checked\": \"2026-10-05\", \"commands_sha256\": \"c5f35f55218f7ecd781654d464b26a5c59f6bc1c2f375ac2f08c4859d08eadaa\", \"ok\": true}"
+   },
+   {
+    "cmd": "commands reported ok in run B",
+    "exit": "-",
+    "msg": "['aws ec2 describe-instances -filters Name=tag:book,Values=saa', 'aws ec2 describe-instances filters Name=tag:book,Values=saa', 'aws ec2 describe-instances --filters Nmae=tag:book,Vaules=saa', 'aws ec2 describe-instances --output jsno', 'aws ec2 describe-instances --query Resrevations[].Instnaces[].InstanceId']"
+   }
+  ],
+  "through": true,
+  "note": "Control exit 1. 5 of 5 misspelled commands are reported ok. cli_model.py skips every token that does not start with '--', and it checks option names only: never shorthand keys, enum values or JMESPath.",
+  "repro": "tasks check-cli on 'aws ec2 describe-instances -filters Name=tag:book,Values=saa' or 'aws ec2 describe-instances --filters Nmae=tag:book,Vaules=saa'.",
+  "severity": "high"
+ },
+ {
+  "n": 56,
+  "gate": "tasks lint --ship (T113)",
+  "title": "A CLI report written by hand",
+  "did": "No check-cli run. _build/reports/cli/99.json written by hand with ok true and the SHA-256 of the fixture's invented 'aws widget' commands. Then tasks lint 99 --ship.",
+  "steps": [
+   {
+    "cmd": "tasks lint 99 --ship (before)",
+    "exit": 1,
+    "msg": "T113 no CLI check report; run `tasks check-cli 99`"
+   },
+   {
+    "cmd": "tasks lint 99 --ship (after the hand-written report)",
+    "exit": 0,
+    "msg": "{\"chapter\": \"99\", \"ok\": true, \"errors\": []}"
+   }
+  ],
+  "through": true,
+  "note": "T113 trusts any file with the right hash and ok true. The report has no list check (commands is empty here) and no trace of a tool run. The fixture's invented 'aws widget' commands then ship.",
+  "repro": "write _build/reports/cli/<id>.json = {chapter, ok: true, commands_sha256: sha256 of the commands joined with newlines}; tasks lint <id> --ship.",
+  "severity": "medium"
+ },
+ {
+  "n": 57,
+  "gate": "diagram lint",
+  "title": "Control: the clean arch spec, then two nodes in one cell",
+  "did": "Step 1: the base spec (must pass). Step 2: node app2 moved to cell A3, where app1 is.",
+  "steps": [
+   {
+    "cmd": "diagram lint --file diagrams/src/breaker-arch.json",
+    "exit": 0,
+    "msg": "ok   breaker-arch  316x366  nodes 6  edges 5  crossings 0"
+   },
+   {
+    "cmd": "diagram lint --file diagrams/src/breaker-arch.json",
+    "exit": 1,
+    "msg": "FAIL breaker-arch  316x366  nodes 6  edges 5  crossings 0 |      error node-overlap: nodes 'app1' and 'app2' overlap |      error label-overlap: label of node 'app1' overlaps label of node 'app2'"
+   }
+  ],
+  "through": false,
+  "note": "Base spec exit 0; the overlapping nodes are rejected.",
+  "repro": null,
+  "severity": "medium"
+ },
+ {
+  "n": 58,
+  "gate": "diagram lint",
+  "title": "Raw diagram with two labels on top of each other",
+  "did": "kind raw; the SVG holds two <text class=\"dg-nl\"> elements at the same x and y, plus a third text that starts 2 units to the right.",
+  "steps": [
+   {
+    "cmd": "diagram lint --file diagrams/src/breaker-raw.json",
+    "exit": 0,
+    "msg": "ok   breaker-raw  340x132  nodes 4  edges 0  crossings 0"
+   }
+  ],
+  "through": true,
+  "note": "The raw kind has no geometry lint at all (TOOLS-diagram.md says so: 'overlap and text width are yours to check'). Three labels in one place pass with exit 0, and so would text wider than its box.",
+  "repro": "diagrams/src/<id>.json with kind raw and an SVG that has two <text> elements at the same position; diagram lint --file.",
+  "severity": "high"
+ },
+ {
+  "n": 59,
+  "gate": "diagram lint",
+  "title": "Node label that states an ungrounded limit",
+  "did": "Base arch spec; node db1 label 'Max 999 TB' (the number is in neither claim nor say).",
+  "steps": [
+   {
+    "cmd": "diagram lint --file diagrams/src/breaker-arch.json",
+    "exit": 0,
+    "msg": "ok   breaker-arch  316x366  nodes 6  edges 5  crossings 0"
+   }
+  ],
+  "through": true,
+  "note": "TOOLS-rules.md R2 asks the diagram module for this check ('a label with a number with a unit must repeat a value that stands in claim or say'). It is not implemented, so a hard fact can enter the book inside a figure without a fact.",
+  "repro": "arch spec with a node label 'Max 999 TB' that the claim and the say lines do not hold.",
+  "severity": "medium"
+ },
+ {
+  "n": 60,
+  "gate": "diagram lint",
+  "title": "Claim of two sentences with absolute words",
+  "did": "claim 'A request passes through three tiers. it always uses 9 hops and never fails.' (second sentence starts in lowercase).",
+  "steps": [
+   {
+    "cmd": "diagram lint --file diagrams/src/breaker-arch.json",
+    "exit": 0,
+    "msg": "ok   breaker-arch  316x366  nodes 6  edges 5  crossings 0"
+   }
+  ],
+  "through": true,
+  "note": "The one-sentence test looks for '. ' followed by a capital letter. (The chapter lint L702 and L705 check the caption again where the figure is embedded.)",
+  "repro": "arch spec with claim 'One thing is true. another thing always holds.'",
+  "severity": "low"
+ },
+ {
+  "n": 61,
+  "gate": "gate diagrams",
+  "title": "SVG that does not belong to its spec",
+  "did": "The fixture has diagrams/svg/sample-hero.svg and no spec. A valid but different spec is written as diagrams/src/sample-hero.json; diagram build is not run. Then gate 99 --gate diagrams.",
+  "steps": [
+   {
+    "cmd": "gate 99 --gate diagrams (fixture, no spec)",
+    "exit": 1,
+    "msg": "D01 diagram sample-hero has no spec in diagrams/src"
+   },
+   {
+    "cmd": "gate 99 --gate diagrams (new spec, old SVG)",
+    "exit": 0,
+    "msg": "{\"result\": \"PASS\", \"chapter\": \"99\", \"gates\": [{\"gate\": \"diagrams\", \"ok\": true, \"errors\": 0, \"warnings\": 0, \"record\": \"_build/ledger/gates/99.diagrams.json\"}], \"errors\": []}"
+   },
+   {
+    "cmd": "SVG file",
+    "exit": "-",
+    "msg": "unchanged old file"
+   }
+  ],
+  "through": true,
+  "note": "The gate checks that the spec lints and that an SVG file exists. It never renders the spec and compares, so the reader can see a picture that no spec describes (stale, or drawn by hand with overlaps).",
+  "repro": "change diagrams/src/<id>.json (or hand-edit diagrams/svg/<id>.svg) without running diagram build; gate <ch> --gate diagrams.",
+  "severity": "high"
+ }
+]

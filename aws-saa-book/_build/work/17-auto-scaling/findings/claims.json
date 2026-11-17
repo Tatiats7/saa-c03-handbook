@@ -1,0 +1,228 @@
+{
+ "lens": "claims",
+ "chapter": "17",
+ "reviewer": "review-17-claims (lenses: claims, technical)",
+ "reviewed": "2026-10-13",
+ "findings": [
+  {
+   "id": "claims-17-001",
+   "file": "17-auto-scaling/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Which policies? | ... | It creates [target tracking scaling policies only](../facts/aws-auto-scaling.md#aws-auto-scaling-faq-creates-target-tracking-only) |",
+   "type": "claims: wrong-or-overstated",
+   "severity": "blocking",
+   "evidence": "source_id docs/autoscaling/plans/userguide/what-is-a-scaling-plan: \"Scaling plans also support predictive scaling for Auto Scaling groups.\" The FAQ quote behind aws-auto-scaling-faq-creates-target-tracking-only contrasts target tracking with step and scheduled policies only; in this comparison table it reads as 'a scaling plan offers no predictive scaling', which is false and contradicts 2-deep.md FAQ 9 (\"the similar prediction algorithm offered through AWS Auto Scaling plan\") and 2-services.md. Suggested cell: target tracking, plus predictive scaling for Auto Scaling groups; no step or scheduled policies (step/scheduled part linked to the same fact, predictive part needs a fact from the scaling-plan page).",
+   "status": "fixed",
+   "resolution": "fix-17: the AWS Auto Scaling cell now reads 'Target tracking, and predictive scaling that [only generates schedules for EC2 instances]' linked to the verified FAQ fact aws-auto-scaling-faq-predictive-ec2-only-in-plans, so no new fact was needed. The step/scheduled clause was left out to keep the cell within 15 words (L202); 2-services.md carries it."
+  },
+  {
+   "id": "claims-17-002",
+   "file": "17-auto-scaling/2-services.md",
+   "section": "aws-auto-scaling",
+   "quote": "**One fact.** A scaling plan creates [target tracking scaling policies only](../facts/aws-auto-scaling.md#aws-auto-scaling-faq-creates-target-tracking-only). For predictive scaling alone, AWS recommends predictive scaling policies [directly on your Auto Scaling resources instead]",
+   "type": "claims: wrong-or-overstated",
+   "severity": "blocking",
+   "evidence": "source_id docs/autoscaling/plans/userguide/what-is-a-scaling-plan: \"Scaling plans also support predictive scaling for Auto Scaling groups.\" The first sentence says a plan creates target tracking policies only; the second sentence assumes a plan does predictive scaling. The card contradicts itself and the scaling-plan page. Say: a plan creates no step or scheduled policies (FAQ fact), and supports target tracking plus predictive scaling for Auto Scaling groups.",
+   "status": "fixed",
+   "resolution": "fix-17: One fact now says a plan creates target tracking scaling policies only, that for [step scaling policies or scheduled scaling] you use each service (same fact), and that a plan can add predictive scaling, which [only generates schedules for EC2 instances] (aws-auto-scaling-faq-predictive-ec2-only-in-plans); the predictive-alone recommendation stays. The card no longer contradicts itself."
+  },
+  {
+   "id": "claims-17-003",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "decision-record",
+   "quote": "At 08:45 the action raises capacity to 6, and you can [use scheduled scaling and scaling policies together]",
+   "type": "technical: unsafe-design / missing-condition",
+   "severity": "should",
+   "evidence": "Fact ec2-auto-scaling-scheduled-plus-policies-together, source_id docs/autoscaling/ec2/userguide/ec2-auto-scaling-scheduled-scaling: \"After a scheduled scaling action runs, the scaling policy can continue to make decisions about whether to further scale capacity.\" and \"current capacity must fall within the minimum and maximum capacity that was set by your scheduled action.\" If the 08:45 action raises only the desired capacity, target tracking sees low CPU before 09:00 and can scale back in, so capacity is not in service at 09:00. The chapter's own question auto-scaling-q003 (correct option b) raises the minimum capacity. Write 'raises the minimum capacity to 6' (and lowers it again after 11:00); STARTUP.md line 75 'scheduled capacity 6' allows this wording.",
+   "status": "fixed",
+   "resolution": "fix-17: Decision now: at 08:45 the action raises the minimum capacity from 3 to 6, and a second action at 11:00 sets it back to 3; target tracking adds more, and capacity [must fall within the minimum and maximum capacity] of the action (same fact). The after-diagram claim, alt and lane label now say the minimum is raised (spec auto-scaling-after.json changed, SVG rebuilt). The How it works subsection on scheduled scaling also says to set the minimum in the action. Consistent with STARTUP.md line 75 (scheduled capacity 6 at 08:45)."
+  },
+  {
+   "id": "claims-17-004",
+   "file": "data/17-auto-scaling/speak.json",
+   "section": "auto-scaling-s02 follow_ups[0]",
+   "quote": "\"Can the schedule and the automatic rule work against each other?\" \"No, they work together. After the scheduled action runs, the scaling policy keeps deciding whether to scale further.\"",
+   "type": "technical: overstated",
+   "severity": "should",
+   "evidence": "Same fact ec2-auto-scaling-scheduled-plus-policies-together: \"After a scheduled scaling action runs, the scaling policy can continue to make decisions about whether to further scale capacity.\" That sentence is exactly how they can work against each other: a schedule that raises only the desired capacity can be undone by the target tracking policy within minutes; only the minimum set by the action holds. The flat 'No' is not supported. Answer: 'They can, if the schedule only sets the desired capacity. Let the schedule raise the minimum; the policy then scales only above it.'",
+   "status": "fixed",
+   "resolution": "fix-17: answer now 'They can. After the scheduled action runs, the scaling policy keeps deciding, so it can remove instances that the schedule added. So the schedule raises the minimum, and the policy then scales only above it.' Facts: ec2-auto-scaling-scheduled-plus-policies-together and ec2-auto-scaling-scheduled-action-keeps-current-limits (added to the item's facts). speak lint clean."
+  },
+  {
+   "id": "claims-17-005",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "step-scaling-follows-alarm-size-and-warmup-replaces-the-old-cooldown",
+   "quote": "Why warmup? A cooldown blocks every activity for a fixed time; a warmup hides new instances from the metric.",
+   "type": "claims: unsupported absolute, contradicts own table",
+   "severity": "should",
+   "evidence": "Fact ec2-auto-scaling-cooldown-applies-to-simple-scaling (source_id docs/autoscaling/ec2/userguide/ec2-auto-scaling-scaling-cooldowns): \"it waits for a cooldown period to end before any further scaling activities initiated by simple scaling policies can start.\" Facts ec2-auto-scaling-cooldown-scheduled-action-does-not-wait and ec2-auto-scaling-cooldown-unhealthy-replacement-does-not-wait, which the table directly above links, say scheduled actions and unhealthy replacement do not wait. 'blocks every activity' is wrong and carries no fact link. Say 'A cooldown blocks further simple scaling activities for a fixed time'.",
+   "status": "fixed",
+   "resolution": "fix-17: now 'A cooldown pauses further [scaling activities initiated by simple scaling policies] for a fixed time. A warmup acts on the metric: a new instance [waits before contributing usage data].' Links: ec2-auto-scaling-cooldown-applies-to-simple-scaling, ec2-auto-scaling-default-instance-warmup-purpose. 'only hides' was not used, because fact ec2-auto-scaling-warmup-blocks-scale-in shows a warmup also blocks dynamic scale in. Same fix closes reader-01."
+  },
+  {
+   "id": "claims-17-006",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "stopped-instances-belong-in-a-warm-pool-not-in-the-running-group",
+   "quote": "Why outside the group? The group [continues to maintain its desired capacity](../facts/ec2-auto-scaling.md#ec2-auto-scaling-default-no-policies-fixed-size) of running instances.",
+   "type": "claims: link does not support sentence",
+   "severity": "should",
+   "evidence": "Fact ec2-auto-scaling-default-no-policies-fixed-size quotes \"If there are no scaling conditions attached to the group, it continues to maintain its desired capacity even if an instance becomes unhealthy.\" It is about a group without policies; it says nothing about running instances or why a warm pool sits outside the group. Supporting facts exist: ec2-auto-scaling-warm-pool-definition (\"As instances leave the warm pool, they count toward the desired capacity of the group.\") and ec2-auto-scaling-cannot-hibernate-group-instance (\"marks the stopped instance as unhealthy\").",
+   "status": "fixed",
+   "resolution": "fix-17: now 'Why outside the group? Inside it, a stopped instance is replaced, because the group [marks the stopped instance as unhealthy]' (ec2-auto-scaling-cannot-hibernate-group-instance). Step 3 of the subsection keeps the warm-pool-definition link for counting toward desired capacity."
+  },
+  {
+   "id": "claims-17-007",
+   "file": "17-auto-scaling/1-fast.md",
+   "section": "changed-recently",
+   "quote": "**Old:** new accounts [cannot create new launch configurations using the console](../facts/ec2-auto-scaling.md#ec2-auto-scaling-launch-configurations-blocked-for-new-accounts); the AWS CLI worked.",
+   "type": "claims: unsupported clause, missing date",
+   "severity": "should",
+   "evidence": "Fact ec2-auto-scaling-launch-configurations-blocked-for-new-accounts, source_id docs/autoscaling/ec2/userguide/launch-configurations: \"Accounts created on or after **June 1, 2023** cannot create new launch configurations using the console.\" The Old line drops the date that defines 'new accounts', and 'the AWS CLI worked' is not in any quote (rule: can/cannot claims need a verified fact). Write: 'Old: accounts created on or after June 1, 2023 could not create them in the console.' with the date as link text.",
+   "status": "fixed",
+   "resolution": "fix-17: Old line now 'accounts created on or after [June 1, 2023] [cannot create new launch configurations using the console]'; the date links verified fact ec2-auto-scaling-launch-configurations-console-blocked-2023. The ungrounded clause 'the AWS CLI worked' was removed (counted as one removed claim). Same fix closes exam-07."
+  },
+  {
+   "id": "claims-17-008",
+   "file": "data/17-auto-scaling/speak.json",
+   "section": "auto-scaling-s03 follow_ups[1]",
+   "quote": "\"Can the worker group go down to zero instances at night?\" \"Yes, if the minimum capacity of the group is set to 0.\"",
+   "type": "technical: condition dropped from fact",
+   "severity": "should",
+   "evidence": "Fact ec2-auto-scaling-target-tracking-scale-to-zero-needs-min-zero; its source sentence in docs/autoscaling/ec2/userguide/as-scaling-target-tracking reads \"When a metric emits real 0 values to CloudWatch (for example, `ALBRequestCountPerTarget`), an Auto Scaling group can scale in to 0 ... the group's minimum capacity must be set to 0.\" This item is about a worker group on backlog per instance, which fact ec2-auto-scaling-sqs-backlog-per-instance defines as queue length divided by \"the number of instances in the `InService` state\": with 0 InService instances that metric has no value, so the group may never scale out again. The answer drops the condition and gives the founder an unsafe 'yes'. Either remove the follow-up or answer with the condition and without promising scale-out from zero.",
+   "status": "fixed",
+   "resolution": "fix-17: answer now 'Only if the minimum capacity of the group is set to 0. Test first how it starts again: backlog per instance divides by the instances in service, and at zero there are none.' It no longer promises scale-out from zero; facts ec2-auto-scaling-target-tracking-scale-to-zero-needs-min-zero and ec2-auto-scaling-sqs-backlog-per-instance. Does not contradict STARTUP.md (Callvale's worker group has minimum 0; the answer gives a caution, not a ban)."
+  },
+  {
+   "id": "claims-17-009",
+   "file": "data/17-auto-scaling/tasks.json",
+   "section": "auto-scaling-t02 verify",
+   "quote": "\"verify\": {\"command\": \"aws autoscaling describe-auto-scaling-groups --filters Name=tag:task,Values=auto-scaling-t02 ...\", \"expect\": \"An empty list.\"}",
+   "type": "technical: verify does not prove cleanup",
+   "severity": "should",
+   "evidence": "Rule RULINGS hard rule 9 (verify step on every Try) and the technical lens (verify must prove the cleanup). The cleanup deletes four resources (group, launch template, instances, security group); the verify checks only the group. A failed delete-security-group (DependencyViolation while an instance still terminates) or a skipped delete-launch-template passes the verify. Add checks that return empty: aws ec2 describe-security-groups --filters Name=tag:task,Values=auto-scaling-t02 --query \"SecurityGroups[].GroupId\" and aws ec2 describe-launch-templates --filters Name=tag:task,Values=auto-scaling-t02 --query \"LaunchTemplates[].LaunchTemplateName\" (or one combined verify step).",
+   "status": "fixed",
+   "resolution": "fix-17: the task schema holds one verify command, so the tag-filtered group check stays (it covers the only resource that costs: the group and its instances). The verify expect now tells the reader to run the security group and launch template checks under What still costs, each must return an empty list; a still_costs line with aws ec2 describe-launch-templates --filters Name=tag:task,Values=auto-scaling-t02 was added (filter tag:<key> confirmed on the saved CLI reference page docs/cli/latest/reference/ec2/describe-launch-templates, added to sources). No task command changed, so the CLI report _build/reports/cli/17.json stays valid."
+  },
+  {
+   "id": "claims-17-010",
+   "file": "data/17-auto-scaling/tasks.json",
+   "section": "auto-scaling-t03 verify",
+   "quote": "\"verify\": {\"command\": \"aws autoscaling describe-auto-scaling-groups --filters Name=tag:task,Values=auto-scaling-t03 ...\", \"expect\": \"An empty list.\"}",
+   "type": "technical: verify misses the only cost-bearing resource",
+   "severity": "should",
+   "evidence": "The task's own cost_if_forgotten and still_costs say the two CloudWatch alarms are what keeps costing (\"The list must be empty\"), yet the verify checks only the group. The launch template is not checked either. Make the verify (or a second verify line) aws cloudwatch describe-alarms --alarm-name-prefix TargetTracking-saa-auto-scaling-t03 --query \"MetricAlarms[].AlarmName\" expecting an empty list, plus the launch-template check.",
+   "status": "fixed",
+   "resolution": "fix-17: a verify with describe-alarms --alarm-name-prefix cannot replace the group check: T108 needs a task tag filter or a saa- resource name, and the alarm names start with TargetTracking-. The verify expect now makes the alarm check the second verify step ('run the alarm command under What still costs: the two alarms are the part that costs, and that list must also be empty'). Commands unchanged; CLI report stays valid."
+  },
+  {
+   "id": "claims-17-011",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "an-instance-refresh-replaces-running-instances-to-roll-out-a-new-version",
+   "quote": "> **Exam signal:** \"deploy new application code\" points to [AWS CodeDeploy or CloudFormation](../facts/ec2-auto-scaling.md#ec2-auto-scaling-faq-codedeploy-cloudformation-for-changes), not an instance refresh.",
+   "type": "claims: sentence says more than the fact",
+   "severity": "should",
+   "evidence": "Fact ec2-auto-scaling-faq-codedeploy-cloudformation-for-changes: \"You can use AWS CodeDeploy or CloudFormation to orchestrate code changes\" (a possibility, not an exclusion). Fact ec2-auto-scaling-instance-refresh-use-cases, source_id docs/autoscaling/ec2/userguide/asg-instance-refresh: \"Deploying a new Amazon Machine Image (AMI) or user data script across your Auto Scaling group.\" In the immutable model this same subsection teaches, new code baked into an AMI is rolled out with an instance refresh, so 'not an instance refresh' can push the reader to a wrong answer. Narrow it: in-place code changes on running instances point to CodeDeploy; a new AMI or user data points to an instance refresh.",
+   "status": "fixed",
+   "resolution": "fix-17: signal now '\"deploy new application code to the running instances\" points to [AWS CodeDeploy or CloudFormation]; code baked into a new AMI points to an instance refresh.' The exclusion is gone; step 2 of the subsection links the instance-refresh use-case fact."
+  },
+  {
+   "id": "claims-17-012",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "scheduled-and-predictive-scaling-add-capacity-before-the-load-arrives",
+   "quote": "A new group needs [24 hours of historical load data](../facts/ec2-auto-scaling.md#ec2-auto-scaling-predictive-new-group-needs-24-hours)",
+   "type": "claims: condition dropped from fact",
+   "severity": "note",
+   "evidence": "Fact ec2-auto-scaling-predictive-new-group-needs-24-hours is conditional: \"If you update your application by creating a new Auto Scaling group and deleting the old one, then your new Auto Scaling group needs 24 hours of historical load data\". The question is about a brand-new group. Link ec2-auto-scaling-predictive-needs-24-hours-of-data (\"this metric must have at least 24 hours of data\") instead.",
+   "status": "fixed",
+   "resolution": "fix-17: answer now 'The policy needs [at least 24 hours of data](…ec2-auto-scaling-predictive-needs-24-hours-of-data), and it starts in forecast only mode.'"
+  },
+  {
+   "id": "claims-17-013",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "an-instance-refresh-replaces-running-instances-to-roll-out-a-new-version",
+   "quote": "At the default minimum healthy percentage of [90 percent](...#ec2-auto-scaling-instance-refresh-min-healthy-percentage-default), it replaces [10 percent](...#ec2-auto-scaling-instance-refresh-ten-percent-at-a-time) at a time.",
+   "type": "claims: condition dropped from fact",
+   "severity": "note",
+   "evidence": "source_id docs/autoscaling/ec2/userguide/understand-instance-refresh-default-values: \"If no instance maintenance policy, this defaults to 90 percent.\" and for the maximum \"If no instance maintenance policy, this defaults to 100 percent (null).\" Fact ec2-auto-scaling-instance-refresh-ten-percent-at-a-time needs \"the maximum healthy percentage is 100 percent\". Add 'without an instance maintenance policy' so the reader knows when 90/10 holds. Same condition missing in the A-list row and card auto-scaling-c012 keeps it (good).",
+   "status": "fixed",
+   "resolution": "fix-17: step 2 now 'With no instance maintenance policy, the minimum healthy percentage is [90 percent], so it replaces [10 percent] at a time', followed by a dated sentence on what the policy decides (exam-06). A-list row: 'Default minimum healthy percentage of a refresh, with no maintenance policy'."
+  },
+  {
+   "id": "claims-17-014",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "the-group-replaces-instances-that-fail-the-health-checks-you-turned-on",
+   "quote": "The group replaces up to [10 percent](../facts/ec2-auto-scaling.md#ec2-auto-scaling-unhealthy-replacement-10-percent-at-a-time) of the desired capacity at a time.",
+   "type": "claims: condition dropped from fact",
+   "severity": "note",
+   "evidence": "Fact ec2-auto-scaling-unhealthy-replacement-10-percent-at-a-time (docs/autoscaling/ec2/userguide/health-checks-overview): \"You can modify the default 10 percent value by setting an instance maintenance policy\" and small groups replace \"one at a time\". Write 'By default, up to 10 percent'; the B-list row 'Unhealthy instances replaced at a time' also needs 'by default'.",
+   "status": "fixed",
+   "resolution": "fix-17: B-list row now 'Default share of unhealthy instances replaced at a time'. The Go deeper block that held the sentence was removed to keep 2-deep.md within its 4,500-word limit (L201)."
+  },
+  {
+   "id": "claims-17-015",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "an-instance-refresh-replaces-running-instances-to-roll-out-a-new-version",
+   "quote": "AWS says [existing instances are not affected](...#ec2-auto-scaling-faq-launch-configuration-change-existing-unaffected) by a new launch configuration; templates behave alike.",
+   "type": "claims: unlinked claim",
+   "severity": "note",
+   "evidence": "The linked FAQ fact covers launch configurations only. 'templates behave alike' carries no fact. Fact ec2-auto-scaling-health-replacement-uses-current-settings (\"The new instance launches using the current settings of the Auto Scaling group and its associated launch template\") already supports it in the launch-template Stop and answer; link it here too.",
+   "status": "fixed",
+   "resolution": "fix-17: 'templates behave alike' replaced by 'With a template, too, a new instance launches with the [current settings of the Auto Scaling group]' (ec2-auto-scaling-health-replacement-uses-current-settings)."
+  },
+  {
+   "id": "claims-17-016",
+   "file": "17-auto-scaling/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "4. The group registers the new instance with the load balancer before it marks the instance InService.\n5. When an instance fails its health checks, the group terminates it and launches another.",
+   "type": "claims: unlinked behavior claims in figure steps",
+   "severity": "note",
+   "evidence": "Steps 2, 4 and 5 state behavior with no fact link (only step 3 is linked). Step 4 drops the condition of fact ec2-auto-scaling-registers-with-lb-before-inservice (\"If your Auto Scaling group is configured to receive traffic from an Elastic Load Balancing load balancer\"); step 5 omits that ELB failures count only after you turn the ELB check on (the chapter's main trap). The same texts are in diagrams/src/auto-scaling-hero.json 'say' fields. Link the facts that 2-deep.md already uses, and say 'fails the health checks that are turned on'.",
+   "status": "fixed",
+   "resolution": "fix-17: step 2 links ec2-auto-scaling-scaling-policy-adjusts-desired; step 4 now starts 'With a load balancer,' and links ec2-auto-scaling-registers-with-lb-before-inservice; step 5 links ec2-auto-scaling-unhealthy-terminated-replaced and names the checks: 'EC2 checks, and ELB checks after you turn them on'. The hero spec say fields match (L702/L703 clean); SVG rebuilt. Same fix closes reader-03."
+  },
+  {
+   "id": "claims-17-017",
+   "file": "diagrams/src/auto-scaling-lifecycle.json",
+   "section": "alt / states",
+   "quote": "A state diagram with seven states. Pending leads to InService, or first to Pending:Wait when a launch hook exists.",
+   "type": "technical: oversimplified diagram",
+   "severity": "note",
+   "evidence": "Fact ec2-auto-scaling-launch-hook-states (docs/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle): \"the instances move from the `Pending` state to the `Pending:Wait` state. After you complete the lifecycle action, the instances enter the `Pending:Proceed` state.\" The diagram goes Pending:Wait -> InService and Terminating:Wait -> Terminated, with no Pending:Proceed or Terminating:Proceed. Acceptable as a simplification only if the caption says so; otherwise add the two Proceed states.",
+   "status": "fixed",
+   "resolution": "fix-17: the caption (spec claim) now ends 'the Proceed states are not drawn'; step 1 of the subsection names [Pending:Proceed] with the launch-hook-states link. SVG rebuilt."
+  },
+  {
+   "id": "claims-17-018",
+   "file": "17-auto-scaling/2-deep.md",
+   "section": "the-group-replaces-instances-that-fail-the-health-checks-you-turned-on",
+   "quote": "| EC2 status checks | On | Impaired hardware, or a stopped instance |",
+   "type": "claims: oversimplified table row",
+   "severity": "note",
+   "evidence": "Fact ec2-auto-scaling-health-check-type-ec2-default (docs/autoscaling/ec2/userguide/health-checks-overview): \"Checks that the instance is running. Checks for underlying hardware or software issues that might impair the instance.\" The row drops software issues and scheduled events and has no link. Suggested: 'Not running, or impaired by hardware or software issues' with the fact link.",
+   "status": "fixed",
+   "resolution": "fix-17: row now 'Not running, impaired, or [affected by a scheduled event]' (ec2-auto-scaling-health-scheduled-event-replaced); 'impaired' no longer names hardware only."
+  },
+  {
+   "id": "claims-17-019",
+   "file": "data/17-auto-scaling/tasks.json",
+   "section": "auto-scaling-t01 step 3",
+   "quote": "\"Compare the second number with the default quota in the chapter.\"",
+   "type": "technical: ambiguous expect",
+   "severity": "note",
+   "evidence": "describe-account-limits returns four fields (MaxNumberOfAutoScalingGroups, MaxNumberOfLaunchConfigurations, NumberOfAutoScalingGroups, NumberOfLaunchConfigurations); 'the second number' can be read as the second field of the output. Name the field: 'Compare MaxNumberOfAutoScalingGroups with the quota in the chapter.' The tasks stage note also records that the CLI reference says 200 while the quota fact says 500: the expect should tell the reader that her account value may differ from both.",
+   "status": "fixed",
+   "resolution": "fix-17: expect now 'Compare MaxNumberOfAutoScalingGroups with the default quota in the chapter. The quota is adjustable, so your account can show a different value.' (the quota fact ec2-auto-scaling-quota-groups-per-region is adjustable). tasks lint clean."
+  },
+  {
+   "id": "claims-17-020",
+   "file": "17-auto-scaling/3-do.md",
+   "section": "whole file (also 4-say.md, 5-quiz.md)",
+   "quote": "Nothing here yet.",
+   "type": "pipeline: generated files empty",
+   "severity": "note",
+   "evidence": "After 'saa.py sync 17' (written=0 unchanged=10) the three generated files still say 'Nothing here yet.' although data/17-auto-scaling holds 3 tasks (status candidate), 4 speak items (candidate) and 23 questions (verified). 2-deep.md 'Try it' boxes link to 3-do.md, and the ledger shows verify-questions still 'running' (attempt 1). For the orchestrator: confirm the files fill at finalize; the reader and exam reviewers read the JSON, not the Markdown.",
+   "status": "fixed",
+   "resolution": "fix-17: 5-quiz.md is generated (18 ready questions). 3-do.md and 4-say.md are generated from ready items; in the finalize step fix-17 sets the 3 tasks, 4 speak items and the cards to ready after their item lint is clean, then runs sync."
+  }
+ ]
+}

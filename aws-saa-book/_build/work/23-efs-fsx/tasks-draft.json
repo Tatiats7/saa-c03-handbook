@@ -1,0 +1,438 @@
+{
+ "v": 1,
+ "chapter": "efs-fsx",
+ "items": [
+  {
+   "id": "efs-fsx-t01",
+   "type": "look",
+   "title": "Read your file systems and their settings",
+   "kills": "\"An EFS file system has a size that you must choose and grow.\"",
+   "trap": "efs-fsx-trap-provision-capacity",
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "elasticfilesystem:DescribeFileSystems",
+    "elasticfilesystem:DescribeMountTargets",
+    "ec2:DescribeAvailabilityZones",
+    "fsx:DescribeFileSystems"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. List the EFS file systems of this Region with their throughput mode, performance mode, encryption, zone and size.",
+     "command": "aws efs describe-file-systems --query \"FileSystems[].[FileSystemId,ThroughputMode,PerformanceMode,Encrypted,AvailabilityZoneName,SizeInBytes.Value]\" --output table",
+     "expect": "One row per file system, or no rows. The throughput mode is elastic, bursting or provisioned. The zone column shows a zone name only for a One Zone file system; a Regional file system shows None. The last column is the size in bytes that EFS measured. No column holds a size that someone chose.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the Availability Zones of this Region. A Regional file system can have one mount target in each of them.",
+     "command": "aws ec2 describe-availability-zones --filters Name=zone-type,Values=availability-zone --query \"AvailabilityZones[].ZoneName\"",
+     "expect": "A list of zone names, for example us-east-1a and us-east-1b.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "If the first list showed a file system, pick its ID as <FS_ID> and list its mount targets. If the list was empty, skip this step.",
+     "command": "aws efs describe-mount-targets --file-system-id <FS_ID> --query \"MountTargets[].[AvailabilityZoneName,SubnetId,IpAddress,LifeCycleState]\" --output table",
+     "expect": "At most one row per Availability Zone, each with a subnet and a private IP address. A One Zone file system shows at most one row. No rows means that no client can mount the file system yet.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the Amazon FSx file systems of this Region with their type, storage type and storage capacity. Compare them with the EFS list.",
+     "command": "aws fsx describe-file-systems --query \"FileSystems[].[FileSystemId,FileSystemType,StorageType,StorageCapacity]\" --output table",
+     "expect": "No rows, or one row per file system: WINDOWS, LUSTRE, ONTAP or OPENZFS, with SSD, HDD or INTELLIGENT_TIERING and a capacity in GiB. On FSx for Lustre and FSx for OpenZFS, someone specified the size of an SSD file system when creating it; an INTELLIGENT_TIERING file system has no size to specify.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "efs-serverless-elastic-no-provisioning",
+    "efs-three-throughput-modes",
+    "efs-faq-file-system-types",
+    "efs-quota-mount-targets-per-az",
+    "efs-faq-one-zone-single-mount-target",
+    "efs-nfs-client-needs-network-connection-to-port-2049",
+    "fsx-faq-lustre-ssd-class-provisioned",
+    "fsx-openzfs-two-storage-classes-intelligent-tiering-and-ssd",
+    "fsx-lustre-intelligent-tiering-elastic-pay-for-data-stored"
+   ],
+   "sources": [
+    {
+     "title": "Creating EFS file systems (Create using the AWS CLI: describe-file-systems)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/creating-using-create-fs.html"
+    },
+    {
+     "title": "describe-file-systems (AWS CLI Command Reference, EFS: AvailabilityZoneName is valid only for One Zone file systems)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/describe-file-systems.html"
+    },
+    {
+     "title": "describe-mount-targets (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/describe-mount-targets.html"
+    },
+    {
+     "title": "describe-file-systems (AWS CLI Command Reference, FSx: StorageType and StorageCapacity)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/fsx/describe-file-systems.html"
+    },
+    {
+     "title": "describe-availability-zones (AWS CLI Command Reference, filter zone-type)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-availability-zones.html"
+    }
+   ],
+   "status": "candidate",
+   "rev": 1
+  },
+  {
+   "id": "efs-fsx-t02",
+   "type": "try",
+   "title": "Set an EFS lifecycle policy and see which throughput change it blocks",
+   "kills": "\"You can switch an EFS file system to any throughput mode at any time.\"",
+   "trap": "efs-fsx-trap-ia-moves-back-by-default",
+   "section": "2-deep.md#cold-files-move-to-cheaper-classes-and-stay-there-unless-you-ask",
+   "pass_route": true,
+   "minutes": 10,
+   "cost": "About $0.00 (rounded): one empty file system for a few minutes, with no mount target and no instance. A new file system has a metered size of 6 KiB. You pay for the storage that you use and for read, write and tiering activity, and EFS has no minimum fee or setup charge. This task writes no data.",
+   "cost_if_forgotten": "About $0.00 a day (rounded), but more than zero: the empty file system keeps its 6 KiB of metered storage until you delete it.",
+   "cost_facts": [],
+   "permissions": [
+    "elasticfilesystem:CreateFileSystem",
+    "elasticfilesystem:TagResource",
+    "elasticfilesystem:DescribeFileSystems",
+    "elasticfilesystem:PutLifecycleConfiguration",
+    "elasticfilesystem:UpdateFileSystem",
+    "elasticfilesystem:DeleteFileSystem",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "These commands create nothing. Pick an existing file system ID as <FS_ID>. Read its lifecycle policies: aws efs describe-lifecycle-configuration --file-system-id <FS_ID> Then read its throughput mode: aws efs describe-file-systems --file-system-id <FS_ID> --query \"FileSystems[0].ThroughputMode\" If the policies include TransitionToArchive, the throughput mode is elastic. If you have no file system, answer the predict question of step 4 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create an empty EFS file system with Elastic throughput, no automatic backups and the tags of this task. From the CLI, encryption at rest is on only when you ask for it.",
+     "command": "aws efs create-file-system --creation-token saa-efs-fsx-t02 --encrypted --no-backup --throughput-mode elastic --tags Key=Name,Value=saa-efs-fsx-t02 Key=book,Value=saa Key=task,Value=efs-fsx-t02",
+     "capture": {
+      "name": "FS_ID",
+      "query": "FileSystemId"
+     },
+     "expect": "No output. FS_ID now holds an ID that starts with fs-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the state, throughput mode, encryption and metered size of the file system. Run the command again until the state is available.",
+     "command": "aws efs describe-file-systems --file-system-id $FS_ID --query \"FileSystems[0].[LifeCycleState,ThroughputMode,Encrypted,SizeInBytes.Value]\"",
+     "expect": "creating, then available, with elastic, true and 6144. The 6,144 bytes are the empty root directory. You chose no size.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Set three lifecycle policies: move a file to EFS IA after 30 days without access, to EFS Archive after 90 days, and back to EFS Standard on its first access.",
+     "command": "aws efs put-lifecycle-configuration --file-system-id $FS_ID --lifecycle-policies '[{\"TransitionToIA\":\"AFTER_30_DAYS\"},{\"TransitionToArchive\":\"AFTER_90_DAYS\"},{\"TransitionToPrimaryStorageClass\":\"AFTER_1_ACCESS\"}]'",
+     "expect": "LifecyclePolicies with three entries, in any order: TransitionToIA AFTER_30_DAYS, TransitionToArchive AFTER_90_DAYS and TransitionToPrimaryStorageClass AFTER_1_ACCESS. Without the third entry, a file that someone reads stays in EFS IA or EFS Archive.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Try to switch the file system to Bursting throughput.",
+     "command": "aws efs update-file-system --file-system-id $FS_ID --throughput-mode bursting",
+     "expect": "An error. The file system keeps Elastic throughput.",
+     "break_it": true,
+     "predict": "AWS lets you change the throughput mode of an available file system. Can you switch this one to Bursting now?",
+     "explain": "You can [change the throughput mode](../facts/efs.md#efs-switch-throughput-mode-no-downtime) after a file system is available. But the EFS Archive storage class is [supported on EFS file systems with Elastic throughput](../facts/efs.md#efs-archive-needs-elastic-throughput-no-bursting-provisioned). While a lifecycle policy moves files to Archive, you [cannot change the throughput mode](../facts/efs.md#efs-archive-needs-elastic-throughput-no-bursting-provisioned) to Bursting or Provisioned."
+    },
+    {
+     "text": "Fix it: keep Elastic throughput, which EFS Archive needs. Read the throughput mode again.",
+     "command": "aws efs describe-file-systems --file-system-id $FS_ID --query \"FileSystems[0].ThroughputMode\"",
+     "expect": "elastic. The failed request changed nothing.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the file system.",
+     "command": "aws efs delete-file-system --file-system-id $FS_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=efs-fsx-t02 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "An empty list. If an ARN still shows, wait one minute and run the command again. A second check without tags: once the deletion has finished, aws efs describe-file-systems --creation-token saa-efs-fsx-t02 returns a FileSystemNotFound error."
+   },
+   "still_costs": [
+    "The file system, until delete-file-system has run. If the CloudShell session ended before the cleanup, FS_ID is empty: find the file system with aws efs describe-file-systems --creation-token saa-efs-fsx-t02 and delete it by its ID."
+   ],
+   "facts": [
+    "efs-metering-new-file-system-size",
+    "efs-pricing-dimensions-storage-activity",
+    "efs-encryption-at-rest-console-default-cli-explicit",
+    "efs-backup-cli-api-default-only-one-zone",
+    "efs-lifecycle-default-ia-after-30-days",
+    "efs-lifecycle-default-archive-after-90-days",
+    "efs-lifecycle-transition-to-standard-on-first-access",
+    "efs-lifecycle-default-no-move-back-to-standard",
+    "efs-archive-needs-elastic-throughput-no-bursting-provisioned",
+    "efs-switch-throughput-mode-no-downtime"
+   ],
+   "sources": [
+    {
+     "title": "Creating EFS file systems (Create using the AWS CLI: create-file-system with --encrypted, --throughput-mode elastic and --tags)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/creating-using-create-fs.html"
+    },
+    {
+     "title": "Configuring lifecycle policies (Using the AWS CLI: put-lifecycle-configuration)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/enable-lifecycle-management.html"
+    },
+    {
+     "title": "LifecyclePolicy (Amazon EFS API Reference, one transition per policy object)",
+     "url": "https://docs.aws.amazon.com/efs/latest/APIReference/API_LifecyclePolicy.html"
+    },
+    {
+     "title": "Managing file system throughput (Using the AWS CLI: update-file-system)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/managing-throughput.html"
+    },
+    {
+     "title": "Features of Amazon EFS (Archive storage class and Elastic throughput)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/features.html"
+    },
+    {
+     "title": "Deleting EFS file systems",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/delete-efs-fs.html"
+    },
+    {
+     "title": "DeleteFileSystem (Amazon EFS API Reference, FileSystemNotFound for a deleted file system ID or creation token)",
+     "url": "https://docs.aws.amazon.com/efs/latest/APIReference/API_DeleteFileSystem.html"
+    },
+    {
+     "title": "create-file-system (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/create-file-system.html"
+    },
+    {
+     "title": "describe-file-systems (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/describe-file-systems.html"
+    },
+    {
+     "title": "put-lifecycle-configuration (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/put-lifecycle-configuration.html"
+    },
+    {
+     "title": "update-file-system (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/update-file-system.html"
+    },
+    {
+     "title": "delete-file-system (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/delete-file-system.html"
+    },
+    {
+     "title": "get-resources (AWS CLI Command Reference, Resource Groups Tagging API)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    }
+   ],
+   "status": "candidate",
+   "rev": 1
+  },
+  {
+   "id": "efs-fsx-t03",
+   "type": "try",
+   "title": "Replicate an EFS file system to a second Region and try to delete the replica",
+   "kills": "\"An EFS replica is an independent file system that you can write to or delete while replication runs.\"",
+   "trap": "efs-fsx-trap-replica-writable",
+   "section": "2-deep.md#efs-replication-keeps-a-read-only-copy-in-another-region-or-zone",
+   "pass_route": false,
+   "minutes": 15,
+   "cost": "About $0.00 (rounded): two empty file systems for a few minutes, with no mount target and no instance. With replication, you pay for the source and destination EFS file systems, plus any data transfer between them. The replica holds approximately 12 MiB of hidden replication data. EFS has no minimum fee or setup charge.",
+   "cost_if_forgotten": "About $0.00 a day (rounded), but more than zero: both file systems keep their metered storage, the replica with its approximately 12 MiB of hidden data, and replication runs until you delete it.",
+   "cost_facts": [],
+   "permissions": [
+    "elasticfilesystem:CreateFileSystem",
+    "elasticfilesystem:TagResource",
+    "elasticfilesystem:DescribeFileSystems",
+    "elasticfilesystem:CreateReplicationConfiguration",
+    "elasticfilesystem:DescribeReplicationConfigurations",
+    "elasticfilesystem:DeleteReplicationConfiguration",
+    "elasticfilesystem:DeleteFileSystem",
+    "iam:CreateServiceLinkedRole (only if the EFS service-linked role does not exist yet)",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "These commands create nothing. List the replication configurations of this Region: aws efs describe-replication-configurations --query \"Replications[].[SourceFileSystemId,Destinations[0].FileSystemId,Destinations[0].Region,Destinations[0].Status]\" --output table For a destination in the list, read its protection in its own Region: aws efs describe-file-systems --file-system-id <DEST_ID> --query \"FileSystems[0].FileSystemProtection.ReplicationOverwriteProtection\" --region <DEST_REGION> REPLICATING means that the file system is read-only. If the list is empty, answer the predict question of step 6 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create an empty, encrypted source file system in us-east-1, with Elastic throughput, no automatic backups and the tags of this task. Every command of this task names its Region.",
+     "command": "aws efs create-file-system --creation-token saa-efs-fsx-t03 --encrypted --no-backup --throughput-mode elastic --tags Key=Name,Value=saa-efs-fsx-t03 Key=book,Value=saa Key=task,Value=efs-fsx-t03 --region us-east-1",
+     "capture": {
+      "name": "SRC_ID",
+      "query": "FileSystemId"
+     },
+     "expect": "No output. SRC_ID now holds an ID that starts with fs-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the state of the source file system. Run the command again until it shows available.",
+     "command": "aws efs describe-file-systems --file-system-id $SRC_ID --query \"FileSystems[0].LifeCycleState\" --region us-east-1",
+     "expect": "creating, then available.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Replicate the source to a new file system in us-west-2. EFS creates the replica for you, with no mount target.",
+     "command": "aws efs create-replication-configuration --source-file-system-id $SRC_ID --destinations Region=us-west-2 --region us-east-1",
+     "expect": "JSON with the source file system and one destination: Status ENABLING, Region us-west-2 and a new FileSystemId.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the ID of the replica as DEST_ID.",
+     "command": "aws efs describe-replication-configurations --file-system-id $SRC_ID --region us-east-1",
+     "capture": {
+      "name": "DEST_ID",
+      "query": "Replications[0].Destinations[0].FileSystemId"
+     },
+     "expect": "No output. DEST_ID now holds an ID that starts with fs-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Tag the replica in us-west-2 with the tags of this task. The replication command takes no tags.",
+     "command": "aws efs tag-resource --resource-id $DEST_ID --tags Key=Name,Value=saa-efs-fsx-t03-replica Key=book,Value=saa Key=task,Value=efs-fsx-t03 --region us-west-2",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Try to delete the replica while replication runs.",
+     "command": "aws efs delete-file-system --file-system-id $DEST_ID --region us-west-2",
+     "expect": "An error. The replica still exists.",
+     "break_it": true,
+     "predict": "The replica is a file system in your own account. Can you delete it, or write to it, while replication runs?",
+     "explain": "While replication runs, the replica is a [new read-only destination file system](../facts/efs.md#efs-replication-destination-read-only-while-replicating), and you [cannot delete a file system that is part](../facts/efs.md#efs-replication-cannot-delete-file-system-in-configuration) of a replication configuration. To use the replica, you fail over [by deleting its replication configuration](../facts/efs.md#efs-replication-failover-delete-configuration-replica-writeable). After that, [the replica becomes writeable](../facts/efs.md#efs-replication-failover-delete-configuration-replica-writeable)."
+    },
+    {
+     "text": "Fix it: leave the replica to replication. Read its state and its protection. To write to it or delete it, you fail over first; the cleanup does that.",
+     "command": "aws efs describe-file-systems --file-system-id $DEST_ID --query \"FileSystems[0].[LifeCycleState,FileSystemProtection.ReplicationOverwriteProtection]\" --region us-west-2",
+     "expect": "creating or available, and REPLICATING: the replica is read-only, and only EFS replication changes it.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the replication status. Run the command again after a few minutes.",
+     "command": "aws efs describe-replication-configurations --file-system-id $SRC_ID --query \"Replications[0].Destinations[0].[Status,Region,LastReplicatedTimestamp]\" --region us-east-1",
+     "expect": "ENABLING, then ENABLED, with us-west-2. A time appears in the last column after the first sync.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Fail over: delete the replication configuration. This is the first cleanup step, and it can take several minutes.",
+     "command": "aws efs delete-replication-configuration --source-file-system-id $SRC_ID --region us-east-1"
+    },
+    {
+     "text": "Check that the configuration is gone. Run the command again until it returns an error instead of a configuration.",
+     "command": "aws efs describe-replication-configurations --file-system-id $SRC_ID --region us-east-1"
+    },
+    {
+     "text": "Delete the source file system. If AWS reports an error, wait one minute and run the command again.",
+     "command": "aws efs delete-file-system --file-system-id $SRC_ID --region us-east-1"
+    },
+    {
+     "text": "Delete the former replica. It is writeable now, and no configuration holds it.",
+     "command": "aws efs delete-file-system --file-system-id $DEST_ID --region us-west-2"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=efs-fsx-t03 --query \"ResourceTagMappingList[].ResourceARN\" --region us-east-1",
+    "expect": "An empty list. Run the same command with --region us-west-2: it must also return an empty list. If an ARN still shows, wait one minute and run the command again."
+   },
+   "still_costs": [
+    "Both file systems, until delete-file-system has run for each. A file system in a replication configuration cannot be deleted: if a delete fails, run delete-replication-configuration first. If the CloudShell session ended, the variables are empty: find the IDs with the verify command in each Region and delete each file system by its ID."
+   ],
+   "facts": [
+    "efs-pricing-replication-pays-both-file-systems",
+    "efs-replication-destination-metered-12-mib-hidden-data",
+    "efs-pricing-dimensions-storage-activity",
+    "efs-encryption-at-rest-console-default-cli-explicit",
+    "efs-backup-cli-api-default-only-one-zone",
+    "efs-replication-destination-has-no-mount-targets",
+    "efs-replication-destination-read-only-while-replicating",
+    "efs-replication-cannot-delete-file-system-in-configuration",
+    "efs-replication-failover-delete-configuration-replica-writeable",
+    "efs-replication-delete-config-takes-minutes-destination-writeable",
+    "efs-replication-rpo-rto-minutes"
+   ],
+   "sources": [
+    {
+     "title": "Configuring replication to new EFS file system (AWS CLI: create-replication-configuration with a Regional destination)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/create-replication.html"
+    },
+    {
+     "title": "Replicating EFS file systems (costs and required IAM permissions)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/efs-replication.html"
+    },
+    {
+     "title": "Deleting replication configurations (AWS CLI: delete-replication-configuration)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/delete-replications.html"
+    },
+    {
+     "title": "Using the replica (fail over by deleting the replication configuration)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/replication-fail-over.html"
+    },
+    {
+     "title": "FileSystemProtectionDescription (Amazon EFS API Reference, ReplicationOverwriteProtection REPLICATING)",
+     "url": "https://docs.aws.amazon.com/efs/latest/APIReference/API_FileSystemProtectionDescription.html"
+    },
+    {
+     "title": "Tagging EFS resources (TagResource on existing file systems)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/manage-fs-tags.html"
+    },
+    {
+     "title": "Creating EFS file systems (Create using the AWS CLI: create-file-system)",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/creating-using-create-fs.html"
+    },
+    {
+     "title": "Deleting EFS file systems",
+     "url": "https://docs.aws.amazon.com/efs/latest/ug/delete-efs-fs.html"
+    },
+    {
+     "title": "create-file-system (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/create-file-system.html"
+    },
+    {
+     "title": "describe-file-systems (AWS CLI Command Reference, EFS: FileSystemProtection)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/describe-file-systems.html"
+    },
+    {
+     "title": "create-replication-configuration (AWS CLI Command Reference, EFS: --destinations shorthand)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/create-replication-configuration.html"
+    },
+    {
+     "title": "describe-replication-configurations (AWS CLI Command Reference, EFS: destination Status values)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/describe-replication-configurations.html"
+    },
+    {
+     "title": "tag-resource (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/tag-resource.html"
+    },
+    {
+     "title": "delete-replication-configuration (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/delete-replication-configuration.html"
+    },
+    {
+     "title": "delete-file-system (AWS CLI Command Reference, EFS)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/efs/delete-file-system.html"
+    },
+    {
+     "title": "get-resources (AWS CLI Command Reference, Resource Groups Tagging API)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    }
+   ],
+   "status": "candidate",
+   "rev": 1
+  }
+ ]
+}

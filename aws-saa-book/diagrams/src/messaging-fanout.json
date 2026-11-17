@@ -1,0 +1,113 @@
+{
+  "id": "messaging-fanout",
+  "kind": "arch",
+  "size": "m",
+  "chapter": "31",
+  "title": "Fan-out from one topic to two queues",
+  "claim": "An SNS topic sends a copy of each message to every subscribed queue, and each queue keeps its copy for its own consumer.",
+  "alt": "A publisher on the left sends to one SNS topic. Arrows go from the topic to two SQS queues; the arrow to the second queue carries a filter policy label. Each queue has its own consumer on the right, and a dead-letter queue sits under each queue.",
+  "cols": 3,
+  "rows": 4,
+  "flow": "right",
+  "nodes": [
+    {
+      "id": "pub",
+      "icon": "generic-application",
+      "label": "Publisher",
+      "at": "A1"
+    },
+    {
+      "id": "topic",
+      "icon": "sns",
+      "label": "SNS topic",
+      "at": "A2:A3"
+    },
+    {
+      "id": "qa",
+      "icon": "queue",
+      "label": "Queue A",
+      "at": "B1"
+    },
+    {
+      "id": "dlqa",
+      "icon": "queue",
+      "label": "DLQ A",
+      "at": "B2"
+    },
+    {
+      "id": "qb",
+      "icon": "queue",
+      "label": "Queue B",
+      "at": "B3"
+    },
+    {
+      "id": "dlqb",
+      "icon": "queue",
+      "label": "DLQ B",
+      "at": "B4"
+    },
+    {
+      "id": "ca",
+      "icon": "server",
+      "label": "Consumer A",
+      "at": "C1"
+    },
+    {
+      "id": "cb",
+      "icon": "server",
+      "label": "Consumer B",
+      "at": "C3"
+    }
+  ],
+  "edges": [
+    {
+      "from": "pub",
+      "to": "topic",
+      "label": "publish",
+      "step": 1,
+      "say": "The publisher sends one message to the topic."
+    },
+    {
+      "from": "topic",
+      "to": "qa",
+      "label": "copy",
+      "step": 2,
+      "emph": true,
+      "say": "SNS sends the message to each subscribed queue."
+    },
+    {
+      "from": "topic",
+      "to": "qb",
+      "label": "filter policy",
+      "step": 3,
+      "emph": true,
+      "say": "A subscription with a filter policy gets a message only when the message attributes or the message body satisfy the conditions specified in the filter policy."
+    },
+    {
+      "from": "ca",
+      "to": "qa",
+      "label": "polls",
+      "step": 4,
+      "say": "Each consumer polls its own queue, where the messages persist in an Amazon SQS queue until it reads them."
+    },
+    {
+      "from": "cb",
+      "to": "qb",
+      "label": "polls",
+      "step": 4
+    },
+    {
+      "from": "qa",
+      "to": "dlqa",
+      "label": "failed",
+      "dashed": true
+    },
+    {
+      "from": "qb",
+      "to": "dlqb",
+      "label": "failed",
+      "dashed": true
+    }
+  ],
+  "notes": "Brief 31 fan-out; 2-deep.md#queues-subscribed-to-a-topic-give-each-consumer-its-own-durable-copy. Title, claim, alt, say from brief.json (step 4 verbatim). Step 2 is on the edge to queue A, step 3 on the edge to queue B (its subscription has the filter policy). Facts: sns-publish-sends-message-to-each-subscribed-queue, sns-filter-nonmatching-message-not-sent, sns-sqs-together-instant-notice-and-later-processing. Consumers poll, so the arrow starts at the consumer. Three columns (a fourth is too wide); no AWS number drawn."
+}

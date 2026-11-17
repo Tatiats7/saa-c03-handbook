@@ -1,0 +1,75 @@
+Skip to Main Content
+## AWS Compute Blog
+# Introducing the price-capacity-optimized allocation strategy for EC2 Spot Instances
+This blog post is written by Jagdeep Phoolkumar, Senior Specialist Solution Architect, Flexible Compute and Peter Manastyrny, Senior Product Manager Tech, EC2 Core.
+Amazon EC2 Spot Instances are unused Amazon Elastic Compute Cloud (Amazon EC2) capacity in the AWS Cloud available at up to a 90% discount compared to On-Demand prices. One of the best practices for using EC2 Spot Instances is to be flexible across a wide range of instance types to increase the chances of getting the aggregate compute capacity. Amazon EC2 Auto Scaling and Amazon EC2 Fleet make it easy to configure a request with a flexible set of instance types, as well as use a Spot allocation strategy to determine how to fulfill Spot capacity from the Spot Instance pools that you provide in your request.
+The existing allocation strategies available in Amazon EC2 Auto Scaling and Amazon EC2 Fleet are called “lowest-price” and “capacity-optimized”. The lowest-price allocation strategy allocates Spot Instance pools where the Spot price is currently the lowest. Customers told us that in some cases the lowest-price strategy picks the Spot Instance pools that are not optimized for capacity availability and results in more frequent Spot Instance interruptions. As an improvement over lowest-price allocation strategy, in August 2019 AWS launched the capacity-optimized allocation strategy for Spot Instances, which helps customers tap into the deepest Spot Instance pools by analyzing capacity metrics. Since then, customers have seen a significantly lower interruption rate with capacity-optimized strategy when compared to the lowest-price strategy. You can read more about these customer stories in the Capacity-Optimized Spot Instance Allocation in Action at Mobileye and Skyscanner blog post. The capacity-optimized allocation strategy strictly selects the deepest pools. Therefore, sometimes it can pick high-priced pools even when there are low-priced pools available with marginally less capacity. Customers have been telling us that, for an optimal experience, they would like an allocation strategy that balances the best trade-offs between lowest-price and capacity-optimized.
+Today, we’re excited to share the new price-capacity-optimized allocation strategy that makes Spot Instance allocation decisions based on both the price and the capacity availability of Spot Instances. The price-capacity-optimized allocation strategy should be the first preference and the default allocation strategy for most Spot workloads.
+This post illustrates how the price-capacity-optimized allocation strategy selects Spot Instances in comparison with lowest-price and capacity-optimized. Furthermore, it discusses some common use cases of the price-capacity-optimized allocation strategy.
+## Overview
+The price-capacity-optimized allocation strategy makes Spot allocation decisions based on both capacity availability and Spot prices. In comparison to the lowest-price allocation strategy, the price-capacity-optimized strategy doesn’t always attempt to launch in the absolute lowest priced Spot Instance pool. Instead, price-capacity-optimized attempts to diversify as much as possible across the multiple low-priced pools with high capacity availability. As a result, the price-capacity-optimized strategy in most cases has a higher chance of getting Spot capacity and delivers lower interruption rates when compared to the lowest-price strategy. If you factor in the cost associated with retrying the interrupted requests, then the price-capacity-optimized strategy becomes even more attractive from a savings perspective over the lowest-price strategy.
+We recommend the price-capacity-optimized allocation strategy for workloads that require optimization of cost savings, Spot capacity availability, and interruption rates. For existing workloads using lowest-price strategy, we recommend price-capacity-optimized strategy as a replacement. The capacity-optimized allocation strategy is still suitable for workloads that either use similarly priced instances, or ones where the cost of interruption is so significant that any cost saving is inadequate in comparison to a marginal increase in interruptions.
+## Walkthrough
+In this section, we illustrate how the price-capacity-optimized allocation strategy deploys Spot capacity when compared to the other two allocation strategies. The following example configuration shows how Spot capacity could be allocated in an Auto Scaling group using the different allocation strategies:
+{
+    "AutoScalingGroupName": "myasg ",
+    "MixedInstancesPolicy": {
+        "LaunchTemplate": {
+            "LaunchTemplateSpecification": {
+                "LaunchTemplateId": "lt-abcde12345"
+            },
+            "Overrides": [
+                {
+                    "InstanceRequirements": {
+                        "VCpuCount": {
+                            "Min": 4,
+                            "Max": 4
+                        },
+                        "MemoryMiB": {
+                            "Min": 0,
+                            "Max": 16384
+                        },
+                        "InstanceGenerations": [
+                            "current"
+                        ],
+                        "BurstablePerformance": "excluded",
+                        "AcceleratorCount": {
+                            "Max": 0
+                        }
+                    }
+                }
+            ]
+        },
+        "InstancesDistribution": {
+            "OnDemandPercentageAboveBaseCapacity": 0,
+            "SpotAllocationStrategy": "spot-allocation-strategy"
+        }
+    },
+    "MinSize": 10,
+    "MaxSize": 100,
+    "DesiredCapacity": 60,
+    "VPCZoneIdentifier": "subnet-a12345a,subnet-b12345b,subnet-c12345c"
+}
+First, Amazon EC2 Auto Scaling attempts to balance capacity evenly across Availability Zones (AZ). Next, Amazon EC2 Auto Scaling applies the Spot allocation strategy using the 30+ instances selected by attribute-based instance type selection, in each Availability Zone. The results after testing different allocation strategies are as follows:
+- Price-capacity-optimized strategy diversifies over multiple low-priced Spot Instance pools that are optimized for capacity availability.
+- Capacity-optimize strategy identifies Spot Instance pools that are only optimized for capacity availability.
+- Lowest-price strategy by default allocates the two lowest priced Spot Instance pools that aren’t optimized for capacity availability
+To find out how each allocation strategy fares regarding Spot savings and capacity, we compare ‘Cost of Auto Scaling group’ (number of instances x Spot price/hour for each type of instance) and ‘Spot interruptions rate’ (number of instances interrupted/number of instances launched) for each allocation strategy. We use fictional numbers for the purpose of this post. However, you can use the Cloud Intelligence Dashboards to find the actual Spot Saving, and the Amazon EC2 Spot interruption dashboard to log Spot Instance interruptions. The example results after a 30-day period are as follows:
+| Allocation strategy | Instance allocation | Cost of Auto Scaling group | Spot interruptions rate |
+| price-capacity-optimized | 40 c6i.xlarge 20 c5.xlarge | $4.80/hour | 3% |
+| capacity-optimized | 60 c5.xlarge | $5.00/hour | 2% |
+| lowest-price | 30 c5a.xlarge 30 m5n.xlarge | $4.75/hour | 20% |
+As per the above table, with the price-capacity-optimized strategy, the cost of the Auto Scaling group is only 5 cents (1%) higher, whereas the rate of Spot interruptions is six times lower (3% vs 20%) than the lowest-price strategy. In summary, from this exercise you learn that the price-capacity-optimized strategy provides the optimal Spot experience that is the best of both the lowest-price and capacity-optimized allocation strategies.
+## Common use-cases of price-capacity-optimized allocation strategy
+Earlier we mentioned that the price-capacity-optimized allocation strategy is recommended for most Spot workloads. To elaborate further, in this section we explore some of these common workloads.
+### Stateless and fault-tolerant workloads
+Stateless workloads that can complete ongoing requests within two minutes of a Spot interruption notice, and the fault-tolerant workloads that have a low cost of retries, are the best fit for the price-capacity-optimized allocation strategy. This category has workloads such as stateless containerized applications, microservices, web applications, data and analytics jobs, and batch processing.
+### Workloads with a high cost of interruption
+Workloads that have a high cost of interruption associated with an expensive cost of retries should implement checkpointing to lower the cost of interruptions. By using checkpointing, you make the price-capacity-optimized allocation strategy a good fit for these workloads, as it allocates capacity from the low-priced Spot Instance pools that offer a low Spot interruptions rate. This category has workloads such as long Continuous Integration (CI), image and media rendering, Deep Learning, and High Performance Compute (HPC) workloads.
+## Conclusion
+We recommend that customers use the price-capacity-optimized allocation strategy as the default option. The price-capacity-optimized strategy helps Amazon EC2 Auto Scaling groups and Amazon EC2 Fleet provision target capacity with an optimal experience. Updating to the price-capacity-optimized allocation strategy is as simple as updating a single parameter in an Amazon EC2 Auto Scaling group and Amazon EC2 Fleet.
+To learn more about allocation strategies for Spot Instances, visit the Spot allocation strategies documentation page.
+### Resources
+Serverless Computing and Applications Amazon Container Services AWS Messaging Cloud Compute with AWS Desktop and Application Streaming
+### Follow
+Twitter Facebook LinkedIn Twitch Email Updates

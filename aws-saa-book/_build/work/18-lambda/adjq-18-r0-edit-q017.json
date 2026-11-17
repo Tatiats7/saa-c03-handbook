@@ -1,0 +1,110 @@
+[
+ {
+  "id": "lambda-q017",
+  "section": "2-deep.md#each-request-runs-in-an-execution-environment-that-lambda-can-freeze-and-reuse",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K12"
+  ],
+  "topics": [
+   "compute",
+   "performance"
+  ],
+  "services": [
+   "lambda",
+   "s3",
+   "fargate"
+  ],
+  "concept": "reuse-warm-environment",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST development effort",
+  "stem": "A company runs an AWS Lambda function that answers product search requests. At the start of every invocation, the handler downloads the same 300 MB reference file from an Amazon S3 bucket, which makes each request slow. The file changes once a week, and the company accepts that an execution environment keeps using an old copy for a few hours. The function serves a steady load of about 20 concurrent requests that does not grow. Every request must be fast, including the first request in each execution environment. Which combination of steps will meet these requirements with the LEAST development effort? (Select TWO.)",
+  "keywords": [
+   "the handler downloads the same 300 MB reference file",
+   "including the first request in each execution environment",
+   "LEAST development effort"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Move the download out of the handler into the initialization code, so that the download runs once when Lambda prepares each environment.",
+    "correct": true,
+    "why": "Initialization code runs before the handler and [is not run again](../facts/lambda.md#lambda-static-init-reuse-connections) when an invocation uses a warm execution environment, so the download happens once per environment.",
+    "concept": "init-code-outside-handler",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Store the reference file in an environment variable of the function, and read the variable at the start of each invocation.",
+    "correct": false,
+    "why": "All environment variables of a function together are limited to [4 KB](../facts/lambda.md#lambda-env-vars-size), which is far too small for the 300 MB file.",
+    "concept": "file-in-env-var",
+    "trap": null,
+    "misconception": "believes that environment variables can hold large data files",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Cache the file in the /tmp directory from the handler, and download it again only when the file is not in /tmp yet.",
+    "correct": false,
+    "why": "The copy in /tmp [remains when the execution environment is frozen](../facts/lambda.md#lambda-tmp-transient-cache), but the first request in each environment still downloads the file.",
+    "concept": "tmp-cache-in-handler",
+    "trap": null,
+    "misconception": "believes that a cache that the handler fills also makes the first request in a new environment fast",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Configure provisioned concurrency of 20 on an alias of the function, and point the callers of the function at that alias.",
+    "correct": true,
+    "why": "Provisioned concurrency keeps [pre-initialized execution environments](../facts/lambda.md#lambda-pc-scales-beyond-setting), so the initialization code has run before the first request arrives.",
+    "concept": "provisioned-concurrency-prepares-init",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Rebuild the search service as containers on Amazon ECS with AWS Fargate, with tasks that load the file at startup and keep it in memory.",
+    "correct": false,
+    "why": "It works, but rebuilding the service on containers is far more development than one code change and one function setting.",
+    "concept": "always-on-containers",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The download repeats because it runs in the handler. Code outside the handler runs once per environment, because [Lambda can reuse the environment](../facts/lambda.md#lambda-warm-start-environment-reuse) for later requests. Provisioned concurrency runs that code before requests arrive, so the function [does not exhibit cold start behavior](../facts/lambda.md#lambda-pc-not-latest-no-cold-start). Lambda [terminates execution environments every few hours](../facts/lambda.md#lambda-environment-not-persistent), so a new copy arrives within hours of a change.",
+  "takeaway": "Load a large shared file in initialization code, and add provisioned concurrency so that even the first request in an environment is fast.",
+  "twin": "If the stem said \"slow first requests in a new environment are acceptable\" instead: the initialization code alone fits, because it [is not run again](../facts/lambda.md#lambda-static-init-reuse-connections) on a warm start.",
+  "say": null,
+  "facts": [
+   "lambda-static-init-reuse-connections",
+   "lambda-env-vars-size",
+   "lambda-tmp-transient-cache",
+   "lambda-pc-scales-beyond-setting",
+   "lambda-pc-not-latest-no-cold-start",
+   "lambda-warm-start-environment-reuse",
+   "lambda-environment-not-persistent"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-select-two",
+   "ee-least-development-effort",
+   "ee-which-combination",
+   "ee-must"
+  ],
+  "twin_of": null,
+  "chapter": "lambda",
+  "authors": [
+   "questions-18-1"
+  ]
+ }
+]

@@ -1,0 +1,185 @@
+{
+ "lens": "exam",
+ "chapter": "07",
+ "reviewer": "review-07-exam",
+ "date": "2026-10-12",
+ "scope_note": "Ran sync 07 (written=0 unchanged=8). Read 1-fast.md, 2-deep.md, 5-quiz.md (10 shipped: q003 worked; core q001, q002, q009, q006; extended q004, q005, q007, q008, q010), 3-do.md and 4-say.md (both 'Nothing here yet.'), data/07-secrets-certificates/{questions,cards,speak,tasks}.json (13 questions: 10 ready, q011/q012/q013 verified but not shipped), brief.json (traps, signals, compare tables, question plan, notes), the registry entry (5 bullets), FREQUENCY.md (planning input only) and facts/acm.md, facts/secrets-manager.md, facts/parameter-store.md. Bullet coverage: 1.2.K1 (q003, q004, q006), 1.2.S3 (q007), 1.3.S3 (q002, q008), 1.3.S7 (q005, q009, q010), 2.1.K2 (q001): every bullet has a section and a shipped question. Q205: 25 of 30 wrong options carry a trap id.",
+ "findings": [
+  {
+   "id": "exam-001",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1 (step 2)",
+   "quote": "2. **CloudFront to the load balancer.** You can [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region) for the origin.",
+   "type": "misleading-wording",
+   "severity": "blocking",
+   "evidence": "The CloudFront page means 'not restricted to us-east-1': the origin certificate sits on the load balancer, and fact acm-faq-certificate-same-region-as-resource says ACM certificates \"must be in the same Region\" as the resource, \"The only exception is Amazon CloudFront\". Read alone, step 2 tells a reader who rushes that a certificate from any Region works on the load balancer. This contradicts the table eight lines below ('Load balancer, also as an origin | Its own: it must be in the same Region') and teaches the opposite trap: reuse the us-east-1 CloudFront certificate on an eu-west-1 load balancer. Fix (same length): '2. **CloudFront to the load balancer.** The origin certificate sits on the load balancer, so it [must be in the same Region](../facts/acm.md#acm-faq-certificate-same-region-as-resource) as the load balancer, not in us-east-1.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Step 2 now reads 'The origin certificate [must be in the same Region](acm-faq-certificate-same-region-as-resource) as the load balancer.'"
+  },
+  {
+   "id": "exam-002",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q002 explanation (5-quiz.md Question 3, Why)",
+   "quote": "The load balancer keeps its eu-west-1 certificate, because you can [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region) for the origin.",
+   "type": "wrong-reason",
+   "severity": "blocking",
+   "evidence": "Same defect as exam-001, now in the explanation that teaches the key. The load balancer keeps its eu-west-1 certificate because a load balancer certificate \"must be in the same Region\" as the load balancer (fact acm-faq-certificate-same-region-as-resource), not because any Region works. The current sentence suggests the opposite and weakens the CloudFront-exception lesson that the question exists to teach. Fix: 'The load balancer keeps its eu-west-1 certificate, because it [must be in the same Region](../facts/acm.md#acm-faq-certificate-same-region-as-resource) as the load balancer; CloudFront is the only exception.' The edit changes rev and sends q002 back to verification (TOOLS-rules R5).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q002 explanation now ends 'because a load balancer's certificate [must be in the same Region](acm-faq-certificate-same-region-as-resource) as the load balancer.' The edit touches the explanation and the facts list only; stem, options and key (what the blind panel saw) are unchanged, so the question was edited in place and not reset, as in chapters 04 and 05."
+  },
+  {
+   "id": "exam-003",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "signals-and-traps (signals table, last row)",
+   "quote": "| \"TLS between internal services\" | ACM private certificate | you [must explicitly configure applications to trust](../facts/acm.md#acm-faq-public-vs-private-trust) it | browsers on the internet: an ACM public certificate |",
+   "type": "signal-too-broad",
+   "severity": "should",
+   "evidence": "The brief's stem was 'TLS between internal services that only the company's clients trust'; the fast file dropped the deciding phrase. 'Internal' alone does not point to a private certificate: the chapter's own FAQ 4 (fact acm-faq-public-cert-internal-load-balancer: \"Yes, but you can also consider using AWS Private CA\") says a public certificate works on an internal load balancer, and a private CA has a monthly fee (fact acm-faq-private-ca-monthly-fee: \"you pay a monthly fee\"). Under 'LOWEST cost' the free public certificate wins. The guard 'browsers on the internet' is not a condition of this stem, so it guards nothing. Fix: stem '\"internal names that only the company's own clients trust\"'; But not if: 'the name is in a public domain and cost decides: an ACM public certificate also works on an internal load balancer'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Row now: stem '\"TLS between internal services that only company clients trust\"'; Because 'private certificates [do the same for private networks]'; But not if 'a public name, and cost decides: an ACM public certificate'."
+  },
+  {
+   "id": "exam-004",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "signals-and-traps (signals table, row 1)",
+   "quote": "| \"rotate the database password automatically\" | Secrets Manager with rotation | [Automatic, with native database integrations](../facts/parameter-store.md#parameter-store-vs-secrets-manager-rotation-row) | plain configuration: a standard parameter |",
+   "type": "guard-does-not-hold",
+   "severity": "should",
+   "evidence": "Lens rule: a 'but not if' cell names a stem that contains the cue but has another answer. A stem that asks to rotate a database password automatically is never 'plain configuration', so this guard never fires. Real guards exist in the canon: (a) a password with no rotation requirement and a cost qualifier: a SecureString standard parameter, because the Parameter Store standard tier is free (fact parameter-store-vs-secrets-manager-cost-row: \"Standard tier free\"); (b) 'rotate the encryption key': AWS KMS key rotation, chapter 06 (brief notes_for_orchestrator: bullet 1.3.S7 is shared with 06). Fix: But not if = 'no rotation is required and cost decides: a SecureString standard parameter' (or 'the encryption key rotates: AWS KMS key rotation').",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): But not if now reads 'no rotation, and cost decides: a SecureString standard parameter'."
+  },
+  {
+   "id": "exam-005",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "check (Check 2 answer)",
+   "quote": "Secrets Manager: it manages [third-party API keys](../facts/secrets-manager.md#secrets-manager-faq-kinds-of-secrets).",
+   "type": "incomplete-answer",
+   "severity": "should",
+   "evidence": "The question asks which service can rotate a third-party API key; the answer only says Secrets Manager stores such keys. Native rotation covers databases (fact parameter-store-vs-secrets-manager-rotation-row: \"Automatic, with native database integrations\"); other secrets rotate through a Lambda function that you write (fact secrets-manager-faq-custom-rotation-lambda: \"You can extend Secrets Manager to rotate other secrets, such as credentials for Oracle databases hosted on EC2 or custom applications generating tokens, by modifying sample AWS Lambda functions\"). Exam stems on non-database keys key on 'a custom AWS Lambda rotation function'; the gist here suggests rotation is built in for any key. Fix: 'Secrets Manager, with a rotation function that you write: you can [rotate other secrets ... by modifying sample AWS Lambda functions](../facts/secrets-manager.md#secrets-manager-faq-custom-rotation-lambda).' (use the fact's display).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Answer now reads 'Secrets Manager: you write the rotation function [by modifying sample AWS Lambda functions](secrets-manager-faq-custom-rotation-lambda).'"
+  },
+  {
+   "id": "exam-006",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "choose-it-or-not (Secrets Manager or Parameter Store, row 'Can another account read it?'); also 2-deep.md parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them (Exam trap)",
+   "quote": "| Can another account read it? | Yes, with a resource-based policy and [a KMS key that you create](../facts/secrets-manager.md#secrets-manager-cross-account-no-aws-managed-key) | Advanced tier only: [it must be in the advanced parameter tier](../facts/parameter-store.md#parameter-store-sharing-advanced-ram) |",
+   "type": "missing-changed-note",
+   "severity": "should",
+   "evidence": "Two gaps on the cross-account decision that the orchestrator note names as owned. (1) The Parameter Store cell drops the key condition that the Secrets Manager cell states: fact parameter-store-share-securestring-cmk, \"To share a SecureString parameter, it must be encrypted with a customer managed key ... AWS managed keys cannot be shared.\" (2) Cross-account sharing only arrived on 2024-02-21 (fact parameter-store-change-cross-account-sharing-2024). RULINGS hard rule 7 asks for a Changed recently note on any change since mid-2022; older practice questions (her Tutorials Dojo mocks included) treat 'Parameter Store cannot be shared across accounts, use Secrets Manager' as the key. The brief recorded this and the L107 blocker (the fact has no changed.date). Fix: ask the registrar to set changed {date 2024-02-21, old 'not available.'} on that fact and add a third fast Changed recently entry; until then add to the 2-deep Exam trap one sentence: 'Older questions may assume that parameters cannot be shared at all.' Change the cell to 'Advanced tier only, and a SecureString needs [a customer managed key](../facts/parameter-store.md#parameter-store-share-securestring-cmk)'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): (1) Cell now reads 'Advanced tier; a SecureString [must be encrypted with a customer managed key](parameter-store-share-securestring-cmk)'. (2) Not done: fact parameter-store-change-cross-account-sharing-2024 still has changed null, so a Changed recently entry fails L107, and 2-deep.md is at its word cap. For the registrar/orchestrator: set changed {date 2024-02-21, was 'not available.'} on that fact, then add the entry to 1-fast."
+  },
+  {
+   "id": "exam-007",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "shipped set (5-quiz.md); 1-fast.md choose-it-or-not (Public or imported or private certificate); 2-deep.md acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1 (API Gateway rows)",
+   "quote": "| When do you choose it? | For [resources on the public Internet](../facts/acm.md#acm-faq-public-internet-private-networks) | One [from a third-party certificate authority (CA)](../facts/acm.md#acm-import-reasons) | Private certificates [do the same for private networks](../facts/acm.md#acm-faq-public-internet-private-networks) |",
+   "type": "topic-coverage",
+   "severity": "should",
+   "evidence": "The chapter owns 'ACM public versus private certificates' and 'where ACM certificates attach (ELB, CloudFront, API Gateway)'. No shipped question tests public versus private (q013, the only one, is verified but not shipped) and none tests API Gateway (edge-optimized needs us-east-1, Regional needs the API's Region: fact acm-api-gateway-certificate-region). Meanwhile three shipped items test the same decision 'rotate -> Secrets Manager' (q003, q001, q006) and three lean on DNS-validation renewal (q009, q005, q008). FREQUENCY.md row 29 names 'certificates on ALB/CloudFront' and row 30 'automatic rotation'; the reader's weakest domain is Secure. Fix: ship q013 in place of q005 (its imported-renewal trap is still tested by q002 option d and q009 option d); give q002 or q008 an API Gateway twin line ('an edge-optimized API Gateway custom domain' -> us-east-1).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q013 set to ready (shipped) and q005 set to verified (not shipped) with q set-status; no question was reset. The API Gateway twin line was not added; the 2-deep table rows for edge-optimized and Regional API Gateway carry the rule."
+  },
+  {
+   "id": "exam-008",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "shipped set difficulty mix",
+   "quote": "difficulty of the 10 ready items: q009 = 1; q003, q001, q002, q006, q004, q005, q008 = 2; q007, q010 = 3",
+   "type": "difficulty-mix",
+   "severity": "should",
+   "evidence": "SPEC.json questions.difficulty_mix is 0.2 / 0.55 / 0.25 with difficulty_mix_tolerance 0.1. The shipped set is 10% / 70% / 20%: difficulty 2 is 5 points over its limit, difficulty 1 sits on the edge. The brief planned 2 / 7 / 3 of 12; the cut removed q011 (difficulty 1) and q012 (difficulty 3) and kept seven difficulty-2 items. q012 (Secrets Manager replication and replica promotion for warm standby) is also the only item on the Go deeper DR content and a strong exam pattern. Fix: ship q012 (extended, difficulty 3) in place of an extended difficulty-2 item (q004 or q008; together with exam-007 swapping q005 for q013 the mix becomes 10% / 60% / 30%, inside tolerance, and the 5 core / 5 extended split is kept).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q012 set to ready and q004 set to verified. Shipped mix is now 1 / 6 / 3 (10% / 60% / 30%); q lint 07 --ship: no errors, no warnings."
+  },
+  {
+   "id": "exam-009",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q006 option d why (5-quiz.md Question 5)",
+   "quote": "It works, but an advanced parameter costs [$0.05 per advanced parameter per month](../facts/parameter-store.md#parameter-store-price-advanced-parameter), and the stem asks for no notification.",
+   "type": "explanation-misreads-stem",
+   "severity": "should",
+   "evidence": "The stem says nothing about notifications, so 'the stem asks for no notification' is false and teaches a reader to invent constraints. The misconception recorded for this option is 'Production configuration needs the advanced tier of Parameter Store', and the why does not answer it. Fix: 'It works, but an advanced parameter costs [$0.05 per advanced parameter per month](...), and a URL fits in a standard value of [4 KB](../facts/parameter-store.md#parameter-store-tier-max-value-size); nothing here needs a parameter policy.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Why now ends 'and nothing in the stem needs a notification.' (why only)."
+  },
+  {
+   "id": "exam-010",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains (step 3 and table)",
+   "quote": "3. **Watch.** ACM sends [daily expiration events](../facts/acm.md#acm-approaching-expiration-event).",
+   "type": "missing-examinable",
+   "severity": "should",
+   "evidence": "Bullet 1.3.S7 (renewing certificates). A common item: certificates imported into ACM are not renewed by ACM, and the company must be alerted before they expire. The canon has both answers verified but the chapter uses neither: fact acm-approaching-expiration-event (\"ACM sends daily expiration events for all active certificates (public, private and imported) starting 45 days prior to expiration for private/imported certificates\", and \"This timing can be changed using the PutAccountConfiguration action\") and fact acm-config-rule-expiration-check (AWS Config rule acm-certificate-expiration-check, \"ACM does not automatically renew certificates that you import\"). Step 3 has no condition, no number and no question; the 'Imported' table row stops at 'You, by reimport'. Fix: step 3 = 'For an imported certificate, ACM sends [daily expiration events](...) from [45 days](...) before expiry; an Amazon EventBridge rule or the AWS Config rule acm-certificate-expiration-check alerts the team.' and give q005 the twin 'the team must be warned before the imported certificate expires'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Step 3 now reads 'ACM sends [daily expiration events], for an imported certificate from [45 days] before expiry.' The Config rule and the q005 twin were not added: q005 is no longer shipped (exam-007), and 2-deep.md is at its word cap."
+  },
+  {
+   "id": "exam-011",
+   "file": "data/07-secrets-certificates/speak.json",
+   "section": "secrets-certificates-s01 sixty_second line 5",
+   "quote": "Secrets Manager rotates the password with a Lambda function.",
+   "type": "overgeneralization",
+   "severity": "should",
+   "evidence": "With managed rotation no Lambda function is involved (fact secrets-manager-managed-rotation-no-lambda, used in 2-deep.md 'With managed rotation'), and the chapter's own exam signal says 'rotate the Amazon RDS master user password with the LEAST operational overhead' points to managed rotation. A spoken answer that she rehearses aloud fixes 'rotation = Lambda' in memory, which is the wrong pick on a LEAST-overhead RDS stem. Fix: 'For Amazon RDS, the database service can rotate it for you; for other secrets, a Lambda function does it.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): s01 line 5 now reads 'Secrets Manager rotates the password. For Amazon RDS, RDS can manage that for you.'"
+  },
+  {
+   "id": "exam-012",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q007 twin (5-quiz.md Question 8)",
+   "quote": "If the stem said \"a Lambda function in account A\" instead: no change is needed, because a customer managed key matters when you [access the secret from another AWS account](../facts/secrets-manager.md#secrets-manager-aws-managed-key-vs-customer-key).",
+   "type": "weak-twin",
+   "severity": "note",
+   "evidence": "A twin line should move the key to another option under one changed phrase. For a (Select TWO.) item with five options, 'no change is needed' is not an option, so the twin teaches nothing about the option set. A one-phrase twin that moves the key: 'the secret is encrypted with a customer managed key whose key policy allows the role' -> only the resource-based policy for the role is still needed (fact secrets-manager-cross-account-needs-both-policies).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q007 twin (wording only) now reads 'If the stem said \"the secret is encrypted with a customer managed key whose key policy allows the role\" instead: the resource-based policy is still needed, because cross-account reads need [a resource policy and in an identity policy].'"
+  },
+  {
+   "id": "exam-013",
+   "file": "07-secrets-certificates/5-quiz.md",
+   "section": "Core (Question 2 = q001, Question 5 = q006)",
+   "quote": "### Question 2 ... ### Question 5",
+   "type": "twin-spacing",
+   "severity": "note",
+   "evidence": "SPEC.json questions.twin_min_questions_between is 3. In questions.json order q001 and q006 have three items between them, but q013 is not shipped, so the rendered quiz shows only two (Questions 3 and 4) and the second twin follows the first too closely. If q013 is shipped (exam-007) the order holds only if q013 renders between them; otherwise move q006 to the end of the bank order or check the spacing on the shipped set.",
+   "status": "rejected",
+   "resolution": "fix-07 (2026-10-13): Q114 counts the questions between the twins in the file, where q002, q009 and q013 stand between q001 and q006 (3, the minimum); q lint --ship passes. q006 is already last in the bank. In the rendered Core group only four non-worked questions exist, so three questions between the twins cannot be met there; the twin line names the changed phrase."
+  },
+  {
+   "id": "exam-014",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "faq-quick-fire (FAQ 3)",
+   "quote": "**FAQ 3.** Do you pay for an ACM certificate on a load balancer? ... No. They [are free](../facts/acm.md#acm-faq-free-with-integrated-services).",
+   "type": "cost-nuance",
+   "severity": "note",
+   "evidence": "True for public certificates, but a private certificate needs a private CA, and for each one [you pay a monthly fee] (fact acm-faq-private-ca-monthly-fee, already in the Go deeper block). A 'MOST cost-effective' stem on TLS to an internal load balancer decides on exactly this (see exam-003). Fix: 'No for a public certificate; a private certificate needs a private CA, which has [a monthly fee](...).'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): FAQ 3 answer now adds 'For each private certificate authority (CA), [you pay a monthly fee](acm-faq-private-ca-monthly-fee).'"
+  },
+  {
+   "id": "exam-015",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q010 bullets",
+   "quote": "\"task\": \"1.3\", \"bullets\": [\"1.3.S7\"]",
+   "type": "bullet-mapping",
+   "severity": "note",
+   "evidence": "Bullet 1.3.S7 is 'Rotating encryption keys and renewing certificates'. q010 tests how a rotation function in private subnets reaches Secrets Manager (interface endpoint versus NAT gateway versus gateway endpoint), which is 1.2.S3 'Integrating AWS services to secure applications ... AWS Secrets Manager'. Coverage of 1.3.S7 stays with q005 and q009. Fix: map q010 to 1.2.S3 (task 1.2).",
+   "status": "rejected",
+   "resolution": "fix-07 (2026-10-13): The stem's failure is that every rotation fails, and the fix makes rotation work, so 1.3.S7 (rotating) still fits. With q005 no longer shipped, remapping q010 would leave 1.3.S7 with one shipped question (q009). Kept as is."
+  },
+  {
+   "id": "exam-016",
+   "file": "07-secrets-certificates/3-do.md",
+   "section": "whole file (also 4-say.md)",
+   "quote": "Nothing here yet.",
+   "type": "empty-generated-file",
+   "severity": "note",
+   "evidence": "Task secrets-certificates-t01, speak items s01 and s02 and all 12 cards have status 'candidate', so sync renders nothing; the 2-deep.md 'Try it' callout ('See [3-do.md](3-do.md)') points to an empty page. TOOLS-rules R5: a reviewer sets cards, speak items and tasks to ready after the item lint is clean. Set them ready before finalize (the counts gate needs them).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): t01, s01, s02 and the 12 cards were set to ready after clean item lints; sync filled 3-do.md and 4-say.md."
+  }
+ ]
+}

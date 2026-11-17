@@ -1,0 +1,838 @@
+[
+ {
+  "id": "messaging-q002",
+  "section": "2-deep.md#a-received-message-stays-hidden-until-it-is-deleted-or-the-timeout-ends",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K11"],
+  "topics": ["integration", "compute"],
+  "services": ["sqs", "ec2-auto-scaling"],
+  "concept": "visibility-timeout-shorter-than-processing",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs order-processing workers on Amazon EC2 instances in an Auto Scaling group. Several applications send messages to an Amazon SQS standard queue. The workers poll the queue and delete each message after they process it. Processing a message takes up to 4 minutes. The queue uses the default visibility timeout, and many messages are processed by two different workers. Which change will resolve this issue with the LEAST operational overhead?",
+  "keywords": ["takes up to 4 minutes", "default visibility timeout", "processed by two different workers", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Increase the visibility timeout of the queue to a value that is longer than the longest processing time of one message.",
+    "correct": true,
+    "why": "Each message stays [temporarily invisible to other consumers](../facts/sqs.md#sqs-receive-keeps-message-hidden) for the whole processing time, so a second worker does not receive it.",
+    "concept": "visibility-timeout",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Create a dead-letter queue, and add a redrive policy to the queue that moves a message after several unsuccessful receives.",
+    "correct": false,
+    "why": "A dead-letter queue sets aside messages that keep failing; it does not stop a second worker from receiving a message that is still in progress.",
+    "concept": "dead-letter-queue",
+    "trap": null,
+    "misconception": "A dead-letter queue stops a second consumer from receiving a message that is still in progress.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Change the workers to call ChangeMessageVisibility during processing, so that each message stays hidden until the worker finishes with it.",
+    "correct": false,
+    "why": "It works, but every worker needs new code for each message, although one queue setting gives the same result.",
+    "concept": "change-message-visibility",
+    "trap": null,
+    "misconception": "Extends the timeout in worker code when one queue setting is enough.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Change the workers to count the receives of each message and to move a message that keeps failing to a second queue.",
+    "correct": false,
+    "why": "The messages do not fail; they come back because the timeout ends too early, so counting receives does not stop the duplicates.",
+    "concept": "custom-receive-count",
+    "trap": null,
+    "misconception": "Treats the duplicate deliveries as messages that keep failing.",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Processing takes as long as 4 minutes, but the default visibility timeout is [30 seconds](../facts/sqs.md#sqs-visibility-timeout-default). If the timeout ends before the delete, the message [becomes visible again in the queue](../facts/sqs.md#sqs-undeleted-message-visible-again), and [a duplicate message is received by another consumer](../facts/sqs.md#sqs-visibility-timeout-too-short-gives-duplicate). One queue setting that is longer than the processing time keeps each message hidden until its worker deletes it.",
+  "takeaway": "Set the visibility timeout longer than the longest processing time, or a second consumer receives the message.",
+  "twin": "If the stem said \"A few malformed messages fail every time\" instead: a dead-letter queue, because a redrive policy counts the [number of times a consumer can receive](../facts/sqs.md#sqs-dlq-max-receive-count-meaning) a message.",
+  "say": "The timeout ends before the worker deletes the message, so I'd raise the visibility timeout above the processing time.",
+  "facts": [
+   "sqs-visibility-timeout-default",
+   "sqs-undeleted-message-visible-again",
+   "sqs-visibility-timeout-too-short-gives-duplicate",
+   "sqs-receive-keeps-message-hidden",
+   "sqs-dlq-max-receive-count-meaning"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q004",
+  "section": "2-deep.md#a-standard-queue-can-deliver-a-message-twice-so-consumers-must-be-idempotent",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.S1", "2.1.K11"],
+  "topics": ["integration", "patterns"],
+  "services": ["sqs"],
+  "concept": "idempotent-consumer-for-duplicates",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "BEST prevent duplicate charges",
+  "stem": "A company's payment service reads orders from an Amazon SQS standard queue and charges the customer for each order. Each order has a unique order ID. Sometimes a customer is charged twice for one order. Logs show two causes: some orders are received twice from the queue, and a partner system sometimes sends the same order again several hours later. Which solution will BEST prevent duplicate charges?",
+  "keywords": ["standard queue", "sends the same order again several hours later", "BEST prevent duplicate charges"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Increase the visibility timeout of the queue to its maximum value, so that a second consumer cannot receive an order that is still in progress.",
+    "correct": false,
+    "why": "A standard queue can deliver [more than one copy of a message](../facts/sqs.md#sqs-standard-at-least-once-duplicates) for other reasons too, and the partner repeats are new messages that no timeout stops.",
+    "concept": "visibility-timeout",
+    "trap": null,
+    "misconception": "A long visibility timeout removes every duplicate of a standard queue.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Replace the standard queue with an SQS FIFO queue that uses content-based deduplication, and keep the code of the payment service unchanged.",
+    "correct": false,
+    "why": "It removes repeats only inside the [5 minute deduplication interval](../facts/sqs.md#sqs-fifo-deduplication-interval-5-minutes), so partner orders that arrive hours later are still charged twice.",
+    "concept": "fifo-deduplication",
+    "trap": "messaging-trap-fifo-dedup-forever",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Make the payment service record each order ID with a conditional write before it charges, and skip an order whose ID is already recorded.",
+    "correct": true,
+    "why": "The order ID is the token, and consumers should [keep track of each token received](../facts/sqs.md#sqs-consumers-keep-idempotency-tokens-ignore-duplicates), which stops both causes of duplicate charges.",
+    "concept": "idempotent-consumer",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Keep the standard queue and fix the partner system alone, because a standard queue delivers each message exactly once and in order.",
+    "correct": false,
+    "why": "A standard queue gives [at-least-once message delivery](../facts/sqs.md#sqs-standard-at-least-once-duplicates), so the queue itself also repeats some orders.",
+    "concept": "standard-queue-delivery",
+    "trap": "messaging-trap-standard-exactly-once",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Duplicates come from two places, so the fix belongs in the consumer. With a standard queue you must [design your applications to be idempotent](../facts/sqs.md#sqs-faq-standard-queue-design-idempotent-consumers). A conditional write of the order ID lets the payment service charge each order a single time, whether the repeat comes from the queue or from the partner.",
+  "takeaway": "When duplicates come from several sources, make the consumer idempotent with a record of each processed ID.",
+  "twin": "If the stem said \"all duplicates come from the queue, and the payment code cannot change\" instead: a FIFO queue, because [duplicates are not introduced into the queue](../facts/sqs.md#sqs-faq-fifo-exactly-once-processing).",
+  "say": "Duplicates come from the queue and from the partner, so I'd make the consumer idempotent on the order ID.",
+  "facts": [
+   "sqs-faq-standard-queue-design-idempotent-consumers",
+   "sqs-standard-at-least-once-duplicates",
+   "sqs-fifo-deduplication-interval-5-minutes",
+   "sqs-consumers-keep-idempotency-tokens-ignore-duplicates",
+   "sqs-faq-fifo-exactly-once-processing"
+  ],
+  "sources": [],
+  "exam_english": ["ee-best"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q006",
+  "section": "2-deep.md#an-eventbridge-rule-matches-event-content-and-sends-each-match-to-its-targets",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K5", "2.1.S3", "2.1.S1"],
+  "topics": ["integration", "operations"],
+  "services": ["eventbridge", "sns", "lambda", "ec2"],
+  "concept": "eventbridge-rule-for-aws-service-events",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company must react whenever any Amazon EC2 instance in its AWS account changes to the stopped state. The operations team must receive an email within a few minutes, and an existing AWS Lambda function must create a ticket for each stopped instance. Instances are stopped by users in the console, by scripts and by scheduled jobs. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["changes to the stopped state", "an existing AWS Lambda function", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a Lambda function that runs every minute, calls DescribeInstances, compares the states with the last run, and sends the email and the ticket.",
+    "correct": false,
+    "why": "It works, but it is polling code to run and fix, although the default bus [automatically receives events from AWS services](../facts/eventbridge.md#eventbridge-default-bus-receives-aws-service-events).",
+    "concept": "polling-function",
+    "trap": "messaging-trap-build-own-change-detection",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Create an AWS CloudTrail trail that writes to an Amazon S3 bucket, and add an S3 event notification that invokes a function to read each log file.",
+    "correct": false,
+    "why": "It works, but it adds a trail, a bucket and log-parsing code, which is far more to run than one rule on the event bus.",
+    "concept": "cloudtrail-log-parsing",
+    "trap": "messaging-trap-build-own-change-detection",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Create an Amazon CloudWatch alarm on the StatusCheckFailed metric of each instance, and send the alarm notifications to an Amazon SNS topic with an email subscription.",
+    "correct": false,
+    "why": "A status check alarm watches instance health; a stop that a user or a script requests is a state change, not a failed check.",
+    "concept": "status-check-alarm",
+    "trap": null,
+    "misconception": "A status check alarm reports every stop of an instance.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Create an Amazon EventBridge rule on the default event bus for EC2 stop events, with the Lambda function and an email-subscribed SNS topic as targets.",
+    "correct": true,
+    "why": "The rule matches the stop events on the [default event bus](../facts/eventbridge.md#eventbridge-default-bus-receives-aws-service-events) and can [route to multiple targets](../facts/eventbridge.md#eventbridge-faq-single-rule-routes-to-multiple-targets-in-parallel), so one rule reaches both the topic and the function.",
+    "concept": "eventbridge-rule",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Every account has a [default event bus](../facts/eventbridge.md#eventbridge-default-bus-receives-aws-service-events) that [automatically receives events from AWS services](../facts/eventbridge.md#eventbridge-default-bus-receives-aws-service-events), and EC2 is one of those services. One rule matches the stopped state, whoever stopped the instance. A single rule can [route to multiple targets](../facts/eventbridge.md#eventbridge-faq-single-rule-routes-to-multiple-targets-in-parallel), so the topic sends the email and the function creates the ticket, with no code to poll.",
+  "takeaway": "To react to a change of an AWS resource, match its event with an EventBridge rule; do not poll.",
+  "twin": "If the stem said \"must react when the instance health checks fail\" instead: a CloudWatch alarm on StatusCheckFailed, because failed checks are a metric, not a state change.",
+  "say": "EC2 sends its state changes to the default event bus, so one EventBridge rule with two targets does it without code.",
+  "facts": [
+   "eventbridge-default-bus-receives-aws-service-events",
+   "eventbridge-faq-single-rule-routes-to-multiple-targets-in-parallel"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q008",
+  "section": "2-deep.md#workers-scale-on-the-backlog-per-instance-and-not-on-queue-length",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": ["3.2.S2", "3.2.S1"],
+  "topics": ["integration", "performance", "compute"],
+  "services": ["sqs", "ec2-auto-scaling", "cloudwatch"],
+  "concept": "scale-workers-on-backlog-per-instance",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "BEST meet the processing-time goal",
+  "stem": "A company processes uploaded images with Amazon EC2 instances in an Auto Scaling group. The instances poll an Amazon SQS queue. Each message takes about the same time to process. The number of uploads changes during the day, and each image must be processed within a set time after upload. The group uses target tracking on average CPU utilization, and messages often wait too long. Which metric should the target tracking policy use to BEST meet the processing-time goal?",
+  "keywords": ["Each message takes about the same time to process", "The number of uploads changes during the day", "BEST meet the processing-time goal"],
+  "options": [
+   {
+    "id": "a",
+    "text": "The ApproximateNumberOfMessagesVisible metric of the queue alone, with one fixed target number of visible messages for the whole group.",
+    "correct": false,
+    "why": "The queue length [might not change proportionally](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-queue-length-not-proportional) to the size of the group, so one fixed target misses the processing-time goal.",
+    "concept": "queue-length-metric",
+    "trap": "auto-scaling-trap-queue-length-metric",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "A metric math expression that divides ApproximateNumberOfMessagesVisible by GroupInServiceInstances, with the acceptable backlog per instance as the target value.",
+    "correct": true,
+    "why": "The [backlog per instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-backlog-per-instance) shows how much waiting work each instance carries, so its target follows the processing-time goal.",
+    "concept": "backlog-per-instance",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "The ApproximateNumberOfMessagesNotVisible metric of the queue, with one fixed target number of messages that the instances are processing.",
+    "correct": false,
+    "why": "It counts messages [received but not yet deleted or expired](../facts/sqs.md#sqs-metric-not-visible-messages-is-in-flight): the work in progress, not the messages that wait.",
+    "concept": "in-flight-metric",
+    "trap": "messaging-trap-in-flight-is-backlog",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "The NumberOfMessagesSent metric of the queue, with a target value that matches the average number of uploads in one minute.",
+    "correct": false,
+    "why": "It counts the messages that producers add to the queue, so it shows arrivals and not the waiting work of each instance.",
+    "concept": "messages-sent-metric",
+    "trap": null,
+    "misconception": "The number of arriving messages shows how long messages wait.",
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "The goal is a wait time, and every message takes about the same time, so the signal is the waiting work of each instance. Metric math divides [ApproximateNumberOfMessagesVisible](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-backlog-per-instance-metric-math) by [GroupInServiceInstances](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-backlog-per-instance-metric-math). Target tracking then keeps the [backlog per instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-backlog-per-instance) at the acceptable value as the load changes.",
+  "takeaway": "Scale queue workers on the backlog per instance, not on CPU or on the queue length alone.",
+  "twin": "If the stem said \"alarm when messages wait too long\" instead: [ApproximateAgeOfOldestMessage](../facts/sqs.md#sqs-metric-age-of-oldest-message-measures-lag), because it reports the oldest unprocessed message.",
+  "say": "I'd scale on backlog per instance: visible messages divided by the instances in service, with the acceptable backlog as the target.",
+  "facts": [
+   "ec2-auto-scaling-sqs-backlog-per-instance-metric-math",
+   "ec2-auto-scaling-sqs-backlog-per-instance",
+   "ec2-auto-scaling-sqs-queue-length-not-proportional",
+   "sqs-metric-not-visible-messages-is-in-flight",
+   "sqs-metric-age-of-oldest-message-measures-lag"
+  ],
+  "sources": [],
+  "exam_english": ["ee-best"],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the metric that target tracking should use to BEST meet a processing-time goal.",
+    "I mark the constraints: the instances poll an SQS queue, each message takes about the same time, the number of uploads changes during the day, and messages wait too long with scaling on CPU.",
+    "Before I look at the options, I predict the backlog per instance: the visible messages divided by the instances in service, because that number tells how long each instance needs to clear its share.",
+    "I remove ApproximateNumberOfMessagesNotVisible, because it counts messages that were received but not yet deleted, the work in progress. I remove NumberOfMessagesSent, because new arrivals do not show how much work waits for each instance.",
+    "Between the visible messages alone and the visible messages per instance the difference is the size of the group; the stem says the load changes, and the queue length might not change proportionally to the group, so I choose the backlog per instance.",
+    "Check: the metric math option follows the waiting work of each instance, adapts to the changing load and serves the processing-time goal. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ },
+ {
+  "id": "messaging-q010",
+  "section": "2-deep.md#workers-scale-on-the-backlog-per-instance-and-not-on-queue-length",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": ["3.2.S2", "3.2.S1"],
+  "topics": ["integration", "operations"],
+  "services": ["sqs", "cloudwatch"],
+  "concept": "age-of-oldest-message-alarm",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs an order system in which Amazon EC2 instances process messages from an Amazon SQS queue. On some nights the consumers stop working for a while, and customers notice late orders the next morning. The operations team wants to monitor the queue and receive an alarm when messages wait too long before a consumer processes them. Which Amazon CloudWatch metric should the alarm use?",
+  "keywords": ["messages wait too long before a consumer processes them", "the consumers stop working"],
+  "options": [
+   {
+    "id": "a",
+    "text": "The ApproximateNumberOfMessagesNotVisible metric of the queue",
+    "correct": false,
+    "why": "It counts messages [received but not yet deleted or expired](../facts/sqs.md#sqs-metric-not-visible-messages-is-in-flight), so it shows work in progress, and stopped consumers receive nothing.",
+    "concept": "in-flight-metric",
+    "trap": "messaging-trap-in-flight-is-backlog",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "The NumberOfMessagesSent metric of the queue",
+    "correct": false,
+    "why": "It counts the messages that producers add to the queue, so it shows arrivals, not how long any message waits.",
+    "concept": "messages-sent-metric",
+    "trap": null,
+    "misconception": "The number of arriving messages shows how long messages wait.",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "The ApproximateAgeOfOldestMessage metric of the queue",
+    "correct": true,
+    "why": "It reports the age of the [oldest unprocessed message in the queue](../facts/sqs.md#sqs-metric-age-of-oldest-message-measures-lag), which is the wait that the team wants to watch.",
+    "concept": "age-of-oldest-message",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "The CPUUtilization metric of the consumer instances",
+    "correct": false,
+    "why": "CPU shows how busy the instances are; stopped consumers use little CPU, so the alarm stays quiet when orders wait.",
+    "concept": "cpu-metric",
+    "trap": null,
+    "misconception": "Instance CPU shows how long messages wait in a queue.",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "The team cares about how long messages wait, not how many arrive. [ApproximateAgeOfOldestMessage](../facts/sqs.md#sqs-metric-age-of-oldest-message-measures-lag) reports the age of the oldest unprocessed message. When the consumers stop, that age grows, so an alarm on it fires whatever the number of instances.",
+  "takeaway": "To alarm on waiting time, watch ApproximateAgeOfOldestMessage; to scale workers, use the backlog per instance.",
+  "twin": "If the stem said \"scale the consumers so that the backlog stays small\" instead: the [backlog per instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-sqs-backlog-per-instance), because a target tracking policy needs a value that moves with the group size.",
+  "say": "Wait time is the age of the oldest message, so I'd alarm on ApproximateAgeOfOldestMessage.",
+  "facts": [
+   "sqs-metric-age-of-oldest-message-measures-lag",
+   "sqs-metric-not-visible-messages-is-in-flight",
+   "ec2-auto-scaling-sqs-backlog-per-instance"
+  ],
+  "sources": [],
+  "exam_english": ["ee-monitor"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q012",
+  "section": "2-deep.md#a-filter-policy-decides-which-messages-reach-each-subscription",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.S3"],
+  "topics": ["integration"],
+  "services": ["sns", "sqs", "lambda"],
+  "concept": "sns-filter-policy-per-subscription",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST development effort",
+  "stem": "A company publishes every order event to an Amazon SNS standard topic. Each message has a message attribute that holds the order type. Two Amazon SQS queues are subscribed to the topic. A Lambda function is also subscribed: it receives every event and copies the return events into a third queue, the returns queue. The company wants to remove the function, and the returns queue must still receive only the return events. Which solution will meet these requirements with the LEAST development effort?",
+  "keywords": ["message attribute that holds the order type", "remove the function", "LEAST development effort"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Subscribe the returns queue to the topic directly, and give that subscription a filter policy that matches the order type of return events.",
+    "correct": true,
+    "why": "SNS sends a message to the subscription when its attributes [satisfy the conditions specified in the filter policy](../facts/sns.md#sns-filter-nonmatching-message-not-sent), so no code is needed.",
+    "concept": "subscription-filter-policy",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Keep a Lambda function between the topic and the returns queue, because an SNS topic sends every message to every subscription.",
+    "correct": false,
+    "why": "A subscriber gets every message by default, but you can [assign a filter policy to the topic subscription](../facts/sns.md#sns-filter-default-every-message) instead of a function.",
+    "concept": "filtering-function",
+    "trap": "messaging-trap-filter-needs-function",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Create a separate SNS topic for each order type, change the publishers to send each event to its topic, and subscribe the returns queue to one.",
+    "correct": false,
+    "why": "It works, but every publisher changes, although one filter policy on a subscription to the existing topic gives the same result.",
+    "concept": "topic-per-type",
+    "trap": "messaging-trap-topic-cannot-filter",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Replace the topic with an Amazon EventBridge event bus, create one rule for each queue, and change the publishers to send events to the bus.",
+    "correct": false,
+    "why": "It works, but publishers and consumers move to a new service, although the topic already offers [subscription filter policies](../facts/sns.md#sns-decision-filter-policies).",
+    "concept": "eventbridge-migration",
+    "trap": "messaging-trap-topic-cannot-filter",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Subscribers can [selectively receive only a subset](../facts/sns.md#sns-faq-message-filtering-subscribers-receive-subset) of the topic's messages. The order type is already a message attribute, so a filter policy on the returns queue's subscription does the function's work. The publishers, the topic and the other two queues do not change.",
+  "takeaway": "To give one subscriber a subset of a topic's messages, put a filter policy on its subscription.",
+  "twin": "If the stem said \"events also come from a SaaS partner application\" instead: an EventBridge event bus with rules, because EventBridge integrates directly with [third-party SaaS partners](../facts/eventbridge.md#eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners).",
+  "say": "A filter policy on the returns queue's subscription does the function's job, and nothing else changes.",
+  "facts": [
+   "sns-faq-message-filtering-subscribers-receive-subset",
+   "sns-filter-nonmatching-message-not-sent",
+   "sns-filter-default-every-message",
+   "sns-decision-filter-policies",
+   "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-development-effort"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q014",
+  "section": "2-deep.md#lambda-polls-the-queue-for-you-and-the-queue-decides-the-retries",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": ["3.2.S1"],
+  "topics": ["integration", "compute"],
+  "services": ["sqs", "lambda"],
+  "concept": "lambda-partial-batch-response",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST operationally efficient",
+  "stem": "A company uses an AWS Lambda function to process messages from an Amazon SQS standard queue. The event source mapping uses a batch size of 10, and the queue has a redrive policy with a dead-letter queue. When one message in a batch is malformed, the function returns an error for the whole batch. The other nine messages are processed again and again, and at last all ten messages move to the dead-letter queue. Which solution will retry only the malformed message in the MOST operationally efficient way?",
+  "keywords": ["returns an error for the whole batch", "retry only the malformed message", "MOST operationally efficient"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Set the batch size of the event source mapping to 1, so that each invocation of the function receives and processes a single message.",
+    "correct": false,
+    "why": "It works, but every message then needs its own invocation, so the function runs many more times for the same work.",
+    "concept": "batch-size-one",
+    "trap": null,
+    "misconception": "Smaller batches are the efficient way to isolate one bad message.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Configure an on-failure destination for the function that sends the records of failed invocations to a second SQS queue for review.",
+    "correct": false,
+    "why": "For a queue, the [visibility timeout and redrive policy](../facts/lambda.md#lambda-queue-esm-retry-set-on-queue) on the source queue decide retries and failed messages, not a setting of the function.",
+    "concept": "function-on-failure-destination",
+    "trap": "lambda-trap-function-dlq-for-sqs",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Lower the visibility timeout of the queue so that a failed batch returns to the function sooner and the good messages finish faster.",
+    "correct": false,
+    "why": "A shorter timeout returns the whole batch sooner; it does not separate the malformed message from the nine good ones.",
+    "concept": "visibility-timeout",
+    "trap": "messaging-trap-short-visibility-safer",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Turn on ReportBatchItemFailures in the event source mapping, and change the function to return the IDs of the messages that failed.",
+    "correct": true,
+    "why": "With [ReportBatchItemFailures](../facts/lambda.md#lambda-sqs-partial-batch-response), Lambda can [make only the failed messages visible again](../facts/lambda.md#lambda-sqs-partial-batch-response), so the good messages are not retried.",
+    "concept": "partial-batch-response",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "A function error returns the whole batch to the queue, so the nine good messages come back with the bad one. With a [partial batch response](../facts/lambda.md#lambda-sqs-partial-batch-response), the function reports which messages failed. The good messages are not processed again, and the queue's redrive policy moves the malformed message to the dead-letter queue.",
+  "takeaway": "For Lambda with SQS, turn on ReportBatchItemFailures so that one bad message does not send a whole batch back.",
+  "twin": "If the stem said \"without any change to the function code\" instead: set the batch size to 1, because a partial batch response needs the function to return the failed message IDs.",
+  "say": "I'd turn on a partial batch response, so the function reports the one failed message and the rest are done.",
+  "facts": [
+   "lambda-sqs-partial-batch-response",
+   "lambda-queue-esm-retry-set-on-queue"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-operationally-efficient"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q016",
+  "section": "2-deep.md#queues-subscribed-to-a-topic-give-each-consumer-its-own-durable-copy",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": ["1.1.S5"],
+  "topics": ["security", "integration"],
+  "services": ["sns", "sqs", "iam"],
+  "concept": "sns-to-sqs-queue-policy",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "An Amazon SNS standard topic and an Amazon SQS standard queue are in the same AWS account. A developer used the Subscribe API action to subscribe the queue to the topic. Server-side encryption is turned off for the queue, and the queue still has the access policy that it had when it was created. Messages published to the topic never arrive in the queue. Which change will deliver the messages in the MOST secure way?",
+  "keywords": ["the queue still has the access policy that it had when it was created", "never arrive in the queue", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a statement to the queue's access policy that allows every principal (*) to call sqs:SendMessage on the queue, with no condition.",
+    "correct": false,
+    "why": "It works, but a wildcard principal grants access to all users, [including anonymous users (public access)](../facts/iam.md#iam-principal-wildcard-is-public), so any sender can write to the queue.",
+    "concept": "wildcard-principal",
+    "trap": null,
+    "misconception": "Opening the queue to every principal is an acceptable fix for a missing delivery permission.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Add a statement to the queue's access policy that allows the SNS service principal to call sqs:SendMessage, with an aws:SourceArn condition for the topic.",
+    "correct": true,
+    "why": "The statement names the SNS service as sender, and the [aws:SourceArn condition](../facts/sns.md#sns-queue-policy-sourcearn-limits-to-one-topic) limits it to messages from this one topic.",
+    "concept": "queue-policy-for-topic",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Call the ConfirmSubscription API action for the subscription, because SNS delivers nothing to a queue until someone confirms the subscription.",
+    "correct": false,
+    "why": "When the queue and the topic are in the [same AWS account](../facts/sns.md#sns-faq-same-account-sqs-subscription-needs-no-opt-in), the subscription needs no confirmation step.",
+    "concept": "confirm-subscription",
+    "trap": null,
+    "misconception": "A same-account queue subscription waits for a confirmation before SNS delivers.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Turn on raw message delivery for the subscription, because the subscription itself already gives the SNS service permission to send messages to the queue.",
+    "correct": false,
+    "why": "Raw delivery changes the message format; SNS still needs you to [set a policy on the Amazon SQS queue](../facts/sns.md#sns-sqs-queue-needs-policy-allowing-topic) that allows it to send.",
+    "concept": "raw-message-delivery",
+    "trap": "messaging-trap-subscribe-without-queue-policy",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "A new queue's policy [allows only the queue owner](../facts/sqs.md#sqs-default-access-policy-owner-only) to send and receive messages, and SNS is not the owner. To publish from a topic to a queue you must [set a policy on the Amazon SQS queue](../facts/sns.md#sns-sqs-queue-needs-policy-allowing-topic). An [aws:SourceArn condition](../facts/sns.md#sns-queue-policy-sourcearn-limits-to-one-topic) lets messages from this one topic in and keeps every other sender out.",
+  "takeaway": "SNS can send to a queue when the queue's policy allows the topic; limit that statement with aws:SourceArn.",
+  "twin": "If the stem said \"the queue is encrypted with a customer managed key\" instead: also add a key policy statement, because SNS needs the [API actions GenerateDataKey and Decrypt](../facts/sns.md#sns-sse-topic-to-encrypted-queue-needs-cmk-policy).",
+  "say": "The queue policy still allows only the owner, so I'd allow the SNS service with an aws:SourceArn condition for this topic.",
+  "facts": [
+   "sqs-default-access-policy-owner-only",
+   "sns-sqs-queue-needs-policy-allowing-topic",
+   "sns-queue-policy-sourcearn-limits-to-one-topic",
+   "iam-principal-wildcard-is-public",
+   "sns-faq-same-account-sqs-subscription-needs-no-opt-in",
+   "sns-sse-topic-to-encrypted-queue-needs-cmk-policy"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-secure"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q020",
+  "section": "2-deep.md#resource-based-policies-decide-which-accounts-and-services-may-send-to-a-queue",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": ["1.1.S5"],
+  "topics": ["security", "identity", "integration"],
+  "services": ["sqs", "iam"],
+  "concept": "cross-account-queue-access-policy",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "An application in account B runs on Amazon EC2 instances with an IAM role. The role's identity-based policy allows sqs:SendMessage on an Amazon SQS queue in account A. Every SendMessage call fails with an access denied error. The queue uses SSE-SQS encryption, and its access policy has not changed since the queue was created. Which solution grants access in the MOST secure way and follows the principle of least privilege?",
+  "keywords": ["An application in account B", "queue in account A", "its access policy has not changed", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a statement to the queue's access policy in account A that allows the role's ARN to call sqs:SendMessage on this queue.",
+    "correct": true,
+    "why": "Across accounts the [resource-based policy in the trusting account must allow the requester](../facts/iam.md#iam-eval-cross-account-needs-both-policies), and this statement names one role and one action.",
+    "concept": "queue-policy-cross-account",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Change the identity-based policy of the role in account B to allow sqs:* on all resources, so that the role can reach the queue.",
+    "correct": false,
+    "why": "Account A must [configure the queue's access policy](../facts/sqs.md#sqs-cross-account-needs-queue-access-policy) for the role, and sqs:* on every resource also breaks least privilege.",
+    "concept": "broader-identity-policy",
+    "trap": "messaging-trap-iam-policy-enough-cross-account",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Add a statement to the queue's access policy in account A that allows every principal (*) to call sqs:SendMessage on this queue.",
+    "correct": false,
+    "why": "It works, but a wildcard principal lets principals of every AWS account send to the queue, which breaks least privilege.",
+    "concept": "wildcard-principal",
+    "trap": null,
+    "misconception": "Allows every principal when one role needs access.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add a statement to the queue's access policy that allows the role's ARN, and remove sqs:SendMessage from the role's own policy.",
+    "correct": false,
+    "why": "AWS [allows the request only if both evaluations return Allow](../facts/iam.md#iam-eval-cross-account-needs-both-policies), so the role's own permission must stay.",
+    "concept": "one-side-cross-account",
+    "trap": "iam-trap-cross-account-one-policy",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The role already has its allow in account B. The queue's policy [allows only the queue owner](../facts/sqs.md#sqs-default-access-policy-owner-only), so account A still denies the call. Account A must [configure the queue's access policy](../facts/sqs.md#sqs-cross-account-needs-queue-access-policy) to allow that principal, and a statement that names one role and one action grants exactly what the application needs.",
+  "takeaway": "Cross-account access to a queue needs the queue's access policy to allow the principal, as well as the principal's own policy.",
+  "twin": "If the stem said \"the queue is in the same account as the role\" instead: the call already succeeds, because [the permissions of identity-based and resource-based policies are a union](../facts/iam.md#iam-eval-same-account-identity-or-resource-allow).",
+  "say": "Account B already allows it, so I'd add the role's ARN to the queue policy in account A.",
+  "facts": [
+   "sqs-default-access-policy-owner-only",
+   "sqs-cross-account-needs-queue-access-policy",
+   "iam-eval-cross-account-needs-both-policies",
+   "iam-eval-same-account-identity-or-resource-allow"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-privilege", "ee-most-secure"],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q022",
+  "section": "2-deep.md#resource-based-policies-decide-which-accounts-and-services-may-send-to-a-queue",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": ["1.1.S5"],
+  "topics": ["security", "integration"],
+  "services": ["sqs", "sns", "kms", "cloudhsm"],
+  "concept": "encrypted-queue-for-service-sender",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "An Amazon SNS topic delivers messages to an Amazon SQS queue in the same AWS account. The queue's access policy allows the topic to send messages. A new company rule requires the queue to be encrypted at rest with an AWS KMS key whose key policy the company controls. After the team turned on SSE-KMS with the AWS managed key for Amazon SQS, no messages arrive in the queue. Which TWO actions will restore delivery and meet the rule with the LEAST operational overhead? (Select TWO.)",
+  "keywords": ["key policy the company controls", "AWS managed key for Amazon SQS", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Edit the key policy of the AWS managed key for Amazon SQS so that it allows the SNS service principal to use the key.",
+    "correct": false,
+    "why": "You [cannot modify the key policy](../facts/sqs.md#sqs-kms-aws-managed-key-policy-not-modifiable) of the AWS managed KMS key for Amazon SQS, so no statement for SNS can be added.",
+    "concept": "aws-managed-key-policy",
+    "trap": "kms-trap-aws-managed-key-controllable",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Create a customer managed KMS key, and configure the queue to use this key for server-side encryption instead of the AWS managed key.",
+    "correct": true,
+    "why": "For AWS services that send to encrypted queues, you must [create a customer managed KMS key](../facts/sqs.md#sqs-kms-service-senders-need-customer-managed-key), and the company controls its key policy.",
+    "concept": "customer-managed-key",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Switch the queue to SSE-SQS encryption, which uses keys that Amazon SQS manages, and keep the access policy of the queue unchanged.",
+    "correct": false,
+    "why": "SSE-SQS uses [SQS-managed encryption keys (SSE-SQS)](../facts/sqs.md#sqs-sse-two-key-types), so the company has no key policy to control, which the rule requires.",
+    "concept": "sse-sqs",
+    "trap": null,
+    "misconception": "SSE-SQS gives the company a key policy that it controls.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Add a statement to the key policy of the new key that allows the SNS service principal to use kms:GenerateDataKey and kms:Decrypt.",
+    "correct": true,
+    "why": "The key policy must grant SNS the [API actions GenerateDataKey and Decrypt](../facts/sns.md#sns-sse-topic-to-encrypted-queue-needs-cmk-policy), so that SNS can encrypt the messages that it sends.",
+    "concept": "key-policy-for-sns",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Create a customer managed key in an AWS KMS custom key store that an AWS CloudHSM cluster backs, and configure the queue to use it.",
+    "correct": false,
+    "why": "It works with the key policy statement, but a CloudHSM cluster is extra hardware to run, although a standard customer managed key meets the rule.",
+    "concept": "custom-key-store",
+    "trap": null,
+    "misconception": "A key policy that the company controls needs dedicated key hardware.",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "SNS needs the queue's KMS key to send to the encrypted queue. You [cannot modify the key policy](../facts/sqs.md#sqs-kms-aws-managed-key-policy-not-modifiable) of the AWS managed key, so the queue needs a customer managed key. Its key policy, which the company controls, must allow SNS the [API actions GenerateDataKey and Decrypt](../facts/sns.md#sns-sse-topic-to-encrypted-queue-needs-cmk-policy).",
+  "takeaway": "An AWS service that sends to an SSE-KMS queue needs a customer managed key whose policy allows that service.",
+  "twin": "If the stem said \"S3 event notifications send the messages\" instead: name the S3 service principal in the key policy, because event sources need [permissions in the key policy](../facts/sqs.md#sqs-kms-service-senders-need-customer-managed-key).",
+  "say": "The AWS managed key's policy can't be changed, so I'd use a customer managed key and allow SNS in its key policy.",
+  "facts": [
+   "sqs-kms-aws-managed-key-policy-not-modifiable",
+   "sns-sse-topic-to-encrypted-queue-needs-cmk-policy",
+   "sqs-kms-service-senders-need-customer-managed-key",
+   "sqs-sse-two-key-types"
+  ],
+  "sources": [],
+  "exam_english": ["ee-select-two", "ee-at-rest", "ee-least-operational-overhead"],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for TWO actions that restore delivery and meet the key rule with the LEAST operational overhead.",
+    "I mark the constraints: SNS sends to the queue, the queue's access policy already allows the topic, the company must control the key policy, and delivery stopped after SSE-KMS with the AWS managed key.",
+    "Before I look at the options, I predict one fix: edit the policy of the AWS managed key so that it allows the SNS service principal.",
+    "I remove SSE-SQS, because the company then controls no key policy. I remove the CloudHSM custom key store, because a standard customer managed key meets the rule with less to run.",
+    "Between editing the AWS managed key and creating a customer managed key the difference is who owns the key policy. My first idea breaks because the key policy of the AWS managed key for Amazon SQS cannot be modified; the stem says the company controls the key policy, so I choose a customer managed key and a statement that allows SNS to use GenerateDataKey and Decrypt.",
+    "Check: the new key and its policy statement restore delivery, the company controls the key policy, and the access policy of the queue stays as it is. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ },
+ {
+  "id": "messaging-q009",
+  "section": "2-deep.md#after-too-many-failed-receives-sqs-moves-a-message-to-a-dead-letter-queue",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K11", "2.1.K2"],
+  "topics": ["integration", "resilience"],
+  "services": ["sqs", "ec2-auto-scaling"],
+  "concept": "poison-message-dead-letter-queue",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs order-processing workers on Amazon EC2 instances in an Auto Scaling group. Several applications send messages to an Amazon SQS standard queue. The workers poll the queue and delete each message after they process it. Processing a message takes a few seconds. A few malformed messages fail every time, and the workers receive them again and again for days. Which change will resolve this issue with the LEAST operational overhead?",
+  "keywords": ["A few malformed messages fail every time", "again and again for days", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Increase the visibility timeout of the queue to a value that is longer than the longest processing time of one message.",
+    "correct": false,
+    "why": "A longer timeout makes the workers [wait for a relatively long time](../facts/sqs.md#sqs-visibility-timeout-too-long-delays-retry) between attempts, but the malformed message still fails and comes back.",
+    "concept": "visibility-timeout",
+    "trap": "messaging-trap-longer-timeout-stops-retries",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Create a dead-letter queue, and add a redrive policy to the queue that moves a message after several unsuccessful receives.",
+    "correct": true,
+    "why": "A [source queue can send messages](../facts/sqs.md#sqs-faq-dlq-definition-isolate-unprocessable-messages) to its dead-letter queue when the consumer cannot process them, so the loop stops.",
+    "concept": "dead-letter-queue",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Change the workers to call ChangeMessageVisibility during processing, so that each message stays hidden until the worker finishes with it.",
+    "correct": false,
+    "why": "Extending the timeout from the workers delays each new attempt, but the malformed message still fails and returns to the queue.",
+    "concept": "change-message-visibility",
+    "trap": "messaging-trap-longer-timeout-stops-retries",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Change the workers to count the receives of each message and to move a message that keeps failing to a second queue.",
+    "correct": false,
+    "why": "It works, but the workers then carry custom code for what a redrive policy on the queue does without code.",
+    "concept": "custom-receive-count",
+    "trap": null,
+    "misconception": "Builds in worker code what a redrive policy already does.",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "A malformed message fails every time, so it returns after each visibility timeout for days. A redrive policy sets the [number of times a consumer can receive](../facts/sqs.md#sqs-dlq-max-receive-count-meaning) a message; after that, SQS moves the message to the dead-letter queue. The workers stop receiving it, and the team can review it there.",
+  "takeaway": "A message that fails every time needs a redrive policy and a dead-letter queue, not a longer timeout.",
+  "twin": "If the stem said \"many messages are processed by two different workers\" instead: increase the visibility timeout, because the default of [30 seconds](../facts/sqs.md#sqs-visibility-timeout-default) ends during processing.",
+  "say": "The same bad messages fail forever, so I'd add a redrive policy that moves them to a dead-letter queue.",
+  "facts": [
+   "sqs-dlq-max-receive-count-meaning",
+   "sqs-visibility-timeout-too-long-delays-retry",
+   "sqs-faq-dlq-definition-isolate-unprocessable-messages",
+   "sqs-visibility-timeout-default"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead"],
+  "twin_of": "messaging-q002"
+ }
+]

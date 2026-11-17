@@ -1,0 +1,77 @@
+[
+ {
+  "id": "lambda-q004",
+  "section": "2-deep.md#one-regional-concurrency-quota-is-shared-by-all-functions-and-throttles-the-excess",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.K10"],
+  "topics": ["compute", "resilience"],
+  "services": ["lambda", "api-gateway", "cloudwatch", "ec2"],
+  "concept": "account-concurrency-quota",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a public API on Amazon API Gateway. The API invokes several AWS Lambda functions in one AWS Region. During monthly sales campaigns, traffic has sudden spikes, and some API calls fail with TooManyRequestsException errors. Amazon CloudWatch metrics show that the total concurrent executions of all functions in the Region reach the account quota at those times. The company must ensure that all requests are served during the next campaign. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["the total concurrent executions of all functions in the Region reach the account quota", "ensure that all requests are served", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Move the API code to Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer that scales on request count.",
+    "correct": false,
+    "why": "It works, because instances have no Lambda concurrency quota, but the team then patches and scales servers, which is far more work than one quota request.",
+    "concept": "move-api-to-ec2",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Configure provisioned concurrency on every function for the campaign period, so that the functions get extra capacity above the account quota.",
+    "correct": false,
+    "why": "Provisioned concurrency adds no capacity: it [incurs charges to your AWS account](../facts/lambda.md#lambda-provisioned-concurrency-charges) and counts toward the same account limit.",
+    "concept": "provisioned-concurrency-capacity",
+    "trap": null,
+    "misconception": "believes that provisioned concurrency adds capacity above the account concurrency quota",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Request an increase of the Lambda concurrent executions quota for the Region in Service Quotas, sized for the campaign peak with headroom.",
+    "correct": true,
+    "why": "All functions in the Region share the quota, and the default can be raised to [tens of thousands](../facts/lambda.md#lambda-concurrent-executions-default) through [Service Quotas](../facts/lambda.md#lambda-faq-limit-increase-service-quotas).",
+    "concept": "concurrency-quota-increase",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Keep the current configuration, because Lambda scales every function on demand without a limit and the errors stop after the spikes.",
+    "correct": false,
+    "why": "Requests above the limit fail with a [throttling error (429 status code)](../facts/lambda.md#lambda-throttle-429), so the same errors return at the next campaign peak.",
+    "concept": "no-change-scales-forever",
+    "trap": "lambda-trap-scales-without-limit",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The metrics show the Region-wide total at the quota, so Lambda throttles the extra requests. The concurrent executions quota applies [per AWS Region](../facts/lambda.md#lambda-quota-scope-region-vs-vpc) to all functions together, and a request to raise it goes through [Service Quotas](../facts/lambda.md#lambda-faq-limit-increase-service-quotas). One request before the campaign fixes the limit without a change to the API or the code.",
+  "takeaway": "Throttling at the Region-wide concurrency quota is fixed with a Service Quotas increase, not with provisioned concurrency.",
+  "twin": "If the stem said \"one function reaches its reserved concurrency\" instead: raise that function's reserved concurrency, because it is a cap that you set to [reserve a subset of your account concurrency limit](../facts/lambda.md#lambda-faq-per-function-concurrency-control).",
+  "say": "All functions in the Region share one concurrency quota, so I'd request an increase in Service Quotas before the campaign.",
+  "facts": [
+   "lambda-concurrent-executions-default",
+   "lambda-faq-limit-increase-service-quotas",
+   "lambda-provisioned-concurrency-charges",
+   "lambda-throttle-429",
+   "lambda-quota-scope-region-vs-vpc",
+   "lambda-faq-per-function-concurrency-control"
+  ],
+  "sources": [],
+  "exam_english": ["ee-spiky", "ee-ensure", "ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ }
+]

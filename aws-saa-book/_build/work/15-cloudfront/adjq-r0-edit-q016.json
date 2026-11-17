@@ -1,0 +1,101 @@
+{
+ "id": "cloudfront-q016",
+ "section": "2-deep.md#health-checks-and-traffic-dials-move-new-connections-from-one-region-to-another",
+ "pool": "chapter",
+ "layer": "extended",
+ "domain": 3,
+ "task": "3.2",
+ "bullets": [
+  "3.2.K2"
+ ],
+ "topics": [
+  "resilience"
+ ],
+ "services": [
+  "global-accelerator",
+  "elb",
+  "route53"
+ ],
+ "concept": "ga-active-standby-traffic-dial",
+ "difficulty": 3,
+ "type": "multi",
+ "select": 2,
+ "qualifier": "LEAST operational overhead",
+ "stem": "A company runs a TCP application on Amazon EC2 instances behind a Network Load Balancer in us-east-1. A standby copy runs behind a second Network Load Balancer in a second Region, us-west-2. An AWS Global Accelerator standard accelerator has one listener with an endpoint group for the us-east-1 load balancer. During normal operation, all traffic must go to us-east-1. If the us-east-1 endpoints become unhealthy, traffic must move to us-west-2 automatically. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+ "keywords": [
+  "all traffic must go to us-east-1",
+  "move to us-west-2 automatically",
+  "LEAST operational overhead"
+ ],
+ "options": [
+  {
+   "id": "a",
+   "text": "Register the us-west-2 Network Load Balancer as a second endpoint in the us-east-1 endpoint group, and set the weight of that endpoint to 0.",
+   "correct": false,
+   "why": "You associate [each endpoint group with one AWS Region](../facts/global-accelerator.md#global-accelerator-listener-endpoint-group-per-region), so the us-east-1 group cannot hold a load balancer from us-west-2.",
+   "concept": "cross-region-endpoint-in-group",
+   "trap": null,
+   "misconception": "one endpoint group can hold endpoints from more than one Region",
+   "distractor_type": "impossible-feature"
+  },
+  {
+   "id": "b",
+   "text": "Add an endpoint group for us-west-2 to the existing listener, and register the us-west-2 Network Load Balancer in that endpoint group as an endpoint.",
+   "correct": true,
+   "why": "You [associate each listener with one or more endpoint](../facts/global-accelerator.md#global-accelerator-listener-endpoint-group-per-region) groups and [each endpoint group with one AWS Region](../facts/global-accelerator.md#global-accelerator-listener-endpoint-group-per-region), so us-west-2 needs its own group.",
+   "concept": "endpoint-group-per-region",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "c",
+   "text": "Create a second accelerator for the us-west-2 load balancer, and create Amazon Route 53 failover records with health checks that point to the two accelerators.",
+   "correct": false,
+   "why": "It works, but it adds an accelerator and DNS records, while one accelerator does not depend on [the IP address caching settings of client devices](../facts/global-accelerator.md#global-accelerator-faq-no-dns-cache-dependency-seconds).",
+   "concept": "dns-failover-between-accelerators",
+   "trap": "cloudfront-trap-dns-failover-same",
+   "misconception": null,
+   "distractor_type": "violates-qualifier"
+  },
+  {
+   "id": "d",
+   "text": "Set the traffic dial of the us-west-2 endpoint group to 0 percent, and keep the traffic dial of the us-east-1 endpoint group at 100 percent.",
+   "correct": true,
+   "why": "A dial at 0 keeps us-west-2 out of normal traffic, and in a failover [Global Accelerator ignores the traffic dial setting](../facts/global-accelerator.md#global-accelerator-failover-to-another-endpoint-group-ignores-dial).",
+   "concept": "standby-dial-zero",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "e",
+   "text": "Set the client affinity of the listener to Source IP, so that each client keeps using the us-east-1 endpoints while those endpoints stay healthy.",
+   "correct": false,
+   "why": "Client affinity can [direct all requests from a user](../facts/global-accelerator.md#global-accelerator-client-affinity-for-stateful-apps) to the same endpoint for stateful applications; it does not choose an active Region.",
+   "concept": "client-affinity",
+   "trap": null,
+   "misconception": "client affinity decides which Region is active",
+   "distractor_type": "different-problem"
+  }
+ ],
+ "explanation": "The traffic dial supports [active-active and active-standby setups](../facts/global-accelerator.md#global-accelerator-dec-traffic-dial-weights-active-active-standby). The standby group's dial is 0, so it gets no normal traffic; when us-east-1 has no healthy endpoint, [Global Accelerator ignores the traffic dial setting](../facts/global-accelerator.md#global-accelerator-failover-to-another-endpoint-group-ignores-dial) and fails over.",
+ "takeaway": "Active-standby in Global Accelerator: the standby endpoint group gets a traffic dial of 0, and failover ignores the dial.",
+ "twin": "If the stem said \"each Region must serve the users closest to it\" instead: keep both traffic dials at their default of [100%](../facts/global-accelerator.md#global-accelerator-faq-traffic-dial-default-100-percent) after you add the second endpoint group.",
+ "say": "I add a us-west-2 endpoint group with its dial at zero; failover ignores the dial, so it is a standby.",
+ "facts": [
+  "global-accelerator-failover-to-another-endpoint-group-ignores-dial",
+  "global-accelerator-listener-endpoint-group-per-region",
+  "global-accelerator-faq-no-dns-cache-dependency-seconds",
+  "global-accelerator-client-affinity-for-stateful-apps",
+  "global-accelerator-dec-traffic-dial-weights-active-active-standby",
+  "global-accelerator-faq-traffic-dial-default-100-percent"
+ ],
+ "sources": [],
+ "exam_english": [
+  "ee-select-two",
+  "ee-which-combination",
+  "ee-cross-region"
+ ],
+ "twin_of": null
+}

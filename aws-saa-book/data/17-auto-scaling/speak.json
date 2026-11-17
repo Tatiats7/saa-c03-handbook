@@ -1,0 +1,620 @@
+{
+ "v": 1,
+ "chapter": "auto-scaling",
+ "items": [
+  {
+   "id": "auto-scaling-s01",
+   "kind": "explain",
+   "prompt": "The load balancer has health checks. Is it not the load balancer that replaces a broken instance?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "No. The load balancer only stops sending traffic to it. The Auto Scaling group replaces it, after you turn on ELB health checks.",
+   "sixty_second": [
+    "The short answer is no. The load balancer doesn't replace anything.",
+    "It works like this. The load balancer checks each instance.",
+    "When an instance fails, the load balancer stops sending it traffic.",
+    "The Auto Scaling group is what terminates that instance and launches a new one.",
+    "But by default, the group ignores the load balancer's health checks.",
+    "So you turn on the ELB health check type for the group.",
+    "The thing to watch is the health check grace period.",
+    "If it's shorter than your start time, the group can replace instances that are still starting.",
+    "Also, a few requests can fail before the load balancer notices.",
+    "In your case, the web instances take a few minutes before they serve traffic.",
+    "So the grace period should cover that start time.",
+    "Is the ELB health check type turned on for the web group today?"
+   ],
+   "skeleton": [
+    "load balancer only reroutes",
+    "group terminates and replaces",
+    "turn on ELB check type",
+    "grace period covers start time"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "When the load balancer detects an unhealthy target, it stops routing traffic to it, and it resumes when the target is healthy again.",
+     "accept": [
+      "the load balancer only stops sending traffic",
+      "the load balancer routes around the broken instance"
+     ],
+     "facts": [
+      "elb-unhealthy-target-stop-resume"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "By default, EC2 Auto Scaling ignores the results of the Elastic Load Balancing health checks.",
+     "accept": [
+      "the group does not use the load balancer checks by default",
+      "ELB checks are off for the group by default"
+     ],
+     "facts": [
+      "ec2-auto-scaling-elb-health-checks-ignored-by-default"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "To use the Elastic Load Balancing health checks, you must turn on that health check type for the Auto Scaling group.",
+     "accept": [
+      "turn on the ELB health check type",
+      "enable ELB health checks on the group"
+     ],
+     "facts": [
+      "ec2-auto-scaling-health-elb-check-must-be-turned-on"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "With the ELB checks turned on, the group terminates an instance that fails them and launches another instance to replace it.",
+     "accept": [
+      "the group replaces the unhealthy instance",
+      "Auto Scaling terminates it and launches a new one"
+     ],
+     "facts": [
+      "ec2-auto-scaling-elb-checks-reroute-and-replace",
+      "ec2-auto-scaling-unhealthy-terminated-replaced"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "The health check grace period is the minimum time a new instance stays in service before the group terminates it as unhealthy.",
+     "accept": [
+      "the grace period protects a starting instance",
+      "the grace period gives a new instance time to start"
+     ],
+     "facts": [
+      "ec2-auto-scaling-grace-period-definition"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Before the load balancer discovers that an instance is unhealthy, some requests to that instance fail.",
+     "accept": [
+      "a few requests fail first",
+      "requests fail until the check notices"
+     ],
+     "facts": [
+      "ec2-auto-scaling-faq-elb-requests-before-detection-fail"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "the load balancer terminates the broken instance and launches a new one",
+     "correct": "The load balancer only stops sending traffic to it. EC2 Auto Scaling replaces the unhealthy instance.",
+     "fact": "ec2-auto-scaling-elb-checks-reroute-and-replace"
+    },
+    {
+     "error": "the group uses the load balancer health checks by default",
+     "correct": "By default, EC2 Auto Scaling ignores the results of the ELB health checks. You turn on the ELB health check type.",
+     "fact": "ec2-auto-scaling-elb-health-checks-ignored-by-default"
+    },
+    {
+     "error": "no request fails when an instance breaks",
+     "correct": "Before the load balancer discovers that an instance is unhealthy, some requests to that instance fail.",
+     "fact": "ec2-auto-scaling-faq-elb-requests-before-detection-fail"
+    }
+   ],
+   "terms": [
+    {
+     "say": "turn on the ELB health check type",
+     "avoid": [
+      "switch on load balancer replacement"
+     ]
+    },
+    {
+     "say": "terminate an instance",
+     "avoid": [
+      "destroy an instance"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What grace period does a new group get by default?",
+     "answer": "It depends on how you create the group. In the console the default is 300 seconds. With the AWS CLI or an SDK the default is 0 seconds.",
+     "facts": [
+      "ec2-auto-scaling-grace-period-console-300-cli-0"
+     ]
+    },
+    {
+     "question": "Do we need a load balancer at all for the group to replace broken instances?",
+     "answer": "No. You can use the EC2 health check, the default type, to find and replace unhealthy instances. The ELB check adds one question: can the instance handle requests?",
+     "facts": [
+      "ec2-auto-scaling-faq-no-elb-required-ec2-health-check",
+      "ec2-auto-scaling-health-check-type-ec2-default",
+      "ec2-auto-scaling-health-elb-check-must-be-turned-on"
+     ]
+    }
+   ],
+   "facts": [
+    "elb-unhealthy-target-stop-resume",
+    "ec2-auto-scaling-elb-health-checks-ignored-by-default",
+    "ec2-auto-scaling-health-elb-check-must-be-turned-on",
+    "ec2-auto-scaling-elb-checks-reroute-and-replace",
+    "ec2-auto-scaling-unhealthy-terminated-replaced",
+    "ec2-auto-scaling-grace-period-definition",
+    "ec2-auto-scaling-faq-elb-requests-before-detection-fail",
+    "ec2-auto-scaling-grace-period-console-300-cli-0",
+    "ec2-auto-scaling-faq-no-elb-required-ec2-health-check",
+    "ec2-auto-scaling-health-check-type-ec2-default"
+   ],
+   "section": "2-deep.md#the-group-replaces-instances-that-fail-the-health-checks-you-turned-on",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 2
+  },
+  {
+   "id": "auto-scaling-s02",
+   "kind": "decide",
+   "prompt": "Why not run 12 instances all day, so that launch week is safe? What does each choice cost us?",
+   "persona": "Ana, CEO of Callvale",
+   "ten_second": "Because we'd pay for idle instances every night. A schedule plus automatic scaling covers the peak, and we pay for what we use.",
+   "sixty_second": [
+    "The short answer is that the full peak size all day pays for idle capacity.",
+    "It works like this. Auto Scaling keeps a group of identical instances for us.",
+    "A schedule adds instances every weekday morning, before the peak starts.",
+    "During the day, a rule adds instances when they get busy.",
+    "It removes them again when the load drops in the evening.",
+    "We pay for instances from the moment they launch, so fewer idle hours cost less.",
+    "The Auto Scaling part itself has no additional fees.",
+    "The thing to watch is a surprise spike outside the morning.",
+    "New instances need a few minutes before they serve customers.",
+    "That's why we keep a small base running at night as well.",
+    "In your case, the question is how much delay a customer accepts.",
+    "Is a few minutes of slower service acceptable during a surprise spike?"
+   ],
+   "skeleton": [
+    "peak size all day idles",
+    "schedule before the morning peak",
+    "rule follows the load",
+    "surprise spike waits minutes"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Supplying resources based on demand means you pay only for the resources you use: launch them when needed and terminate them when not.",
+     "accept": [
+      "pay only for what we use",
+      "capacity follows demand, so idle hours cost nothing extra"
+     ],
+     "facts": [
+      "ec2-auto-scaling-wa-demand-based-pay-for-use"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "A scheduled action fits demand that follows a predictable schedule; dynamic scaling fits traffic changes at times you cannot predict.",
+     "accept": [
+      "the schedule handles the known morning peak",
+      "the automatic rule handles surprises"
+     ],
+     "facts": [
+      "ec2-auto-scaling-scheduled-vs-dynamic-when-to-use"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Scheduled scaling and scaling policies work together on one group.",
+     "accept": [
+      "use the schedule and the rule together",
+      "both on the same group"
+     ],
+     "facts": [
+      "ec2-auto-scaling-scheduled-plus-policies-together"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Instances are billed as soon as they launch, including the time before they are in service.",
+     "accept": [
+      "we pay from launch",
+      "a starting instance already costs money"
+     ],
+     "facts": [
+      "ec2-auto-scaling-billed-from-launch"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "EC2 Auto Scaling itself carries no additional fees; EC2 and CloudWatch fees apply and are billed separately.",
+     "accept": [
+      "Auto Scaling has no extra fee",
+      "we pay for the instances, not for Auto Scaling"
+     ],
+     "facts": [
+      "ec2-auto-scaling-faq-no-additional-fees"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "automatic scaling is free",
+     "correct": "Auto Scaling carries no additional fees, but EC2 and CloudWatch fees apply and are billed separately.",
+     "fact": "ec2-auto-scaling-faq-no-additional-fees"
+    },
+    {
+     "error": "the group scales out and in on its own once we create it",
+     "correct": "By default a group has no scaling policies or scheduled actions, so it keeps a fixed size.",
+     "fact": "ec2-auto-scaling-default-no-policies-fixed-size"
+    }
+   ],
+   "terms": [
+    {
+     "say": "scheduled action",
+     "avoid": [
+      "timer"
+     ]
+    },
+    {
+     "say": "scale in",
+     "avoid": [
+      "shrink down"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can the schedule and the automatic rule work against each other?",
+     "answer": "They can. After the scheduled action runs, the scaling policy keeps deciding, so it can remove instances that the schedule added. So the schedule raises the minimum, and the policy then scales only above it.",
+     "facts": [
+      "ec2-auto-scaling-scheduled-plus-policies-together",
+      "ec2-auto-scaling-scheduled-action-keeps-current-limits"
+     ]
+    },
+    {
+     "question": "Do we pay for an instance while it is still starting?",
+     "answer": "Yes. You are billed for instances as soon as they launch, including the time that they are not yet in service.",
+     "facts": [
+      "ec2-auto-scaling-billed-from-launch"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-auto-scaling-wa-demand-based-pay-for-use",
+    "ec2-auto-scaling-scheduled-vs-dynamic-when-to-use",
+    "ec2-auto-scaling-scheduled-plus-policies-together",
+    "ec2-auto-scaling-billed-from-launch",
+    "ec2-auto-scaling-faq-no-additional-fees",
+    "ec2-auto-scaling-default-no-policies-fixed-size",
+    "ec2-auto-scaling-faq-target-tracking-definition",
+    "ec2-auto-scaling-scheduled-action-keeps-current-limits"
+   ],
+   "section": "2-deep.md#decision-record",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 2
+  },
+  {
+   "id": "auto-scaling-s03",
+   "kind": "decide",
+   "prompt": "Our workers pull jobs from a queue. Should the worker group scale on CPU?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Usually not. Scale on the backlog per instance: the messages in the queue divided by running instances. Target tracking keeps it near a target.",
+   "sixty_second": [
+    "The short answer is: scale on the backlog per instance, not on CPU.",
+    "It works like this. You take the number of messages in the queue.",
+    "You divide it by the number of instances in service.",
+    "That's the backlog per instance.",
+    "For the target, decide how long a job can wait.",
+    "Then divide that by the time one instance needs per message.",
+    "Target tracking then adds or removes workers to stay near that number.",
+    "The thing to watch is that busy workers often sit near full CPU.",
+    "So CPU tells you little about how long the queue is.",
+    "And the message count alone doesn't change in proportion to the group size.",
+    "In your case, start with the wait your customers accept.",
+    "How long can a job sit in the queue before a customer notices?"
+   ],
+   "skeleton": [
+    "backlog per instance, not CPU",
+    "messages divided by InService instances",
+    "target from acceptable wait",
+    "message count alone misleads"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Backlog per instance is the queue length divided by the number of InService instances of the group.",
+     "accept": [
+      "messages per running worker",
+      "queue messages divided by instances in service"
+     ],
+     "facts": [
+      "ec2-auto-scaling-sqs-backlog-per-instance"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "The target value is the acceptable backlog per instance: the acceptable latency divided by the average time an instance needs for one message.",
+     "accept": [
+      "acceptable wait divided by processing time",
+      "how many messages one worker can hold"
+     ],
+     "facts": [
+      "ec2-auto-scaling-sqs-acceptable-backlog-per-instance-target"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "The number of messages in the queue might not change in proportion to the size of the group that processes them.",
+     "accept": [
+      "the raw queue length is the wrong metric",
+      "message count does not track group size"
+     ],
+     "facts": [
+      "ec2-auto-scaling-sqs-queue-length-not-proportional"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "For batch work such as transcoding, full CPU utilization is expected and should not be the primary metric; use the depth of the job queue.",
+     "accept": [
+      "busy workers always look busy on CPU",
+      "scale on queue depth, not CPU"
+     ],
+     "facts": [
+      "ec2-auto-scaling-wa-queue-depth-metric-for-batch-work"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Messages not yet processed when a worker is terminated return to the queue for another instance.",
+     "accept": [
+      "an unfinished job goes back to the queue",
+      "another worker picks up the message"
+     ],
+     "facts": [
+      "ec2-auto-scaling-sqs-unprocessed-messages-return"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "scale on the total number of messages in the queue",
+     "correct": "The message count might not change in proportion to the group size. Divide it by the InService instances.",
+     "fact": "ec2-auto-scaling-sqs-queue-length-not-proportional"
+    },
+    {
+     "error": "CPU always shows how loaded a worker is",
+     "correct": "For queue work, full CPU utilization is expected and should not be the primary metric. Use the queue depth.",
+     "fact": "ec2-auto-scaling-wa-queue-depth-metric-for-batch-work"
+    }
+   ],
+   "terms": [
+    {
+     "say": "poll a queue",
+     "avoid": [
+      "read the line"
+     ]
+    },
+    {
+     "say": "backlog per instance",
+     "avoid": [
+      "queue size per box"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What happens to a job when scale in removes a worker in the middle of it?",
+     "answer": "Messages that were not processed return to the queue, and a running instance processes them. For long jobs, scale-in protection controls which workers are terminated.",
+     "facts": [
+      "ec2-auto-scaling-sqs-unprocessed-messages-return"
+     ]
+    },
+    {
+     "question": "Can the worker group go down to zero instances at night?",
+     "answer": "Only if the minimum capacity of the group is set to 0. Test first how it starts again: backlog per instance divides by the instances in service, and at zero there are none.",
+     "facts": [
+      "ec2-auto-scaling-target-tracking-scale-to-zero-needs-min-zero",
+      "ec2-auto-scaling-sqs-backlog-per-instance"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-auto-scaling-sqs-backlog-per-instance",
+    "ec2-auto-scaling-sqs-acceptable-backlog-per-instance-target",
+    "ec2-auto-scaling-sqs-queue-length-not-proportional",
+    "ec2-auto-scaling-wa-queue-depth-metric-for-batch-work",
+    "ec2-auto-scaling-sqs-unprocessed-messages-return",
+    "ec2-auto-scaling-target-tracking-scale-to-zero-needs-min-zero",
+    "ec2-auto-scaling-faq-target-tracking-definition"
+   ],
+   "section": "2-deep.md#a-worker-group-scales-on-the-backlog-of-messages-per-instance",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 2
+  },
+  {
+   "id": "auto-scaling-s04",
+   "kind": "compare",
+   "prompt": "Bigger instance or more instances: how should we scale our API servers?",
+   "persona": "a startup CTO you advise",
+   "ten_second": "Both add capacity. More instances follow a changing load. A bigger instance needs a stop, so plan for downtime.",
+   "sixty_second": [
+    "Both add capacity. The difference is how they handle a changing load.",
+    "It works like this. To scale up, you change the instance type.",
+    "You must stop the instance first, so you plan for downtime.",
+    "To scale out, an Auto Scaling group adds identical instances.",
+    "The other instances keep serving during that time.",
+    "AWS calls scaling out essential for workloads whose demand changes.",
+    "The thing to watch is state on the instance.",
+    "Scaling out works when any instance can serve any request.",
+    "So keep session data in a cache or a database, not in memory.",
+    "In your case, check what the API keeps between requests.",
+    "Does your API store anything in instance memory between requests?"
+   ],
+   "skeleton": [
+    "both add capacity",
+    "scale up needs a stop",
+    "scale out follows load",
+    "keep sessions off instances"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "To scale up, you resize an instance by changing its instance type.",
+     "accept": [
+      "a bigger instance type",
+      "change the size of the instance"
+     ],
+     "facts": [
+      "ec2-auto-scaling-vertical-resize-instance-type"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "You must stop an instance before you change its instance type, so you plan for downtime.",
+     "accept": [
+      "scaling up means a stop",
+      "resizing needs downtime"
+     ],
+     "facts": [
+      "ec2-auto-scaling-vertical-stop-required"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Horizontal scalability is essential for dynamic workloads with fluctuating demand.",
+     "accept": [
+      "more instances fit a changing load",
+      "scale out for demand that goes up and down"
+     ],
+     "facts": [
+      "ec2-auto-scaling-decision-guide-horizontal-for-fluctuating"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Stateless applications scale horizontally because any instance can serve any request.",
+     "accept": [
+      "the app must be stateless",
+      "any instance can take any request"
+     ],
+     "facts": [
+      "ec2-auto-scaling-wa-stateless-scales-horizontally"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "To make an application stateless, offload session data to a database, a cache or external files.",
+     "accept": [
+      "move sessions to a cache",
+      "keep sessions in a database"
+     ],
+     "facts": [
+      "ec2-auto-scaling-wa-offload-session-data"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "you can change the instance type with no downtime",
+     "correct": "You must stop the instance before you change its instance type, so plan for downtime.",
+     "fact": "ec2-auto-scaling-vertical-stop-required"
+    },
+    {
+     "error": "scaling out works for any application as it is",
+     "correct": "Scaling out works for stateless applications. Offload session data to a database, a cache or external files.",
+     "fact": "ec2-auto-scaling-wa-offload-session-data"
+    }
+   ],
+   "terms": [
+    {
+     "say": "scale out",
+     "avoid": [
+      "grow out"
+     ]
+    },
+    {
+     "say": "scale up",
+     "avoid": [
+      "size up"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we change the type of an instance that runs in an Auto Scaling group?",
+     "answer": "If you stop it, the group marks it unhealthy and can replace it. Suspend the scaling processes first, or roll out the new type with an instance refresh.",
+     "facts": [
+      "ec2-auto-scaling-vertical-stopped-group-instance-unhealthy",
+      "ec2-auto-scaling-instance-refresh-use-cases"
+     ]
+    },
+    {
+     "question": "What happens to our bill when we change the instance type?",
+     "answer": "From the change, you start paying the rate of the new instance type.",
+     "facts": [
+      "ec2-auto-scaling-vertical-resize-instance-type"
+     ]
+    }
+   ],
+   "facts": [
+    "ec2-auto-scaling-vertical-resize-instance-type",
+    "ec2-auto-scaling-vertical-stop-required",
+    "ec2-auto-scaling-decision-guide-horizontal-for-fluctuating",
+    "ec2-auto-scaling-wa-stateless-scales-horizontally",
+    "ec2-auto-scaling-wa-offload-session-data",
+    "ec2-auto-scaling-vertical-stopped-group-instance-unhealthy",
+    "ec2-auto-scaling-instance-refresh-use-cases"
+   ],
+   "section": "2-deep.md#stopped-instances-belong-in-a-warm-pool-not-in-the-running-group",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 2
+  }
+ ]
+}

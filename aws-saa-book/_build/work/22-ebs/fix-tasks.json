@@ -1,0 +1,247 @@
+[
+ {
+  "id": "ebs-t03",
+  "type": "try",
+  "title": "Snapshot a volume and restore it in another zone",
+  "kills": "\"A snapshot can be restored only in the Availability Zone of its source volume.\"",
+  "trap": "ebs-trap-volume-attaches-across-azs",
+  "section": "2-deep.md#a-restored-volume-can-start-in-any-zone-but-reads-slowly-at-first",
+  "pass_route": false,
+  "minutes": 15,
+  "cost": "More than $0: two 2 GiB gp3 volumes and one snapshot, for the minutes that they exist. In the example of the Amazon EBS pricing page, gp3 storage costs $0.08 per GB-month, billed in per-second increments, with a 60-second minimum. The Amazon EBS User Guide names a standard snapshot rate of $0.05 per GB-month, and a snapshot charge is based on the size of the data being backed up: nothing was written to this volume.",
+  "cost_if_forgotten": "More than $0 a day, every day until you delete them: 4 GiB of gp3 storage at $0.08 per GB-month, and the snapshot at $0.05 per GB-month of stored data.",
+  "cost_facts": [
+   "ebs-gp3-storage-price-example",
+   "ebs-billing-per-second-60-second-minimum",
+   "ebs-snapshot-standard-price",
+   "ebs-snapshot-charged-by-data-not-volume-size",
+   "ebs-recycle-bin-billed-same-rate"
+  ],
+  "permissions": [
+   "ec2:DescribeAvailabilityZones",
+   "ec2:CreateVolume",
+   "ec2:CreateTags",
+   "ec2:DescribeVolumes",
+   "ec2:CreateSnapshot",
+   "ec2:DescribeSnapshots",
+   "ec2:DeleteVolume",
+   "ec2:DeleteSnapshot",
+   "kms:CreateGrant",
+   "kms:Decrypt",
+   "kms:DescribeKey",
+   "kms:GenerateDataKeyWithoutPlaintext",
+   "kms:ReEncrypt*"
+  ],
+  "read_only_alternative": "These commands create nothing. List your own snapshots with their source volume, size and encryption: aws ec2 describe-snapshots --owner-ids self --query \"Snapshots[].[SnapshotId,VolumeId,VolumeSize,Encrypted]\" --output table Pick one snapshot ID as <SNAP_ID>, and list the volumes that were created from it, with their zones: aws ec2 describe-volumes --filters Name=snapshot-id,Values=<SNAP_ID> --query \"Volumes[].[VolumeId,AvailabilityZone,Encrypted]\" --output table If the lists are empty, answer the predict question of step 7 on paper.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Store the name of the first Availability Zone of this Region as AZ_A.",
+    "command": "aws ec2 describe-availability-zones --filters Name=zone-type,Values=availability-zone Name=state,Values=available",
+    "capture": {
+     "name": "AZ_A",
+     "query": "AvailabilityZones[0].ZoneName"
+    },
+    "expect": "No output. AZ_A now holds a zone name, for example us-east-1a.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Store the name of a second Availability Zone of the same Region as AZ_B.",
+    "command": "aws ec2 describe-availability-zones --filters Name=zone-type,Values=availability-zone Name=state,Values=available",
+    "capture": {
+     "name": "AZ_B",
+     "query": "AvailabilityZones[1].ZoneName"
+    },
+    "expect": "No output. AZ_B now holds another zone name, for example us-east-1b. If AZ_B holds None, use a Region with two or more zones.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Create an empty, encrypted 2 GiB gp3 volume in AZ_A, tagged for this book and this task. This is the source volume. From here, it is billed.",
+    "command": "aws ec2 create-volume --availability-zone $AZ_A --size 2 --volume-type gp3 --encrypted --tag-specifications 'ResourceType=volume,Tags=[{Key=book,Value=saa},{Key=task,Value=ebs-t03}]'",
+    "capture": {
+     "name": "VOL_ID",
+     "query": "VolumeId"
+    },
+    "expect": "No output. VOL_ID now holds an ID that starts with vol-.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Wait until the volume is available.",
+    "command": "aws ec2 wait volume-available --volume-ids $VOL_ID",
+    "expect": "No output. The prompt comes back when the volume is available.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Take a snapshot of the volume, with the same tags. The volume does not need to be attached to an instance.",
+    "command": "aws ec2 create-snapshot --volume-id $VOL_ID --description saa-ebs-t03 --tag-specifications 'ResourceType=snapshot,Tags=[{Key=book,Value=saa},{Key=task,Value=ebs-t03}]'",
+    "capture": {
+     "name": "SNAP_ID",
+     "query": "SnapshotId"
+    },
+    "expect": "No output. SNAP_ID now holds an ID that starts with snap-.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Wait until the snapshot is completed. This can take a few minutes.",
+    "command": "aws ec2 wait snapshot-completed --snapshot-ids $SNAP_ID",
+    "expect": "No output. The prompt comes back when the snapshot is completed.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Create a volume from the snapshot in the other zone, AZ_B, with the same tags. Name gp3 as the type: in the CLI, gp2 is the default selection.",
+    "command": "aws ec2 create-volume --snapshot-id $SNAP_ID --availability-zone $AZ_B --volume-type gp3 --tag-specifications 'ResourceType=volume,Tags=[{Key=book,Value=saa},{Key=task,Value=ebs-t03}]'",
+    "capture": {
+     "name": "NEW_ID",
+     "query": "VolumeId"
+    },
+    "expect": "No output. NEW_ID now holds an ID that starts with vol-. AWS accepted a zone that differs from the zone of the source volume.",
+    "break_it": true,
+    "predict": "The snapshot comes from a volume in AZ_A. Can you create a volume from it in AZ_B?",
+    "explain": "Snapshot data is [replicated across all Availability Zones in the Region](../facts/ebs.md#ebs-snapshot-restore-in-any-az-of-region), so you can [restore volumes in any Availability Zones](../facts/ebs.md#ebs-snapshot-restore-in-any-az-of-region) of that Region. A volume and its instance [must be in the same Availability Zone](../facts/ebs.md#ebs-volume-same-az-as-instance). To use the data in another zone, you take a snapshot and [create a duplicate volume in that zone](../facts/ebs.md#ebs-snapshot-restore-volume-other-az). Until the snapshot blocks are [downloaded from Amazon S3 to the new volume](../facts/ebs.md#ebs-volume-initialization-from-snapshot), a restored volume shows [increased I/O latency and decreased performance](../facts/ebs.md#ebs-volume-initialization-from-snapshot)."
+   },
+   {
+    "text": "Read the zone, size, encryption and source snapshot of both volumes.",
+    "command": "aws ec2 describe-volumes --volume-ids $VOL_ID $NEW_ID --query \"Volumes[].[VolumeId,AvailabilityZone,Size,Encrypted,SnapshotId]\" --output table",
+    "expect": "Two rows, in any order. The source volume shows the zone of AZ_A, 2, True and no snapshot ID. The new volume shows the zone of AZ_B, 2, True and SNAP_ID. You set no size and no encryption for the new volume: both came from the snapshot.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the restored volume. If AWS reports an error because the volume is still being created, wait one minute and run the command again.",
+    "command": "aws ec2 delete-volume --volume-id $NEW_ID"
+   },
+   {
+    "text": "Delete the snapshot. Deleting a snapshot has no effect on the volume.",
+    "command": "aws ec2 delete-snapshot --snapshot-id $SNAP_ID"
+   },
+   {
+    "text": "Delete the source volume.",
+    "command": "aws ec2 delete-volume --volume-id $VOL_ID"
+   }
+  ],
+  "verify": {
+   "command": "aws ec2 describe-volumes --filters Name=tag:task,Values=ebs-t03 --query \"Volumes[].VolumeId\"",
+   "expect": "An empty list. If an ID still shows, run the command again after one minute. Then check the snapshot too: aws ec2 describe-snapshots --owner-ids self --filters Name=tag:task,Values=ebs-t03 --query \"Snapshots[].SnapshotId\" must also return an empty list."
+  },
+  "still_costs": [
+   "The snapshot, until delete-snapshot has run. Find it with aws ec2 describe-snapshots --owner-ids self --filters Name=tag:task,Values=ebs-t03 --query \"Snapshots[].SnapshotId\" and delete it by its ID.",
+   "The two volumes, until delete-volume has run for each. If the CloudShell session ended before the cleanup, the variables are empty: find the volumes with the verify command and delete them by their IDs.",
+   "If a Recycle Bin retention rule for snapshots or volumes matches these resources, a deleted snapshot or volume stays in the Recycle Bin until the retention period ends, billed at the same rate as a regular one. List such rules with aws rbin list-rules --resource-type EBS_SNAPSHOT and again with --resource-type EBS_VOLUME"
+  ],
+  "facts": [
+   "ebs-snapshot-restore-in-any-az-of-region",
+   "ebs-volume-same-az-as-instance",
+   "ebs-snapshot-restore-volume-other-az",
+   "ebs-volume-initialization-from-snapshot",
+   "ebs-volume-from-snapshot-size-at-least-source",
+   "ebs-encryption-propagates-to-snapshots-and-volumes",
+   "ebs-snapshot-same-encryption-and-key-as-volume",
+   "ebs-snapshot-volume-need-not-be-attached",
+   "ebs-gp3-console-default-type",
+   "ebs-snapshot-and-volume-delete-independent",
+   "ebs-snapshot-delete-retained-by-recycle-bin-rule",
+   "ebs-recycle-bin-recovers-volumes-snapshots-amis",
+   "ebs-recycle-bin-billed-same-rate",
+   "ebs-gp3-storage-price-example",
+   "ebs-billing-per-second-60-second-minimum",
+   "ebs-snapshot-standard-price",
+   "ebs-snapshot-charged-by-data-not-volume-size",
+   "ebs-faq-snapshot-written-data-only",
+   "ebs-encryption-users-need-kms-permissions"
+  ],
+  "sources": [
+   {
+    "title": "Create an Amazon EBS volume (create a volume from a snapshot; encryption outcomes)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-creating-volume.html"
+   },
+   {
+    "title": "Create a snapshot of an EBS volume (AWS CLI: create-snapshot)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-create-snapshot.html"
+   },
+   {
+    "title": "Create Amazon EBS snapshots (snapshot encryption, pending state)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-creating-snapshot.html"
+   },
+   {
+    "title": "Replace an Amazon EBS volume using a snapshot (AWS CLI: create-volume --snapshot-id --volume-type gp3)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-restoring-volume.html"
+   },
+   {
+    "title": "Delete an Amazon EBS snapshot (Recycle Bin, effect on volumes)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-deleting-snapshot.html"
+   },
+   {
+    "title": "Delete an Amazon EBS volume (AWS CLI: delete-volume)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-deleting-volume.html"
+   },
+   {
+    "title": "Requirements for Amazon EBS encryption (KMS permissions for users)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-encryption-requirements.html"
+   },
+   {
+    "title": "Recover deleted EBS volumes, EBS snapshots, and EBS-backed AMIs with Recycle Bin",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/recycle-bin.html"
+   },
+   {
+    "title": "Amazon EBS pricing (example Region rate for gp3 storage)",
+    "url": "https://aws.amazon.com/ebs/pricing/"
+   },
+   {
+    "title": "Pricing and billing for EBS Snapshots Archive (standard snapshot rate)",
+    "url": "https://docs.aws.amazon.com/ebs/latest/userguide/snapshot-archive-pricing.html"
+   },
+   {
+    "title": "describe-availability-zones (AWS CLI Command Reference, filters zone-type and state)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-availability-zones.html"
+   },
+   {
+    "title": "create-volume (AWS CLI Command Reference, example 2: from a snapshot; example 4: tags)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-volume.html"
+   },
+   {
+    "title": "wait volume-available (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/volume-available.html"
+   },
+   {
+    "title": "create-snapshot (AWS CLI Command Reference, tags on creation)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-snapshot.html"
+   },
+   {
+    "title": "wait snapshot-completed (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/snapshot-completed.html"
+   },
+   {
+    "title": "describe-volumes (AWS CLI Command Reference, filters tag and snapshot-id)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-volumes.html"
+   },
+   {
+    "title": "describe-snapshots (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-snapshots.html"
+   },
+   {
+    "title": "delete-volume (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-volume.html"
+   },
+   {
+    "title": "delete-snapshot (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-snapshot.html"
+   },
+   {
+    "title": "list-rules (AWS CLI Command Reference, Recycle Bin, resource types EBS_SNAPSHOT and EBS_VOLUME)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/rbin/list-rules.html"
+   }
+  ],
+  "chapter": "ebs",
+  "status": "candidate",
+  "rev": 1,
+  "label": "checked against docs, not run in a real account",
+  "checked": "2026-10-14"
+ }
+]

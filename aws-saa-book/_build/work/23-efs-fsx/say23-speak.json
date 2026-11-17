@@ -1,0 +1,258 @@
+[
+ {
+  "id": "efs-fsx-s01",
+  "kind": "decide",
+  "prompt": "A volume, a file system or a bucket for these files: how do I decide?",
+  "persona": "Ben, CTO of Callvale",
+  "ten_second": "It depends on who reads the files. One instance: a volume. Many Linux instances: a file system. Code that calls an API: a bucket.",
+  "sixty_second": [
+   "The short answer is: it depends on who reads the files, and how.",
+   "It works like this. A volume is block storage for a single instance.",
+   "A file system like Amazon EFS is shared. Many Linux instances mount it at the same time.",
+   "They can run in every Availability Zone of the Region. The code still reads and writes a normal directory.",
+   "A bucket in Amazon S3 stores objects. Your code reads and writes them through an API.",
+   "The thing to watch is the client. EFS is for Linux instances, not for Windows.",
+   "A bucket helps only if the code can use that API.",
+   "In your case, the report code writes to a directory, and it can't change this year.",
+   "So I'd mount one EFS file system on every instance.",
+   "Could the report code move to the S3 API next year?"
+  ],
+  "skeleton": [
+   "who reads the files",
+   "volume: one instance",
+   "file system: many Linux instances",
+   "bucket: code calls an API"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "Amazon EBS is block storage for a single EC2 instance or container; Amazon EFS is file storage; Amazon S3 is object storage.", "accept": ["a volume attaches to one instance", "block, file and object storage"], "facts": ["efs-faq-use-case-file-vs-block-vs-object", "efs-decision-guide-block-row-single-instance"]},
+   {"id": "kp2", "kind": "must", "point": "File system storage fits applications that need shared read and write access across multiple EC2 instances or containers.", "accept": ["many instances share one file system", "shared read and write access"], "facts": ["efs-decision-guide-file-system-row-shared-access"]},
+   {"id": "kp3", "kind": "must", "point": "EC2 instances in multiple Availability Zones of the same Region can access one EFS file system at the same time.", "accept": ["instances in every zone mount it", "concurrent access from several zones"], "facts": ["efs-concurrent-access-multiple-clients-multiple-azs"]},
+   {"id": "kp4", "kind": "must", "point": "Object storage gives access to data through an API, so code that writes to a directory has to change before it can use Amazon S3.", "accept": ["S3 needs API calls in the code", "a bucket is not a directory"], "facts": ["efs-decision-guide-object-storage-api-read-heavy"]},
+   {"id": "kp5", "kind": "must", "point": "Using Amazon EFS with Windows-based EC2 instances is not supported.", "accept": ["EFS is for Linux, not Windows"], "facts": ["efs-windows-ec2-not-supported"]},
+   {"id": "kp6", "kind": "nice", "point": "Amazon EFS stores data within and across multiple Availability Zones and needs no changes to existing applications.", "accept": ["no code change for EFS", "data across several zones"], "facts": ["efs-overview-regional-linux-shared-access"]}
+  ],
+  "must_not_say": [
+   {"error": "One EBS volume can be shared by all the web instances.", "correct": "Block storage is for a single EC2 instance or container. Many instances that share files need a file system such as Amazon EFS.", "fact": "efs-decision-guide-block-row-single-instance"},
+   {"error": "Amazon S3 works like a disk, with no code change.", "correct": "Amazon S3 is object storage that the code reaches through an API. Code that writes to a directory has to change to use it.", "fact": "efs-decision-guide-object-storage-api-read-heavy"},
+   {"error": "EFS works for Windows instances too.", "correct": "Using Amazon EFS with Windows-based EC2 instances is not supported. Windows file shares belong on FSx for Windows File Server.", "fact": "efs-windows-ec2-not-supported"}
+  ],
+  "terms": [
+   {"say": "mount a file system", "avoid": ["plug in a file system"]},
+   {"say": "volume", "avoid": ["hard drive"]},
+   {"say": "instance", "avoid": ["box"]}
+  ],
+  "follow_ups": [
+   {"question": "Do we need a mount target in every Availability Zone?", "answer": "You can create one mount target in each Availability Zone, and all instances in that zone share it. Create one in each zone where your instances run.", "facts": ["efs-one-mount-target-per-az-shared-by-instances"]},
+   {"question": "Does the file system fill up like a disk?", "answer": "No. You do not provision storage capacity for Amazon EFS. The file system grows and shrinks automatically as you add and remove files.", "facts": ["efs-serverless-elastic-no-provisioning"]}
+  ],
+  "facts": [
+   "efs-faq-use-case-file-vs-block-vs-object",
+   "efs-decision-guide-block-row-single-instance",
+   "efs-decision-guide-file-system-row-shared-access",
+   "efs-decision-guide-object-storage-api-read-heavy",
+   "efs-concurrent-access-multiple-clients-multiple-azs",
+   "efs-overview-regional-linux-shared-access",
+   "efs-windows-ec2-not-supported",
+   "efs-one-mount-target-per-az-shared-by-instances",
+   "efs-serverless-elastic-no-provisioning"
+  ],
+  "section": "2-deep.md#amazon-efs-gives-many-linux-clients-one-shared-file-system-over-nfs",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false
+ },
+ {
+  "id": "efs-fsx-s02",
+  "kind": "explain",
+  "prompt": "We are moving our Windows file server, with all its share permissions, to AWS. Can we just use EFS like our Linux team does?",
+  "persona": "a startup CTO you advise",
+  "ten_second": "No. EFS doesn't support Windows instances. FSx for Windows File Server gives you managed SMB shares that join your Active Directory.",
+  "sixty_second": [
+   "The short answer is no. EFS doesn't support Windows instances.",
+   "Use FSx for Windows File Server. It's a managed Windows file server with SMB shares.",
+   "It works like this. You join the file system to your Active Directory domain.",
+   "Your users sign in with their domain accounts, as they do today.",
+   "File and folder permissions are normal Windows permissions, so your current ones move with the data.",
+   "You copy the files with AWS DataSync, or with Robocopy.",
+   "A DNS alias lets people keep the old share name.",
+   "The thing to watch is the directory.",
+   "FSx joins AWS Managed Microsoft AD or your own Active Directory. AD Connector and Simple AD don't work.",
+   "In your case, the directory decides the plan.",
+   "Where does your Active Directory run today, on premises or in AWS?"
+  ],
+  "skeleton": [
+   "EFS: no Windows",
+   "FSx for Windows: SMB shares",
+   "join your Active Directory",
+   "not AD Connector"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "Using Amazon EFS with Windows-based EC2 instances is not supported.", "accept": ["EFS does not serve Windows"], "facts": ["efs-windows-ec2-not-supported"]},
+   {"id": "kp2", "kind": "must", "point": "FSx for Windows File Server provides fully managed Windows file servers and supports the SMB protocol.", "accept": ["a managed Windows file server", "SMB shares"], "facts": ["fsx-windows-fully-managed-native-windows-file-servers-smb"]},
+   {"id": "kp3", "kind": "must", "point": "You join the file system to your Active Directory domain, which gives user authentication and file- and folder-level access control.", "accept": ["join the domain", "users sign in with domain accounts"], "facts": ["fsx-windows-joins-active-directory-for-authentication-and-acls"]},
+   {"id": "kp4", "kind": "must", "point": "The file system joins AWS Managed Microsoft AD or a self-managed Active Directory; Amazon FSx does not support AD Connector or Simple AD.", "accept": ["not AD Connector", "AWS Managed Microsoft AD or our own AD"], "facts": ["fsx-windows-ad-options-aws-managed-or-self-managed", "fsx-windows-ad-connector-simple-ad-not-supported"]},
+   {"id": "kp5", "kind": "must", "point": "FSx uses standard Windows ACLs, and an existing ACL configuration migrates without modifications; AWS recommends DataSync for the copy, with Robocopy as an alternative.", "accept": ["permissions move with the files", "copy with DataSync or Robocopy"], "facts": ["fsx-windows-bp-windows-acls-enforced-existing-acls-migrate", "fsx-windows-migrate-with-datasync-or-robocopy"]},
+   {"id": "kp6", "kind": "nice", "point": "DNS aliases let users keep the existing DNS names of the shares after the move.", "accept": ["keep the old share name"], "facts": ["fsx-windows-dns-aliases-keep-existing-names"]}
+  ],
+  "must_not_say": [
+   {"error": "EFS works on Windows if you install an NFS client.", "correct": "Using Amazon EFS with Windows-based EC2 instances is not supported. Use FSx for Windows File Server.", "fact": "efs-windows-ec2-not-supported"},
+   {"error": "You have to recreate all the share permissions.", "correct": "FSx for Windows File Server uses standard Windows ACLs, and you can migrate an existing ACL configuration without modifications.", "fact": "fsx-windows-bp-windows-acls-enforced-existing-acls-migrate"},
+   {"error": "AD Connector is enough for FSx.", "correct": "Amazon FSx does not support AD Connector or Simple AD. Join AWS Managed Microsoft AD or a self-managed Active Directory.", "fact": "fsx-windows-ad-connector-simple-ad-not-supported"}
+  ],
+  "terms": [
+   {"say": "join the file system to Active Directory", "avoid": ["plug into AD"]},
+   {"say": "file share", "avoid": ["network drive"]}
+  ],
+  "follow_ups": [
+   {"question": "What happens if one Availability Zone fails?", "answer": "Choose a Multi-AZ file system. It fails over to a standby file server in a second zone, typically in less than 30 seconds. A Single-AZ file system usually has about 30 minutes of downtime during recovery.", "facts": ["fsx-windows-multi-az-standby-two-azs-sync-replication", "fsx-windows-failover-under-30-seconds-failback-automatic", "fsx-windows-single-az-one-server-one-az-30-minutes-downtime"]},
+   {"question": "Is there a size limit for one file system?", "answer": "Yes. One file system holds up to 64 TiB. You can increase its storage capacity later, but you cannot decrease it.", "facts": ["fsx-windows-limit-max-storage-capacity", "fsx-windows-storage-capacity-increase-only-never-decrease"]}
+  ],
+  "facts": [
+   "efs-windows-ec2-not-supported",
+   "fsx-windows-fully-managed-native-windows-file-servers-smb",
+   "fsx-windows-joins-active-directory-for-authentication-and-acls",
+   "fsx-windows-ad-options-aws-managed-or-self-managed",
+   "fsx-windows-ad-connector-simple-ad-not-supported",
+   "fsx-windows-bp-windows-acls-enforced-existing-acls-migrate",
+   "fsx-windows-migrate-with-datasync-or-robocopy",
+   "fsx-windows-dns-aliases-keep-existing-names",
+   "fsx-windows-multi-az-standby-two-azs-sync-replication",
+   "fsx-windows-failover-under-30-seconds-failback-automatic",
+   "fsx-windows-single-az-one-server-one-az-30-minutes-downtime",
+   "fsx-windows-limit-max-storage-capacity",
+   "fsx-windows-storage-capacity-increase-only-never-decrease"
+  ],
+  "section": "2-deep.md#fsx-for-windows-file-server-serves-smb-shares-that-join-your-active-directory",
+  "layer": "core",
+  "pass_route": false,
+  "pack": false
+ },
+ {
+  "id": "efs-fsx-s03",
+  "kind": "compare",
+  "prompt": "Our training data is 200 terabytes in S3, and our GPUs wait on data. Should we copy everything to EFS first?",
+  "persona": "a machine learning founder in office hours",
+  "ten_second": "No copy needed. Link FSx for Lustre to the bucket. Files appear at once and load when a job first reads them.",
+  "sixty_second": [
+   "Both EFS and FSx for Lustre are file systems that Linux instances mount.",
+   "The difference is the job. Lustre is built for workloads where speed matters, like machine learning.",
+   "It works like this. You link a Lustre file system to your S3 bucket.",
+   "The objects show up as files, so the training code reads a normal path.",
+   "A file's data loads from S3 the first time a job reads it.",
+   "So you don't copy the whole bucket first, and results can go back to S3.",
+   "The thing to watch is the deployment type.",
+   "A scratch file system doesn't replicate data. If a file server fails, that data is gone.",
+   "So the bucket stays your safe copy.",
+   "In your case, link the file system to the bucket you already have.",
+   "If a training run fails halfway, can your job read the data from S3 again?"
+  ],
+  "skeleton": [
+   "both shared Linux file systems",
+   "Lustre built for speed",
+   "link to bucket, load on read",
+   "scratch: no replica"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "FSx for Lustre is for workloads where speed matters, such as machine learning and high performance computing (HPC).", "accept": ["Lustre is built for speed", "made for machine learning and HPC"], "facts": ["fsx-lustre-workloads-ml-hpc-video-financial"]},
+   {"id": "kp2", "kind": "must", "point": "A Lustre file system linked to an S3 bucket presents the objects as files and can write file system data back to S3.", "accept": ["objects show up as files", "results go back to the bucket"], "facts": ["fsx-lustre-s3-presents-objects-as-files-and-writes-back"]},
+   {"id": "kp3", "kind": "must", "point": "An object's content is imported only when its file is first accessed, so the bucket is not copied before the job starts.", "accept": ["data loads on first read", "no full copy first"], "facts": ["fsx-faq-lustre-s3-object-imported-on-first-access"]},
+   {"id": "kp4", "kind": "must", "point": "On a scratch file system data is not replicated and does not persist if a file server fails; on a persistent one data is replicated and failed servers are replaced.", "accept": ["scratch keeps no replica", "persistent replaces failed servers"], "facts": ["fsx-lustre-scratch-temporary-not-replicated", "fsx-lustre-persistent-replicated-servers-replaced"]},
+   {"id": "kp5", "kind": "nice", "point": "SageMaker AI can use FSx for Lustre as an input data source, which removes the initial download step from Amazon S3.", "accept": ["SageMaker AI reads from Lustre directly"], "facts": ["fsx-lustre-sagemaker-input-source-skips-s3-download"]},
+   {"id": "kp6", "kind": "nice", "point": "AWS lists Linux as the client for FSx for Lustre.", "accept": ["Lustre clients are Linux"], "facts": ["fsx-compare-client-compatibility"]}
+  ],
+  "must_not_say": [
+   {"error": "Lustre copies the whole bucket before the job starts.", "correct": "The content of an S3 object is imported only when its file is first accessed.", "fact": "fsx-faq-lustre-s3-object-imported-on-first-access"},
+   {"error": "Scratch file systems are backed up for you.", "correct": "Backups are not supported on scratch file systems, because they are designed for temporary storage.", "fact": "fsx-faq-lustre-backups-not-on-scratch"},
+   {"error": "EFS is the fastest choice for GPU training.", "correct": "AWS names FSx for Lustre for workloads where speed matters, such as machine learning and HPC.", "fact": "fsx-decision-guide-lustre-speed-workloads"}
+  ],
+  "terms": [
+   {"say": "link a file system to a bucket", "avoid": ["sync the bucket"]},
+   {"say": "scratch file system", "avoid": ["temp drive"]}
+  ],
+  "follow_ups": [
+   {"question": "What if the data has to stay on the file system for months?", "answer": "Use a persistent file system. Persistent file systems are for longer-term storage and throughput-focused workloads. Their data is replicated, and failed file servers are replaced.", "facts": ["fsx-lustre-use-scratch-for-short-term-persistent-for-long-term", "fsx-lustre-persistent-replicated-servers-replaced"]},
+   {"question": "Can our Windows laptops mount the Lustre file system?", "answer": "No. AWS lists Linux as the client for FSx for Lustre. Windows clients can use FSx for Windows File Server, FSx for NetApp ONTAP or FSx for OpenZFS.", "facts": ["fsx-compare-client-compatibility"]}
+  ],
+  "facts": [
+   "fsx-lustre-workloads-ml-hpc-video-financial",
+   "fsx-lustre-s3-presents-objects-as-files-and-writes-back",
+   "fsx-faq-lustre-s3-object-imported-on-first-access",
+   "fsx-lustre-scratch-temporary-not-replicated",
+   "fsx-lustre-persistent-replicated-servers-replaced",
+   "fsx-lustre-sagemaker-input-source-skips-s3-download",
+   "fsx-compare-client-compatibility",
+   "fsx-faq-lustre-backups-not-on-scratch",
+   "fsx-decision-guide-lustre-speed-workloads",
+   "fsx-lustre-use-scratch-for-short-term-persistent-for-long-term",
+   "efs-concurrent-access-multiple-clients-multiple-azs"
+  ],
+  "section": "2-deep.md#fsx-for-lustre-feeds-compute-heavy-jobs-and-loads-s3-data-on-first-access",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false
+ },
+ {
+  "id": "efs-fsx-s04",
+  "kind": "explain",
+  "prompt": "Our EFS bill grows every month, and most of the files are old. What can we do without touching the application?",
+  "persona": "a startup founder in office hours",
+  "ten_second": "Turn on a lifecycle policy. EFS then moves unread files to cheaper storage classes, with no code change.",
+  "sixty_second": [
+   "The short answer is: turn on a lifecycle policy on the file system.",
+   "It works like this. New files land in EFS Standard.",
+   "When a file goes unread for a set time, EFS moves it to Infrequent Access.",
+   "Infrequent Access costs much less to store.",
+   "Later it moves to Archive, for data read a few times a year.",
+   "It's a setting on the file system, not in your code. AWS gives you default times.",
+   "The thing to watch is reads. Reading a cold file adds a data access charge.",
+   "And by default, a cold file stays cold, even after someone reads it.",
+   "If old files get busy again, set the policy to move them back on first access.",
+   "In your case, I'd start with the defaults.",
+   "How often does anyone open a file that's older than a month?"
+  ],
+  "skeleton": [
+   "lifecycle policy, no code change",
+   "Standard, then IA, then Archive",
+   "reads cost extra",
+   "move back on first access"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "EFS lifecycle management automatically transitions data between storage classes according to the lifecycle configuration of the file system.", "accept": ["EFS moves the files for you", "a setting on the file system"], "facts": ["efs-lifecycle-automatic-transition-between-classes"]},
+   {"id": "kp2", "kind": "must", "point": "By default, a file not accessed for 30 days moves to EFS IA, and a file not accessed for 90 days moves to EFS Archive.", "accept": ["unread files move to IA, then to Archive", "defaults you can change"], "facts": ["efs-lifecycle-default-ia-after-30-days", "efs-lifecycle-default-archive-after-90-days"]},
+   {"id": "kp3", "kind": "must", "point": "EFS IA offers up to 95% lower cost than EFS Standard for infrequently accessed data.", "accept": ["IA costs much less to store"], "facts": ["efs-faq-ia-cost-95-percent"]},
+   {"id": "kp4", "kind": "must", "point": "Reading files in IA or Archive adds data access charges, and by default files stay in IA or Archive after they are read.", "accept": ["reads of cold files cost extra", "cold files do not move back by themselves"], "facts": ["efs-ia-archive-billed-per-class-plus-access-charges", "efs-lifecycle-default-no-move-back-to-standard"]},
+   {"id": "kp5", "kind": "nice", "point": "Set Transition into Standard to move files back on first access when the fastest latency matters.", "accept": ["move them back on first access"], "facts": ["efs-lifecycle-transition-to-standard-on-first-access"]},
+   {"id": "kp6", "kind": "nice", "point": "EFS Archive has a minimum storage duration of 90 days, and IA and Archive bill each file as at least 128 KiB.", "accept": ["tiny files cost more in IA", "Archive keeps a file for a minimum time"], "facts": ["efs-faq-archive-minimum-duration-90-days", "efs-min-billing-per-file-ia-archive"]}
+  ],
+  "must_not_say": [
+   {"error": "The files move back to Standard by themselves when someone opens them.", "correct": "By default, files stay in IA or Archive when they are read. Set Transition into Standard to move them back on first access.", "fact": "efs-lifecycle-default-no-move-back-to-standard"},
+   {"error": "Cold storage is free to read.", "correct": "You are billed data access charges when files in IA or Archive are read.", "fact": "efs-ia-archive-billed-per-class-plus-access-charges"},
+   {"error": "You have to change the application to use Infrequent Access.", "correct": "Lifecycle management transitions data between storage classes according to the lifecycle configuration of the file system.", "fact": "efs-lifecycle-automatic-transition-between-classes"}
+  ],
+  "terms": [
+   {"say": "lifecycle policy", "avoid": ["cleanup rule"]},
+   {"say": "storage class", "avoid": ["storage tier"]}
+  ],
+  "follow_ups": [
+   {"question": "Which class fits files that people open a few times a year?", "answer": "EFS Archive. AWS designs EFS IA for data accessed a few times a quarter, and EFS Archive for data accessed a few times a year or less.", "facts": ["efs-faq-ia-quarter-archive-year-designed-for"]},
+   {"question": "Does Archive change anything about our throughput mode?", "answer": "Yes. EFS Archive is supported on file systems with Elastic throughput. After a lifecycle policy moves data to Archive, you cannot change the throughput mode to Bursting or Provisioned.", "facts": ["efs-archive-needs-elastic-throughput-no-bursting-provisioned"]}
+  ],
+  "facts": [
+   "efs-lifecycle-automatic-transition-between-classes",
+   "efs-lifecycle-default-ia-after-30-days",
+   "efs-lifecycle-default-archive-after-90-days",
+   "efs-faq-ia-cost-95-percent",
+   "efs-faq-ia-quarter-archive-year-designed-for",
+   "efs-ia-archive-billed-per-class-plus-access-charges",
+   "efs-lifecycle-default-no-move-back-to-standard",
+   "efs-lifecycle-transition-to-standard-on-first-access",
+   "efs-faq-archive-minimum-duration-90-days",
+   "efs-min-billing-per-file-ia-archive",
+   "efs-archive-needs-elastic-throughput-no-bursting-provisioned"
+  ],
+  "section": "2-deep.md#cold-files-move-to-cheaper-classes-and-stay-there-unless-you-ask",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false
+ }
+]

@@ -1,0 +1,125 @@
+{
+  "id": "lambda-after",
+  "kind": "arch",
+  "size": "s",
+  "chapter": "18",
+  "title": "Callvale after: functions that events invoke",
+  "claim": "Events now start small functions, while the long conversions stay on the workers and the database is reached through RDS Proxy.",
+  "alt": "After: an upload to the audio bucket sends an event to the uploads queue. Lambda polls it for the start-job function, which puts work on the convert queue for the conversion workers. The save-results and notify functions finish each job; save-results reaches PostgreSQL through RDS Proxy.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "nodes": [
+    {
+      "id": "bucket",
+      "icon": "s3",
+      "label": "callvale-audio\nbucket",
+      "at": "A1"
+    },
+    {
+      "id": "uploads",
+      "icon": "queue",
+      "label": "uploads queue",
+      "at": "B1"
+    },
+    {
+      "id": "start",
+      "icon": "lambda-function",
+      "label": "start-job",
+      "at": "B2",
+      "emph": true
+    },
+    {
+      "id": "convert",
+      "icon": "queue",
+      "label": "convert queue",
+      "at": "A2"
+    },
+    {
+      "id": "workers",
+      "icon": "auto-scaling-group",
+      "label": "Conversion\nworkers",
+      "at": "A3"
+    },
+    {
+      "id": "save",
+      "icon": "lambda-function",
+      "label": "save-results",
+      "at": "A4",
+      "emph": true
+    },
+    {
+      "id": "proxy",
+      "icon": "rds-proxy",
+      "label": "RDS Proxy",
+      "at": "B4"
+    },
+    {
+      "id": "notify",
+      "icon": "lambda-function",
+      "label": "notify",
+      "at": "A5",
+      "emph": true
+    },
+    {
+      "id": "db",
+      "icon": "db-instance",
+      "label": "PostgreSQL\ndatabase",
+      "at": "B5"
+    }
+  ],
+  "edges": [
+    {
+      "from": "bucket",
+      "to": "uploads",
+      "label": "event",
+      "step": 1,
+      "say": "An upload to the audio bucket sends an event to the uploads queue."
+    },
+    {
+      "from": "uploads",
+      "to": "start",
+      "label": "mapping",
+      "step": 2,
+      "say": "With an event source mapping, Lambda handles the polling of the uploads queue for the start-job function."
+    },
+    {
+      "from": "start",
+      "to": "convert",
+      "label": "work",
+      "step": 3,
+      "say": "Start-job puts the conversion on the convert queue, and the workers convert the audio."
+    },
+    {
+      "from": "convert",
+      "to": "workers",
+      "step": 3
+    },
+    {
+      "from": "workers",
+      "to": "save",
+      "label": "results",
+      "step": 4,
+      "dashed": true,
+      "say": "The save-results function stores the results through connection pooling offered by RDS Proxy."
+    },
+    {
+      "from": "save",
+      "to": "proxy",
+      "step": 4
+    },
+    {
+      "from": "proxy",
+      "to": "db",
+      "step": 4
+    },
+    {
+      "from": "save",
+      "to": "notify",
+      "label": "done",
+      "step": 5,
+      "say": "The notify function tells the customer that the transcript is ready."
+    }
+  ],
+  "notes": "Brief 18 story pair, after (pipeline state P2); 2-deep.md#decision-record (after Decision). Title, claim, alt from brief.json; steps 2 and 4 rephrased so the fact displays stand verbatim (L703): step 2 lambda-esm-lambda-polls-source, step 4 rds-proxy-lambda-connection-pooling (also lambda-vpc-db-connections-rds-proxy). Nine nodes; the three functions are the highlight. Two columns (three do not fit a phone). No Transcribe or Comprehend chain, topic, Step Functions, DynamoDB or API Gateway. No AWS number."
+}

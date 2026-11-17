@@ -1,0 +1,193 @@
+{
+  "lens": "reader",
+  "chapter": "19",
+  "findings": [
+    {
+      "id": "reader-01",
+      "file": "19-containers/3-do.md",
+      "section": "whole file; also 4-say.md, 1-fast.md#look-first, 2-deep.md Try it callouts",
+      "quote": "Nothing here yet.",
+      "type": "missing-content",
+      "severity": "blocking",
+      "evidence": "TOOLS-items.md: 'Only items with `status: ready` are printed'. data/19-containers/tasks.json (t01, t02, t03), speak.json (s01, s02) and cards.json (c001 to c012) all have status candidate, although the tasks, speak and cards stages passed (TOOLS-rules.md R5: 'A reviewer sets cards, speak items and tasks to `ready` in the stage of that kind'). As shipped, the reader gets an empty 3-do.md and 4-say.md, an empty task block under 'Look first' (<!-- task:start id=containers-t01 --> directly followed by <!-- task:end -->), and two 'Try it ... See [3-do.md](3-do.md)' callouts in 2-deep.md that lead to 'Nothing here yet.' This misleads her and removes the spoken practice she asked for.",
+      "status": "fixed",
+      "resolution": "fix-19: tasks t01 to t03, speak s01 and s02 and cards c001 to c012 are ready (set-status; item lints clean; speak and cards --ship clean). sync 19 now prints 3-do.md, 4-say.md and the Look first task region, so both Try it links lead to the tasks."
+    },
+    {
+      "id": "reader-02",
+      "file": "19-containers/1-fast.md",
+      "section": "Check",
+      "quote": "**Check 1.** Tasks fail to pull a private ECR image. The task role allows all ECR actions. Which role needs them?",
+      "type": "skim-answerable",
+      "severity": "should",
+      "evidence": "READER.md: 'Headings, tables and captions must give a correct gist on their own; questions must test what the gist misses.' Both Check items are answered by the Signals table alone: row 4 'But not if' says 'the image pull fails: task execution role' (Check 1), and row 3 says 'some tasks must always run: a FARGATE base' (Check 2). A skim of the table answers both checks word for word. Ask about a case the table does not state, for example the role that reads a Secrets Manager secret named in the task definition (fact ecs-task-execution-role-use-cases), or a FARGATE base with a weight split.",
+      "status": "fixed",
+      "resolution": "fix-19: Check 1 now asks the case the table does not state: 'A task definition passes a database password from Secrets Manager. Which role reads the secret?' Answer: the task execution role, which serves a task definition that [references sensitive data using Secrets Manager secrets] (ecs-task-execution-role-use-cases). Check 2 is unchanged (fast file at 999 of 1,000 words)."
+    },
+    {
+      "id": "reader-03",
+      "file": "19-containers/1-fast.md",
+      "section": "Signals and traps; Recap from memory",
+      "quote": "| \"Kubernetes in a data center with no connection to AWS\" | Amazon EKS Anywhere | for [isolated or air-gapped environments](../facts/eks.md#eks-faq-anywhere-for-isolated-or-air-gapped) | a reliable connection: EKS Hybrid Nodes |",
+      "type": "term-not-explained",
+      "severity": "should",
+      "evidence": "STYLE/CONVENTIONS: a term is explained at first use. 'EKS Hybrid Nodes' appears in 1-fast.md (Signals row 5 and Recap 2 'A reliable connection: EKS Hybrid Nodes.'), in 2-services.md (EKS Anywhere card, 'Do not confuse with') and in card c008, but no file says what Hybrid Nodes are (on-premises nodes joined to an EKS cluster whose control plane runs in the AWS Region). Recap 2 asks her to recall a name she was never taught.",
+      "status": "fixed",
+      "resolution": "fix-19: the Signals 'But not if' cell and Recap 2 now say what decides it: 'AWS runs the control plane: EKS Hybrid Nodes'. The EKS Anywhere card in 2-services.md explains the term: '[AWS manages the AWS-hosted Kubernetes control plane], your servers join as nodes, and the site [must have a reliable connection]'. Card c008's extra now says 'EKS Hybrid Nodes keep the control plane in AWS'."
+    },
+    {
+      "id": "reader-04",
+      "file": "19-containers/2-deep.md",
+      "section": "EKS runs the Kubernetes control plane and you choose where pods run",
+      "quote": "| DaemonSets | Yes | No: [run as a sidecar container](../facts/eks.md#eks-fargate-no-daemonsets) |",
+      "type": "term-not-explained",
+      "severity": "should",
+      "evidence": "Neither 'DaemonSet' nor 'sidecar container' is defined anywhere in 1-fast.md or 2-deep.md; the table row is their first and only use in prose. The core question containers-q008 (5-quiz.md Question 3) turns on exactly these two terms. Fact eks-daemonset-runs-on-every-node (linked in q008's twin line) gives the definition to add: a DaemonSet 'runs on every node in your cluster'; a sidecar is a second container in the same pod.",
+      "status": "rejected",
+      "resolution": "fix-19: deferred for the 2,400-word cap of 2-deep.md (L201 blocking). The definitions were drafted in the table row and linted, then removed for words. In the quiz, q008's explanation defines the sidecar ('a second container in the same pod') and its twin line links the DaemonSet definition (eks-daemonset-runs-on-every-node). Logged for the orchestrator together with the other EKS deferrals."
+    },
+    {
+      "id": "reader-05",
+      "file": "19-containers/2-deep.md",
+      "section": "Fargate gives each task its own isolated compute and no instance to manage",
+      "quote": "**Stop and answer.** A nightly report runs as a standalone Fargate task. AWS retires its platform revision that night. What happens?",
+      "type": "leap",
+      "severity": "should",
+      "evidence": "The section never explains task retirement, a platform revision, or a standalone task (a task started without a service). Step 3 says only that 'the Amazon ECS scheduler automatically replaces the tasks' of a service. The Stop-and-answer then tests the standalone case (fact fargate-retirement-service-tasks-replaced-automatically, value 'Amazon ECS doesn't launch a replacement task'), which the text did not teach. Add one sentence to step 3: AWS retires old platform versions; service tasks are replaced, standalone tasks are stopped and not replaced.",
+      "status": "fixed",
+      "resolution": "fix-19: step 3 now reads '[AWS is responsible for maintaining the underlying infrastructure]. At retirement, [the Amazon ECS scheduler automatically replaces the tasks] of a service, not a standalone task.' The Stop and answer reveal still gives the detail (AWS stops the task, no replacement)."
+    },
+    {
+      "id": "reader-06",
+      "file": "19-containers/2-deep.md",
+      "section": "Service auto scaling changes the task count and capacity providers supply the compute",
+      "quote": "> **Exam signal:** \"scale on an Amazon SQS queue\" points to backlog per task: queue depth is [not a reliable metric to scale on directly](../facts/ecs.md#ecs-sqs-scale-on-backlog-per-task).",
+      "type": "term-not-explained",
+      "severity": "should",
+      "evidence": "'Backlog per task' is named but never defined, so she gets a label without the mechanism. Fact ecs-sqs-scale-on-backlog-per-task quotes the definition: 'scale on the *backlog per task*: the queue depth divided by the number of running tasks.' Add the definition and the reason (the same queue depth means less work per task when more tasks run).",
+      "status": "fixed",
+      "resolution": "fix-19: the Exam signal now reads 'points to backlog per task, the queue depth divided by the running tasks: queue depth is [not a reliable metric to scale on directly]'. The reason clause did not fit the 2,400-word cap."
+    },
+    {
+      "id": "reader-07",
+      "file": "19-containers/2-deep.md",
+      "section": "Fargate gives each task its own isolated compute and no instance to manage",
+      "quote": "Why can AWS patch for you? The host belongs to AWS: Fargate [prevents containers from accessing the underlying host](../facts/fargate.md#fargate-containers-cannot-access-host-resources).",
+      "type": "cause-effect-gap",
+      "severity": "should",
+      "evidence": "The answer does not explain the cause. Blocking host access is a security result, not the reason AWS can patch. The cause is in the same section's step 3 (fact fargate-task-retirement-aws-maintains-infrastructure: 'AWS is responsible for maintaining the underlying infrastructure'), and step 3 also explains why AWS can replace hosts (service tasks are rescheduled). Rewrite as cause and effect: AWS owns and maintains the hosts, and no customer runs anything on them, so AWS can patch them and move tasks.",
+      "status": "rejected",
+      "resolution": "fix-19: kept as written. A cause-and-effect rewrite was drafted ('AWS maintains the hosts, and your containers cannot reach them'), but its absolute word needed a separate link (L304) and the words did not fit the 2,400-word cap. Step 3 now states the cause directly above ('AWS is responsible for maintaining the underlying infrastructure' and the retirement behaviour), and the line 'The host belongs to AWS' remains true."
+    },
+    {
+      "id": "reader-08",
+      "file": "19-containers/2-deep.md",
+      "section": "How it works, all seven Say it lines",
+      "quote": "> **Say it:** The short answer is: the agent uses the execution role, and your code uses the task role. The thing to watch is who calls.",
+      "type": "spoken-answer",
+      "severity": "should",
+      "evidence": "READER.md: 'model answers written for speech' that she can say to founders. Each Say it ends with 'The thing to watch is' plus a bare noun phrase that does not say what to watch for: 'who calls', 'host access', 'room for new tasks', 'the image pull', 'Spot capacity', 'the cluster fee', 'replication'. Said out loud to a customer, these sentences carry no information. Give each a full clause, for example 'The thing to watch: if the image pull fails, fix the execution role, not the task role.'",
+      "status": "rejected",
+      "resolution": "fix-19: not changed except the EKS line ('The thing to watch is the fee per cluster.'). Full clauses were drafted for all seven; four broke the 25-word limit of a Say it callout (L202, blocking) and the rest pushed 2-deep.md over its 2,400-word cap (L201). Each watch phrase points to the subsection's own Stop and answer and Exam trap, which carry the clause. Logged for a later edit pass with more room."
+    },
+    {
+      "id": "reader-09",
+      "file": "19-containers/5-quiz.md",
+      "section": "Question 8 and Question 9 (containers-q004, containers-q010), Why not",
+      "quote": "- \"Keep the tasks on the FARGATE capacity provider, ...\": It works, but Savings Plans are [a better fit for steady-state workloads]",
+      "type": "ambiguous-label",
+      "severity": "should",
+      "evidence": "Rule broken: a Why-not line must identify its option. In Question 8, options b (Compute Savings Plan) and c (EC2 Instance Savings Plan) are both cut to the same label 'Keep the tasks on the FARGATE capacity provider, ...', and the same happens in Question 9 (b and c). She cannot tell which explanation belongs to which option. Make the generated label longer, or reword the options so their first words differ ('Buy a Compute Savings Plan ...', 'Buy an EC2 Instance Savings Plan ...').",
+      "status": "fixed",
+      "resolution": "fix-19: each wrong-option why of q004 now starts by naming its option: a 'The standard price works, but ...', b 'A Compute Savings Plan works, but ...', c 'An EC2 Instance Savings Plan does not fit: ...' (explanation fields only; stems, options and key unchanged, so the verification stands; same approach as fix-01). q010 is no longer shipped. The generator's 8-word label is a contract rule (TOOLS-items.md 6.2) and is unchanged."
+    },
+    {
+      "id": "reader-10",
+      "file": "19-containers/2-deep.md",
+      "section": "Images live in a Regional ECR repository that tasks pull from",
+      "quote": "No. Only content pushed [after replication is configured is replicated](../facts/ecr.md#ecr-replication-only-new-pushes). Push the tag again.",
+      "type": "ungrounded-advice",
+      "severity": "should",
+      "evidence": "No fact in the canon supports 'Push the tag again' as the fix. Fact ecr-replication-only-new-pushes says only 'Only repository content pushed or restored to a repository after replication is configured is replicated.' The same section recommends tag immutability (step 3, fact ecr-tag-immutability-prevent-overwrite: 'prevent image tags from being overwritten'), so a second push of an existing tag may be refused, and the canon does not show that a push of an unchanged image counts as new content. She works at AWS, so a wrong how-to is worse than none. Either ground a remedy in a quoted AWS page or end the answer at 'No'.",
+      "status": "removed",
+      "resolution": "fix-19: removed, as in claims-19-002. The answer ends at 'No. Only content pushed or restored [after replication is configured is replicated].'"
+    },
+    {
+      "id": "reader-11",
+      "file": "19-containers/1-fast.md",
+      "section": "Words that go together; In one breath; Signals and traps",
+      "quote": "| capacity provider | **associate** a capacity provider with a cluster | Fargate, Fargate Spot or an Auto Scaling group | launch type |",
+      "type": "term-before-explained",
+      "severity": "note",
+      "evidence": "1-fast.md uses 'launch type' (Words table), 'awsvpc mode' (figure step 3), 'pull through cache rule' (Signals row 6) and 'a FARGATE base' (Signals row 3) without a plain meaning. They are explained only later in 2-deep.md, and the fast route reader may never open it. Add three to five words of plain meaning at first use, or add the terms to the Words table.",
+      "status": "rejected",
+      "resolution": "fix-19: deferred for the fast file cap (999 of 1,000 words, L201 blocking). The figure step text equals the diagram spec and cannot change here, and the Words table already holds four of its five rows. Logged for the orchestrator."
+    },
+    {
+      "id": "reader-12",
+      "file": "19-containers/1-fast.md",
+      "section": "In one breath; 2-deep.md Decision record",
+      "quote": "## In one breath (2 min)",
+      "type": "length",
+      "severity": "note",
+      "evidence": "Ledger warnings: 'W201 `In one breath` has 238 words; the section allows 0 to 200' and 'W201 `Decision record` has 223 words; the section allows 0 to 150'. READER.md: 'Put the short version first, always.' Cut the startup example in In one breath (it repeats the decision record's context word for word) and shorten the decision record's Options and Trade-off.",
+      "status": "fixed",
+      "resolution": "fix-19: the Startup example is shorter (44 to 31 words) and the decision record Context no longer repeats the figure caption; In one breath is now 226 words and the Decision record 209 (both still warnings). What remains over the range is the hero and before/after figures: their alt text, caption and steps must equal the diagram specs (L702, L703), so they change only in a diagrams rerun."
+    },
+    {
+      "id": "reader-13",
+      "file": "19-containers/2-deep.md",
+      "section": "FAQ quick-fire, FAQ 2",
+      "quote": "> \"Amazon Elastic File System (EFS) an be used to provide persistent storage to workloads running on AWS Fargate.\"",
+      "type": "readability",
+      "severity": "note",
+      "evidence": "The quote is verbatim (AWS typo 'an' for 'can'), but as she reads in her second language she will think the book has a typo or will misread it. Mark it with [sic] after 'an', or use another FAQ answer.",
+      "status": "rejected",
+      "resolution": "fix-19: not changed. An AWS quote block must match the saved page exactly (L306), so '[sic]' would fail the gate, and swapping the FAQ item needs another verified FAQ quote of the same length, which the 2,400-word cap leaves no room for. The answer line above the quote ('Yes, on Amazon Elastic File System (EFS)') gives the meaning in plain words."
+    },
+    {
+      "id": "reader-14",
+      "file": "data/19-containers/speak.json",
+      "section": "containers-s01 ten_second; containers-s02 sixty_second",
+      "quote": "ECS is less for you to operate.",
+      "type": "spoken-answer",
+      "severity": "note",
+      "evidence": "Spoken answers must sound like speech (READER.md). 'ECS is less for you to operate.' (s01) and 'AWS also points large workloads that must be price optimized to EC2 capacity.' (s02) are unnatural for a native listener. Suggest: 'With ECS, you have less to run yourself.' and 'For large fleets where price matters most, AWS suggests EC2 capacity.'",
+      "status": "fixed",
+      "resolution": "fix-19: both lines replaced with the suggested wording. speak lint --ship clean (s02 sixty_second within 105 to 145 words)."
+    },
+    {
+      "id": "reader-15",
+      "file": "data/19-containers/cards.json",
+      "section": "containers-c008",
+      "quote": "In Kubernetes on premises, the data center has no connection to AWS. Which AWS option runs the clusters?",
+      "type": "readability",
+      "severity": "note",
+      "evidence": "The card's opening phrase does not parse ('In Kubernetes on premises, the data center ...'). Suggest: 'A company runs Kubernetes in a data center with no connection to AWS. Which AWS option runs the clusters?' The extra field also uses 'EKS Hybrid Nodes', which is never explained (see reader-03).",
+      "status": "fixed",
+      "resolution": "fix-19: front now reads 'A company runs Kubernetes in a data center with no connection to AWS. Which Amazon EKS option runs the clusters?' (service name added for C203). Extra: 'EKS Hybrid Nodes keep the control plane in AWS, so they [must have a reliable connection] to AWS.'"
+    },
+    {
+      "id": "reader-16",
+      "file": "19-containers/1-fast.md",
+      "section": "Look first",
+      "quote": "Fargate quotas count the [number of vCPU cores used](../facts/fargate.md#fargate-faq-quotas-based-on-vcpu-per-region-account) in a Region of your account.",
+      "type": "weak-task",
+      "severity": "note",
+      "evidence": "READER.md: she 'acts before she reads, and trusts the gist she gets from one glance'. The Look first task (containers-t01, Fargate vCPU quotas) is the first thing she does, but quotas do not come up again in the chapter, its checks or its questions. A look at something the chapter teaches (an existing task definition's roles and network mode, or a repository's Region in its URI) would prime the gist better.",
+      "status": "rejected",
+      "resolution": "fix-19: the task is kept. A new Look task needs the tasks stage (writer, CLI check report T113), which is outside the fix stage. The intro sentence was removed to make room in the fast file; the task now prints in the region. Logged for the orchestrator: a Look task on a task definition's roles and network mode would prime the chapter better."
+    },
+    {
+      "id": "reader-17",
+      "file": "19-containers/5-quiz.md",
+      "section": "Question 10 (containers-q012), Why",
+      "quote": "- Binpack leaves [the least amount of unused CPU or memory](../facts/ecs.md#ecs-placement-binpack-least-unused-cpu-memory), which [minimizes the number of container instances in use](../facts/ecs.md#ecs-placement-binpack-least-unused-cpu-memory) and frees instances to remove.",
+      "type": "padding",
+      "severity": "note",
+      "evidence": "The Why paragraph above already says that binpack 'minimizes the number of container instances in use' and that managed scaling lets ECS 'manage the scaling of Amazon EC2 instances'. The two bullets repeat the same links and sentences. Drop the bullets or the duplicated clauses.",
+      "status": "fixed",
+      "resolution": "fix-19: the why of option b no longer repeats the explanation's clause: 'Binpack leaves [the least amount of unused CPU or memory] on each instance, so the tasks fill fewer instances and free the rest for removal.' (explanation field only; key unchanged). The option e why keeps its distinct second link."
+    }
+  ]
+}

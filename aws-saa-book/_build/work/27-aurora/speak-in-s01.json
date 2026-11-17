@@ -1,0 +1,189 @@
+[
+ {
+  "id": "aurora-s01",
+  "kind": "explain",
+  "prompt": "It is still PostgreSQL. What do I get from Aurora that RDS did not give me?",
+  "persona": "Ben, CTO of Callvale",
+  "ten_second": "The same PostgreSQL on shared storage. Replicas read that storage, so they stay close behind, and failover usually takes under a minute.",
+  "sixty_second": [
+   "The short answer is: the same PostgreSQL, on a storage layer that all instances share.",
+   "It works like this. The cluster volume keeps six copies of your data across three Availability Zones.",
+   "Aurora Replicas read that same volume, so they don't copy the data themselves.",
+   "Replica lag is usually well under a hundred milliseconds.",
+   "And you can add up to fifteen of them, besides the primary.",
+   "One reader endpoint spreads the dashboard connections across them.",
+   "If the writer fails, a replica takes over, usually in under a minute.",
+   "The thing to watch is the bill. It changes shape.",
+   "On Aurora Standard, you also pay for each I/O request.",
+   "In your case, I'd move with an Aurora read replica and a short cutover.",
+   "Which dashboards break first when the replica falls behind?"
+  ],
+  "skeleton": [
+   "same PostgreSQL, shared storage",
+   "replicas read the same volume",
+   "one reader endpoint, fast failover",
+   "the bill pays per I/O"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Aurora Replicas connect to the same storage volume as the primary DB instance and support read operations only.",
+    "accept": [
+     "replicas read the same storage",
+     "no separate copy for each replica"
+    ],
+    "facts": [
+     "aurora-adding-replicas-read-same-volume-offload"
+    ]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "Aurora Replica lag is usually much less than 100 milliseconds after the primary instance writes an update.",
+    "accept": [
+     "replicas stay milliseconds behind",
+     "very small replica lag"
+    ],
+    "facts": [
+     "aurora-replica-lag-under-100-ms"
+    ]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "The reader endpoint balances read-only connections across the Aurora Replicas of the cluster.",
+    "accept": [
+     "one endpoint for all the reads",
+     "the reader endpoint spreads connections"
+    ],
+    "facts": [
+     "aurora-reader-endpoint-connection-balancing-read-only"
+    ]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "If the writer fails, Aurora fails over to an Aurora Replica, and service is typically restored in less than 60 seconds.",
+    "accept": [
+     "a replica takes over in under a minute",
+     "automatic failover to a replica"
+    ],
+    "facts": [
+     "aurora-auto-failover-to-replica",
+     "aurora-failover-time-with-replica-guide"
+    ]
+   },
+   {
+    "id": "kp5",
+    "kind": "must",
+    "point": "The code, tools and applications that work with PostgreSQL today can be used with Aurora.",
+    "accept": [
+     "no SQL rewrite",
+     "it is still PostgreSQL for the application"
+    ],
+    "facts": [
+     "aurora-existing-mysql-postgres-code-works"
+    ]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "The cluster volume keeps six copies of the data across three AZs.",
+    "accept": [
+     "six copies in three Availability Zones"
+    ],
+    "facts": [
+     "aurora-storage-six-copies-three-azs"
+    ]
+   },
+   {
+    "id": "kp7",
+    "kind": "nice",
+    "point": "With Aurora Standard you pay per request for I/O. With Aurora I/O-Optimized, read and write I/O is included at no additional charge.",
+    "accept": [
+     "you pay for each I/O request",
+     "the bill counts I/O"
+    ],
+    "facts": [
+     "aurora-faq-standard-pay-per-io-vs-io-optimized-included"
+    ]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "Aurora Replicas copy the data, like RDS read replicas.",
+    "correct": "Aurora Replicas connect to the same storage volume as the primary DB instance. They read the shared cluster volume.",
+    "fact": "aurora-adding-replicas-read-same-volume-offload"
+   },
+   {
+    "error": "Replica lag is zero.",
+    "correct": "Replica lag is usually much less than 100 milliseconds, and it varies with the rate of database change.",
+    "fact": "aurora-replica-lag-under-100-ms"
+   },
+   {
+    "error": "Aurora is a different engine, so you rewrite the SQL.",
+    "correct": "The code, tools and applications you use with PostgreSQL today can be used with Aurora.",
+    "fact": "aurora-existing-mysql-postgres-code-works"
+   }
+  ],
+  "terms": [
+   {
+    "say": "Aurora Replica",
+    "avoid": [
+     "read copy",
+     "slave"
+    ]
+   },
+   {
+    "say": "reader endpoint",
+    "avoid": [
+     "read load balancer"
+    ]
+   },
+   {
+    "say": "fail over",
+    "avoid": [
+     "switch over"
+    ]
+   }
+  ],
+  "follow_ups": [
+   {
+    "question": "What happens if we run only one instance, with no replica?",
+    "answer": "Aurora creates a new primary instance, and service typically returns in less than 10 minutes. With an Aurora Replica, service is typically restored in less than 60 seconds. So for fast failover we keep a replica.",
+    "facts": [
+     "aurora-failover-time-without-replica",
+     "aurora-failover-time-with-replica-guide"
+    ]
+   },
+   {
+    "question": "How do we move without a long outage?",
+    "answer": "We create an Aurora read replica of the RDS for PostgreSQL DB instance. When the replica lag is zero, we stop replication and make it a standalone Aurora cluster. Then the application connects to the new cluster.",
+    "facts": [
+     "aurora-rds-postgres-read-replica-for-migration",
+     "aurora-postgres-migrate-replica-lag-zero-stop-replication"
+    ]
+   }
+  ],
+  "facts": [
+   "aurora-existing-mysql-postgres-code-works",
+   "aurora-storage-six-copies-three-azs",
+   "aurora-adding-replicas-read-same-volume-offload",
+   "aurora-cmp-replicas-share-storage-no-replica-writes",
+   "aurora-replica-lag-under-100-ms",
+   "aurora-replicas-up-to-15-in-addition-to-primary",
+   "aurora-reader-endpoint-connection-balancing-read-only",
+   "aurora-auto-failover-to-replica",
+   "aurora-failover-time-with-replica-guide",
+   "aurora-failover-time-without-replica",
+   "aurora-faq-standard-pay-per-io-vs-io-optimized-included",
+   "aurora-rds-postgres-read-replica-for-migration",
+   "aurora-postgres-migrate-replica-lag-zero-stop-replication"
+  ],
+  "section": "2-deep.md#aurora-replicas-read-the-shared-volume-so-replica-lag-stays-low",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false
+ }
+]

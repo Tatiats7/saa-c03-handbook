@@ -1,0 +1,407 @@
+{
+ "v": 1,
+ "chapter": "rds",
+ "items": [
+  {
+   "id": "rds-t01",
+   "type": "look",
+   "title": "Read your RDS quotas and what a small DB instance can do",
+   "kills": "\"Amazon RDS is a database that you install and configure yourself on a server.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "rds:DescribeAccountAttributes",
+    "rds:DescribeDBEngineVersions",
+    "rds:DescribeOrderableDBInstanceOptions"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read your quota for DB instances in this Region: how many you use, and the maximum.",
+     "command": "aws rds describe-account-attributes --query \"AccountQuotas[?AccountQuotaName=='DBInstances'].[AccountQuotaName,Used,Max]\" --output table",
+     "expect": "One row: DBInstances, then Used and Max. Max is your quota. The default quota is 40 in most Regions and 20 in ap-south-1, and you can ask AWS to raise it.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the default PostgreSQL version and its parameter group family. PostgreSQL is one of six RDS engines, next to IBM Db2, MariaDB, Microsoft SQL Server, MySQL and Oracle Database.",
+     "command": "aws rds describe-db-engine-versions --engine postgres --default-only --query \"DBEngineVersions[].[EngineVersion,DBParameterGroupFamily]\" --output table",
+     "expect": "One row: a version number, and a family name that starts with postgres. The parameter group task of this chapter uses the family name again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the same default version as PG_VERSION, for the next command.",
+     "command": "aws rds describe-db-engine-versions --engine postgres --default-only",
+     "capture": {
+      "name": "PG_VERSION",
+      "query": "DBEngineVersions[0].EngineVersion"
+     },
+     "expect": "No output. PG_VERSION now holds the version number from the table above.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Ask what a small instance class, db.t4g.micro, offers with this version. Look for Multi-AZ and read replicas.",
+     "command": "aws rds describe-orderable-db-instance-options --engine postgres --engine-version $PG_VERSION --db-instance-class db.t4g.micro --query \"OrderableDBInstanceOptions[].[StorageType,MultiAZCapable,ReadReplicaCapable]\" --output table",
+     "expect": "One row or more, one for each storage type, with True or False for Multi-AZ and for read replicas. True means that you turn the feature on as a setting of the DB instance. You install no database software: Amazon RDS manages backups, software patching, failure detection and recovery. If the table is empty, run the command again with db.t3.micro.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "rds-quota-db-instances",
+    "rds-engines-supported",
+    "rds-managed-tasks"
+   ],
+   "sources": [
+    {
+     "title": "describe-account-attributes (AWS CLI Command Reference, quota DBInstances with Used and Max)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-account-attributes.html"
+    },
+    {
+     "title": "Quotas and constraints for Amazon RDS (DB instances quota per Region)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html"
+    },
+    {
+     "title": "describe-db-engine-versions (AWS CLI Command Reference, --default-only and DBParameterGroupFamily)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-engine-versions.html"
+    },
+    {
+     "title": "describe-orderable-db-instance-options (AWS CLI Command Reference, MultiAZCapable and ReadReplicaCapable)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-orderable-db-instance-options.html"
+    },
+    {
+     "title": "What is Amazon Relational Database Service (Amazon RDS)? (engines and managed tasks)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Welcome.html"
+    }
+   ],
+   "chapter": "rds",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "rds-t02",
+   "type": "try",
+   "title": "Build a DB subnet group and watch RDS refuse one zone",
+   "kills": "\"A database that runs in one Availability Zone needs a subnet group with a subnet in that zone only.\"",
+   "trap": null,
+   "section": "2-deep.md#a-db-instance-sits-in-private-subnets-behind-its-security-group",
+   "pass_route": true,
+   "minutes": 10,
+   "cost": "$0: the task creates no DB instance and no storage, only a DB subnet group. Amazon RDS bills DB instance hours and storage per GB per month, and billing for a DB instance starts as soon as the DB instance is available.",
+   "cost_if_forgotten": "$0 a day. Delete the group anyway: it counts toward the DB subnet group quota of this Region.",
+   "cost_facts": [],
+   "permissions": [
+    "ec2:DescribeSubnets",
+    "rds:CreateDBSubnetGroup",
+    "rds:AddTagsToResource",
+    "rds:DescribeDBSubnetGroups",
+    "rds:ModifyDBSubnetGroup",
+    "rds:DeleteDBSubnetGroup"
+   ],
+   "read_only_alternative": "These commands create nothing. List the DB subnet groups of this Region with the Availability Zones of their subnets: aws rds describe-db-subnet-groups --query \"DBSubnetGroups[].[DBSubnetGroupName,Subnets[].SubnetAvailabilityZone.Name]\" Count the zones of each group. If the list is empty, answer the predict question of step 5 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the IDs of two default subnets as SUBNETS. The default VPC has one default subnet in each Availability Zone, so the two subnets sit in two zones.",
+     "command": "aws ec2 describe-subnets --filters Name=default-for-az,Values=true",
+     "capture": {
+      "name": "SUBNETS",
+      "query": "Subnets[0:2].SubnetId"
+     },
+     "expect": "No output. SUBNETS now holds two subnet IDs. If it holds fewer than two, this Region has no default subnets: use another Region, or use the read-only alternative.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the ID of one default subnet as SUBNET_A, for the break step.",
+     "command": "aws ec2 describe-subnets --filters Name=default-for-az,Values=true",
+     "capture": {
+      "name": "SUBNET_A",
+      "query": "Subnets[0].SubnetId"
+     },
+     "expect": "No output. SUBNET_A now holds one subnet ID that starts with subnet-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a DB subnet group with both subnets, tagged for this book and this task. No DB instance is created. For a real database, choose private subnets: default subnets are public.",
+     "command": "aws rds create-db-subnet-group --db-subnet-group-name saa-rds-t02 --db-subnet-group-description \"saa two zones\" --subnet-ids $SUBNETS --tags Key=book,Value=saa Key=task,Value=rds-t02 --query \"DBSubnetGroup.SubnetGroupStatus\"",
+     "expect": "Complete: the status of the new group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the subnets of the group and the Availability Zone of each subnet.",
+     "command": "aws rds describe-db-subnet-groups --db-subnet-group-name saa-rds-t02 --query \"DBSubnetGroups[0].Subnets[].[SubnetIdentifier,SubnetAvailabilityZone.Name]\" --output table",
+     "expect": "Two rows, each subnet with a different Availability Zone, for example us-east-1a and us-east-1b.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Your database will run in one Availability Zone. Try to shrink the group to one subnet in one zone.",
+     "command": "aws rds modify-db-subnet-group --db-subnet-group-name saa-rds-t02 --subnet-ids $SUBNET_A",
+     "expect": "An error with the code DBSubnetGroupDoesNotCoverEnoughAZs. AWS changes nothing.",
+     "break_it": true,
+     "predict": "The DB instance will run in one Availability Zone. Can its DB subnet group hold one subnet in that one zone?",
+     "explain": "An RDS DB subnet group requires [a subnet in at least two Availability Zones](../facts/rds.md#rds-subnet-group-two-azs), even for a DB instance that runs in one zone. The second zone is ready for the day that you switch the DB instance to Multi-AZ. The RDS FAQ asks for more: [at least one subnet for every Availability Zone](../facts/rds.md#rds-faq-subnet-group-every-az) of the Region."
+    },
+    {
+     "text": "Fix it: keep a subnet in each of two zones, even for a DB instance in one zone. Read the group again.",
+     "command": "aws rds describe-db-subnet-groups --db-subnet-group-name saa-rds-t02 --query \"DBSubnetGroups[0].Subnets[].[SubnetIdentifier,SubnetAvailabilityZone.Name]\" --output table",
+     "expect": "The same two rows as in step 4. The refused request changed nothing.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the DB subnet group.",
+     "command": "aws rds delete-db-subnet-group --db-subnet-group-name saa-rds-t02"
+    }
+   ],
+   "verify": {
+    "command": "aws rds describe-db-subnet-groups --db-subnet-group-name saa-rds-t02",
+    "expect": "An error with the code DBSubnetGroupNotFoundFault. The group is gone."
+   },
+   "still_costs": [
+    "No billed resource: the task creates no DB instance and no storage. If the CloudShell session ended before the cleanup, the cleanup command still works, because it names the group and uses no variable."
+   ],
+   "facts": [
+    "rds-subnet-group-two-azs",
+    "rds-faq-subnet-group-every-az",
+    "rds-quota-db-subnet-groups",
+    "rds-faq-private-subnet-backend",
+    "vpc-default-subnet-per-az",
+    "vpc-default-subnet-one-per-az",
+    "vpc-default-subnet-public-ip-and-dns",
+    "vpc-default-vpc-main-route-to-igw",
+    "rds-pricing-dimension-instance-hours",
+    "rds-pricing-dimension-storage-gb-month",
+    "rds-billing-begins-available-ends-terminate"
+   ],
+   "sources": [
+    {
+     "title": "Scenarios for accessing a DB instance in a VPC (a DB subnet group requires subnets in two Availability Zones)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.Scenarios.html"
+    },
+    {
+     "title": "Working with a DB instance in a VPC (DB subnet groups)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.WorkingWithRDSInstanceinaVPC.html"
+    },
+    {
+     "title": "describe-subnets (AWS CLI Command Reference, filter default-for-az)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html"
+    },
+    {
+     "title": "create-db-subnet-group (AWS CLI Command Reference, example: create a DB subnet group; --tags)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-subnet-group.html"
+    },
+    {
+     "title": "CreateDBSubnetGroup (Amazon RDS API Reference, errors)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_CreateDBSubnetGroup.html"
+    },
+    {
+     "title": "describe-db-subnet-groups (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-subnet-groups.html"
+    },
+    {
+     "title": "DescribeDBSubnetGroups (Amazon RDS API Reference, error DBSubnetGroupNotFoundFault)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBSubnetGroups.html"
+    },
+    {
+     "title": "modify-db-subnet-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/modify-db-subnet-group.html"
+    },
+    {
+     "title": "ModifyDBSubnetGroup (Amazon RDS API Reference, error DBSubnetGroupDoesNotCoverEnoughAZs)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBSubnetGroup.html"
+    },
+    {
+     "title": "delete-db-subnet-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/delete-db-subnet-group.html"
+    },
+    {
+     "title": "Amazon RDS FAQs (DB subnet groups, private subnets, billing)",
+     "url": "https://aws.amazon.com/rds/faqs/"
+    }
+   ],
+   "chapter": "rds",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "rds-t03",
+   "type": "try",
+   "title": "Force TLS in a custom parameter group",
+   "kills": "\"You change a database setting such as forced TLS by editing the default parameter group.\"",
+   "trap": null,
+   "section": "2-deep.md#encryption-at-rest-is-chosen-at-creation-and-covers-every-copy",
+   "pass_route": false,
+   "minutes": 12,
+   "cost": "$0: the task creates no DB instance and no storage, only a DB parameter group, which is a container for engine settings. Amazon RDS bills DB instance hours and storage per GB per month.",
+   "cost_if_forgotten": "$0 a day. Delete the group anyway: it counts toward the DB parameter group quota of this Region.",
+   "cost_facts": [],
+   "permissions": [
+    "rds:DescribeDBEngineVersions",
+    "rds:DescribeEngineDefaultParameters",
+    "rds:CreateDBParameterGroup",
+    "rds:AddTagsToResource",
+    "rds:ModifyDBParameterGroup",
+    "rds:DescribeDBParameters",
+    "rds:DescribeDBParameterGroups",
+    "rds:DeleteDBParameterGroup"
+   ],
+   "read_only_alternative": "These commands create nothing. Run steps 1 and 2: they only read. Then list the DB parameter groups of this Region: aws rds describe-db-parameter-groups --query \"DBParameterGroups[].[DBParameterGroupName,DBParameterGroupFamily]\" --output table A name that starts with default. is a default group, which you cannot change. Every other name is a custom group. Answer the predict question of step 4 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the parameter group family of the default PostgreSQL version as FAMILY.",
+     "command": "aws rds describe-db-engine-versions --engine postgres --default-only",
+     "capture": {
+      "name": "FAMILY",
+      "query": "DBEngineVersions[0].DBParameterGroupFamily"
+     },
+     "expect": "No output. FAMILY now holds a name that starts with postgres, for example postgres17.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Connections to every RDS engine can use TLS. Read the engine default of rds.force_ssl for this family. When the value is 1, PostgreSQL requires SSL/TLS for every connection.",
+     "command": "aws rds describe-engine-default-parameters --db-parameter-group-family $FAMILY --query \"EngineDefaults.Parameters[?ParameterName=='rds.force_ssl'].[ParameterValue,ApplyType,IsModifiable]\" --output table",
+     "expect": "One row: the default value, the apply type (static or dynamic), and True, which means that a custom group can change the value. For PostgreSQL 15 and later, the default value is 1.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create your own DB parameter group for the same family, tagged for this book and this task.",
+     "command": "aws rds create-db-parameter-group --db-parameter-group-name saa-rds-t03 --db-parameter-group-family $FAMILY --description \"saa force TLS\" --tags Key=book,Value=saa Key=task,Value=rds-t03 --query \"DBParameterGroup.DBParameterGroupName\"",
+     "expect": "saa-rds-t03: the name of the new group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Now try to set rds.force_ssl to 1 in the default group of this family, default.$FAMILY. A DB instance that you create without naming a group uses this group.",
+     "command": "aws rds modify-db-parameter-group --db-parameter-group-name default.$FAMILY --parameters \"ParameterName=rds.force_ssl,ParameterValue=1,ApplyMethod=pending-reboot\"",
+     "expect": "An error, and AWS changes nothing. If the message says that the group was not found, this account has no group with that name in this Region: the lesson is the same.",
+     "break_it": true,
+     "predict": "Every DB instance that you create without naming a group uses default.$FAMILY. Can you set rds.force_ssl in that group?",
+     "explain": "You [can't modify the parameter settings](../facts/rds.md#rds-parameter-group-default-not-modifiable) of a default parameter group, and [a default DB Parameter Group is used](../facts/rds.md#rds-faq-parameter-group-default) when you create a DB instance without naming one. To require TLS, you [create a custom DB parameter group](../facts/rds.md#rds-tls-force-postgresql) and set rds.force_ssl there."
+    },
+    {
+     "text": "Fix it: make the same change in your own group. With pending-reboot, a DB instance that uses this group gets the change after you reboot it.",
+     "command": "aws rds modify-db-parameter-group --db-parameter-group-name saa-rds-t03 --parameters \"ParameterName=rds.force_ssl,ParameterValue=1,ApplyMethod=pending-reboot\"",
+     "expect": "The name saa-rds-t03. AWS accepted the change.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the parameters that you changed in your own group.",
+     "command": "aws rds describe-db-parameters --db-parameter-group-name saa-rds-t03 --source user --query \"Parameters[].[ParameterName,ParameterValue]\" --output table",
+     "expect": "One row: rds.force_ssl with the value 1. Every DB instance that uses this group gets this setting, and a change to the group changes all of them.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete your DB parameter group.",
+     "command": "aws rds delete-db-parameter-group --db-parameter-group-name saa-rds-t03"
+    }
+   ],
+   "verify": {
+    "command": "aws rds describe-db-parameter-groups --db-parameter-group-name saa-rds-t03",
+    "expect": "An error with the code DBParameterGroupNotFound. The group is gone."
+   },
+   "still_costs": [
+    "No billed resource: the task creates no DB instance and no storage. If the CloudShell session ended before the cleanup, the cleanup command still works, because it names the group and uses no variable."
+   ],
+   "facts": [
+    "rds-parameter-group-default-not-modifiable",
+    "rds-faq-parameter-group-default",
+    "rds-parameter-group-shared-changes",
+    "rds-tls-force-postgresql",
+    "rds-tls-all-engines",
+    "rds-parameter-pending-reboot-not-automatic",
+    "rds-faq-parameter-group-container",
+    "rds-quota-parameter-groups",
+    "rds-pricing-dimension-instance-hours",
+    "rds-pricing-dimension-storage-gb-month"
+   ],
+   "sources": [
+    {
+     "title": "Overview of parameter groups (default groups, custom groups, pending-reboot)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/parameter-groups-overview.html"
+    },
+    {
+     "title": "Creating a DB parameter group in Amazon RDS (AWS CLI: create-db-parameter-group)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithParamGroups.Creating.html"
+    },
+    {
+     "title": "Modifying parameters in a DB parameter group in Amazon RDS (AWS CLI: modify-db-parameter-group)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithParamGroups.Modifying.html"
+    },
+    {
+     "title": "Listing DB parameter groups in Amazon RDS (AWS CLI: describe-db-parameter-groups)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithParamGroups.Listing.html"
+    },
+    {
+     "title": "Using SSL with a PostgreSQL DB instance (rds.force_ssl)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL.Concepts.General.SSL.html"
+    },
+    {
+     "title": "describe-db-engine-versions (AWS CLI Command Reference, --default-only and DBParameterGroupFamily)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-engine-versions.html"
+    },
+    {
+     "title": "describe-engine-default-parameters (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-engine-default-parameters.html"
+    },
+    {
+     "title": "create-db-parameter-group (AWS CLI Command Reference, --tags)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-parameter-group.html"
+    },
+    {
+     "title": "modify-db-parameter-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/modify-db-parameter-group.html"
+    },
+    {
+     "title": "ModifyDBParameterGroup (Amazon RDS API Reference, ApplyMethod immediate or pending-reboot)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBParameterGroup.html"
+    },
+    {
+     "title": "describe-db-parameters (AWS CLI Command Reference, --source user)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-parameters.html"
+    },
+    {
+     "title": "describe-db-parameter-groups (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/describe-db-parameter-groups.html"
+    },
+    {
+     "title": "DescribeDBParameterGroups (Amazon RDS API Reference, error DBParameterGroupNotFound)",
+     "url": "https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DescribeDBParameterGroups.html"
+    },
+    {
+     "title": "delete-db-parameter-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/rds/delete-db-parameter-group.html"
+    }
+   ],
+   "chapter": "rds",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

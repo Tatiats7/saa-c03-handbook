@@ -1,0 +1,649 @@
+{
+ "v": 1,
+ "chapter": "cloudfront",
+ "items": [
+  {
+   "id": "cloudfront-s01",
+   "kind": "explain",
+   "prompt": "Does the bucket have to be public for CloudFront to serve our recordings?",
+   "persona": "Ana, CEO of Callvale",
+   "ten_second": "No. The bucket stays private and trusts only your CloudFront distribution. A signed link with an end time decides who can play a recording.",
+   "sixty_second": [
+    "The short answer is no. The bucket stays private.",
+    "It works like this. The bucket is where your recordings are stored.",
+    "The distribution is your CloudFront setup in front of the bucket.",
+    "CloudFront sends authenticated requests to the bucket.",
+    "The bucket policy allows CloudFront, and only for requests from your distribution.",
+    "So a direct link to the bucket fails. Every viewer goes through CloudFront.",
+    "And the transfer from the bucket to CloudFront is free.",
+    "The thing to watch is this: a private bucket doesn't decide which users can play.",
+    "For that, the app gives each signed-in user a signed link with an end time.",
+    "After that time, the link stops working.",
+    "In your case, a playback link works for a few minutes today.",
+    "Should it work longer for very long calls?"
+   ],
+   "skeleton": [
+    "no, bucket stays private",
+    "CloudFront sends authenticated requests",
+    "policy allows our distribution only",
+    "signed link with end time"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "With origin access control, the bucket policy allows the CloudFront service principal (cloudfront.amazonaws.com) only when the request is on behalf of your distribution.",
+     "accept": [
+      "the bucket trusts only our distribution",
+      "the bucket policy allows CloudFront for our distribution"
+     ],
+     "facts": [
+      "cloudfront-oac-bucket-policy-cloudfront-service-principal"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Users reach the files through the distribution and cannot access them directly by using Amazon S3 URLs, so no one bypasses CloudFront.",
+     "accept": [
+      "a direct S3 link fails",
+      "nobody can go around CloudFront"
+     ],
+     "facts": [
+      "cloudfront-private-s3-oac-plus-signed-urls"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "AWS recommends origin access control (OAC) instead of the older origin access identity (OAI).",
+     "accept": [
+      "use origin access control",
+      "OAC is the recommended way"
+     ],
+     "facts": [
+      "cloudfront-oac-oai-two-ways-oac-recommended"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A CloudFront signed URL has an ending date and time, after which the URL is no longer valid.",
+     "accept": [
+      "the signed link expires",
+      "the link stops working after a set time"
+     ],
+     "facts": [
+      "cloudfront-dec-signed-url-expiry-restrictions"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Data transfer from S3 to CloudFront is free, and edge locations closer to users give lower latency.",
+     "accept": [
+      "the bucket to CloudFront transfer costs nothing",
+      "users abroad get faster playback"
+     ],
+     "facts": [
+      "cloudfront-dec-ddos-wp-s3-bucket-benefits"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "AWS recommends trusted key groups as the signer for signed URLs and signed cookies.",
+     "accept": [
+      "sign with a trusted key group"
+     ],
+     "facts": [
+      "cloudfront-signer-key-group-recommended"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "we make the bucket public but use random file names",
+     "correct": "AWS recommends CloudFront in front of the bucket so that it's not publicly accessible. Origin access control keeps the bucket private.",
+     "fact": "cloudfront-dec-ddos-wp-s3-bucket-benefits"
+    },
+    {
+     "error": "an origin access identity is the recommended way to keep the bucket private",
+     "correct": "AWS recommends origin access control. An origin access identity doesn't work for all scenarios, for example dynamic requests to Amazon S3.",
+     "fact": "cloudfront-oai-legacy-not-for-all-scenarios"
+    }
+   ],
+   "terms": [
+    {
+     "say": "origin access control",
+     "avoid": [
+      "OAI"
+     ]
+    },
+    {
+     "say": "signed URL",
+     "avoid": [
+      "presigned URL"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we limit a recording link to the computers of one customer office?",
+     "answer": "Yes. When you create a signed URL, you can also set the IP address or range of addresses of the computers that can access the content.",
+     "facts": [
+      "cloudfront-dec-signed-url-expiry-restrictions"
+     ]
+    },
+    {
+     "question": "Does CloudFront also make playback faster for our users abroad?",
+     "answer": "Yes. CloudFront serves content from edge locations closer to the users, so latency is lower. And data transfer from S3 to CloudFront is free.",
+     "facts": [
+      "cloudfront-dec-ddos-wp-s3-bucket-benefits"
+     ]
+    }
+   ],
+   "facts": [
+    "cloudfront-oac-bucket-policy-cloudfront-service-principal",
+    "cloudfront-private-s3-oac-plus-signed-urls",
+    "cloudfront-oac-oai-two-ways-oac-recommended",
+    "cloudfront-dec-signed-url-expiry-restrictions",
+    "cloudfront-dec-ddos-wp-s3-bucket-benefits",
+    "cloudfront-signer-key-group-recommended",
+    "cloudfront-oai-legacy-not-for-all-scenarios"
+   ],
+   "section": "2-deep.md#origin-access-control-keeps-the-bucket-private-and-lets-your-distribution-read-it",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "cloudfront",
+   "status": "ready",
+   "rev": 2
+  },
+  {
+   "id": "cloudfront-s02",
+   "kind": "compare",
+   "prompt": "CloudFront or Global Accelerator: which one makes our game faster for players around the world?",
+   "persona": "a game studio founder in office hours",
+   "ten_second": "Both use AWS edge locations near your players. CloudFront caches downloads such as patches. Global Accelerator carries live TCP or UDP game traffic.",
+   "sixty_second": [
+    "Both services meet your players at AWS edge locations near them. The difference is what they carry.",
+    "It works like this. CloudFront works with web content over HTTP.",
+    "It keeps copies of files, such as patches and images, at the edge.",
+    "When a player asks for a cached file, the edge location returns it.",
+    "Global Accelerator works with TCP and UDP traffic.",
+    "It proxies the packets at the edge to your load balancers or instances in AWS Regions.",
+    "Players connect to static IP addresses, and failover between Regions is fast.",
+    "The thing to watch is that many games need both services.",
+    "CloudFront for downloads, and Global Accelerator for live play.",
+    "In your case, patches are large files that many players download.",
+    "Does your live game traffic use UDP, and in which Regions does it run?"
+   ],
+   "skeleton": [
+    "both edge, carry different things",
+    "CloudFront: HTTP, cached copies",
+    "Global Accelerator: TCP, UDP, static IPs",
+    "often both"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "CloudFront improves performance for both cacheable content (such as images and videos) and dynamic content.",
+     "accept": [
+      "CloudFront caches files at the edge",
+      "CloudFront is for web content"
+     ],
+     "facts": [
+      "global-accelerator-faq-vs-cloudfront-content-types"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Global Accelerator improves TCP or UDP applications by proxying packets at the edge to applications in AWS Regions.",
+     "accept": [
+      "Global Accelerator proxies packets",
+      "it carries TCP and UDP traffic to the Regions"
+     ],
+     "facts": [
+      "global-accelerator-faq-vs-cloudfront-content-types",
+      "global-accelerator-faq-protocols-tcp-and-udp"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Global Accelerator fits non-HTTP use cases such as gaming (UDP), IoT (MQTT), or Voice over IP, and fast regional failover.",
+     "accept": [
+      "Global Accelerator fits UDP games",
+      "it gives fast failover between Regions"
+     ],
+     "facts": [
+      "global-accelerator-faq-good-fit-non-http-static-ip-fast-failover"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A new accelerator gets two IPv4 static IP addresses.",
+     "accept": [
+      "players connect to fixed IP addresses",
+      "the accelerator has static addresses"
+     ],
+     "facts": [
+      "global-accelerator-faq-two-static-ipv4-independent-network-zones"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "CloudFront supports content that can be sent using the HTTP or WebSocket protocols.",
+     "accept": [
+      "CloudFront is for HTTP and WebSocket"
+     ],
+     "facts": [
+      "cloudfront-faq-content-types-http-websocket"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "A cache hit is a request that CloudFront serves directly from the CloudFront cache.",
+     "accept": [
+      "a cache hit is answered at the edge"
+     ],
+     "facts": [
+      "cloudfront-cache-hit-ratio-definition"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Global Accelerator caches your game files at the edge",
+     "correct": "Global Accelerator proxies TCP or UDP packets at the edge to applications in AWS Regions. CloudFront is the service that returns cached copies.",
+     "fact": "global-accelerator-faq-vs-cloudfront-content-types"
+    },
+    {
+     "error": "CloudFront can carry our live UDP game traffic",
+     "correct": "CloudFront supports content sent using the HTTP or WebSocket protocols. UDP traffic is a use case for Global Accelerator.",
+     "fact": "cloudfront-faq-content-types-http-websocket"
+    },
+    {
+     "error": "Global Accelerator replaces your load balancers",
+     "correct": "Global Accelerator sends traffic to endpoints such as Application Load Balancers, Network Load Balancers or EC2 instances. The load balancers stay.",
+     "fact": "global-accelerator-faq-vs-elastic-ip-scope-and-advertisement"
+    }
+   ],
+   "terms": [
+    {
+     "say": "static IP address",
+     "avoid": [
+      "fixed DNS name"
+     ]
+    },
+    {
+     "say": "edge location",
+     "avoid": [
+      "edge server"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can our partners allow-list the addresses of the game?",
+     "answer": "Yes. A new accelerator gets two IPv4 static IP addresses from independent network zones. Partners allow-list those addresses, not your instances.",
+     "facts": [
+      "global-accelerator-faq-two-static-ipv4-independent-network-zones"
+     ]
+    },
+    {
+     "question": "Do both services help against DDoS attacks?",
+     "answer": "Yes. Both services integrate with AWS Shield for DDoS protection.",
+     "facts": [
+      "global-accelerator-faq-good-fit-non-http-static-ip-fast-failover"
+     ]
+    }
+   ],
+   "facts": [
+    "global-accelerator-faq-vs-cloudfront-content-types",
+    "global-accelerator-faq-protocols-tcp-and-udp",
+    "global-accelerator-faq-good-fit-non-http-static-ip-fast-failover",
+    "global-accelerator-faq-two-static-ipv4-independent-network-zones",
+    "cloudfront-faq-content-types-http-websocket",
+    "cloudfront-cache-hit-ratio-definition",
+    "global-accelerator-faq-vs-elastic-ip-scope-and-advertisement"
+   ],
+   "section": "2-deep.md#global-accelerator-carries-tcp-and-udp-from-two-static-addresses-over-the-aws-network",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "cloudfront",
+   "status": "ready",
+   "rev": 3
+  },
+  {
+   "id": "cloudfront-s03",
+   "kind": "decide",
+   "prompt": "Every release changes our JavaScript files. Do we invalidate the whole cache each time, or is there a better way?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "Put a version in your file names. A new name is a new file everywhere. Keep invalidation for surprises.",
+   "sixty_second": [
+    "The short answer is: put a version in your file names.",
+    "Keep invalidation for the unexpected cases.",
+    "It works like this. A new file name is a new object for CloudFront.",
+    "It's also new for browsers and company proxies, so they don't return the old copy.",
+    "Your HTML page points to the new names after each release.",
+    "AWS still recommends an expiration date on the files, even with versions.",
+    "The thing to watch is copies outside CloudFront.",
+    "Versioning costs less, and a wildcard path counts as one path.",
+    "The bigger problem is that invalidation can't reach copies in browsers and proxies.",
+    "Users can keep seeing the old version until those copies expire.",
+    "In your case, look at your build tool.",
+    "Does it already add a hash to your file names?"
+   ],
+   "skeleton": [
+    "version in file names",
+    "new name, new object everywhere",
+    "set an expiry anyway",
+    "invalidation misses browser copies"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "For frequent updates, AWS recommends that you primarily use file versioning, not invalidation.",
+     "accept": [
+      "version the file names",
+      "use versioned names instead of invalidation"
+     ],
+     "facts": [
+      "cloudfront-invalidation-prefer-versioning-for-frequent-updates",
+      "cloudfront-versioned-file-names-recommended"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Versioning controls which file a request returns, even when the user has a copy cached locally or behind a corporate caching proxy.",
+     "accept": [
+      "browsers and proxies get the new file",
+      "invalidation does not reach browser copies"
+     ],
+     "facts": [
+      "cloudfront-invalidation-prefer-versioning-for-frequent-updates"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "AWS says to use invalidation only in unexpected circumstances.",
+     "accept": [
+      "invalidation is for surprises",
+      "invalidate only when something goes wrong"
+     ],
+     "facts": [
+      "cloudfront-faq-invalidate-only-unexpected-use-versioning"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Even if you version your files, AWS still recommends that you set an expiration date.",
+     "accept": [
+      "still set an expiry",
+      "keep a cache lifetime on versioned files"
+     ],
+     "facts": [
+      "cloudfront-dec-set-expiry-even-with-versioning"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "A path with the * wildcard counts as one path, and the first 1,000 invalidation paths each month are free.",
+     "accept": [
+      "a wildcard is one path",
+      "invalidation is cheap for a few paths"
+     ],
+     "facts": [
+      "cloudfront-invalidation-wildcard-counts-one-path",
+      "cloudfront-invalidation-first-1000-paths-free"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "invalidation is free",
+     "correct": "The first 1,000 invalidation paths that you submit each month are free. You pay for each path after that.",
+     "fact": "cloudfront-invalidation-first-1000-paths-free"
+    },
+    {
+     "error": "turn on S3 Versioning to update the files",
+     "correct": "AWS recommends a version identifier in file names or in folder names. That is a naming practice, not a bucket setting.",
+     "fact": "cloudfront-versioned-file-names-recommended"
+    },
+    {
+     "error": "set every TTL to zero so users always get new files",
+     "correct": "If Minimum TTL, Maximum TTL and Default TTL are all set to 0, CloudFront caching is disabled.",
+     "fact": "cloudfront-ttl-all-zero-disables-caching"
+    }
+   ],
+   "terms": [
+    {
+     "say": "invalidation",
+     "avoid": [
+      "cache purge"
+     ]
+    },
+    {
+     "say": "versioned file names",
+     "avoid": [
+      "cache busting"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What if a broken file is already cached and must go now?",
+     "answer": "That is the unexpected case that invalidation is for. A path with the * wildcard counts as one path, and the first 1,000 invalidation paths each month are free.",
+     "facts": [
+      "cloudfront-faq-invalidate-only-unexpected-use-versioning",
+      "cloudfront-invalidation-wildcard-counts-one-path",
+      "cloudfront-invalidation-first-1000-paths-free"
+     ]
+    },
+    {
+     "question": "How long does CloudFront keep a file if our origin sends no cache headers?",
+     "answer": "Then CloudFront uses the Default TTL of the cache behavior. Its default value is 86400 seconds, which is one day.",
+     "facts": [
+      "cloudfront-ttl-default-ttl-only-without-headers",
+      "cloudfront-default-ttl-default-value"
+     ]
+    }
+   ],
+   "facts": [
+    "cloudfront-invalidation-prefer-versioning-for-frequent-updates",
+    "cloudfront-versioned-file-names-recommended",
+    "cloudfront-faq-invalidate-only-unexpected-use-versioning",
+    "cloudfront-dec-set-expiry-even-with-versioning",
+    "cloudfront-invalidation-wildcard-counts-one-path",
+    "cloudfront-invalidation-first-1000-paths-free",
+    "cloudfront-ttl-all-zero-disables-caching",
+    "cloudfront-ttl-default-ttl-only-without-headers",
+    "cloudfront-default-ttl-default-value"
+   ],
+   "section": "2-deep.md#cache-headers-decide-how-long-a-copy-lives-and-versioned-names-replace-it-sooner",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "cloudfront",
+   "status": "ready",
+   "rev": 3
+  },
+  {
+   "id": "cloudfront-s04",
+   "kind": "compare",
+   "prompt": "CloudFront Functions or Lambda@Edge: where should our token check run?",
+   "persona": "a startup CTO you advise",
+   "ten_second": "If the function can check the token from the request alone, use CloudFront Functions. If the check must call your user service, use Lambda@Edge.",
+   "sixty_second": [
+    "Both let you run code in CloudFront, close to your users. The difference is what the code can reach.",
+    "It works like this. CloudFront Functions are for short, light tasks.",
+    "Checking a JSON web token in the request headers is one of them.",
+    "They run in under a millisecond, but they have no network access.",
+    "Lambda@Edge runs longer, and it can make network calls.",
+    "For example, it can call your user service to confirm credentials.",
+    "The thing to watch is cost and key data.",
+    "CloudFront Functions cost a fraction of the price of Lambda@Edge.",
+    "Keep the key data in CloudFront KeyValueStore, so you update it without new code.",
+    "In your case, it depends on the token.",
+    "Is it a signed JSON web token, or does the check need a database lookup?"
+   ],
+   "skeleton": [
+    "both run code in CloudFront",
+    "Functions: light, no network",
+    "Lambda@Edge: network calls, longer",
+    "key data in KeyValueStore"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "CloudFront Functions suit request authorization: they can validate authorization tokens, such as JSON web tokens (JWT), by inspecting authorization headers.",
+     "accept": [
+      "a function can check a JSON web token",
+      "token checks fit CloudFront Functions"
+     ],
+     "facts": [
+      "cloudfront-dec-functions-use-token-validation",
+      "cloudfront-functions-use-cases"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "CloudFront Functions have no network access, no file system access and no access to the request body.",
+     "accept": [
+      "CloudFront Functions cannot call other services",
+      "no network calls from CloudFront Functions"
+     ],
+     "facts": [
+      "cloudfront-functions-no-network-no-body-fs-access"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A Lambda@Edge function can make network calls to external resources, for example to confirm user credentials.",
+     "accept": [
+      "Lambda@Edge can call our user service",
+      "Lambda@Edge has network access"
+     ],
+     "facts": [
+      "cloudfront-lambda-edge-network-calls-allowed"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "CloudFront Functions run in submillisecond time, and Lambda@Edge functions can run up to 30 seconds.",
+     "accept": [
+      "functions run in under a millisecond",
+      "Lambda@Edge runs longer"
+     ],
+     "facts": [
+      "cloudfront-edge-compare-duration"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "CloudFront Functions cost a fraction of the price of AWS Lambda@Edge.",
+     "accept": [
+      "CloudFront Functions are cheaper"
+     ],
+     "facts": [
+      "cloudfront-dec-functions-cheaper-than-lambda-edge"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "CloudFront KeyValueStore lets a function read key value data that you update independently of the function code.",
+     "accept": [
+      "keep the keys in KeyValueStore"
+     ],
+     "facts": [
+      "cloudfront-faq-keyvaluestore-global-key-value-for-functions"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "CloudFront Functions can call your API to check the token",
+     "correct": "CloudFront Functions have no network access. A check that calls another service needs Lambda@Edge.",
+     "fact": "cloudfront-functions-no-network-no-body-fs-access"
+    },
+    {
+     "error": "CloudFront Functions replace Lambda@Edge",
+     "correct": "CloudFront Functions is meant to complement Lambda@Edge, not replace it. You can use both on different event triggers within the same cache behavior.",
+     "fact": "cloudfront-faq-functions-complement-lambda-edge"
+    },
+    {
+     "error": "Lambda@Edge is always faster",
+     "correct": "CloudFront Functions run in submillisecond time. Lambda@Edge functions can run up to 30 seconds.",
+     "fact": "cloudfront-edge-compare-duration"
+    }
+   ],
+   "terms": [
+    {
+     "say": "JSON web token",
+     "avoid": [
+      "JWT token"
+     ]
+    },
+    {
+     "say": "network call",
+     "avoid": [
+      "outbound hop"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we use both in the same distribution?",
+     "answer": "Yes. You can use CloudFront Functions and Lambda@Edge on different event triggers within the same cache behavior.",
+     "facts": [
+      "cloudfront-faq-functions-complement-lambda-edge"
+     ]
+    },
+    {
+     "question": "How big can a CloudFront function be?",
+     "answer": "The maximum function size is 10 KB, and this quota isn't adjustable. For more data, you create a key value store.",
+     "facts": [
+      "cloudfront-quota-function-max-size"
+     ]
+    }
+   ],
+   "facts": [
+    "cloudfront-dec-functions-use-token-validation",
+    "cloudfront-functions-use-cases",
+    "cloudfront-functions-no-network-no-body-fs-access",
+    "cloudfront-lambda-edge-network-calls-allowed",
+    "cloudfront-edge-compare-duration",
+    "cloudfront-dec-functions-cheaper-than-lambda-edge",
+    "cloudfront-faq-keyvaluestore-global-key-value-for-functions",
+    "cloudfront-faq-functions-complement-lambda-edge",
+    "cloudfront-quota-function-max-size"
+   ],
+   "section": "2-deep.md#cloudfront-functions-do-light-rewrites-and-edge-lambda-functions-can-call-other-services",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "cloudfront",
+   "status": "ready",
+   "rev": 3
+  }
+ ]
+}

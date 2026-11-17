@@ -1,0 +1,392 @@
+{
+ "v": 1,
+ "chapter": "kms",
+ "items": [
+  {
+   "id": "kms-t01",
+   "type": "try",
+   "title": "Disable a KMS key and watch decryption stop",
+   "kills": "\"You can delete a KMS key at once, and a disabled key is gone.\"",
+   "trap": "kms-trap-delete-key-immediately",
+   "section": "2-deep.md#a-disabled-kms-key-can-be-re-enabled-but-a-deleted-one-cannot-be-recovered",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "Close to $0. The key exists for less than one hour before you schedule its deletion, and AWS KMS prorates the key price hourly. The few requests of this task fall inside the AWS KMS free tier of 20,000 requests/month.",
+   "cost_if_forgotten": "$1/month for the key, prorated hourly: about a thirtieth of $1 each day. Disabling the key does not stop this charge. Scheduling its deletion does.",
+   "cost_facts": [
+    "kms-price-key-storage-per-month",
+    "kms-pricing-no-charge-scheduled-deletion",
+    "kms-free-tier-20000-requests"
+   ],
+   "permissions": [
+    "kms:CreateKey",
+    "kms:TagResource",
+    "kms:Encrypt",
+    "kms:Decrypt",
+    "kms:DescribeKey",
+    "kms:DisableKey",
+    "kms:EnableKey",
+    "kms:ScheduleKeyDeletion",
+    "kms:ListAliases",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "Use this when you cannot create KMS keys. It changes nothing. List the aliases of your account in this Region: aws kms list-aliases --query \"Aliases[].[AliasName,TargetKeyId]\" An alias that starts with alias/aws/ and shows a key ID points to an AWS managed key. An alias without a key ID has no key yet. Use one key ID as <KEY_ID> and read who manages the key and its state: aws kms describe-key --key-id <KEY_ID> --query \"KeyMetadata.[KeyManager,KeyState]\" Expect AWS and Enabled. You cannot disable an AWS managed key or schedule its deletion, so the break-it step of this task needs a customer managed key.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a symmetric encryption KMS key with the two book tags. Name no key policy: the default key policy lets the IAM policies of your account allow the use of the key.",
+     "command": "aws kms create-key --description \"saa kms-t01 practice key\" --tags TagKey=book,TagValue=saa TagKey=task,TagValue=kms-t01",
+     "capture": {
+      "name": "KEY_ID",
+      "query": "KeyMetadata.KeyId"
+     },
+     "expect": "No output. KEY_ID now holds the key ID of the new key.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Encrypt a short text with the new key. The value c2FhIHRlc3Q= is the text saa test in base64, the form that the AWS CLI expects for --plaintext.",
+     "command": "aws kms encrypt --key-id $KEY_ID --plaintext c2FhIHRlc3Q=",
+     "capture": {
+      "name": "CIPHERTEXT",
+      "query": "CiphertextBlob"
+     },
+     "expect": "No output. CIPHERTEXT now holds the encrypted text, also in base64.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Decrypt the ciphertext while the key is enabled.",
+     "command": "aws kms decrypt --ciphertext-blob $CIPHERTEXT --key-id $KEY_ID --query Plaintext --output text",
+     "expect": "c2FhIHRlc3Q=, the base64 form of saa test.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Disable the key. Disabling is the reversible way to stop all use of a key.",
+     "command": "aws kms disable-key --key-id $KEY_ID",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the state of the key.",
+     "command": "aws kms describe-key --key-id $KEY_ID --query \"KeyMetadata.[KeyState,Enabled]\"",
+     "expect": "Disabled and false. The key still exists.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Decrypt the same ciphertext again.",
+     "command": "aws kms decrypt --ciphertext-blob $CIPHERTEXT --key-id $KEY_ID --query Plaintext --output text",
+     "expect": "An error that names DisabledException and says that the key is disabled.",
+     "break_it": true,
+     "predict": "Your IAM permissions did not change, and the ciphertext did not change. Does the decrypt call still work?",
+     "explain": "A disabled key works in no cryptographic operation [until you re-enable it](../facts/kms.md#kms-disabled-key-no-crypto-until-reenabled). Decrypt is a cryptographic operation, so the call fails although your permissions are the same. [Disabled keys continue to incur storage charges](../facts/kms.md#kms-disabled-keys-still-charged), so disabling a key does not stop its monthly fee."
+    },
+    {
+     "text": "Fix it: enable the key again.",
+     "command": "aws kms enable-key --key-id $KEY_ID",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Decrypt the same ciphertext a third time.",
+     "command": "aws kms decrypt --ciphertext-blob $CIPHERTEXT --key-id $KEY_ID --query Plaintext --output text",
+     "expect": "c2FhIHRlc3Q= again. Nothing was lost while the key was disabled.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Schedule the key for deletion with the shortest waiting period, 7 days. The output shows KeyState PendingDeletion and a DeletionDate: AWS KMS does not delete a key at once.",
+     "command": "aws kms schedule-key-deletion --key-id $KEY_ID --pending-window-in-days 7"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=kms-t01 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "The ARN of this key, because a key that waits for deletion keeps its tags. The list is not the proof. For each ARN, run aws kms describe-key --key-id with that ARN and --query KeyMetadata.KeyState. PendingDeletion passes. Enabled or Disabled fails: the cleanup did not run, so schedule the deletion of that key."
+   },
+   "still_costs": [
+    "Nothing after the cleanup. A customer managed key that is scheduled for deletion is not charged. To check the key, run aws kms describe-key --key-id $KEY_ID --query \"KeyMetadata.[KeyState,DeletionDate]\" and expect PendingDeletion and a date 7 days from today.",
+    "If you cancel the deletion, the key is charged again as though it was never scheduled for deletion.",
+    "If the CloudShell session ended before the cleanup, KEY_ID is empty. Find the key ARN again with the verify command, and use the key ID at its end."
+   ],
+   "facts": [
+    "kms-disabled-key-no-crypto-until-reenabled",
+    "kms-disabled-keys-still-charged",
+    "kms-disable-instead-of-delete",
+    "kms-deletion-waiting-period-7-to-30-days",
+    "kms-pending-deletion-no-crypto-cancel-possible",
+    "kms-default-key-policy-enables-iam",
+    "kms-aws-managed-key-cannot-change",
+    "kms-price-key-storage-per-month",
+    "kms-pricing-no-charge-scheduled-deletion",
+    "kms-free-tier-20000-requests"
+   ],
+   "sources": [
+    {
+     "title": "Enable and disable keys (AWS CLI examples: enable-key, disable-key, describe-key)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/enabling-keys.html"
+    },
+    {
+     "title": "Schedule key deletion (AWS CLI example: schedule-key-deletion)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys-scheduling-key-deletion.html"
+    },
+    {
+     "title": "Key states of AWS KMS keys (DisabledException)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/key-state.html"
+    },
+    {
+     "title": "AWS KMS examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_kms_code_examples.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-key (example 1 and the --tags syntax)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/create-key.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: encrypt (the --plaintext value must be base64-encoded)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/encrypt.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: decrypt",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/decrypt.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: disable-key",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/disable-key.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: enable-key",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/enable-key.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-key",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/describe-key.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: schedule-key-deletion",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/schedule-key-deletion.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-aliases",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/list-aliases.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-resources (Resource Groups Tagging API)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    },
+    {
+     "title": "Resource Groups Tagging API Reference: GetResources supports all resource types",
+     "url": "https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/Welcome.html"
+    },
+    {
+     "title": "Tags in AWS KMS (no tag changes on a key that is pending deletion)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/tagging-keys.html"
+    }
+   ],
+   "chapter": "kms",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "kms-t02",
+   "type": "try",
+   "title": "Rotate a KMS key and decrypt data from before the rotation",
+   "kills": "\"Rotation gives the key a new key ID, and old data must be re-encrypted.\"",
+   "trap": "kms-trap-rotation-reencrypts-data",
+   "section": "2-deep.md#automatic-rotation-changes-only-the-key-material-and-keeps-the-same-kms-key",
+   "pass_route": false,
+   "minutes": 12,
+   "cost": "Close to $0. The key and its one rotation exist for less than one hour before you schedule the deletion, and AWS KMS prorates both charges hourly. The few requests fall inside the AWS KMS free tier of 20,000 requests/month.",
+   "cost_if_forgotten": "$1/month for the key, $1/month more for the on-demand rotation of step 6, and $1/month more after the automatic rotation about 90 days later, all prorated hourly. The second rotation is the last one that adds cost. This runs until you schedule the deletion of the key.",
+   "cost_facts": [
+    "kms-price-key-storage-per-month",
+    "kms-price-rotation-capped-at-second",
+    "kms-pricing-no-charge-scheduled-deletion",
+    "kms-free-tier-20000-requests"
+   ],
+   "permissions": [
+    "kms:CreateKey",
+    "kms:TagResource",
+    "kms:Encrypt",
+    "kms:Decrypt",
+    "kms:GetKeyRotationStatus",
+    "kms:EnableKeyRotation",
+    "kms:RotateKeyOnDemand",
+    "kms:ListKeyRotations",
+    "kms:ScheduleKeyDeletion",
+    "kms:ListAliases",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "Use this when you cannot create KMS keys. It changes nothing. List the aliases of your account in this Region: aws kms list-aliases --query \"Aliases[].[AliasName,TargetKeyId]\" Use the key ID of an alias that starts with alias/aws/ as <KEY_ID>. That key is an AWS managed key. Read its rotation status: aws kms get-key-rotation-status --key-id <KEY_ID> Expect \"KeyRotationEnabled\": true. AWS rotates every AWS managed key each year, and you cannot turn that rotation off. Services keep using the same key ID after each rotation.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a symmetric encryption KMS key with the two book tags.",
+     "command": "aws kms create-key --description \"saa kms-t02 practice key\" --tags TagKey=book,TagValue=saa TagKey=task,TagValue=kms-t02",
+     "capture": {
+      "name": "KEY_ID",
+      "query": "KeyMetadata.KeyId"
+     },
+     "expect": "No output. KEY_ID now holds the key ID of the new key.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Encrypt a short text before any rotation. The value c2FhIHRlc3Q= is the text saa test in base64, the form that the AWS CLI expects for --plaintext.",
+     "command": "aws kms encrypt --key-id $KEY_ID --plaintext c2FhIHRlc3Q=",
+     "capture": {
+      "name": "CIPHERTEXT",
+      "query": "CiphertextBlob"
+     },
+     "expect": "No output. CIPHERTEXT now holds the encrypted text.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the rotation status of the new key: is automatic rotation on?",
+     "command": "aws kms get-key-rotation-status --key-id $KEY_ID",
+     "expect": "\"KeyRotationEnabled\": false. Automatic rotation of a new customer managed key stays off until you turn it on.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Turn on automatic rotation with a rotation period of 90 days, the shortest period that AWS KMS accepts.",
+     "command": "aws kms enable-key-rotation --key-id $KEY_ID --rotation-period-in-days 90",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the rotation status again.",
+     "command": "aws kms get-key-rotation-status --key-id $KEY_ID --query \"[KeyRotationEnabled,RotationPeriodInDays,NextRotationDate]\"",
+     "expect": "true, 90, and a date about 90 days from today.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Do not wait 90 days: rotate the key material now, on demand. An on-demand rotation does not change the automatic rotation schedule.",
+     "command": "aws kms rotate-key-on-demand --key-id $KEY_ID",
+     "expect": "The same key ID as in KEY_ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the completed rotations of the key.",
+     "command": "aws kms list-key-rotations --key-id $KEY_ID --query \"Rotations[].[RotationType,RotationDate]\"",
+     "expect": "ON_DEMAND and the date and time of today. If the list is empty, the rotation is still in progress: wait one minute and run the command again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Decrypt the ciphertext of step 2, made with the old key material. Does it decrypt, and under which key ID?",
+     "command": "aws kms decrypt --ciphertext-blob $CIPHERTEXT --key-id $KEY_ID --query \"[KeyId,Plaintext]\"",
+     "expect": "The ARN of the same key, which ends with the ID in KEY_ID, and c2FhIHRlc3Q=. The old ciphertext decrypts without re-encryption, and the key ID did not change.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Schedule the key for deletion with the shortest waiting period, 7 days.",
+     "command": "aws kms schedule-key-deletion --key-id $KEY_ID --pending-window-in-days 7"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=kms-t02 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "The ARN of this key, because a key that waits for deletion keeps its tags. The list is not the proof. For each ARN, run aws kms describe-key --key-id with that ARN and --query KeyMetadata.KeyState. PendingDeletion passes. Enabled or Disabled fails: the cleanup did not run, so schedule the deletion of that key."
+   },
+   "still_costs": [
+    "Nothing after the cleanup. A customer managed key that is scheduled for deletion is not charged. To check the key, run aws kms describe-key --key-id $KEY_ID --query \"KeyMetadata.[KeyState,DeletionDate]\" and expect PendingDeletion and a date 7 days from today.",
+    "If the CloudShell session ended before the cleanup, KEY_ID is empty. Find the key ARN again with the verify command, and use the key ID at its end."
+   ],
+   "facts": [
+    "kms-rotation-disabled-by-default-cmk",
+    "kms-rotation-period-range-90-2560-days",
+    "kms-rotation-same-logical-key-transparent",
+    "kms-faq-auto-rotation-no-reencrypt",
+    "kms-rotation-retains-old-material",
+    "kms-on-demand-rotation-imported-symmetric",
+    "kms-on-demand-rotation-keeps-schedule",
+    "kms-aws-managed-keys-rotate-every-year",
+    "kms-aws-managed-key-cannot-change",
+    "kms-deletion-waiting-period-7-to-30-days",
+    "kms-price-key-storage-per-month",
+    "kms-price-rotation-capped-at-second",
+    "kms-pricing-no-charge-scheduled-deletion",
+    "kms-free-tier-20000-requests"
+   ],
+   "sources": [
+    {
+     "title": "Enable automatic key rotation (AWS CLI example: enable-key-rotation, get-key-rotation-status)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/rotating-keys-enable.html"
+    },
+    {
+     "title": "Perform on-demand key rotation (AWS CLI example: rotate-key-on-demand)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/rotating-keys-on-demand.html"
+    },
+    {
+     "title": "List rotations and key materials (AWS CLI example: list-key-rotations)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/list-rotations.html"
+    },
+    {
+     "title": "Schedule key deletion (AWS CLI example: schedule-key-deletion)",
+     "url": "https://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys-scheduling-key-deletion.html"
+    },
+    {
+     "title": "AWS KMS examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_kms_code_examples.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-key (example 1 and the --tags syntax)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/create-key.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: encrypt (the --plaintext value must be base64-encoded)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/encrypt.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: decrypt",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/decrypt.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-key-rotation-status (also for AWS managed keys)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/get-key-rotation-status.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: enable-key-rotation",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/enable-key-rotation.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: rotate-key-on-demand",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/rotate-key-on-demand.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-key-rotations",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/list-key-rotations.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: schedule-key-deletion",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/schedule-key-deletion.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-aliases",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/kms/list-aliases.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-resources (Resource Groups Tagging API)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    }
+   ],
+   "chapter": "kms",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

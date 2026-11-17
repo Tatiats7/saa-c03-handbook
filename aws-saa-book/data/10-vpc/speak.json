@@ -1,0 +1,650 @@
+{
+ "v": 1,
+ "chapter": "vpc",
+ "items": [
+  {
+   "id": "vpc-s01",
+   "kind": "explain",
+   "prompt": "My worker only talks to S3. Why do I pay for a NAT gateway at all?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "For the S3 traffic, you shouldn't. A gateway endpoint carries it privately, with no hourly charge and no data processing charge.",
+   "sixty_second": [
+    "The short answer is: for the S3 traffic, you don't need the NAT gateway.",
+    "It works like this. A NAT gateway charges for every hour it runs.",
+    "It also charges for every gigabyte it processes, whatever the destination.",
+    "A gateway endpoint for S3 adds a route to the worker's route table.",
+    "Traffic to S3 matches that route, so it skips the NAT gateway.",
+    "And the endpoint has no hourly charge and no processing charge.",
+    "The thing to watch is that one endpoint serves one service.",
+    "If the worker calls S3 in its own Region alone, it needs no NAT gateway.",
+    "But software updates come from the internet, and need one.",
+    "In your case, I'd add the endpoint to the private route table between uploads.",
+    "Then the big uploads stop paying the NAT processing charge.",
+    "Which other hosts does the worker call, besides Amazon S3?"
+   ],
+   "skeleton": [
+    "NAT bills hours and gigabytes",
+    "endpoint is a route",
+    "endpoint has no charge",
+    "updates still need NAT"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A NAT gateway is charged for each hour that it is available and for each gigabyte of data that it processes.",
+     "accept": [
+      "the NAT gateway costs per hour and per gigabyte",
+      "you pay hours and data processing"
+     ],
+     "facts": [
+      "vpc-natgw-pricing-dimensions"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "The data processing charge applies regardless of the traffic's source or destination, so S3 traffic through the NAT gateway is charged too.",
+     "accept": [
+      "S3 traffic through NAT is not free",
+      "the destination does not matter"
+     ],
+     "facts": [
+      "vpc-natgw-data-processing-any-destination"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A gateway endpoint has no hourly charge and no data processing charge.",
+     "accept": [
+      "the gateway endpoint is free",
+      "no charge for the endpoint"
+     ],
+     "facts": [
+      "vpc-gateway-endpoint-no-hourly-or-processing-charge"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Instances in subnets whose route table has the endpoint route use the gateway endpoint for the service automatically.",
+     "accept": [
+      "the endpoint is a route in the route table",
+      "no code change, the route sends it"
+     ],
+     "facts": [
+      "vpc-gateway-endpoint-applies-per-route-table",
+      "vpc-gateway-endpoint-route-auto-added"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "A gateway endpoint reaches Amazon S3 and DynamoDB in its own Region; software updates, and S3 traffic to another Region, still go through the NAT gateway.",
+     "accept": [
+      "the endpoint is for S3 and DynamoDB in the same Region",
+      "updates still use the NAT gateway"
+     ],
+     "facts": [
+      "vpc-gateway-endpoint-s3-dynamodb-no-privatelink",
+      "vpc-gateway-endpoint-beats-igw-default-route",
+      "vpc-natgw-purpose"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "a gateway endpoint replaces the NAT gateway for all traffic",
+     "correct": "A gateway endpoint reaches Amazon S3 and DynamoDB. Traffic to the internet still needs a NAT gateway.",
+     "fact": "vpc-gateway-endpoint-s3-dynamodb-no-privatelink"
+    },
+    {
+     "error": "S3 traffic through a NAT gateway is free because EC2 to S3 is free",
+     "correct": "The NAT gateway charges data processing for every gigabyte, regardless of the traffic's source or destination.",
+     "fact": "vpc-natgw-data-processing-any-destination"
+    }
+   ],
+   "terms": [
+    {
+     "say": "gateway endpoint",
+     "avoid": [
+      "S3 gateway"
+     ]
+    },
+    {
+     "say": "route table",
+     "avoid": [
+      "routing table"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can our office network use the same endpoint to reach S3?",
+     "answer": "No. Gateway endpoints do not allow access from on-premises networks, from peered VPCs in other Regions, or through a transit gateway. For those cases you use an interface endpoint, at an additional cost.",
+     "facts": [
+      "vpc-gateway-endpoint-no-onprem-cross-region-tgw"
+     ]
+    },
+    {
+     "question": "Do we have to change the worker's code?",
+     "answer": "No. Instances in subnets whose route table has the endpoint route automatically use the gateway endpoint. Instances in other subnets keep using the public service endpoint.",
+     "facts": [
+      "vpc-gateway-endpoint-applies-per-route-table"
+     ]
+    }
+   ],
+   "facts": [
+    "vpc-natgw-pricing-dimensions",
+    "vpc-natgw-data-processing-any-destination",
+    "vpc-gateway-endpoint-no-hourly-or-processing-charge",
+    "vpc-gateway-endpoint-applies-per-route-table",
+    "vpc-gateway-endpoint-route-auto-added",
+    "vpc-gateway-endpoint-beats-igw-default-route",
+    "vpc-gateway-endpoint-s3-dynamodb-no-privatelink",
+    "vpc-natgw-purpose",
+    "vpc-gateway-endpoint-no-onprem-cross-region-tgw"
+   ],
+   "section": "2-deep.md#a-nat-gateway-lets-private-instances-start-connections-and-charges-hourly-and-per-gigabyte",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "vpc",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "vpc-s02",
+   "kind": "compare",
+   "prompt": "Security group or network ACL: which one should protect my database?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Both filter traffic. Start with the security group: it can allow only your app's security group. Add a network ACL to deny a source.",
+   "sixty_second": [
+    "Both are firewalls, but they sit at different levels.",
+    "The difference is what they remember, and whether they can deny.",
+    "It works like this. A security group sits on the database instance itself.",
+    "It has allow rules only, and it remembers each connection, so replies go back out.",
+    "Its rule can name your app's security group, not a list of addresses.",
+    "A network ACL sits on the whole subnet, with allow rules and deny rules.",
+    "The thing to watch is that a network ACL checks every packet, with no memory.",
+    "So you need rules for the replies too, or the connection breaks.",
+    "In your case, put the security group first, and keep the network ACL simple.",
+    "Do you need to block a known source, or only allow your application?"
+   ],
+   "skeleton": [
+    "both firewalls, different levels",
+    "security group: allow only, stateful",
+    "network ACL: subnet, allow and deny",
+    "replies need network ACL rules"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A security group works at the instance level; a network ACL works at the subnet level.",
+     "accept": [
+      "the security group is on the instance",
+      "the network ACL is on the subnet"
+     ],
+     "facts": [
+      "vpc-sg-vs-nacl-level"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "A security group has allow rules only; a network ACL has allow and deny rules.",
+     "accept": [
+      "a security group cannot deny",
+      "only the network ACL can block a source"
+     ],
+     "facts": [
+      "vpc-sg-vs-nacl-rule-type"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A security group is stateful, so return traffic is allowed automatically; a network ACL is stateless, so return traffic must be explicitly allowed.",
+     "accept": [
+      "the security group remembers connections",
+      "the network ACL needs a rule for the reply"
+     ],
+     "facts": [
+      "vpc-sg-vs-nacl-return-traffic"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "The source of a security group rule can be the ID of another security group.",
+     "accept": [
+      "allow the app's security group",
+      "reference a security group in a rule"
+     ],
+     "facts": [
+      "vpc-sg-rule-sources"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Security groups are the more versatile control; network ACLs work as a secondary control, for example to deny a specific subset of traffic.",
+     "accept": [
+      "security groups first, network ACLs second"
+     ],
+     "facts": [
+      "vpc-sg-primary-nacl-secondary"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Security groups and network ACLs can be used together or on their own.",
+     "accept": [
+      "use both together"
+     ],
+     "facts": [
+      "vpc-decision-guide-sg-and-nacl-together"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "a security group can deny an IP address",
+     "correct": "A security group has allow rules only. To deny a source, add a deny rule to a network ACL.",
+     "fact": "vpc-sg-vs-nacl-rule-type"
+    },
+    {
+     "error": "a network ACL remembers connections",
+     "correct": "Network ACLs are stateless, so you must include a rule that allows responses to the inbound traffic.",
+     "fact": "vpc-nacl-stateless-needs-response-rule"
+    }
+   ],
+   "terms": [
+    {
+     "say": "network ACL",
+     "avoid": [
+      "NACL"
+     ]
+    },
+    {
+     "say": "security group",
+     "avoid": [
+      "firewall group"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "If I remove a rule from the security group, does an open connection stop at once?",
+     "answer": "No. Its tracked connections are not immediately interrupted; they continue until they time out. To interrupt the traffic at once, you can use a network ACL for the subnet.",
+     "facts": [
+      "vpc-sg-rule-change-tracked-connections-continue"
+     ]
+    },
+    {
+     "question": "Does the network ACL filter traffic between the app and the database in the same subnet?",
+     "answer": "No. Network ACLs do not filter traffic between instances in the same subnet. The security groups of the instances filter that traffic, because they work at the instance level.",
+     "facts": [
+      "vpc-faq-network-acl-same-subnet",
+      "vpc-sg-vs-nacl-level"
+     ]
+    }
+   ],
+   "facts": [
+    "vpc-sg-vs-nacl-level",
+    "vpc-sg-vs-nacl-rule-type",
+    "vpc-sg-vs-nacl-return-traffic",
+    "vpc-sg-rule-sources",
+    "vpc-sg-primary-nacl-secondary",
+    "vpc-decision-guide-sg-and-nacl-together",
+    "vpc-nacl-stateless-needs-response-rule",
+    "vpc-sg-rule-change-tracked-connections-continue",
+    "vpc-faq-network-acl-same-subnet"
+   ],
+   "section": "2-deep.md#security-groups-remember-connections-but-network-acls-check-every-packet",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "vpc",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "vpc-s03",
+   "kind": "compare",
+   "prompt": "One NAT gateway in each Availability Zone, or one regional NAT gateway: what is the difference?",
+   "persona": "a startup CTO you advise",
+   "ten_second": "Both keep outbound access when one Availability Zone fails. A regional NAT gateway follows your workloads and needs no public subnet.",
+   "sixty_second": [
+    "Both give your private subnets outbound access that survives an Availability Zone failure.",
+    "The difference is who places the gateways and the routes.",
+    "It works like this. A zonal NAT gateway lives in one Availability Zone.",
+    "So you create one per Availability Zone, each in a public subnet, with its own route.",
+    "A regional NAT gateway needs no public subnet.",
+    "It follows your workloads into each Availability Zone, and every subnet uses one route.",
+    "The thing to watch is billing: it's charged for each Availability Zone where it runs.",
+    "It also doesn't support private NAT.",
+    "And reaching a new Availability Zone can take up to sixty minutes.",
+    "In your case, a regional NAT gateway means less routing work for your team.",
+    "Do any of your private subnets need private NAT to reach another network?"
+   ],
+   "skeleton": [
+    "both survive an AZ failure",
+    "zonal: one per AZ, public subnet",
+    "regional: follows workloads, one route",
+    "billed per AZ, no private NAT"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A zonal NAT gateway is created in one Availability Zone and is redundant inside that zone.",
+     "accept": [
+      "a zonal NAT gateway lives in one zone",
+      "redundant in its own zone"
+     ],
+     "facts": [
+      "vpc-natgw-one-az-redundant-in-zone"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "If several zones share one zonal NAT gateway and its zone fails, resources in the other Availability Zones lose internet access, so you create one per zone.",
+     "accept": [
+      "one NAT gateway per zone",
+      "a shared NAT gateway is a single point of failure"
+     ],
+     "facts": [
+      "vpc-natgw-shared-across-azs-loses-internet"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A regional NAT gateway automatically expands across Availability Zones based on where your workloads are.",
+     "accept": [
+      "it follows the workloads",
+      "it expands to new zones automatically"
+     ],
+     "facts": [
+      "vpc-regional-natgw-vs-zonal"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A regional NAT gateway needs no public subnet and uses one NAT ID across Availability Zones, so subnets can share one route entry.",
+     "accept": [
+      "no public subnet needed",
+      "one route for all subnets"
+     ],
+     "facts": [
+      "vpc-regional-natgw-no-public-subnet"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "must",
+     "point": "A regional NAT gateway is charged for each hour that it is configured in each Availability Zone.",
+     "accept": [
+      "billed per zone per hour",
+      "more zones, more NAT gateway hours"
+     ],
+     "facts": [
+      "vpc-regional-natgw-billed-per-az-hour"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Regional NAT gateways do not support private NAT.",
+     "accept": [
+      "no private NAT on the regional gateway"
+     ],
+     "facts": [
+      "vpc-regional-nat-no-private-nat"
+     ]
+    },
+    {
+     "id": "kp7",
+     "kind": "nice",
+     "point": "A regional NAT gateway can take up to 60 minutes to expand to a new Availability Zone.",
+     "accept": [
+      "up to an hour to reach a new zone"
+     ],
+     "facts": [
+      "vpc-regional-nat-expand-60-minutes"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "a regional NAT gateway has one hourly charge for all zones",
+     "correct": "A regional NAT gateway is charged for each hour that it is configured in each Availability Zone.",
+     "fact": "vpc-regional-natgw-billed-per-az-hour"
+    },
+    {
+     "error": "a regional NAT gateway supports private NAT",
+     "correct": "Regional NAT gateways do not support private NAT. Use a zonal NAT gateway for private NAT.",
+     "fact": "vpc-regional-nat-no-private-nat"
+    },
+    {
+     "error": "one zonal NAT gateway is highly available for every zone",
+     "correct": "A zonal NAT gateway is redundant inside its own zone. If that zone fails, resources in the other Availability Zones lose internet access.",
+     "fact": "vpc-natgw-shared-across-azs-loses-internet"
+    }
+   ],
+   "terms": [
+    {
+     "say": "regional NAT gateway",
+     "avoid": [
+      "multi-AZ NAT"
+     ]
+    },
+    {
+     "say": "zonal NAT gateway",
+     "avoid": [
+      "single NAT"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "How many connections can a NAT gateway handle to one busy destination?",
+     "answer": "Each IP address supports 55,000 simultaneous connections to one destination. A zonal NAT gateway takes up to 8 IPv4 addresses. A regional one supports 32 IP addresses per Availability Zone.",
+     "facts": [
+      "vpc-nat-55000-connections-per-ip",
+      "vpc-regional-nat-ip-per-az"
+     ]
+    },
+    {
+     "question": "When we launch instances in a new zone, is the regional NAT gateway there right away?",
+     "answer": "Not always. It can take up to 60 minutes to expand to a new Availability Zone. Until then, the gateway in an existing zone handles that traffic across zones.",
+     "facts": [
+      "vpc-regional-nat-expand-60-minutes"
+     ]
+    }
+   ],
+   "facts": [
+    "vpc-natgw-one-az-redundant-in-zone",
+    "vpc-natgw-shared-across-azs-loses-internet",
+    "vpc-regional-natgw-vs-zonal",
+    "vpc-regional-natgw-no-public-subnet",
+    "vpc-regional-natgw-billed-per-az-hour",
+    "vpc-regional-nat-no-private-nat",
+    "vpc-regional-nat-expand-60-minutes",
+    "vpc-nat-55000-connections-per-ip",
+    "vpc-regional-nat-ip-per-az"
+   ],
+   "section": "2-deep.md#a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "vpc",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "vpc-s04",
+   "kind": "decide",
+   "prompt": "There is a line on our bill for public IP addresses. Do our servers need them?",
+   "persona": "Ana, CEO of Callvale",
+   "ten_second": "Only the web instance that customers visit needs one. Each public address is billed every hour, in use or idle.",
+   "sixty_second": [
+    "The short answer is: only the web instance that customers visit needs one.",
+    "It works like this. A public IP address lets the internet reach one instance.",
+    "AWS charges for each one by the hour, whether it's in use or idle.",
+    "The worker and the database don't need to be reached from the internet.",
+    "So they move to a private subnet, a part the internet cannot reach.",
+    "They still reach the internet for updates through a NAT gateway.",
+    "That's a shared exit: they can go out, but nobody can come in.",
+    "The thing to watch is the NAT gateway's own hourly charge and address.",
+    "In your case, the web instance keeps its address, and the NAT gateway has its own.",
+    "Which of your instances must customers reach directly?"
+   ],
+   "skeleton": [
+    "only the web instance",
+    "billed hourly, used or idle",
+    "private subnet plus NAT gateway",
+    "NAT gateway: hours, gigabytes, its address"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "You pay an hourly rate for each public IPv4 address, and the price is the same whether the address is in use or idle.",
+     "accept": [
+      "every public address costs money",
+      "in use or idle, same price"
+     ],
+     "facts": [
+      "vpc-public-ipv4-hourly-in-use-or-idle"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "An instance that does not need to be reached directly from the internet should not be in a public subnet.",
+     "accept": [
+      "the worker and database go private",
+      "only reachable instances stay public"
+     ],
+     "facts": [
+      "vpc-public-subnet-only-if-reachable"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Instances without public IP addresses reach the internet through a NAT gateway, and hosts on the internet cannot start a connection to them.",
+     "accept": [
+      "they go out through the NAT gateway",
+      "nobody can come in"
+     ],
+     "facts": [
+      "vpc-faq-private-instances-nat"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A NAT gateway is charged for each hour that it is available and for each gigabyte of data that it processes.",
+     "accept": [
+      "the NAT gateway has its own charge"
+     ],
+     "facts": [
+      "vpc-natgw-pricing-dimensions"
+     ]
+    },
+    {
+     "id": "kp7",
+     "kind": "must",
+     "point": "A public NAT gateway has an Elastic IP address, and every public IPv4 address is billed.",
+     "accept": [
+      "the NAT gateway's address is billed too",
+      "two billed addresses, not one"
+     ],
+     "facts": [
+      "vpc-natgw-public-connectivity-type",
+      "vpc-public-ipv4-charge-2024"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "AWS suggests load balancers for inbound traffic and NAT gateways for outbound traffic instead of a public IPv4 address on each instance.",
+     "accept": [
+      "load balancer in, NAT gateway out"
+     ],
+     "facts": [
+      "vpc-public-ipv4-avoid-per-instance-with-elb-nat"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Elastic IP addresses are free while they are attached",
+     "correct": "An Elastic IP address is a public IPv4 address, and every public IPv4 address is billed hourly, in use or idle.",
+     "fact": "vpc-public-ipv4-hourly-in-use-or-idle"
+    },
+    {
+     "error": "private instances cannot download updates",
+     "correct": "Private instances reach the internet through a NAT gateway. The NAT gateway allows outbound connections and blocks connections started from the internet.",
+     "fact": "vpc-faq-private-instances-nat"
+    }
+   ],
+   "terms": [
+    {
+     "say": "public IP address",
+     "avoid": [
+      "internet IP"
+     ]
+    },
+    {
+     "say": "NAT gateway",
+     "avoid": [
+      "NAT box"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "If the web instance needs an address that never changes, what do we use?",
+     "answer": "An Elastic IP address. It remains allocated to your account until you explicitly release it. It is billed like any other public IPv4 address, in use or idle.",
+     "facts": [
+      "vpc-eip-persistent-until-released",
+      "vpc-public-ipv4-hourly-in-use-or-idle"
+     ]
+    },
+    {
+     "question": "Can the database still download its updates without a public address?",
+     "answer": "Yes. Instances without public IP addresses route their traffic through a NAT gateway to reach the internet. Hosts on the internet cannot start a connection to them.",
+     "facts": [
+      "vpc-faq-private-instances-nat"
+     ]
+    }
+   ],
+   "facts": [
+    "vpc-public-ipv4-hourly-in-use-or-idle",
+    "vpc-public-subnet-only-if-reachable",
+    "vpc-faq-private-instances-nat",
+    "vpc-natgw-pricing-dimensions",
+    "vpc-natgw-public-connectivity-type",
+    "vpc-public-ipv4-charge-2024",
+    "vpc-public-ipv4-avoid-per-instance-with-elb-nat",
+    "vpc-eip-persistent-until-released"
+   ],
+   "section": "2-deep.md#every-public-ipv4-address-is-billed-but-only-an-elastic-ip-address-stays-yours",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "vpc",
+   "status": "ready",
+   "rev": 1
+  }
+ ]
+}

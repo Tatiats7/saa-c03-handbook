@@ -1,0 +1,248 @@
+{
+ "lens": "reader",
+ "chapter": "08",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "decision-record",
+   "quote": "- **AWS WAF with managed rules and a rate-based rule.** ... 1. The web ACL on CloudFront blocks addresses that send too many sign-in requests and requests that match common attacks. ... **Figure.** Web ACLs on CloudFront and the load balancer stop the flood, and outbound traffic passes Network Firewall to approved domains.",
+   "type": "contradiction",
+   "severity": "blocking",
+   "evidence": "The chapter's own Stop and answer in 2-deep.md#a-rate-based-rule-limits-each-key-that-sends-requests-too-fast says a per-address limit does not stop this attack: \"Each of 1,400 IP addresses sends about four sign-in attempts in five minutes. ... No. Each address is counted on its own and stays under the limit. Add the ATP managed rule group.\" Callvale's attack (STARTUP.md, 08: 60,000 attempts in one hour from 1,400 IP addresses, about 43 per address per hour) is that exact case, and the lowest limit is 10 (fact waf-rate-limit-minimum). Fact waf-rate-based-default-key-ip: the rule groups requests \"based on the request IP address\". The decision record, its after figure, its caption and step 1 still say the rate-based rule stops the flood, and the ATP group appears neither in Options nor in Decision. The spoken answer edge-protection-s01 for the same story adds \"A second rule checks each sign-in against a database of stolen passwords\", so the reader gets two answers to one story. Fix: name the account takeover prevention (ATP) managed rule group in the chosen option and in the Decision (fact waf-atp-inspects-login-attempts), rewrite step 1 and the caption (and the diagram spec edge-protection-after) so the rate-based rule stops fast addresses and ATP stops the stolen-password attempts, and add the ATP fee to the Trade-off (fact waf-managed-paid-groups-bot-atp-acfp). STARTUP.md rule: the story never teaches a fact; keep the decision, change the stated reason.",
+   "status": "fixed",
+   "resolution": "fix-08: As claims-01: ATP in Options, figure step 1 and diagram spec; Trade-off names its fee."
+  },
+  {
+   "id": "reader-02",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "decision-record",
+   "quote": "2. Requests that pass go to the Application Load Balancer, which has its own web ACL from the same Firewall Manager policy.",
+   "type": "wrong",
+   "severity": "blocking",
+   "evidence": "One Firewall Manager AWS WAF policy cannot cover a CloudFront distribution and a load balancer. Fact firewall-manager-waf-policy-global-for-cloudfront (docs/waf/latest/developerguide/create-policy): \"To protect Amazon CloudFront distributions, choose **Global**.\" and \"To protect resources in multiple Regions (other than CloudFront distributions), you must create separate Firewall Manager policies for each Region.\" Fact firewall-manager-policies-region-specific (the chapter itself says \"Security policies are region specific\"). Fact waf-cloudfront-web-acl-not-other-types: a CloudFront web ACL cannot be associated \"with any other AWS resource type\". The reader would tell a customer that one policy covers both. Fix: \"... its own web ACL from a second Firewall Manager policy in the load balancer's Region\", in the prose step and in the after-diagram spec and alt text.",
+   "status": "fixed",
+   "resolution": "fix-08: As claims-02."
+  },
+  {
+   "id": "reader-03",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Which layer? | [Application layer (L7)](../facts/waf.md#waf-vs-shield-layer) | [Network, transport, and application layers (L3/L4/L7)](../facts/waf.md#waf-vs-shield-layer) | ... **Recap 1.** Which layers do AWS WAF and AWS Shield protect?",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "Skim test: from this table alone the reader learns that Shield covers L7 like AWS WAF, so an HTTP flood would need only Shield. The chapter itself says the opposite two sections later: Shield \"does not inspect the contents\" of HTTP traffic (fact shield-no-http-content-inspection) and \"Customers can also use AWS WAF to protect against Application layer attacks like HTTP POST or GET floods\" (fact shield-faq-standard-use-waf-for-layer-7). Shield's L7 protection works through AWS WAF: fact shield-auto-l7-managed-rule-group, \"Shield Advanced maintains a rule group in the resource's associated web ACL\". Recap 1 then asks her to memorize the misleading cell. READER.md: \"Headings, tables and captions must give a correct gist on their own.\" Fix: add to the Shield cell \"L7 only through AWS WAF rules (Shield Advanced)\" with the shield-auto-l7-managed-rule-group link, and give Recap 1's answer the same qualifier.",
+   "status": "fixed",
+   "resolution": "fix-08: Shield cell split by tier (Standard layer 3 and 4; Advanced layers 3, 4, and 7) and Recap 1 likewise, so the table no longer says free Shield covers L7; Check 1 now tests that Shield Standard does not stop an HTTP GET flood."
+  },
+  {
+   "id": "reader-04",
+   "file": "08-edge-protection/3-do.md",
+   "section": "do-it",
+   "quote": "# WAF, Shield, Firewall Manager and Network Firewall: do it\n\nNothing here yet.",
+   "type": "missing",
+   "severity": "blocking",
+   "evidence": "4-say.md also says \"Nothing here yet.\" All items in data/08-edge-protection/tasks.json (t01, t02), speak.json (s01, s02) and cards.json (12 cards) have \"status\": \"candidate\"; TOOLS-items.md sync: \"Only items with `status: ready` are printed\". TOOLS-rules.md R5: \"A reviewer sets cards, speak items and tasks to `ready` in the stage of that kind, after the item lint is clean\" (not done). Effect for the reader: both \"Try it\" boxes in 2-deep.md (\"See [3-do.md](3-do.md)\") open an empty page, she gets no spoken model answers for the week she must answer customers out loud, and no Anki cards. The finalize counts gate (T201, P201, C201) will also fail. Fix: run tasks/speak/cards set-status --status ready for the items after their item lint, then sync 08.",
+   "status": "fixed",
+   "resolution": "fix-08: As claims-03."
+  },
+  {
+   "id": "reader-05",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "> **Startup example:** Callvale's sign-in page receives 60,000 automated attempts in one hour from 1,400 IP addresses. The bank also requires that production workloads connect only to approved outside domains.",
+   "type": "term-before-explained",
+   "severity": "should",
+   "evidence": "\"The bank\" is never introduced in this chapter (same sentence in 2-deep.md decision-record Context, and \"the bank's supervisors\" in speak item edge-protection-s01). A reader who opens chapter 08 alone does not know which bank or why it sets rules for Callvale. STARTUP.md rule 1, Fixed names: \"Ostell Bank (the bank)\". Fix: first mention \"Callvale's bank customer, Ostell Bank, also requires ...\".",
+   "status": "fixed",
+   "resolution": "fix-08: Ostell Bank named in the Startup example ('Its bank customer, Ostell Bank'), the decision Context and s01."
+  },
+  {
+   "id": "reader-06",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "a-web-acl-checks-each-http-request-against-its-rules-in-priority-order",
+   "quote": "4. **Act.** Allow and Block each [stops the protection pack (web ACL) evaluation](../facts/waf.md#waf-terminating-vs-non-terminating); Count does not.",
+   "type": "terminology",
+   "severity": "should",
+   "evidence": "\"protection pack (web ACL)\" appears as link text four times (here, in the Spot the bug answer, and twice in \"with only one protection pack (web ACL)\" in the next subsection), after the text says the console \"also calls it\" that. RULINGS rule 8: one term per concept. The fact's own note (waf-change-protection-pack-console-2025): \"Write 'web ACL (protection pack)' once, then 'web ACL', which the exam uses.\" Fix: use displays without the console name (for example a different verbatim phrase of the same fact) or add a display such as \"stops the ... evaluation\"; keep the console name only in the first sentence.",
+   "status": "fixed",
+   "resolution": "fix-08: Displays changed to 'terminating or non-terminating' (step 4, Spot the bug) and 'one-to-many' (Associate step); the console name stays only in the first sentence."
+  },
+  {
+   "id": "reader-07",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "a-web-acl-checks-each-http-request-against-its-rules-in-priority-order",
+   "quote": "3. **Match.** A statement [inspects for malicious SQL code](../facts/waf.md#waf-sqli-statement-inspects-malicious-sql), an IP set or a country.",
+   "type": "unclear",
+   "severity": "should",
+   "evidence": "The sentence reads as \"a statement inspects for an IP set or a country\". STYLE.md plain English, short sentences with one idea. Fix: \"A statement matches a part of the request: SQL code ([inspects for malicious SQL code]), a source address in an IP set, or a country of origin.\"",
+   "status": "fixed",
+   "resolution": "fix-08: Match step: 'One statement [inspects for malicious SQL code]; others check an IP set or work [based on country and region of origin].'"
+  },
+  {
+   "id": "reader-08",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "each-resource-has-one-web-acl-in-the-same-region-as-the-resource",
+   "quote": "Why one Region? A CloudFront distribution serves from every edge location, so its web ACL needs one home: Global (CloudFront) is [identical to choosing Region US East (N. Virginia)](../facts/waf.md#waf-global-cloudfront-equals-us-east-1).",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The question \"Why one Region?\" asks why a web ACL lives in its resource's Region, but the answer explains only the CloudFront special case, and the cause it gives (\"needs one home\") is the writer's guess, not an AWS statement. The heading claim (\"in the same Region as the resource\") gets no cause and effect. Fix: ask \"Why US East (N. Virginia) for CloudFront?\" and answer with the fact only, or explain the regional case from waf-regional-rules-run-in-region-internal (used in q002: \"your rules run in region\").",
+   "status": "fixed",
+   "resolution": "fix-08: 'Why the Region?' now answered from facts: regional rules [run in region] (waf-regional-rules-run-in-region-internal); Global (CloudFront) equals US East (N. Virginia)."
+  },
+  {
+   "id": "reader-09",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "firewall-manager-applies-the-same-protections-to-every-account-in-an-organization",
+   "quote": "> **Say it:** The short answer is: one policy gives every account the same rules. The thing to watch is one policy per Region.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The Region rule is never taught in the body of the subsection (steps Prepare, Write, Scope, Apply say nothing about Regions); it appears first in this Say it line, directly above the Stop and answer that tests it, and is explained only in that answer (fact firewall-manager-policies-region-specific). So the Stop and answer gives itself away and the body leaves a gap. Same pattern in the rate-based subsection: \"The thing to watch is many slow addresses\" sits directly above the Stop and answer about 1,400 slow addresses. READER.md: questions must test what the gist misses. Fix: add a step \"Region. A policy covers one Region; CloudFront needs a Global policy\" (facts firewall-manager-policies-region-specific, firewall-manager-waf-policy-global-for-cloudfront) and move each Say it box after its Stop and answer.",
+   "status": "fixed",
+   "resolution": "fix-08: Region step added to the Firewall Manager body; rate-based Say it now 'The thing to watch is how the rule counts.' Moving Say it after Stop and answer was not done: TOOLS-rules R3 fixes the Say it callout directly before the Stop and answer."
+  },
+  {
+   "id": "reader-10",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "network-firewall-inspects-vpc-traffic-only-when-route-tables-send-it-there",
+   "quote": "No. Keep firewall subnets [for the exclusive use of Network Firewall](../facts/network-firewall.md#network-firewall-endpoint-not-own-subnet); an endpoint protects other subnets.",
+   "type": "mechanism-not-explained",
+   "severity": "should",
+   "evidence": "The answer gives a recommendation, not the cause. Fact network-firewall-endpoint-not-own-subnet, source docs/network-firewall/latest/developerguide/vpc-config-subnets: \"A firewall endpoint can't filter traffic coming into or going out of the subnet in which it resides\", and firewall-components: \"A firewall endpoint can protect any subnet in your VPC except for the one in which it's located.\" Question q010 already uses the display \"except for the one in which it's located\". Fix: \"No. An endpoint protects every subnet [except for the one in which it's located], so keep its subnet for Network Firewall only.\"",
+   "status": "fixed",
+   "resolution": "fix-08: Answer gives the cause: 'An endpoint does not filter its own subnet, so keep firewall subnets [for the exclusive use of Network Firewall].' The display with 'it's' fails L803 (contraction), so the other display of the same fact is used."
+  },
+  {
+   "id": "reader-11",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "decision-record",
+   "quote": "**Requirement.** Callvale must block common web attacks and limit request rates in every account, with the MOST cost-effective solution.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The Context names two problems (the sign-in flood and the bank's approved-domains rule), but the Requirement and all three Options cover only the web problem; the Decision then adds \"Outbound traffic passes AWS Network Firewall to approved domains\" with no requirement or option that leads to it. STARTUP.md 08 Problem keeps both. The section is also 343 words against a limit of 150 (lint W201), mostly because the before and after figures each repeat the context in three numbered steps. Fix: add the outbound-domain clause to the Requirement, put a second choice in the Options (security group rules / Network Firewall domain allow list), and cut the figure steps to one line each.",
+   "status": "fixed",
+   "resolution": "fix-08: Requirement now covers outbound domains; Options pair AWS WAF with Network Firewall; figure steps and alts cut. Section 343 to 258 words; the two story figures keep it above 150 (W201 warning)."
+  },
+  {
+   "id": "reader-12",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "**The problem it solves.** Attacks arrive at different layers, and each layer needs its own check.",
+   "type": "length",
+   "severity": "should",
+   "evidence": "Lint W201: `In one breath` has 246 words; the section allows 0 to 200. READER.md: \"A file she can finish in 15 to 20 minutes gets opened. Put the short version first, always.\" The four numbered figure steps repeat the caption. Fix: keep the caption and steps 1 and 4, drop steps 2 and 3 (the Say it line already says them).",
+   "status": "fixed",
+   "resolution": "fix-08: Hero steps and alt shortened; In one breath is under 200 words."
+  },
+  {
+   "id": "reader-13",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "words-that-go-together",
+   "quote": "| network ACL (NAK-ul) | **add** a deny rule to a network ACL | Numbered firewall rules on a subnet | web ACL |",
+   "type": "missing",
+   "severity": "should",
+   "evidence": "The table gives collocations only for neighbor terms (network ACL, edge location, transit gateway, egress). None of the chapter's own terms (web ACL, rate-based rule, managed rule group, firewall endpoint, DDoS attack; the glossary terms this chapter requested) gets a collocation. READER.md: \"Every chapter gives her sentences she can say: a one-breath definition, collocations\". The spoken answers use exactly these phrases (\"associate a web ACL\", \"subscribe to Shield Advanced\", \"route traffic through the firewall endpoint\"). Fix: replace transit gateway and edge location rows with web ACL (**associate** a web ACL with a resource), rate-based rule (a rate-based rule **blocks** an address), Shield Advanced (**subscribe to** Shield Advanced), firewall endpoint (**route** traffic **through** the endpoint).",
+   "status": "fixed",
+   "resolution": "fix-08: Words table rows for web ACL (associate), rate-based rule (blocks) and firewall endpoint (route ... through) replace edge location and transit gateway; egress row dropped for the word limit (egress stays bold in 2-deep)."
+  },
+  {
+   "id": "reader-14",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "**FAQ 5.** Can AWS Network Firewall inspect encrypted traffic? ... Yes. It supports [deep packet inspection for encrypted traffic](../facts/network-firewall.md#network-firewall-faq-inspects-encrypted-traffic).",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "A bare \"Yes\" lets the reader tell a customer that encrypted traffic is inspected out of the box. Verified facts: network-firewall-tls-inspection-decrypt-reencrypt (\"decrypt your firewall's inbound and outbound SSL/TLS traffic\"), network-firewall-tls-needs-acm-new-policy (\"import or provision certificates to AWS Certificate Manager\"), network-firewall-tls-inspection-hourly (\"additional hourly rate\"). The domain list in the same chapter works without decryption because it reads the SNI. Fix: \"Yes, after you configure TLS inspection: the firewall decrypts and re-encrypts the traffic with certificates in ACM, at an additional hourly rate.\"",
+   "status": "fixed",
+   "resolution": "fix-08: As claims-07. The hourly-rate clause was dropped for the 2-deep word limit."
+  },
+  {
+   "id": "reader-15",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "**FAQ 2.** Can Shield Standard run out of resources to protect?",
+   "type": "idiom",
+   "severity": "should",
+   "evidence": "\"Run out of resources\" is an idiom and reads as \"Can Shield Standard run out of capacity?\", which is a different question. RULINGS rule 8: plain English, no idioms. The quote answers a count limit: \"There is no limit on the number of resources subject to AWS Shield Standard protection.\" Fix: \"Is there a limit on how many resources Shield Standard protects?\"",
+   "status": "fixed",
+   "resolution": "fix-08: FAQ 2: 'Is there a limit on how many resources Shield Standard protects?'"
+  },
+  {
+   "id": "reader-16",
+   "file": "data/08-edge-protection/tasks.json",
+   "section": "edge-protection-t01",
+   "quote": "\"text\": \"Try to replace the list with 0.0.0.0/0, which covers every IPv4 address.\"",
+   "type": "task-teaches-little",
+   "severity": "should",
+   "evidence": "The task says it kills the belief \"A network ACL is the place to block a long list of attacking IP addresses.\", but its only break-it step teaches a side rule (fact waf-ip-set-cidr-ipv4-ipv6-not-slash-0) that no section, question or trap of the chapter uses; the read-only alternative also ends on it (\"read which CIDR range AWS WAF does not support\"). The network ACL side is one quota read in step 1. READER.md asks for tasks that teach the decision. Fix: make the predict-and-break step the comparison itself (predict how many addresses fit in one network ACL by default, read the quota, then add three ranges to the IP set and read the WCU cost of one rule that holds them all), and keep /0 as a one-line note at most.",
+   "status": "rejected",
+   "resolution": "fix-08: Changing the break-it command needs a new CLI check (T113) and a new task check; the step's explain already ends on the IP set (10,000) against network ACL (20 rules) comparison, and step 1 reads the quota. Left for the W14 review."
+  },
+  {
+   "id": "reader-17",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "a-rate-based-rule-limits-each-key-that-sends-requests-too-fast",
+   "quote": "Behind CloudFront, the load balancer sees [the address of the last proxy](../facts/waf.md#waf-forwarded-ip-default-origin-ip), so a rule can [use a forwarded IP address](../facts/waf.md#waf-forwarded-ip-statements).",
+   "type": "mechanism-not-explained",
+   "severity": "note",
+   "evidence": "The consequence is missing: a per-IP rate-based rule in the load balancer's web ACL behind CloudFront counts CloudFront's addresses, not the users', so it either never fires or blocks many users at once. This matters for the decision record, where the load balancer has its own web ACL. Fact waf-forwarded-ip-default-origin-ip. Fix: add one sentence of cause and effect, \"so a per-IP rule there counts CloudFront's addresses; put the rate-based rule on CloudFront or key it on the forwarded IP\".",
+   "status": "fixed",
+   "resolution": "fix-08: Go deeper: 'so a per-IP rule there counts CloudFront's addresses. Put the rule on CloudFront, or [use a forwarded IP address].'"
+  },
+  {
+   "id": "reader-18",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "a-web-acl-checks-each-http-request-against-its-rules-in-priority-order",
+   "quote": "Most sites set the [default action to Allow](../facts/waf.md#waf-default-allow-add-block-rules) and add rules that block.",
+   "type": "ungrounded-generalization",
+   "severity": "note",
+   "evidence": "Fact waf-default-allow-add-block-rules says \"if you want to *allow* most requests, you would set the protection pack (web ACL) default action to Allow\"; it says nothing about what most sites do. Fix: \"To let most requests through, set the [default action to Allow] and add rules that block.\"",
+   "status": "fixed",
+   "resolution": "fix-08: As claims-10."
+  },
+  {
+   "id": "reader-19",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "shield-standard-protects-every-account-free-but-shield-advanced-adds-paid-response",
+   "quote": "| Attack | Standard | Advanced |\n|---|---|---|\n| SYN flood | Protected | Plus the response team |\n| Scaling charges | You pay | A service credit |",
+   "type": "unclear",
+   "severity": "note",
+   "evidence": "\"Scaling charges\" is not an attack, so the column header misleads on a skim. STYLE.md tables: headers name what the cells hold. Fix: header \"During an attack\".",
+   "status": "fixed",
+   "resolution": "fix-08: Header 'During an attack'."
+  },
+  {
+   "id": "reader-20",
+   "file": "data/08-edge-protection/speak.json",
+   "section": "edge-protection-s01",
+   "quote": "\"prompt\": \"The attack came from 1,400 addresses. Why can we not block those addresses?\"",
+   "type": "not-speech",
+   "severity": "note",
+   "evidence": "A CEO says \"Why can't we block those addresses?\"; \"Why can we not\" is written English (STARTUP.md has the same line, but a spoken prompt should sound spoken). The sixty-second answer also opens \"we can, but ...\" while the ten-second answer says \"A fixed list fails\": the two versions start from different claims. In s02, \"For most startups, Shield Standard plus AWS WAF is enough\" is an opinion with no fact; say \"For many startups\" or tie it to the cost test in the next sentence.",
+   "status": "fixed",
+   "resolution": "fix-08: s01 prompt 'Why can't we block those addresses?'; ten_second now starts 'We can, but attackers change addresses', matching the sixty-second answer; s02 'For many startups'."
+  },
+  {
+   "id": "reader-21",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "check",
+   "quote": "**Check 1.** A UDP reflection attack hits a CloudFront site with no Shield plan. Is it protected, and at what cost?",
+   "type": "check-answerable-from-skim",
+   "severity": "note",
+   "evidence": "The skim alone answers it: the signals row \"SYN floods and UDP reflection attacks | Shield Standard, already on\" and the trap \"Shield Standard protects every customer at no additional charge\" both sit in bold or table text. READER.md: \"questions must test what the gist misses.\" Fix: test a case the skim misses, for example an HTTP GET flood on the same site with no web ACL (answer: Shield Standard does not stop it; add an AWS WAF rate-based rule, facts shield-no-http-content-inspection, shield-faq-standard-use-waf-for-layer-7).",
+   "status": "fixed",
+   "resolution": "fix-08: Check 1 now asks whether Shield Standard stops an HTTP GET flood on a site with no web ACL (answer: no, shield-no-http-content-inspection; use AWS WAF)."
+  },
+  {
+   "id": "reader-22",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "4. A request from the application to the internet passes a Network Firewall endpoint before the NAT gateway.",
+   "type": "ungrounded",
+   "severity": "note",
+   "evidence": "The order firewall endpoint, then NAT gateway (also in the after figure of 2-deep.md: \"passes approved domains to the NAT gateway\") is not backed by any saved page: a corpus search for \"NAT gateway\" on Network Firewall pages finds only a pricing What's New item. AWS documents more than one placement, and the reader will draw this picture for customers. Fix: fetch the Network Firewall architecture page for an internet gateway with a NAT gateway and match the figure and the step to it, or word the step without an order (\"passes a Network Firewall endpoint on its way to the internet\").",
+   "status": "fixed",
+   "resolution": "fix-08: As claims-06 (order taken from the saved Network Firewall pages asymmetric-routing and arch-igw-ngw)."
+  }
+ ]
+}

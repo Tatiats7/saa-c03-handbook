@@ -1,0 +1,108 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "fact.schema.json",
+ "title": "One fact: one line of data/facts/<service>.jsonl",
+ "description": "The fact canon. Only saalib/facts.py writes these files. Cross-field rules (the mechanical checks M1 to M12 in TOOLS.md) are checked by `facts verify`, not here.",
+ "type": "object",
+ "required": ["id", "service", "home_chapter", "kind", "claim", "values", "qualifiers", "evidence", "source_tier", "hard", "tier0", "volatility", "changed", "exam_relevance", "status", "votes", "retrieved", "rev"],
+ "additionalProperties": false,
+ "properties": {
+  "id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$", "description": "starts with '<service>-'; never reused"},
+  "service": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "fact namespace: a service key of the registry, or a key of book.fact_namespaces"},
+  "home_chapter": {"type": "string", "pattern": "^[0-9]{2}$"},
+  "kind": {"enum": ["limit", "quota", "default", "behavior", "capability", "restriction", "pricing-dimension", "price", "sla", "change", "exam-policy", "case-study"]},
+  "claim": {"type": "string", "minLength": 10, "description": "one or two sentences in the book's own words; every number in it appears in a quote"},
+  "question": {"type": ["string", "null"], "description": "the question this fact answers; the only thing a re-derivation verifier sees; required (M13) when hard is true"},
+  "values": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/value"}},
+  "qualifiers": {
+   "type": "object",
+   "required": ["scope", "default_or_max", "adjustable", "condition"],
+   "additionalProperties": false,
+   "properties": {
+    "scope": {"type": "string", "description": "for example 'per NAT gateway', 'per Region, per account'"},
+    "default_or_max": {"enum": ["", "default", "max", "min", "fixed"]},
+    "adjustable": {"type": "boolean"},
+    "condition": {"type": "string"}
+   }
+  },
+  "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidence"}},
+  "derivation": {"type": ["string", "null"], "description": "how a value that is not literal in a quote was derived; needs a 'derive' vote"},
+  "source_tier": {"type": "integer", "minimum": 1, "maximum": 4},
+  "hard": {"type": "boolean"},
+  "tier0": {"type": "boolean", "description": "a fact that decides many answers; always part of audit samples"},
+  "volatility": {"enum": ["stable", "changed-since-2022", "frequently-changing"]},
+  "changed": {
+   "type": ["object", "null"],
+   "required": ["date", "was", "was_evidence"],
+   "additionalProperties": false,
+   "properties": {
+    "date": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}(-[0-9]{2})?$"},
+    "was": {"type": "string", "minLength": 1, "description": "the old value, verbatim from the evidence"},
+    "was_evidence": {"type": "integer", "minimum": 0, "description": "index into evidence of the quote that states the old value"}
+   }
+  },
+  "change_items": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "ids of change-feed items that touch this fact"},
+  "bullets": {"type": "array", "items": {"type": "string", "pattern": "^[1-4]\\.[1-5]\\.[KS][0-9]{1,2}$"}, "uniqueItems": true},
+  "exam_relevance": {"enum": ["core", "extended", "reference"]},
+  "status": {"enum": ["candidate", "mech-pass", "verified", "disputed", "rejected", "superseded"]},
+  "votes": {"type": "array", "items": {"$ref": "#/$defs/vote_summary"}, "description": "summary written by `facts finalize`; the vote log is the source"},
+  "retrieved": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$", "description": "date the evidence was last checked against the snapshot"},
+  "rev": {"type": "integer", "minimum": 1},
+  "repairs": {"type": "integer", "minimum": 0, "maximum": 1},
+  "author": {"type": ["string", "null"], "description": "label of the agent that added the fact; that label cannot vote on it"},
+  "amended_by": {"type": "array", "items": {"type": "string"}, "description": "labels of the agents that changed the fact with `facts amend --by`; none of them can vote on it"},
+  "supersedes": {"type": ["string", "null"], "description": "set on the new fact by `facts amend OLD --supersede NEW`"},
+  "superseded_by": {"type": ["string", "null"]},
+  "stale": {"type": ["string", "null"], "description": "why the fact went back to candidate, for example 'quote-missing' or 'snapshot-changed'"},
+  "mech": {
+   "description": "last result of the mechanical checks; written by `facts add`, `adopt`, `amend`, and by `facts verify` only when the status changes",
+   "type": ["object", "null"],
+   "required": ["ok", "checked", "errors"],
+   "additionalProperties": false,
+   "properties": {
+    "ok": {"type": "boolean"},
+    "checked": {"type": "string"},
+    "errors": {"type": "array", "items": {"type": "string"}}
+   }
+  },
+  "note": {"type": ["string", "null"]}
+ },
+ "$defs": {
+  "value": {
+   "type": "object",
+   "required": ["key", "display"],
+   "additionalProperties": false,
+   "properties": {
+    "key": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "display": {"type": "string", "minLength": 1, "description": "a canonical value string; link text must contain one of these"},
+    "spoken": {"type": "string", "minLength": 1, "description": "the value written for speech, without digits"}
+   }
+  },
+  "evidence": {
+   "type": "object",
+   "required": ["source_id", "url", "quote", "sha256", "match", "table_header"],
+   "additionalProperties": false,
+   "properties": {
+    "source_id": {"type": "string", "minLength": 3},
+    "url": {"type": "string", "pattern": "^https://(docs\\.aws\\.amazon\\.com|aws\\.amazon\\.com|d1\\.awsstatic\\.com|repost\\.aws|pricing\\.us-east-1\\.amazonaws\\.com)/"},
+    "title": {"type": "string"},
+    "quote": {"type": "string", "minLength": 8, "description": "verbatim from the snapshot .txt"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the snapshot .txt at the time of the last check"},
+    "match": {"type": ["array", "null"], "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 0}, "description": "start and end in the normalised page text"},
+    "table_header": {"type": ["string", "null"], "description": "header row, verbatim, when the quote is a table row"},
+    "heading": {"type": ["string", "null"], "description": "heading text, when the quote is one whole value line under that heading (M4 heading-scoped quote, TOOLS.md 5.2); absent or null otherwise"}
+   }
+  },
+  "vote_summary": {
+   "type": "object",
+   "required": ["lens", "verdict"],
+   "additionalProperties": false,
+   "properties": {
+    "lens": {"enum": ["entail", "currency", "derive", "rederive"]},
+    "verdict": {"enum": ["support", "partial", "not-supported", "current", "outdated", "match", "mismatch", "not-found", "unsure"]},
+    "voter": {"type": "string"},
+    "rev": {"type": "integer", "minimum": 1}
+   }
+  }
+ }
+}

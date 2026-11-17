@@ -1,0 +1,4597 @@
+{
+ "chapter": "19",
+ "slug": "containers",
+ "title": "ECS, EKS, Fargate and ECR",
+ "template": "medium",
+ "written_by": "plan-19",
+ "written_at": "2026-10-13",
+ "sources_fetched": 174,
+ "fetch_failures": [
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/11/predictive-scaling-for-amazon-ecs-services/",
+   "reason": "robots.txt of aws.amazon.com disallows this path (exit 4); use the ECS document_history row of 2024-11-21 and predictive-auto-scaling"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/09/amazon-ecs-graviton-based-spot-compute-fargate/",
+   "reason": "robots.txt disallows (exit 4); use the ECS document_history row of 2024-09-06 ('Fargate Spot is available for Linux ARM') and fargate-capacity-providers"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/06/amazon-ecs-aws-fargate-encrypt-ephemeral-storage-customer-managed-kms-keys",
+   "reason": "robots.txt disallows (exit 4); use fargate-task-storage and fetch fargate-storage-encryption on demand"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/01/amazon-ecs-fargate-integrate-ebs/",
+   "reason": "robots.txt disallows (exit 4); use the ECS document_history row of 2024-01-11 and ebs-volumes"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2022/09/aws-fargate-increases-compute-memory-resource-configurations-4x/",
+   "reason": "robots.txt disallows (exit 4); use the ECS document_history row 'New task definition sizes' (September 16, 2022) and the task size table in fargate-tasks-services"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2022/09/aws-fargate-announces-migration-service-quotas-vcpu-based/",
+   "reason": "robots.txt disallows (exit 4); use the ECS document_history row 'New Fargate quotas' and the AWS Fargate quotas table in docs/general/latest/gr/ecs-service"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/12/amazon-eks-auto-mode/",
+   "reason": "robots.txt disallows (exit 4); use the EKS doc-history row of 2024-12-01 and automode"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/12/amazon-eks-hybrid-nodes",
+   "reason": "robots.txt disallows (exit 4); use the EKS doc-history row of 2024-12-01 and hybrid-nodes-overview"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/04/amazon-eks-support-kubernetes-versions/",
+   "reason": "robots.txt disallows (exit 4); use the EKS doc-history row of 2024-01-16 and kubernetes-versions"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2023/11/amazon-eks-pod-identity/",
+   "reason": "robots.txt disallows (exit 4); use the EKS doc-history row of 2023-11-26 and pod-identities"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2023/12/amazon-eks-controls-iam-cluster-access-management/",
+   "reason": "robots.txt disallows (exit 4); use the EKS doc-history row of 2023-12-18 and access-entries"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/08/karpenter-1-0",
+   "reason": "robots.txt disallows (exit 4); Karpenter is taught only through the EKS guide page autoscaling and automode"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/11/amazon-ecr-repository-limit-100000",
+   "reason": "robots.txt disallows (exit 4); use the ECR service-quotas table (registry quota for repositories)"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/amazon-prime-video-ecs-case-study/",
+   "reason": "fetched with status 200 but the page redirects to the generic case-study directory (title 'Customer Success Stories'); not usable as evidence"
+  },
+  {
+   "url": "https://docs.aws.amazon.com/decision-guides/latest/decision-guides/choosing-modern-app-strategy.html",
+   "reason": "fetched with status 200 but the snapshot is the decision-guide landing text (title 'AWS Decision Guides', 2 KB); not a usable source"
+  }
+ ],
+ "notes": [
+  "Research input only: FREQUENCY.md (rank 5 of 42, 'more than expected'; sub-topics Fargate vs EC2 launch type, task roles, ECS Anywhere and EKS Anywhere, EKS Cluster Autoscaler and Metrics Server, Karpenter, migrating applications to containers; pairs ECS vs EKS, Fargate vs Lambda, Fargate vs EC2 capacity, Compute Savings Plans cover Fargate; stem signals 'LEAST operational overhead', 'existing Kubernetes', 'minimal code changes') and FRESHNESS.md section 'ECS, EKS, Fargate, ECR' are hypotheses. Every value must come from a saved AWS page.",
+  "FREQUENCY suggests more depth than a typical medium chapter, mainly for EKS scaling. The demand list therefore carries the EKS compute and scaling items (managed node groups, Fargate profiles, Auto Mode, Karpenter, Cluster Autoscaler, HPA, VPA, Metrics Server) as full items, not as notes.",
+  "Ownership: chapter 18 owns Lambda limits (only the comparison sentence of the Fargate-or-Lambda decision guide is quoted here); chapter 14 owns ALB, NLB and target groups (only the ECS and EKS side is quoted here); chapter 17 owns EC2 Auto Scaling policies; chapter 23 owns EFS and FSx; chapter 41 (cost) owns Savings Plans types (here only the sentence that Compute Savings Plans cover Fargate); chapter 20 owns AWS Batch (here only 'Batch can run on Fargate'). The security chapters own KMS and Secrets Manager internals.",
+  "Recognition-only service cards: ECS Anywhere, EKS Anywhere, EKS Distro. EKS Anywhere and EKS Distro have no guide on an allowed host; use www/eks/eks-anywhere, www/eks/eks-distro, their FAQ and pricing snapshots, and docs/eks/latest/userguide/eks-deployment-options.",
+  "Out of scope as answers: AWS App Runner (not in the in-scope list; FRESHNESS says closed to new customers on 2026-04-30 with ECS Express Mode as the replacement; verify only through AWS pages such as express-service-overview or the decision guide, and do not teach it as an answer). AWS App Mesh (end of support; Service Connect is the ECS answer). App2Container is the AWS tool behind bullet 2.1.K8 but not an in-scope entry; teach it as a tool name only.",
+  "Not examinable yet (GA after 2026-07-15): ECS VPC Lattice support for blue/green, linear and canary (2026-10-02); ECS Express Mode on Graviton (2026-09-18); ECS Early Success Criteria (2026-09-04); ECS fractional GPU (2026-08-06); ECS automatic repair of impaired agent connectivity (2026-08-24); Service Connect zone-aware routing (2026-07-23); ECS Action Logs (2026-07-21); ECR 25 replication rules per registry (2026-08-17); ECR image layers up to 200 GB (2026-08-03); EKS multiple OIDC providers (2026-08-24); EKS CA rotation (2026-08-20); EKS Kubernetes 1.37 (2026-10-02). Examinable but very recent (label 'Changed recently'): Fargate 32 vCPU (2026-06-05), ECS faster service auto scaling (2026-06-18), EKS Kubernetes version rollback (2026-07-01), EKS 99.99% SLA for Provisioned Control Plane (2026-03-20).",
+  "Change inputs: changes-ecs.txt (249 items since 2022-07-01, 200 listed), changes-eks.txt and changes-eks-all.txt (364 items), changes-fargate.txt, changes-ecr.txt, changes-eks-distro.txt. ECS Anywhere and EKS Anywhere have no change feed of their own (no What's New tag); their items carry amazon-ecs and amazon-eks. Older What's New posts are blocked by robots.txt (see fetch_failures), so change facts quote the document-history row and the current guide sentence.",
+  "FAQ indexes parsed 2026-10-13: corpus/faq/ecs.jsonl (48 questions), eks.jsonl (55), fargate.jsonl (25), ecr.jsonl (28), ecs-anywhere.jsonl (18), eks-eks-anywhere.jsonl (22), eks-eks-distro.jsonl (20; item 21 '[Test] Something' is page noise). Lists in faq-*.txt in this folder.",
+  "Case studies in the corpus: www/solutions/case-studies/smartsheet-ecs-fargate-case-study, old-mutual-case-study (Fargate, reduced operational overhead), flywire-ecs-case-study, miro-eks-case-study, sony-eks-case-study. Other candidates in cases-*.txt (BILL, United Airlines, Autodesk, Crossuite) are fetched on demand.",
+  "Callvale (STARTUP.md, chapter 19, stage 3, month 20): 14 engineers release one application together, one release takes 40 minutes; the application runs on an Auto Scaling group that the team must patch. Decision: Amazon ECS with AWS Fargate, six services (dashboard, upload, search, accounts, billing, admin) behind the Application Load Balancer; adds Amazon ECR, service auto scaling and task roles. Accepts less control of the host and a higher price for each unit of compute. Rejected: six Auto Scaling groups; Amazon EKS (one engineer knows Kubernetes). Fargate minimum 3 tasks per service, 1 per service in the standby Region later. Ben asks: 'ECS or EKS? My one Kubernetes engineer says that EKS is the standard.' Demand items tagged 'callvale' hold the facts behind that answer. Question stems never name Callvale.",
+  "Lens names in the demand items: numbers, changes (lens numbers+changes); behavior, decisions (lens behavior+decisions); faq (lens faq). See mine-plan.json."
+ ],
+ "demand": [
+  {
+   "id": "d19-001",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is Amazon ECS in one sentence (a fully managed container orchestration service)? Which layers does the guide name (capacity, controller, provisioning)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/Welcome",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-fully-managed-orchestration",
+    "ecs-layer-capacity",
+    "ecs-layer-controller",
+    "ecs-layer-provisioning",
+    "ecs-no-control-plane-to-manage"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-fully-managed-orchestration",
+    "ecs-layer-capacity",
+    "ecs-layer-controller",
+    "ecs-layer-provisioning",
+    "ecs-no-control-plane-to-manage"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-002",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What are an ECS cluster, a task definition, a task and a service? Quote the guide's definition of each (task definition as a blueprint in JSON; task as an instantiation of a task definition; service keeps a desired number of tasks).",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/Welcome",
+    "docs/AmazonECS/latest/developerguide/task_definitions",
+    "docs/AmazonECS/latest/developerguide/ecs_services",
+    "docs/AmazonECS/latest/developerguide/clusters"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-cluster-is-infrastructure",
+    "ecs-cluster-is-regional-and-mixes-capacity",
+    "ecs-task-definition-json-blueprint",
+    "ecs-task-is-instantiation-of-task-definition",
+    "ecs-faq-task-smallest-unit",
+    "ecs-service-maintains-desired-count",
+    "ecs-service-scheduler-for-long-running-stateless"
+   ],
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecs-task-runs-then-stops",
+      "ecs-service-long-running-stateless"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-cluster-is-infrastructure",
+    "ecs-cluster-is-regional-and-mixes-capacity",
+    "ecs-task-definition-json-blueprint",
+    "ecs-task-is-instantiation-of-task-definition",
+    "ecs-faq-task-smallest-unit",
+    "ecs-service-maintains-desired-count",
+    "ecs-service-scheduler-for-long-running-stateless"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-003",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What does the ECS service scheduler do when a task fails or stops (replaces it to keep the desired count)? What are the REPLICA and DAEMON scheduling strategies, and is DAEMON available on Fargate?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/ecs_services",
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-service-maintains-desired-count",
+    "ecs-service-scheduler-reschedules-on-infrastructure-failure",
+    "ecs-service-scheduler-replaces-unhealthy-tasks",
+    "ecs-faq-service-scheduler-recovers-unhealthy-containers",
+    "ecs-replica-strategy-default-spreads-azs",
+    "ecs-daemon-strategy-one-task-per-instance",
+    "fargate-no-daemon-scheduling-strategy",
+    "ecs-service-throttle-logic-failed-starts",
+    "ecs-service-scheduler-for-long-running-stateless"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-service-maintains-desired-count",
+    "ecs-service-scheduler-reschedules-on-infrastructure-failure",
+    "ecs-service-scheduler-replaces-unhealthy-tasks",
+    "ecs-faq-service-scheduler-recovers-unhealthy-containers",
+    "ecs-replica-strategy-default-spreads-azs",
+    "ecs-daemon-strategy-one-task-per-instance",
+    "fargate-no-daemon-scheduling-strategy",
+    "ecs-service-throttle-logic-failed-starts",
+    "ecs-service-scheduler-for-long-running-stateless"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-004",
+   "bullet": "3.2.K1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Can ECS run batch or one-off jobs as standalone tasks, and run tasks on a schedule with Amazon EventBridge Scheduler?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/tasks-scheduled-eventbridge-scheduler",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-eventbridge-scheduler-serverless-scheduler",
+    "ecs-whitepaper-batch-runs-on-fargate-or-ec2",
+    "ecs-task-is-instantiation-of-task-definition"
+   ],
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecs-task-runs-then-stops"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-eventbridge-scheduler-serverless-scheduler",
+    "ecs-whitepaper-batch-runs-on-fargate-or-ec2",
+    "ecs-task-is-instantiation-of-task-definition"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-005",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Which capacity options does ECS offer (Fargate, Amazon EC2 instances, ECS Managed Instances, external instances with ECS Anywhere), and what does the guide say each is best for?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison",
+    "docs/AmazonECS/latest/developerguide/Welcome",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-capacity-providers-three-compute-types",
+    "ecs-capacity-managed-instances",
+    "ecs-cluster-ec2-full-control-you-manage-instances",
+    "ecs-cluster-managed-instances-recommended-for-most-new-workloads",
+    "ecs-anywhere-external-launch-type",
+    "ecs-capacity-providers-recommended-over-launch-types",
+    "ecs-launch-type-only-for-compatibility",
+    "ecs-launch-type-to-launch-type-not-supported"
+   ],
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecs-capacity-ec2-you-manage",
+      "ecs-cluster-fargate-serverless-pay-for-tasks"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-capacity-providers-three-compute-types",
+    "ecs-capacity-managed-instances",
+    "ecs-cluster-ec2-full-control-you-manage-instances",
+    "ecs-cluster-managed-instances-recommended-for-most-new-workloads",
+    "ecs-anywhere-external-launch-type",
+    "ecs-capacity-providers-recommended-over-launch-types",
+    "ecs-launch-type-only-for-compatibility",
+    "ecs-launch-type-to-launch-type-not-supported"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-006",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is a capacity provider and a capacity provider strategy (base and weight)? Can one service mix Fargate and Fargate Spot, or Fargate and EC2 Auto Scaling group capacity providers?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-capacity-providers",
+    "docs/AmazonECS/latest/developerguide/asg-capacity-providers",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-capacity-provider-manages-infrastructure-scaling",
+    "ecs-capacity-provider-strategy-single-type",
+    "ecs-strategy-fargate-or-asg-not-both",
+    "ecs-strategy-only-one-base",
+    "ecs-strategy-weight-zero-not-used",
+    "ecs-faq-split-across-capacity-providers",
+    "ecs-fargate-capacity-providers-auto-created",
+    "ecs-faq-predefined-fargate-capacity-providers",
+    "fargate-capacity-provider-must-be-associated-first",
+    "ecs-strategy-update-moves-service-between-compute-types",
+    "ecs-service-to-strategy-needs-new-deployment"
+   ],
+   "note": "register-19: the definition was missing; added ecs-capacity-provider-manages-infrastructure-scaling from the clusters page and service_definition_parameters (base and weight).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-capacity-provider-manages-infrastructure-scaling",
+    "ecs-capacity-provider-strategy-single-type",
+    "ecs-strategy-fargate-or-asg-not-both",
+    "ecs-strategy-only-one-base",
+    "ecs-strategy-weight-zero-not-used",
+    "ecs-faq-split-across-capacity-providers",
+    "ecs-fargate-capacity-providers-auto-created",
+    "ecs-faq-predefined-fargate-capacity-providers",
+    "fargate-capacity-provider-must-be-associated-first",
+    "ecs-strategy-update-moves-service-between-compute-types",
+    "ecs-service-to-strategy-needs-new-deployment"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-007",
+   "bullet": "3.2.K6",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecs",
+   "question": "How many capacity providers can be associated with one cluster (quota, adjustable or not)?",
+   "look_in": [
+    "docs/general/latest/gr/ecs-service"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-capacity-providers-per-cluster-limit"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-capacity-providers-per-cluster-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-008",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is ECS cluster auto scaling (managed scaling of an Auto Scaling group capacity provider)? What does managed termination protection prevent? How is it different from service auto scaling?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/cluster-auto-scaling",
+    "docs/AmazonECS/latest/developerguide/asg-capacity-providers",
+    "docs/AmazonECS/latest/developerguide/capacity-availability"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider",
+    "ecs-cluster-auto-scaling-policy-managed-by-ecs",
+    "ecs-cluster-auto-scaling-reservation-above-or-below-target",
+    "ecs-capacity-provider-reservation-metric-range",
+    "ecs-managed-termination-protection-only-empty-instances",
+    "ecs-managed-termination-protection-scale-in",
+    "ecs-target-capacity-below-100-keeps-spare-instances",
+    "ecs-asg-capacity-provider-new-empty-asg-recommended",
+    "ecs-provisioning-tasks-per-cluster-limit",
+    "ecs-service-auto-scaling-application-auto-scaling"
+   ],
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecs-cluster-auto-scaling-vs-service"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider",
+    "ecs-cluster-auto-scaling-policy-managed-by-ecs",
+    "ecs-cluster-auto-scaling-reservation-above-or-below-target",
+    "ecs-capacity-provider-reservation-metric-range",
+    "ecs-managed-termination-protection-only-empty-instances",
+    "ecs-managed-termination-protection-scale-in",
+    "ecs-target-capacity-below-100-keeps-spare-instances",
+    "ecs-asg-capacity-provider-new-empty-asg-recommended",
+    "ecs-provisioning-tasks-per-cluster-limit",
+    "ecs-service-auto-scaling-application-auto-scaling"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-009",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How does ECS service auto scaling work (Application Auto Scaling)? Which policy types are supported (target tracking, step, scheduled, predictive) and which predefined metrics (average CPU, average memory, ALB request count per target)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/service-auto-scaling",
+    "docs/AmazonECS/latest/developerguide/service-autoscaling-targettracking",
+    "docs/AmazonECS/latest/developerguide/predictive-auto-scaling"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-service-auto-scaling-application-auto-scaling",
+    "ecs-service-auto-scaling-types-target-step-scheduled-predictive",
+    "ecs-target-tracking-easiest-step-scaling-reacts-faster",
+    "ecs-target-tracking-scale-out-fast-scale-in-slow",
+    "ecs-service-auto-scaling-scale-in-blocked-during-deployment",
+    "ecs-predictive-scaling-historical-patterns",
+    "ecs-predictive-scaling-service-level-not-compute",
+    "ecs-predictive-scaling-needs-24-hours-of-history",
+    "ecs-faq-service-metrics-cpu-memory-for-app-auto-scaling",
+    "ecs-faq-app-auto-scaling-custom-cloudwatch-metric",
+    "ecs-scaling-target-headroom-60-80-percent",
+    "ecs-scale-out-before-known-demand-shock"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-service-auto-scaling-application-auto-scaling",
+    "ecs-service-auto-scaling-types-target-step-scheduled-predictive",
+    "ecs-target-tracking-easiest-step-scaling-reacts-faster",
+    "ecs-target-tracking-scale-out-fast-scale-in-slow",
+    "ecs-service-auto-scaling-scale-in-blocked-during-deployment",
+    "ecs-predictive-scaling-historical-patterns",
+    "ecs-predictive-scaling-service-level-not-compute",
+    "ecs-predictive-scaling-needs-24-hours-of-history",
+    "ecs-faq-service-metrics-cpu-memory-for-app-auto-scaling",
+    "ecs-faq-app-auto-scaling-custom-cloudwatch-metric",
+    "ecs-scaling-target-headroom-60-80-percent",
+    "ecs-scale-out-before-known-demand-shock"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-010",
+   "bullet": "4.2.K8",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How does the guide recommend scaling an ECS service on an Amazon SQS queue (backlog per task as a custom metric)? How does task scale-in protection keep a task that is processing a message?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/service-autoscaling-queue"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-sqs-scale-on-backlog-per-task",
+    "ecs-sqs-scale-in-protection-task-processing"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-sqs-scale-on-backlog-per-task",
+    "ecs-sqs-scale-in-protection-task-processing"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-011",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Which Elastic Load Balancing types can an ECS service use (ALB, NLB, Gateway Load Balancer)? What does the guide recommend? With awsvpc network mode, which target type must the target group use (ip)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/service-load-balancing",
+    "docs/AmazonECS/latest/developerguide/fargate-task-networking",
+    "docs/AmazonECS/latest/developerguide/task-networking-awsvpc"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-alb-recommended-for-services",
+    "ecs-faq-ingress-alb-nlb",
+    "fargate-service-load-balancer-types",
+    "ecs-awsvpc-load-balancer-target-type-ip",
+    "fargate-target-group-ip-target-type",
+    "fargate-classic-load-balancer-not-supported",
+    "ecs-service-optional-load-balancer",
+    "ecs-faq-service-scheduler-registers-containers-with-load-balancer"
+   ],
+   "note": "Source conflict on Gateway Load Balancer for Fargate services: see the note on fargate-service-load-balancer-types. Teach ALB and NLB; Classic Load Balancer is not supported.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-alb-recommended-for-services",
+    "ecs-faq-ingress-alb-nlb",
+    "fargate-service-load-balancer-types",
+    "ecs-awsvpc-load-balancer-target-type-ip",
+    "fargate-target-group-ip-target-type",
+    "fargate-classic-load-balancer-not-supported",
+    "ecs-service-optional-load-balancer",
+    "ecs-faq-service-scheduler-registers-containers-with-load-balancer"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-012",
+   "bullet": "2.1.K14",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecs",
+   "question": "How many Classic Load Balancers can one ECS service use? Can a service register with more than one target group?",
+   "look_in": [
+    "docs/general/latest/gr/ecs-service",
+    "docs/AmazonECS/latest/developerguide/service-load-balancing"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-classic-load-balancers-per-service-limit",
+    "ecs-target-groups-per-service-limit"
+   ],
+   "note": "1 Classic Load Balancer; up to 5 target groups with an Application or Network Load Balancer; both not adjustable.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-classic-load-balancers-per-service-limit",
+    "ecs-target-groups-per-service-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-013",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Which deployment types does an ECS service support (rolling update, blue/green, linear, canary, external)? Is AWS CodeDeploy still needed for blue/green?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/deployment-type-ecs",
+    "docs/AmazonECS/latest/developerguide/deployment-type-blue-green",
+    "docs/AmazonECS/latest/developerguide/document_history"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-rolling-update-replaces-tasks",
+    "ecs-blue-green-definition-and-zero-downtime",
+    "ecs-blue-green-doubles-resource-usage",
+    "ecs-blue-green-native-similar-to-codedeploy",
+    "ecs-change-native-blue-green-deployments-2025-07",
+    "ecs-change-canary-deployments-2025-10",
+    "ecs-change-linear-deployments-2025-10",
+    "ecs-failed-deployment-detection-circuit-breaker-vs-alarms"
+   ],
+   "note": "register-19: fetched migrate-codedeploy-to-ecs-bluegreen: CodeDeploy blue/green and ECS blue/green provide similar functionality; with ECS blue/green the configuration is part of the ECS service. No page says CodeDeploy is obsolete; do not write that.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-rolling-update-replaces-tasks",
+    "ecs-blue-green-definition-and-zero-downtime",
+    "ecs-blue-green-doubles-resource-usage",
+    "ecs-blue-green-native-similar-to-codedeploy",
+    "ecs-change-native-blue-green-deployments-2025-07",
+    "ecs-change-canary-deployments-2025-10",
+    "ecs-change-linear-deployments-2025-10",
+    "ecs-failed-deployment-detection-circuit-breaker-vs-alarms"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-014",
+   "bullet": "2.1.K14",
+   "kind": "default",
+   "lens": "numbers",
+   "service": "ecs",
+   "question": "In a rolling update, what do minimumHealthyPercent and maximumPercent control, and what are their default values for a replica service?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/deployment-type-ecs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-rolling-maximum-percent-default-200",
+    "ecs-rolling-minimum-healthy-percent-default-100",
+    "ecs-daemon-minimum-healthy-percent-default",
+    "ecs-minimum-healthy-percent-meaning",
+    "ecs-maximum-percent-meaning",
+    "ecs-min-healthy-percent-example-50-of-four",
+    "ecs-max-percent-example-200-of-four"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-rolling-maximum-percent-default-200",
+    "ecs-rolling-minimum-healthy-percent-default-100",
+    "ecs-daemon-minimum-healthy-percent-default",
+    "ecs-minimum-healthy-percent-meaning",
+    "ecs-maximum-percent-meaning",
+    "ecs-min-healthy-percent-example-50-of-four",
+    "ecs-max-percent-example-200-of-four"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-015",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What does the ECS deployment circuit breaker do when a deployment fails (stops it and, if configured, rolls back to the last completed deployment)? Which deployment types does it apply to?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/deployment-circuit-breaker"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-circuit-breaker-rolls-back-to-completed",
+    "ecs-circuit-breaker-rolling-controller-only",
+    "ecs-circuit-breaker-default-threshold-bounded-percent-50",
+    "ecs-failed-deployment-detection-circuit-breaker-vs-alarms",
+    "ecs-change-configurable-circuit-breaker-2026-07"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-circuit-breaker-rolls-back-to-completed",
+    "ecs-circuit-breaker-rolling-controller-only",
+    "ecs-circuit-breaker-default-threshold-bounded-percent-50",
+    "ecs-failed-deployment-detection-circuit-breaker-vs-alarms",
+    "ecs-change-configurable-circuit-breaker-2026-07"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-016",
+   "bullet": "4.2.K8",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What do the task placement strategies binpack, spread and random do (binpack packs tasks to use the least number of instances, which saves cost)? Are placement strategies and constraints supported for tasks on Fargate?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/task-placement-strategies",
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-placement-strategy-types-binpack-random-spread",
+    "ecs-placement-binpack-least-unused-cpu-memory",
+    "ecs-placement-spread-balance-across-azs-on-scale-in",
+    "ecs-placement-strategies-best-effort-constraints-binding",
+    "ecs-placement-strategy-default-for-services-spread-az",
+    "fargate-no-placement-constraints",
+    "fargate-no-placement-strategies-best-effort-az-spread"
+   ],
+   "note": "register-19: service-rebalancing page says task placement strategies and constraints aren't supported for tasks using Fargate (fargate-no-placement-strategies-best-effort-az-spread).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-placement-strategy-types-binpack-random-spread",
+    "ecs-placement-binpack-least-unused-cpu-memory",
+    "ecs-placement-spread-balance-across-azs-on-scale-in",
+    "ecs-placement-strategies-best-effort-constraints-binding",
+    "ecs-placement-strategy-default-for-services-spread-az",
+    "fargate-no-placement-constraints",
+    "fargate-no-placement-strategies-best-effort-az-spread"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-017",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Which network modes exist for ECS tasks (awsvpc, bridge, host, none)? Which mode must Fargate tasks use? In awsvpc mode, does each task get its own elastic network interface, private IP address and security groups?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/task-networking",
+    "docs/AmazonECS/latest/developerguide/fargate-task-networking",
+    "docs/AmazonECS/latest/developerguide/task-networking-awsvpc"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-network-mode-vpc",
+    "ecs-faq-network-mode-bridge",
+    "ecs-faq-network-mode-host",
+    "ecs-faq-network-mode-none",
+    "ecs-network-mode-awsvpc-own-eni",
+    "ecs-network-mode-bridge-default-linux",
+    "ecs-network-mode-host-one-task-per-port",
+    "ecs-network-mode-none-no-external-connectivity",
+    "ecs-awsvpc-network-mode-recommended-ec2",
+    "ecs-awsvpc-task-own-eni-security-groups",
+    "fargate-requires-awsvpc-network-mode",
+    "ecs-bridge-mode-starts-faster-than-awsvpc-on-ec2",
+    "ecs-faq-mi-network-modes",
+    "ecs-managed-instances-linux-bottlerocket-network-modes"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-network-mode-vpc",
+    "ecs-faq-network-mode-bridge",
+    "ecs-faq-network-mode-host",
+    "ecs-faq-network-mode-none",
+    "ecs-network-mode-awsvpc-own-eni",
+    "ecs-network-mode-bridge-default-linux",
+    "ecs-network-mode-host-one-task-per-port",
+    "ecs-network-mode-none-no-external-connectivity",
+    "ecs-awsvpc-network-mode-recommended-ec2",
+    "ecs-awsvpc-task-own-eni-security-groups",
+    "fargate-requires-awsvpc-network-mode",
+    "ecs-bridge-mode-starts-faster-than-awsvpc-on-ec2",
+    "ecs-faq-mi-network-modes",
+    "ecs-managed-instances-linux-bottlerocket-network-modes"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-018",
+   "bullet": "2.1.K14",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecs",
+   "question": "How many security groups and how many subnets can an awsvpcConfiguration specify?",
+   "look_in": [
+    "docs/general/latest/gr/ecs-service"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-security-groups-per-awsvpc-configuration-limit",
+    "ecs-subnets-per-awsvpc-configuration-limit"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-security-groups-per-awsvpc-configuration-limit",
+    "ecs-subnets-per-awsvpc-configuration-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-019",
+   "bullet": "4.2.K8",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "On EC2 capacity with awsvpc mode, what limits the number of tasks per instance (network interfaces), and how does ENI trunking raise task density?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/task-networking-awsvpc"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-awsvpc-eni-limits-tasks-per-instance",
+    "ecs-awsvpc-trunking-increases-eni-density",
+    "ecs-awsvpc-ec2-task-eni-no-public-ip"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-awsvpc-eni-limits-tasks-per-instance",
+    "ecs-awsvpc-trunking-increases-eni-density",
+    "ecs-awsvpc-ec2-task-eni-no-public-ip"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-020",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "A Fargate task in a private subnet must pull an image from Amazon ECR. What does it need (a NAT gateway, or interface VPC endpoints for ecr.api and ecr.dkr plus the Amazon S3 gateway endpoint)? When does a Fargate task need a public IP address?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-task-networking",
+    "docs/AmazonECR/latest/userguide/vpc-endpoints",
+    "docs/AmazonECS/latest/developerguide/vpc-endpoints"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-private-subnet-image-pull-needs-nat",
+    "fargate-public-subnet-image-pull-needs-public-ip",
+    "fargate-task-has-route-to-internet-to-pull",
+    "fargate-ecr-endpoint-uses-private-ip",
+    "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+    "ecr-privatelink-no-internet-gateway-needed",
+    "ecr-vpc-endpoint-security-group-port-443",
+    "ecs-interface-endpoint-privatelink-no-igw-nat",
+    "ecs-interface-endpoints-incomplete-traffic-uses-public-endpoint"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-private-subnet-image-pull-needs-nat",
+    "fargate-public-subnet-image-pull-needs-public-ip",
+    "fargate-task-has-route-to-internet-to-pull",
+    "fargate-ecr-endpoint-uses-private-ip",
+    "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+    "ecr-privatelink-no-internet-gateway-needed",
+    "ecr-vpc-endpoint-security-group-port-443",
+    "ecs-interface-endpoint-privatelink-no-igw-nat",
+    "ecs-interface-endpoints-incomplete-traffic-uses-public-endpoint"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-021",
+   "bullet": "2.1.K4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How do ECS services find and call each other (Service Connect, service discovery with AWS Cloud Map, Amazon VPC Lattice, an internal load balancer)? Which one does the guide recommend for service-to-service communication?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/interconnecting-services",
+    "docs/AmazonECS/latest/developerguide/service-connect",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-service-connect-recommended-for-service-to-service",
+    "ecs-service-connect-builds-discovery-and-mesh",
+    "ecs-service-connect-proxy-container-in-each-task",
+    "ecs-service-connect-same-namespace-only",
+    "ecs-service-connecting-options-without-load-balancer",
+    "ecs-service-discovery-cloud-map-dns",
+    "ecs-service-discovery-retry-logic-disadvantage",
+    "ecs-faq-service-connect-logical-names",
+    "ecs-faq-service-discovery-cloud-map",
+    "ecs-change-vpc-lattice-integration-2024-11"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-service-connect-recommended-for-service-to-service",
+    "ecs-service-connect-builds-discovery-and-mesh",
+    "ecs-service-connect-proxy-container-in-each-task",
+    "ecs-service-connect-same-namespace-only",
+    "ecs-service-connecting-options-without-load-balancer",
+    "ecs-service-discovery-cloud-map-dns",
+    "ecs-service-discovery-retry-logic-disadvantage",
+    "ecs-faq-service-connect-logical-names",
+    "ecs-faq-service-discovery-cloud-map",
+    "ecs-change-vpc-lattice-integration-2024-11"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-022",
+   "bullet": "2.1.K4",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Hypothesis (FRESHNESS): AWS App Mesh reached end of support on 2026-09-30 and ECS Service Connect is the replacement. Is there an AWS page in the corpus that states this? If not, record not-found.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/service-connect",
+    "docs/AmazonECS/latest/developerguide/interconnecting-services",
+    "docs/eks/latest/userguide/doc-history"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-app-mesh-end-of-support-2026-09-30",
+    "eks-change-app-mesh-existing-customers-only-2023-09"
+   ],
+   "note": "Hypothesis confirmed: docs/app-mesh what-is-app-mesh (fetched this run) says AWS discontinues support for AWS App Mesh on September 30, 2026 and points to the blog post 'Migrating from AWS App Mesh to Amazon ECS Service Connect'. ECS Service Connect GA: 2022-11-27 (ecs-change-service-connect-ga-2022-11).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-app-mesh-end-of-support-2026-09-30",
+    "eks-change-app-mesh-existing-customers-only-2023-09"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-023",
+   "bullet": "3.2.K6",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecs",
+   "question": "ECS quotas: services per cluster, container instances per cluster, clusters per account, containers per task definition, tasks launched per service per minute on Fargate and on EC2. Which are adjustable?",
+   "look_in": [
+    "docs/general/latest/gr/ecs-service",
+    "docs/AmazonECS/latest/developerguide/service-quotas"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-services-per-cluster-limit",
+    "ecs-container-instances-per-cluster-limit",
+    "ecs-clusters-per-account-quota",
+    "ecs-containers-per-task-definition-limit",
+    "ecs-fargate-tasks-launched-per-service-per-minute-limit",
+    "ecs-ec2-tasks-launched-per-service-per-minute-limit"
+   ],
+   "note": "Only clusters per account is adjustable; the Fargate launch rate is 125 in 16 listed Regions.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-services-per-cluster-limit",
+    "ecs-container-instances-per-cluster-limit",
+    "ecs-clusters-per-account-quota",
+    "ecs-containers-per-task-definition-limit",
+    "ecs-fargate-tasks-launched-per-service-per-minute-limit",
+    "ecs-ec2-tasks-launched-per-service-per-minute-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-024",
+   "bullet": "3.2.K1",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "fargate",
+   "question": "Fargate quotas: Fargate On-Demand vCPU resource count and Fargate Spot vCPU resource count per Region (vCPU-based quotas). Shared between ECS and EKS?",
+   "look_in": [
+    "docs/general/latest/gr/ecs-service",
+    "docs/eks/latest/userguide/service-quotas",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "fargate-ondemand-vcpu-quota",
+    "fargate-spot-vcpu-quota",
+    "fargate-ondemand-vcpu-quota-eks-page",
+    "fargate-ondemand-burst-launch-rate-quota"
+   ],
+   "note": "Both vCPU quotas default to 6 and are adjustable. No page says in one sentence that ECS and EKS share the vCPU quota. Evidence for sharing: the Fargate quota table appears on both the ECS and the EKS quota pages, and the launch-rate rows say 'on-demand Amazon ECS tasks or Amazon EKS pods'. | register-19: no single sentence says ECS and EKS share the Fargate vCPU quota; the same quota row appears on both quota pages (fargate-ondemand-vcpu-quota, fargate-ondemand-vcpu-quota-eks-page).",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "fargate-ondemand-vcpu-quota",
+    "fargate-spot-vcpu-quota",
+    "fargate-ondemand-vcpu-quota-eks-page",
+    "fargate-ondemand-burst-launch-rate-quota"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-025",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is the difference between the task IAM role, the task execution IAM role and the container instance IAM role? Who uses each one (the application in the container, the ECS agent or Fargate, the EC2 instance)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/security-ecs-iam-role-overview",
+    "docs/AmazonECS/latest/developerguide/task-iam-roles",
+    "docs/AmazonECS/latest/developerguide/task_execution_IAM_role",
+    "docs/AmazonECS/latest/developerguide/instance_IAM_role"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-iam-role-table-task-role",
+    "ecs-iam-role-table-container-instance-role",
+    "ecs-iam-role-table-ecs-anywhere-role",
+    "ecs-task-role-gives-app-code-aws-permissions",
+    "ecs-task-execution-role-for-agents",
+    "ecs-container-instance-role-registers-agent"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-iam-role-table-task-role",
+    "ecs-iam-role-table-container-instance-role",
+    "ecs-iam-role-table-ecs-anywhere-role",
+    "ecs-task-role-gives-app-code-aws-permissions",
+    "ecs-task-execution-role-for-agents",
+    "ecs-container-instance-role-registers-agent"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-026",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How does a task role give credentials to the containers of a task? What does the guide say about not using the container instance role for application permissions (least privilege per task)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/task-iam-roles",
+    "docs/AmazonECS/latest/developerguide/instance_IAM_role",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-task-role-gives-app-code-aws-permissions",
+    "ecs-task-role-credentials-exclusive-no-instance-inheritance",
+    "ecs-task-role-fargate-no-instance-profile",
+    "ecs-task-role-least-privilege-per-task-definition",
+    "ecs-containers-not-security-boundary-use-fargate-for-isolation",
+    "ecs-faq-task-uses-iam-role",
+    "ecs-one-task-definition-family-per-business-purpose"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-task-role-gives-app-code-aws-permissions",
+    "ecs-task-role-credentials-exclusive-no-instance-inheritance",
+    "ecs-task-role-fargate-no-instance-profile",
+    "ecs-task-role-least-privilege-per-task-definition",
+    "ecs-containers-not-security-boundary-use-fargate-for-isolation",
+    "ecs-faq-task-uses-iam-role",
+    "ecs-one-task-definition-family-per-business-purpose"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-027",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "When is the task execution role required (pull a private image from Amazon ECR, send logs with the awslogs driver, read secrets from Secrets Manager or Parameter Store, private registry authentication)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/task_execution_IAM_role"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-task-execution-role-use-cases",
+    "ecs-task-execution-role-for-agents",
+    "ecr-ecs-agent-pull-permissions"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-task-execution-role-use-cases",
+    "ecs-task-execution-role-for-agents",
+    "ecr-ecs-agent-pull-permissions"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-028",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How does ECS inject sensitive data into a container (secrets from AWS Secrets Manager or Systems Manager Parameter Store as environment variables or log configuration)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/specifying-sensitive-data"
+   ],
+   "status": "not-found",
+   "facts": [
+    "ecs-secrets-injected-from-secrets-manager-and-parameter-store"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [],
+   "rejected_facts": [
+    "ecs-secrets-injected-from-secrets-manager-and-parameter-store"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-029",
+   "bullet": "2.1.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Can ECS use images from a private registry outside AWS? How are the credentials stored (AWS Secrets Manager, repositoryCredentials)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/private-auth",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-private-registry-credentials-secrets-manager",
+    "ecs-private-registry-secret-cross-region-account"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-private-registry-credentials-secrets-manager",
+    "ecs-private-registry-secret-cross-region-account"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-030",
+   "bullet": "2.1.K4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Which storage options can an ECS task use (Amazon EBS, Amazon EFS, FSx for Windows File Server, Docker volumes, bind mounts, Fargate ephemeral storage)? Which are available on Fargate?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/using_data_volumes",
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-storage-types-ebs-efs-bind",
+    "ecs-ebs-volume-per-task-managed-by-ecs",
+    "ecs-efs-volumes-shared-persistent-across-instances",
+    "fargate-no-docker-volumes",
+    "fargate-ephemeral-storage-linux-only-windows-not"
+   ],
+   "note": "FSx for Windows File Server volumes for ECS: not mined.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-storage-types-ebs-efs-bind",
+    "ecs-ebs-volume-per-task-managed-by-ecs",
+    "ecs-efs-volumes-shared-persistent-across-instances",
+    "fargate-no-docker-volumes",
+    "fargate-ephemeral-storage-linux-only-windows-not"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-031",
+   "bullet": "2.1.K4",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "fargate",
+   "question": "How much ephemeral storage does a Fargate task get by default (platform version 1.4.0 or later), and what is the maximum it can be increased to?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-task-storage",
+    "www/fargate/pricing"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-ephemeral-storage-default-20-gib",
+    "fargate-ephemeral-storage-max-200-gib",
+    "fargate-eks-pod-ephemeral-storage-default-20-gib",
+    "fargate-eks-pod-ephemeral-storage-max-175-gib"
+   ],
+   "note": "EKS Pods on Fargate can go to 175 GiB only (ECS: 200 GiB).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-ephemeral-storage-default-20-gib",
+    "fargate-ephemeral-storage-max-200-gib",
+    "fargate-eks-pod-ephemeral-storage-default-20-gib",
+    "fargate-eks-pod-ephemeral-storage-max-175-gib"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-032",
+   "bullet": "2.1.K4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "Is Fargate ephemeral storage encrypted by default, and can a customer managed AWS KMS key be used (since 2024-06)? Is the storage deleted when the task stops?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-task-storage",
+    "docs/AmazonECS/latest/developerguide/fargate-security-considerations"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-ephemeral-storage-encrypted-by-default",
+    "fargate-ephemeral-storage-cmk-audit-cloudtrail",
+    "fargate-ephemeral-storage-cmk-no-extra-charge",
+    "fargate-faq-ephemeral-storage-20-gib-erased"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-ephemeral-storage-encrypted-by-default",
+    "fargate-ephemeral-storage-cmk-audit-cloudtrail",
+    "fargate-ephemeral-storage-cmk-no-extra-charge",
+    "fargate-faq-ephemeral-storage-20-gib-erased"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-033",
+   "bullet": "2.1.K4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How do Amazon EBS volumes work with ECS tasks: how many volumes per task, attached at launch (from a snapshot or new), available on Fargate, can a volume be shared between tasks, what happens to the volume when the task stops?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/ebs-volumes"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-ebs-volume-one-per-task-new-volume",
+    "ecs-ebs-volume-per-task-managed-by-ecs",
+    "ecs-ebs-volume-service-task-deleted-on-termination",
+    "ecs-ebs-fargate-magnetic-not-supported",
+    "fargate-ebs-volumes-need-linux-platform-1-4-0",
+    "ecs-change-ebs-data-volume-per-task-2024-01"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-ebs-volume-one-per-task-new-volume",
+    "ecs-ebs-volume-per-task-managed-by-ecs",
+    "ecs-ebs-volume-service-task-deleted-on-termination",
+    "ecs-ebs-fargate-magnetic-not-supported",
+    "fargate-ebs-volumes-need-linux-platform-1-4-0",
+    "ecs-change-ebs-data-volume-per-task-2024-01"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-034",
+   "bullet": "2.1.K4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Can several ECS tasks (including Fargate tasks in different Availability Zones) share one Amazon EFS file system for persistent data?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/efs-volumes",
+    "www/fargate/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-efs-volumes-shared-persistent-across-instances",
+    "ecs-efs-fargate-platform-14-linux-only",
+    "fargate-faq-efs-for-persistent-storage"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-efs-volumes-shared-persistent-across-instances",
+    "ecs-efs-fargate-platform-14-linux-only",
+    "fargate-faq-efs-for-persistent-storage"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-035",
+   "bullet": "2.1.K4",
+   "kind": "behavior",
+   "lens": "decisions",
+   "service": "ecs",
+   "question": "Stateless compared with stateful: what do the AWS pages say about designing container tasks as stateless and keeping state outside the task (EFS, databases, S3)? Can Fargate run stateful workloads?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/capacity-tasksize",
+    "docs/AmazonECS/latest/developerguide/application_architecture",
+    "docs/whitepapers/latest/containers-on-aws/containers-services-on-aws",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "eks-stateless-application-no-session-data-deployment",
+    "ecs-task-size-stateless-small-reservations-cost",
+    "fargate-faq-ephemeral-storage-20-gib-erased",
+    "fargate-faq-efs-for-persistent-storage",
+    "ecs-service-scheduler-for-long-running-stateless"
+   ],
+   "note": "No AWS sentence says in one place to design tasks stateless and keep state outside the task; the pieces are in the listed facts.",
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecs-service-long-running-stateless"
+     ],
+     "status_was": "partial"
+    }
+   ],
+   "status_found": "partial",
+   "verified_facts": [
+    "eks-stateless-application-no-session-data-deployment",
+    "ecs-task-size-stateless-small-reservations-cost",
+    "fargate-faq-ephemeral-storage-20-gib-erased",
+    "fargate-faq-efs-for-persistent-storage",
+    "ecs-service-scheduler-for-long-running-stateless"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-036",
+   "bullet": "3.2.K1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "What is AWS Fargate (a serverless, pay-as-you-go compute engine for containers)? What does it remove (provisioning, patching and scaling servers)? Which orchestrators can use it (ECS and EKS)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate",
+    "www/fargate/faqs",
+    "www/fargate",
+    "docs/eks/latest/userguide/fargate"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-serverless-pay-as-you-go",
+    "fargate-faq-serverless-engine-for-ecs-and-eks",
+    "fargate-no-provision-vm-clusters",
+    "fargate-whitepaper-own-kernel-for-ecs-and-eks",
+    "eks-faq-works-with-fargate",
+    "fargate-task-retirement-aws-maintains-infrastructure"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-serverless-pay-as-you-go",
+    "fargate-faq-serverless-engine-for-ecs-and-eks",
+    "fargate-no-provision-vm-clusters",
+    "fargate-whitepaper-own-kernel-for-ecs-and-eks",
+    "eks-faq-works-with-fargate",
+    "fargate-task-retirement-aws-maintains-infrastructure"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-037",
+   "bullet": "3.2.K1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "How is a Fargate task or pod isolated (its own isolation boundary; no kernel, CPU, memory or network interface shared with another task)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate",
+    "docs/AmazonECS/latest/developerguide/fargate-security-considerations",
+    "docs/eks/latest/userguide/fargate"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-task-isolation-boundary",
+    "eks-fargate-pod-own-compute-boundary",
+    "fargate-faq-single-tenant-instance-per-workload",
+    "ecs-faq-fargate-own-vm-and-network-interface",
+    "fargate-whitepaper-own-kernel-for-ecs-and-eks"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-task-isolation-boundary",
+    "eks-fargate-pod-own-compute-boundary",
+    "fargate-faq-single-tenant-instance-per-workload",
+    "ecs-faq-fargate-own-vm-and-network-interface",
+    "fargate-whitepaper-own-kernel-for-ecs-and-eks"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-038",
+   "bullet": "3.2.K1",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "fargate",
+   "question": "Fargate task sizes for ECS: the smallest CPU and memory combination, the largest vCPU and memory, and which sizes are Linux only. Does the current table include 32 vCPU (What's New 2026-06-05)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services",
+    "docs/AmazonECS/latest/developerguide/task_definition_parameters",
+    "www/about-aws/whats-new/2026/06/amazon-ecs-fargate-32vcpu"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-task-size-smallest",
+    "fargate-task-size-largest-32-vcpu",
+    "fargate-task-size-16-vcpu",
+    "fargate-task-size-1-vcpu-linux-windows",
+    "fargate-task-size-4-vcpu-linux-windows",
+    "ecs-change-fargate-32vcpu-2026-06",
+    "fargate-eks-pod-size-largest-16-vcpu"
+   ],
+   "note": "The current fargate-tasks-services table includes 32768 (32 vCPU) with 60, 120, 244 GB. Linux only: 0.25, 0.5, 8, 16, 32 vCPU. EKS Pods on Fargate stop at 16 vCPU.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-task-size-smallest",
+    "fargate-task-size-largest-32-vcpu",
+    "fargate-task-size-16-vcpu",
+    "fargate-task-size-1-vcpu-linux-windows",
+    "fargate-task-size-4-vcpu-linux-windows",
+    "ecs-change-fargate-32vcpu-2026-06",
+    "fargate-eks-pod-size-largest-16-vcpu"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-039",
+   "bullet": "3.2.K1",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "What can a Fargate task not do compared with EC2 capacity (privileged containers, host network mode, placement strategies, GPU, access to the host, daemon scheduling)? Quote each restriction from the guide.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services",
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate",
+    "docs/AmazonECS/latest/developerguide/fargate-security-considerations",
+    "docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-no-privileged-containers",
+    "fargate-limited-linux-capabilities",
+    "fargate-no-host-access-ecs-exec",
+    "fargate-containers-cannot-access-host-resources",
+    "fargate-no-placement-constraints",
+    "fargate-no-placement-strategies-best-effort-az-spread",
+    "fargate-no-daemon-scheduling-strategy",
+    "fargate-faq-gpu-not-supported",
+    "fargate-requires-awsvpc-network-mode",
+    "fargate-no-docker-volumes",
+    "fargate-launch-type-requires-task-definition-config"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-no-privileged-containers",
+    "fargate-limited-linux-capabilities",
+    "fargate-no-host-access-ecs-exec",
+    "fargate-containers-cannot-access-host-resources",
+    "fargate-no-placement-constraints",
+    "fargate-no-placement-strategies-best-effort-az-spread",
+    "fargate-no-daemon-scheduling-strategy",
+    "fargate-faq-gpu-not-supported",
+    "fargate-requires-awsvpc-network-mode",
+    "fargate-no-docker-volumes",
+    "fargate-launch-type-requires-task-definition-config"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-040",
+   "bullet": "3.2.K1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "What is a Fargate platform version, and what does LATEST mean? Who patches the platform?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/platform-fargate",
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-platform-version-defined",
+    "fargate-new-tasks-latest-revision-patched",
+    "fargate-vulnerable-revision-tasks-retired",
+    "fargate-task-retirement-aws-maintains-infrastructure"
+   ],
+   "note": "The meaning of LATEST was not mined.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-platform-version-defined",
+    "fargate-new-tasks-latest-revision-patched",
+    "fargate-vulnerable-revision-tasks-retired",
+    "fargate-task-retirement-aws-maintains-infrastructure"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-041",
+   "bullet": "4.2.S3",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "What is Fargate Spot: which workloads fit (interruption tolerant), how much warning a task gets before interruption (two-minute warning, SIGTERM), and what discount AWS states compared with Fargate On-Demand?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-capacity-providers",
+    "www/fargate/pricing",
+    "www/fargate/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-spot-interruption-tolerant-discount",
+    "fargate-spot-two-minute-interruption-warning",
+    "fargate-spot-warning-delivery-sigterm-eventbridge",
+    "fargate-spot-container-must-handle-sigterm",
+    "fargate-spot-no-on-demand-replacement",
+    "fargate-spot-single-task-service-interrupted",
+    "fargate-faq-spot-up-to-70-percent-discount"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-spot-interruption-tolerant-discount",
+    "fargate-spot-two-minute-interruption-warning",
+    "fargate-spot-warning-delivery-sigterm-eventbridge",
+    "fargate-spot-container-must-handle-sigterm",
+    "fargate-spot-no-on-demand-replacement",
+    "fargate-spot-single-task-service-interrupted",
+    "fargate-faq-spot-up-to-70-percent-discount"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-042",
+   "bullet": "4.2.S3",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "Where is Fargate Spot not supported (Windows containers; EKS on Fargate)? Since when does Fargate Spot support Linux Arm64 (2024-09-06)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/fargate-capacity-providers",
+    "docs/AmazonECS/latest/developerguide/document_history",
+    "docs/eks/latest/userguide/fargate"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-spot-linux-only-pricing-page",
+    "eks-fargate-no-spot",
+    "ecs-change-fargate-spot-linux-arm-2024-09"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-spot-linux-only-pricing-page",
+    "eks-fargate-no-spot",
+    "ecs-change-fargate-spot-linux-arm-2024-09"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-043",
+   "bullet": "3.2.K1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "Which operating systems and CPU architectures can Fargate tasks use (Linux x86_64, Linux Arm64 on Graviton, Windows)?",
+   "look_in": [
+    "www/fargate/faqs",
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate",
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-windows-containers-x86-64-only",
+    "fargate-faq-arm-on-ecs-via-arm64",
+    "fargate-faq-arm-on-eks-not-supported",
+    "fargate-task-size-1-vcpu-linux-windows",
+    "fargate-faq-windows-license-built-into-price"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-windows-containers-x86-64-only",
+    "fargate-faq-arm-on-ecs-via-arm64",
+    "fargate-faq-arm-on-eks-not-supported",
+    "fargate-task-size-1-vcpu-linux-windows",
+    "fargate-faq-windows-license-built-into-price"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-044",
+   "bullet": "3.2.K1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "What is Fargate task retirement (AWS stops tasks on a platform version that needs patching), how is the customer notified, and can the customer set a waiting period or event windows?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate",
+    "docs/AmazonECS/latest/developerguide/document_history"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-task-retirement-aws-maintains-infrastructure",
+    "fargate-retirement-notification-channels",
+    "fargate-retirement-wait-time-default",
+    "fargate-retirement-event-windows-precedence",
+    "fargate-retirement-no-opt-out",
+    "fargate-retirement-service-tasks-replaced-automatically",
+    "fargate-retirement-host-issue-no-notice"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-task-retirement-aws-maintains-infrastructure",
+    "fargate-retirement-notification-channels",
+    "fargate-retirement-wait-time-default",
+    "fargate-retirement-event-windows-precedence",
+    "fargate-retirement-no-opt-out",
+    "fargate-retirement-service-tasks-replaced-automatically",
+    "fargate-retirement-host-issue-no-notice"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-045",
+   "bullet": "3.2.K1",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "fargate",
+   "question": "How can Fargate task startup be made faster (smaller images, Seekable OCI lazy loading)?",
+   "look_in": [
+    "www/fargate/faqs",
+    "docs/AmazonECS/latest/developerguide/document_history"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-soci-lazy-loading-faster-start",
+    "fargate-soci-linux-1-4-0-only-not-windows",
+    "fargate-soci-try-for-images-over-250-mib",
+    "fargate-faq-zstd-images-start-faster",
+    "ecs-keep-images-in-same-region-as-workload"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-soci-lazy-loading-faster-start",
+    "fargate-soci-linux-1-4-0-only-not-windows",
+    "fargate-soci-try-for-images-over-250-mib",
+    "fargate-faq-zstd-images-start-faster",
+    "ecs-keep-images-in-same-region-as-workload"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-046",
+   "bullet": "3.2.K1",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is Amazon ECS Managed Instances (AWS-managed EC2 capacity: instance selection, provisioning, patching)? How is it different from ECS with Fargate (instance types, GPUs, privileged capabilities) and from self-managed EC2 capacity?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/ManagedInstances",
+    "www/ecs/faqs",
+    "docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecs-managed-instances-full-range-ec2-aws-manages",
+    "ecs-capacity-managed-instances",
+    "ecs-managed-instances-default-instance-selection",
+    "ecs-managed-instances-multi-task-placement-default",
+    "ecs-managed-instances-limited-lifetime-patching",
+    "ecs-managed-instances-fargate-task-definition-compatible",
+    "ecs-managed-instances-need-capacity-provider-strategy",
+    "ecs-managed-instances-two-iam-roles",
+    "ecs-managed-instances-privileged-capabilities-allowed",
+    "ecs-faq-mi-same-operational-benefits-as-fargate",
+    "ecs-faq-mi-additional-benefits-over-fargate",
+    "ecs-faq-mi-compute-in-your-account-billing",
+    "ecs-pricing-managed-instances-management-fee"
+   ],
+   "note": "Instance lifetime: source conflict 14 days (guide, FAQ) versus 21 days (document history 2025-12-11); state neither number as exact.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-managed-instances-full-range-ec2-aws-manages",
+    "ecs-capacity-managed-instances",
+    "ecs-managed-instances-default-instance-selection",
+    "ecs-managed-instances-multi-task-placement-default",
+    "ecs-managed-instances-fargate-task-definition-compatible",
+    "ecs-managed-instances-need-capacity-provider-strategy",
+    "ecs-managed-instances-two-iam-roles",
+    "ecs-managed-instances-privileged-capabilities-allowed",
+    "ecs-faq-mi-same-operational-benefits-as-fargate",
+    "ecs-faq-mi-additional-benefits-over-fargate",
+    "ecs-faq-mi-compute-in-your-account-billing",
+    "ecs-pricing-managed-instances-management-fee"
+   ],
+   "rejected_facts": [
+    "ecs-managed-instances-limited-lifetime-patching"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-047",
+   "bullet": "3.2.K1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Hypothesis (FRESHNESS): ECS Managed Instances became generally available on 2025-09-30 and changed the ECS-on-EC2 compared with Fargate trade-off. Quote the document-history row and the What's New snapshot; note the old choice (self-managed EC2 or Fargate).",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/document_history",
+    "www/about-aws/whats-new/2025/09/amazon-ecs-managed-instances"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-managed-instances-launch-2025-09",
+    "ecs-change-managed-instances-lifetime-21-days-2025-12"
+   ],
+   "note": "History row 2025-09-30 confirms GA. The 'old choice' (self-managed EC2 or Fargate) is not stated by a page, so no was-value. CONFLICT: the ManagedInstances guide page still says 14 days of instance lifetime; the 2025-12-11 history row says the maximum was extended from 14 to 21 days.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-managed-instances-launch-2025-09",
+    "ecs-change-managed-instances-lifetime-21-days-2025-12"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-048",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is Amazon ECS Express Mode: what does it create for a container image (Fargate service, load balancer, auto scaling, domain), and what does it cost?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/express-service-overview",
+    "www/ecs/faqs",
+    "www/about-aws/whats-new/2025/11/announcing-amazon-ecs-express-mode"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-express-mode-creates-fargate-alb-autoscaling",
+    "ecs-express-mode-three-inputs",
+    "ecs-express-mode-use-cases-web-apps-apis",
+    "ecs-express-mode-shares-alb-reduces-cost",
+    "ecs-express-mode-no-additional-charge",
+    "ecs-faq-express-default-fargate-and-alb",
+    "ecs-faq-express-creates-all-resources",
+    "ecs-faq-express-alb-shared-up-to-25-services",
+    "ecs-change-express-mode-launch-2025-11"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-express-mode-creates-fargate-alb-autoscaling",
+    "ecs-express-mode-three-inputs",
+    "ecs-express-mode-use-cases-web-apps-apis",
+    "ecs-express-mode-shares-alb-reduces-cost",
+    "ecs-express-mode-no-additional-charge",
+    "ecs-faq-express-default-fargate-and-alb",
+    "ecs-faq-express-creates-all-resources",
+    "ecs-faq-express-alb-shared-up-to-25-services",
+    "ecs-change-express-mode-launch-2025-11"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-049",
+   "bullet": "2.1.S4",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Hypothesis (FRESHNESS and registry note): AWS App Runner is in maintenance or closed to new customers, and AWS points App Runner users to ECS Express Mode. Which AWS page in the corpus states this? Record the date and the exact wording, or not-found.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/express-service-overview",
+    "www/about-aws/whats-new/2025/11/announcing-amazon-ecs-express-mode",
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "www/ecs/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecs-change-app-runner-closed-to-new-customers-2026-04"
+   ],
+   "note": "Decision guide (lightsail-elastic-beanstalk-ec2): 'As of April 30, 2026, AWS App Runner no longer accepts new customers; existing services continue to run.' Not found: any page that says AWS points App Runner users to ECS Express Mode; the guide only lists ECS (including ECS Express Mode) among container services.",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "ecs-change-app-runner-closed-to-new-customers-2026-04"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-050",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs-anywhere",
+   "question": "What is Amazon ECS Anywhere: run and manage ECS tasks on customer-managed infrastructure (on premises, other clouds) registered as external instances with the SSM Agent and the ECS agent; the EXTERNAL launch type?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/ecs-anywhere",
+    "docs/AmazonECS/latest/developerguide/launch-type-external",
+    "www/ecs/anywhere",
+    "www/ecs/anywhere/faqs",
+    "docs/AmazonECS/latest/developerguide/ecs-anywhere-registration"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-anywhere-faq-what-it-is",
+    "ecs-anywhere-external-instances-outbound-workloads",
+    "ecs-anywhere-external-launch-type",
+    "ecs-anywhere-faq-no-local-control-plane",
+    "ecs-anywhere-iam-role-ecsanywhererole-once-per-account",
+    "ecs-anywhere-ssm-credentials-refresh-on-reconnect",
+    "ecs-anywhere-faq-activation-key-registers-up-to-1000"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-anywhere-faq-what-it-is",
+    "ecs-anywhere-external-instances-outbound-workloads",
+    "ecs-anywhere-external-launch-type",
+    "ecs-anywhere-faq-no-local-control-plane",
+    "ecs-anywhere-iam-role-ecsanywhererole-once-per-account",
+    "ecs-anywhere-ssm-credentials-refresh-on-reconnect",
+    "ecs-anywhere-faq-activation-key-registers-up-to-1000"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-051",
+   "bullet": "2.1.S4",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "ecs-anywhere",
+   "question": "What does ECS Anywhere not support (for example load balancers, awsvpc network mode, service discovery, some volume types)? Quote the considerations list.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/ecs-anywhere",
+    "docs/AmazonECS/latest/developerguide/launch-type-external"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-anywhere-no-load-balancing",
+    "ecs-anywhere-no-service-discovery",
+    "ecs-anywhere-network-modes-no-awsvpc",
+    "ecs-anywhere-no-capacity-providers-no-efs",
+    "ecs-anywhere-one-cluster-at-a-time-iam-role",
+    "ecs-anywhere-windows-support-deprecated"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-anywhere-no-load-balancing",
+    "ecs-anywhere-no-service-discovery",
+    "ecs-anywhere-network-modes-no-awsvpc",
+    "ecs-anywhere-no-capacity-providers-no-efs",
+    "ecs-anywhere-one-cluster-at-a-time-iam-role",
+    "ecs-anywhere-windows-support-deprecated"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-052",
+   "bullet": "2.1.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs-anywhere",
+   "question": "Does ECS Anywhere need a connection to an AWS Region? What happens to running tasks when the connection is lost? Can it run in air-gapped environments? Which IAM role do external instances use?",
+   "look_in": [
+    "www/ecs/anywhere/faqs",
+    "docs/AmazonECS/latest/developerguide/iam-role-ecsanywhere",
+    "docs/AmazonECS/latest/developerguide/ecs-anywhere"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+    "ecs-anywhere-faq-disconnected-tasks-keep-running",
+    "ecs-anywhere-faq-no-scaling-while-disconnected",
+    "ecs-anywhere-faq-task-role-credentials-6-hours",
+    "ecs-anywhere-faq-link-encrypted-with-tls"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+    "ecs-anywhere-faq-disconnected-tasks-keep-running",
+    "ecs-anywhere-faq-no-scaling-while-disconnected",
+    "ecs-anywhere-faq-task-role-credentials-6-hours",
+    "ecs-anywhere-faq-link-encrypted-with-tls"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-053",
+   "bullet": "4.2.S3",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "ecs-anywhere",
+   "question": "Pricing dimension of ECS Anywhere (a charge per managed on-premises instance per hour; no upfront fee). Dimension only, no price.",
+   "look_in": [
+    "www/ecs/anywhere/pricing",
+    "www/ecs/anywhere/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-anywhere-pricing-per-instance-hour",
+    "ecs-anywhere-pricing-no-charge-when-deregistered"
+   ],
+   "note": "CONFLICT: the ECS pricing page table says ECS Anywhere is billed 'Per-hour (1 hr min.)'; the ECS Anywhere pricing page says a minimum charge of 1 minute per instance and rounds up to the nearest second. The dedicated page wins; the table row was not used. | ECS Anywhere billing minimum: the ECS pricing table says 1 hour minimum, the ECS Anywhere pricing page says 1 minute; the dedicated page wins and no minimum is stated as a fact.",
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecs-anywhere-free-tier-2200-instance-hours"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-anywhere-pricing-per-instance-hour",
+    "ecs-anywhere-pricing-no-charge-when-deregistered"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-054",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What is Amazon EKS (a managed Kubernetes service; AWS runs the Kubernetes control plane; conformant with upstream Kubernetes, so existing tools and applications work)?",
+   "look_in": [
+    "docs/eks/latest/userguide/what-is-eks",
+    "www/eks/faqs",
+    "www/eks"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-fully-managed-kubernetes-service",
+    "eks-certified-kubernetes-conformant",
+    "eks-faq-managed-kubernetes-no-control-plane-to-run",
+    "eks-faq-runs-open-source-kubernetes-compatible",
+    "eks-managed-control-plane-across-azs"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-fully-managed-kubernetes-service",
+    "eks-certified-kubernetes-conformant",
+    "eks-faq-managed-kubernetes-no-control-plane-to-run",
+    "eks-faq-runs-open-source-kubernetes-compatible",
+    "eks-managed-control-plane-across-azs"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-055",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How is the EKS control plane made highly available (API server instances and etcd spread across three Availability Zones in the Region; unhealthy instances replaced by AWS)? Is each control plane dedicated to one cluster?",
+   "look_in": [
+    "docs/eks/latest/userguide/eks-architecture",
+    "docs/eks/latest/userguide/disaster-recovery-resiliency",
+    "docs/eks/latest/userguide/what-is-eks"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-control-plane-three-azs-api-etcd",
+    "eks-control-plane-auto-replace-and-scale",
+    "eks-control-plane-dedicated-per-cluster",
+    "eks-faq-control-plane-multi-az-and-self-healing",
+    "eks-managed-control-plane-across-azs"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-control-plane-three-azs-api-etcd",
+    "eks-control-plane-auto-replace-and-scale",
+    "eks-control-plane-dedicated-per-cluster",
+    "eks-faq-control-plane-multi-az-and-self-healing",
+    "eks-managed-control-plane-across-azs"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-056",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "Kubernetes words the exam assumes: pod, node, deployment, service, namespace, DaemonSet, kubectl. Quote the EKS guide's short definition of each.",
+   "look_in": [
+    "docs/eks/latest/userguide/kubernetes-concepts"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "eks-pod-smallest-deployable-unit",
+    "eks-deployment-replicaset-stateless",
+    "eks-kubernetes-node-machine-runs-containers",
+    "eks-daemonset-runs-on-every-node",
+    "eks-namespace-groups-pods-of-an-application",
+    "eks-kubectl-talks-to-control-plane",
+    "eks-stateless-application-no-session-data-deployment"
+   ],
+   "note": "register-19: added the Pod and Deployment definitions from kubernetes-concepts. Kubernetes Service: the sentence sits in a bold list item with link targets that check M3 refuses; no fact.",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "eks-pod-smallest-deployable-unit",
+    "eks-deployment-replicaset-stateless",
+    "eks-kubernetes-node-machine-runs-containers",
+    "eks-daemonset-runs-on-every-node",
+    "eks-namespace-groups-pods-of-an-application",
+    "eks-kubectl-talks-to-control-plane",
+    "eks-stateless-application-no-session-data-deployment"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-057",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "Which compute options does EKS offer for running pods (EKS Auto Mode, managed node groups, self-managed nodes, AWS Fargate, Hybrid Nodes), and how does the guide compare them (who manages the nodes)?",
+   "look_in": [
+    "docs/eks/latest/userguide/eks-compute",
+    "docs/eks/latest/userguide/what-is-eks",
+    "docs/eks/latest/userguide/eks-architecture"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-compute-options-pod-scheduling",
+    "eks-compute-compare-who-manages-ec2-instances",
+    "eks-compute-compare-who-patches-node-os",
+    "eks-compute-compare-ssh-into-node",
+    "eks-compute-compare-windows-containers",
+    "eks-compute-compare-security-groups-per-pod",
+    "eks-nodes-same-vpc-as-cluster-subnets",
+    "eks-self-managed-nodes-in-your-account-billed-ec2"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-compute-options-pod-scheduling",
+    "eks-compute-compare-who-manages-ec2-instances",
+    "eks-compute-compare-who-patches-node-os",
+    "eks-compute-compare-ssh-into-node",
+    "eks-compute-compare-windows-containers",
+    "eks-compute-compare-security-groups-per-pod",
+    "eks-nodes-same-vpc-as-cluster-subnets",
+    "eks-self-managed-nodes-in-your-account-billed-ec2"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-058",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What is a managed node group (nodes in an EC2 Auto Scaling group that EKS creates and manages; drains nodes on update)? Does it support On-Demand and Spot capacity? Is there an extra charge for managed node groups?",
+   "look_in": [
+    "docs/eks/latest/userguide/managed-node-groups",
+    "docs/eks/latest/userguide/worker"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-managed-node-group-automates-ec2-lifecycle",
+    "eks-managed-node-group-asg-in-your-account",
+    "eks-managed-node-group-on-demand-or-spot",
+    "eks-managed-node-group-default-on-demand",
+    "eks-managed-node-group-ami-shared-responsibility",
+    "eks-managed-node-group-no-extra-charge",
+    "eks-managed-node-group-no-outposts-wavelength",
+    "eks-managed-node-group-private-subnet-reach-ecr",
+    "eks-faq-update-managed-nodes-single-command",
+    "eks-change-warm-pools-managed-node-groups-2026-04"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-managed-node-group-automates-ec2-lifecycle",
+    "eks-managed-node-group-asg-in-your-account",
+    "eks-managed-node-group-on-demand-or-spot",
+    "eks-managed-node-group-default-on-demand",
+    "eks-managed-node-group-ami-shared-responsibility",
+    "eks-managed-node-group-no-extra-charge",
+    "eks-managed-node-group-no-outposts-wavelength",
+    "eks-managed-node-group-private-subnet-reach-ecr",
+    "eks-faq-update-managed-nodes-single-command",
+    "eks-change-warm-pools-managed-node-groups-2026-04"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-059",
+   "bullet": "3.2.K6",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "eks",
+   "question": "EKS quotas: clusters per Region, managed node groups per cluster, nodes per managed node group, Fargate profiles per cluster, selectors per Fargate profile. Which are adjustable?",
+   "look_in": [
+    "docs/eks/latest/userguide/service-quotas"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-clusters-per-region-quota",
+    "eks-managed-node-groups-per-cluster-quota",
+    "eks-nodes-per-managed-node-group-quota",
+    "eks-fargate-profiles-per-cluster-quota",
+    "eks-selectors-per-fargate-profile-quota",
+    "eks-label-pairs-per-fargate-selector-quota"
+   ],
+   "note": "The EKS quotas are in the general reference page docs/general/latest/gr/eks (fetched this run), not on the EKS user guide service-quotas page (which holds no numbers).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-clusters-per-region-quota",
+    "eks-managed-node-groups-per-cluster-quota",
+    "eks-nodes-per-managed-node-group-quota",
+    "eks-fargate-profiles-per-cluster-quota",
+    "eks-selectors-per-fargate-profile-quota",
+    "eks-label-pairs-per-fargate-selector-quota"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-060",
+   "bullet": "3.2.K6",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What is EKS Auto Mode: what AWS manages (compute with Karpenter-based scaling, storage, load balancing, networking, node patching and node lifetime), and how is it different from EKS with Fargate?",
+   "look_in": [
+    "docs/eks/latest/userguide/automode",
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-auto-mode-aws-manages-infrastructure",
+    "eks-auto-mode-karpenter-scaling",
+    "eks-auto-mode-integrates-load-balancing-storage",
+    "eks-auto-mode-node-lifetime-immutable-no-ssh",
+    "eks-auto-mode-node-max-lifetime-21-days",
+    "eks-faq-auto-mode-fully-automates-cluster-management",
+    "eks-pricing-auto-mode-per-instance-duration-and-type",
+    "eks-pricing-auto-mode-per-second-one-minute"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-auto-mode-aws-manages-infrastructure",
+    "eks-auto-mode-karpenter-scaling",
+    "eks-auto-mode-integrates-load-balancing-storage",
+    "eks-auto-mode-node-lifetime-immutable-no-ssh",
+    "eks-auto-mode-node-max-lifetime-21-days",
+    "eks-faq-auto-mode-fully-automates-cluster-management",
+    "eks-pricing-auto-mode-per-instance-duration-and-type",
+    "eks-pricing-auto-mode-per-second-one-minute"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-061",
+   "bullet": "3.2.K6",
+   "kind": "change",
+   "lens": "changes",
+   "service": "eks",
+   "question": "Hypothesis (FRESHNESS): EKS Auto Mode and EKS Hybrid Nodes became available on 2024-12-01; before that, node groups or self-run Karpenter were the answer. Quote the doc-history rows.",
+   "look_in": [
+    "docs/eks/latest/userguide/doc-history",
+    "docs/eks/latest/userguide/automode",
+    "docs/eks/latest/userguide/hybrid-nodes-overview"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-change-auto-mode-launch-2024-12",
+    "eks-change-hybrid-nodes-launch-2024-12"
+   ],
+   "note": "Both history rows are dated December 1, 2024. The 'old answer' (managed node groups or self-run Karpenter) is not stated as a was-value; Karpenter autoscaler support has a history row of 2021-11-29.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-change-auto-mode-launch-2024-12",
+    "eks-change-hybrid-nodes-launch-2024-12"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-062",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How does EKS decide which pods run on Fargate (Fargate profile with namespace and label selectors)? Does each Fargate pod run on its own node? Which role does Fargate use to pull images (pod execution role)?",
+   "look_in": [
+    "docs/eks/latest/userguide/fargate",
+    "docs/eks/latest/userguide/fargate-profile",
+    "docs/eks/latest/userguide/fargate-pod-configuration",
+    "docs/eks/latest/userguide/pod-execution-role"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-fargate-profile-selects-pods",
+    "eks-fargate-pods-not-matching-profile-pending",
+    "eks-fargate-profile-immutable",
+    "eks-fargate-pod-execution-role-required",
+    "eks-fargate-pod-own-compute-boundary",
+    "eks-fargate-private-subnets-only",
+    "fargate-eks-pod-default-size-quarter-vcpu",
+    "fargate-eks-pod-size-largest-16-vcpu"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-fargate-profile-selects-pods",
+    "eks-fargate-pods-not-matching-profile-pending",
+    "eks-fargate-profile-immutable",
+    "eks-fargate-pod-execution-role-required",
+    "eks-fargate-pod-own-compute-boundary",
+    "eks-fargate-private-subnets-only",
+    "fargate-eks-pod-default-size-quarter-vcpu",
+    "fargate-eks-pod-size-largest-16-vcpu"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-063",
+   "bullet": "3.2.K6",
+   "kind": "restriction",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What does EKS on Fargate not support (DaemonSets, privileged containers, GPUs, HostPort or HostNetwork, Amazon EBS volumes, Spot, Classic Load Balancers)? Quote the Fargate considerations list.",
+   "look_in": [
+    "docs/eks/latest/userguide/fargate"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-fargate-no-daemonsets",
+    "eks-fargate-no-privileged-containers",
+    "eks-fargate-no-gpu",
+    "eks-fargate-no-hostport-hostnetwork",
+    "eks-fargate-no-ebs-volumes",
+    "eks-fargate-no-spot",
+    "eks-fargate-not-on-outposts-wavelength-local-zones",
+    "eks-fargate-imds-unavailable-use-irsa",
+    "eks-fargate-load-balancer-ip-targets-only",
+    "eks-fargate-efs-static-provisioning-only",
+    "eks-ebs-csi-fargate-limits"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-fargate-no-daemonsets",
+    "eks-fargate-no-privileged-containers",
+    "eks-fargate-no-gpu",
+    "eks-fargate-no-hostport-hostnetwork",
+    "eks-fargate-no-ebs-volumes",
+    "eks-fargate-no-spot",
+    "eks-fargate-not-on-outposts-wavelength-local-zones",
+    "eks-fargate-imds-unavailable-use-irsa",
+    "eks-fargate-load-balancer-ip-targets-only",
+    "eks-fargate-efs-static-provisioning-only",
+    "eks-ebs-csi-fargate-limits"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-064",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How do Karpenter and the Kubernetes Cluster Autoscaler scale EKS nodes (Cluster Autoscaler adjusts EC2 Auto Scaling groups; Karpenter launches right-sized instances directly)? What does the guide say about each?",
+   "look_in": [
+    "docs/eks/latest/userguide/autoscaling",
+    "docs/eks/latest/userguide/kubernetes-concepts",
+    "docs/eks/latest/userguide/eks-architecture"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-karpenter-right-sized-compute",
+    "eks-karpenter-customer-managed-no-sla",
+    "eks-cluster-autoscaler-uses-auto-scaling-groups",
+    "eks-auto-mode-karpenter-scaling"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-karpenter-right-sized-compute",
+    "eks-karpenter-customer-managed-no-sla",
+    "eks-cluster-autoscaler-uses-auto-scaling-groups",
+    "eks-auto-mode-karpenter-scaling"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-065",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What do the Horizontal Pod Autoscaler and the Vertical Pod Autoscaler do (change the number of pods; change the CPU and memory requests of pods)? Which component must be installed first (Kubernetes Metrics Server)?",
+   "look_in": [
+    "docs/eks/latest/userguide/horizontal-pod-autoscaler",
+    "docs/eks/latest/userguide/vertical-pod-autoscaler",
+    "docs/eks/latest/userguide/metrics-server"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-hpa-scales-pod-count-on-cpu",
+    "eks-vpa-adjusts-cpu-memory-reservations",
+    "eks-metrics-server-not-default-not-for-monitoring"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-hpa-scales-pod-count-on-cpu",
+    "eks-vpa-adjusts-cpu-memory-reservations",
+    "eks-metrics-server-not-default-not-for-monitoring"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-066",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What is the Kubernetes Metrics Server for (resource metrics for autoscaling), and what does the guide say it should not be used for (an accurate source of monitoring metrics)?",
+   "look_in": [
+    "docs/eks/latest/userguide/metrics-server"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-metrics-server-not-default-not-for-monitoring"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-metrics-server-not-default-not-for-monitoring"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-067",
+   "bullet": "3.2.K6",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How does the Amazon VPC CNI plugin give pods IP addresses from the VPC? What does that mean for subnet IP address planning? Can pods get their own security groups (security groups for pods)?",
+   "look_in": [
+    "docs/eks/latest/userguide/managing-vpc-cni",
+    "docs/eks/latest/userguide/eks-networking",
+    "docs/eks/latest/userguide/security-groups-for-pods"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "eks-vpc-cni-pods-get-vpc-ip-addresses",
+    "eks-vpc-cni-not-for-hybrid-nodes",
+    "eks-security-groups-for-pods",
+    "eks-compute-compare-security-groups-per-pod"
+   ],
+   "note": "Subnet IP address planning is not stated as such; the CNI fact says each Pod gets a VPC address.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-vpc-cni-pods-get-vpc-ip-addresses",
+    "eks-vpc-cni-not-for-hybrid-nodes",
+    "eks-compute-compare-security-groups-per-pod"
+   ],
+   "rejected_facts": [
+    "eks-security-groups-for-pods"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-068",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How does EKS expose applications through load balancers (AWS Load Balancer Controller: an ALB for a Kubernetes Ingress, an NLB for a Service of type LoadBalancer; IP targets required for Fargate pods)?",
+   "look_in": [
+    "docs/eks/latest/userguide/aws-load-balancer-controller",
+    "docs/eks/latest/userguide/alb-ingress",
+    "docs/eks/latest/userguide/network-load-balancing"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-load-balancer-controller-creates-alb-for-ingress-nlb-for-service",
+    "eks-fargate-load-balancer-ip-targets-only",
+    "eks-auto-mode-integrates-load-balancing-storage"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-load-balancer-controller-creates-alb-for-ingress-nlb-for-service",
+    "eks-fargate-load-balancer-ip-targets-only",
+    "eks-auto-mode-integrates-load-balancing-storage"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-069",
+   "bullet": "2.1.K14",
+   "kind": "default",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "Cluster API server endpoint access: public, private, or both. What is the default for a new cluster? How do private clusters reach AWS services without internet access (VPC endpoints)?",
+   "look_in": [
+    "docs/eks/latest/userguide/cluster-endpoint",
+    "docs/eks/latest/userguide/private-clusters"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-api-endpoint-public-by-default",
+    "eks-api-endpoint-private-access-options",
+    "eks-private-cluster-requirements",
+    "eks-public-endpoint-cidr-ranges-per-cluster-limit"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-api-endpoint-public-by-default",
+    "eks-api-endpoint-private-access-options",
+    "eks-private-cluster-requirements",
+    "eks-public-endpoint-cidr-ranges-per-cluster-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-070",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How do pods get AWS permissions with least privilege: EKS Pod Identity and IAM roles for service accounts (IRSA), instead of the node IAM role? What does the guide recommend between the two?",
+   "look_in": [
+    "docs/eks/latest/userguide/pod-identities",
+    "docs/eks/latest/userguide/iam-roles-for-service-accounts",
+    "docs/eks/latest/userguide/service-accounts"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-pod-identity-recommended-over-irsa",
+    "eks-pod-identity-role-to-service-account",
+    "eks-pod-identity-credential-isolation-imds",
+    "eks-irsa-role-to-service-account",
+    "eks-change-pod-identities-2023-11",
+    "eks-fargate-imds-unavailable-use-irsa"
+   ],
+   "note": "register-19: service-accounts page says AWS recommends EKS Pod Identities whenever possible (eks-pod-identity-recommended-over-irsa).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-pod-identity-recommended-over-irsa",
+    "eks-pod-identity-role-to-service-account",
+    "eks-pod-identity-credential-isolation-imds",
+    "eks-irsa-role-to-service-account",
+    "eks-change-pod-identities-2023-11",
+    "eks-fargate-imds-unavailable-use-irsa"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-071",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "How are IAM principals given access to the Kubernetes API of a cluster (EKS access entries and access policies, compared with the older aws-auth ConfigMap)? What are the cluster IAM role and the node IAM role for?",
+   "look_in": [
+    "docs/eks/latest/userguide/access-entries",
+    "docs/eks/latest/userguide/grant-k8s-access",
+    "docs/eks/latest/userguide/cluster-iam-role"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-access-entries-best-way-kubernetes-api-access",
+    "eks-access-entries-recommended-over-aws-auth",
+    "eks-cluster-iam-role-required",
+    "eks-node-iam-role-required-before-launch",
+    "eks-change-access-entries-2023-12",
+    "eks-access-entries-per-cluster-limit"
+   ],
+   "note": "register-19: fetched create-node-role; the node IAM role fact is eks-node-iam-role-required-before-launch.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-access-entries-best-way-kubernetes-api-access",
+    "eks-access-entries-recommended-over-aws-auth",
+    "eks-cluster-iam-role-required",
+    "eks-node-iam-role-required-before-launch",
+    "eks-change-access-entries-2023-12",
+    "eks-access-entries-per-cluster-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-072",
+   "bullet": "2.1.K4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "Persistent storage for EKS: the Amazon EBS CSI driver (a volume in one Availability Zone for one node at a time) compared with the Amazon EFS CSI driver (shared across nodes and Availability Zones). Which one works with Fargate pods?",
+   "look_in": [
+    "docs/eks/latest/userguide/storage",
+    "docs/eks/latest/userguide/ebs-csi",
+    "docs/eks/latest/userguide/efs-csi",
+    "docs/eks/latest/userguide/fargate"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-ebs-csi-fargate-limits",
+    "eks-efs-csi-shared-file-storage-windows-hybrid",
+    "eks-fargate-efs-static-provisioning-only",
+    "eks-fargate-no-ebs-volumes"
+   ],
+   "note": "That an EBS volume lives in one Availability Zone is an EBS fact (chapter 22); not restated here.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-ebs-csi-fargate-limits",
+    "eks-efs-csi-shared-file-storage-windows-hybrid",
+    "eks-fargate-efs-static-provisioning-only",
+    "eks-fargate-no-ebs-volumes"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-073",
+   "bullet": "2.1.K14",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "eks",
+   "question": "Kubernetes version lifecycle on EKS: how many months of standard support and of extended support does a version get, and what happens when extended support ends (automatic upgrade)?",
+   "look_in": [
+    "docs/eks/latest/userguide/kubernetes-versions",
+    "www/eks/faqs",
+    "docs/eks/latest/userguide/kubernetes-versions-extended"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-standard-support-14-months",
+    "eks-extended-support-12-months",
+    "eks-version-total-support-26-months",
+    "eks-extended-support-end-auto-upgrade",
+    "eks-extended-support-enabled-by-default",
+    "eks-version-rollback-within-7-days"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-standard-support-14-months",
+    "eks-extended-support-12-months",
+    "eks-version-total-support-26-months",
+    "eks-extended-support-end-auto-upgrade",
+    "eks-extended-support-enabled-by-default",
+    "eks-version-rollback-within-7-days"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-074",
+   "bullet": "2.1.K14",
+   "kind": "change",
+   "lens": "changes",
+   "service": "eks",
+   "question": "Change: EKS extended support for Kubernetes versions (preview 2023-10-04, full release 2024-01-16 in doc history; FRESHNESS says GA 2024-04-01) and its extra charge. Quote the doc-history rows.",
+   "look_in": [
+    "docs/eks/latest/userguide/doc-history",
+    "www/eks/pricing"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-change-extended-support-preview-2023-10",
+    "eks-change-extended-support-full-release-2024-01",
+    "eks-pricing-extended-support-additional-cost-per-cluster-hour"
+   ],
+   "note": "CONFLICT with FRESHNESS.md: the history says preview 2023-10-04 and full release 2024-01-16, not 2024-04-01 (the 2024-04 What's New post is blocked by robots.txt). History rows win.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-change-extended-support-preview-2023-10",
+    "eks-change-extended-support-full-release-2024-01",
+    "eks-pricing-extended-support-additional-cost-per-cluster-hour"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-075",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What are EKS add-ons (AWS-managed installation and updates of operational software such as the VPC CNI, CoreDNS, kube-proxy and the EBS CSI driver)?",
+   "look_in": [
+    "docs/eks/latest/userguide/eks-add-ons",
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-addons-curated-managed-software",
+    "eks-faq-add-ons-one-click-install",
+    "eks-faq-add-ons-manage-operational-software",
+    "eks-faq-capabilities-run-managed-by-aws-not-on-cluster"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-addons-curated-managed-software",
+    "eks-faq-add-ons-one-click-install",
+    "eks-faq-add-ons-manage-operational-software",
+    "eks-faq-capabilities-run-managed-by-aws-not-on-cluster"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-076",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What is EKS Hybrid Nodes (on-premises and edge machines joined as nodes to an EKS cluster whose control plane runs in the AWS Region)? What network connection does it need?",
+   "look_in": [
+    "docs/eks/latest/userguide/hybrid-nodes-overview",
+    "docs/eks/latest/userguide/eks-deployment-options",
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-hybrid-nodes-on-premises-control-plane-aws",
+    "eks-hybrid-nodes-need-reliable-connection",
+    "eks-hybrid-nodes-network-connectivity-options",
+    "eks-hybrid-nodes-not-on-cloud-infrastructure",
+    "eks-hybrid-nodes-pricing-vcpu-hour",
+    "eks-vpc-cni-not-for-hybrid-nodes",
+    "eks-change-hybrid-nodes-launch-2024-12",
+    "eks-faq-hybrid-nodes-gateway-automates-pod-networking"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-hybrid-nodes-on-premises-control-plane-aws",
+    "eks-hybrid-nodes-need-reliable-connection",
+    "eks-hybrid-nodes-network-connectivity-options",
+    "eks-hybrid-nodes-not-on-cloud-infrastructure",
+    "eks-hybrid-nodes-pricing-vcpu-hour",
+    "eks-vpc-cni-not-for-hybrid-nodes",
+    "eks-change-hybrid-nodes-launch-2024-12",
+    "eks-faq-hybrid-nodes-gateway-automates-pod-networking"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-077",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What is Amazon EKS on AWS Outposts: extended clusters (control plane in the Region) compared with local clusters (control plane on the Outpost, keeps running when disconnected)?",
+   "look_in": [
+    "docs/eks/latest/userguide/eks-outposts",
+    "docs/eks/latest/userguide/eks-deployment-options"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-outposts-extended-vs-local-clusters",
+    "eks-outposts-extended-cluster-needs-reliable-network",
+    "eks-outposts-local-cluster-survives-disconnect",
+    "eks-faq-outposts-local-clusters",
+    "eks-faq-outposts-nodes-on-42u-racks",
+    "eks-deployment-options-control-plane-location-hybrid-outposts"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-outposts-extended-vs-local-clusters",
+    "eks-outposts-extended-cluster-needs-reliable-network",
+    "eks-outposts-local-cluster-survives-disconnect",
+    "eks-faq-outposts-local-clusters",
+    "eks-faq-outposts-nodes-on-42u-racks",
+    "eks-deployment-options-control-plane-location-hybrid-outposts"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-078",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "What does the Amazon EKS Connector do (register and view any conformant Kubernetes cluster in the EKS console; it does not manage the cluster)?",
+   "look_in": [
+    "docs/eks/latest/userguide/eks-connector",
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-connector-view-only-conformant-clusters",
+    "eks-faq-connector-view-only-no-management",
+    "eks-faq-connector-no-charge"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-connector-view-only-conformant-clusters",
+    "eks-faq-connector-view-only-no-management",
+    "eks-faq-connector-no-charge"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-079",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks",
+   "question": "Resilience for EKS workloads: what does Amazon Application Recovery Controller zonal shift do for an EKS cluster (move traffic away from an impaired Availability Zone)?",
+   "look_in": [
+    "docs/eks/latest/userguide/zone-shift",
+    "docs/eks/latest/userguide/disaster-recovery-resiliency"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-zonal-shift-temporary-move-traffic-from-impaired-az"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-zonal-shift-temporary-move-traffic-from-impaired-az"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-080",
+   "bullet": "2.1.K14",
+   "kind": "default",
+   "lens": "changes",
+   "service": "eks",
+   "question": "Since 2025-03-05, does EKS envelope encrypt all Kubernetes API data by default (with an AWS owned key or a customer managed KMS key)? Quote the What's New snapshot.",
+   "look_in": [
+    "www/about-aws/whats-new/2025/03/amazon-eks-envelope-encrypts-kubernetes-api-data-default",
+    "docs/eks/latest/userguide/doc-history"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-change-envelope-encryption-default-2025-03"
+   ],
+   "note": "What's New 2025-03-05: default for clusters on Kubernetes 1.28 or higher; AWS owns the key by default; before, optional with KMS provider v1.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-change-envelope-encryption-default-2025-03"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-081",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks-anywhere",
+   "question": "What is Amazon EKS Anywhere (create and operate Kubernetes clusters on customer-managed infrastructure, built on EKS Distro)? Which infrastructure does it support (VMware vSphere, bare metal, Nutanix, CloudStack, Snow)? Who manages the clusters and the capacity?",
+   "look_in": [
+    "www/eks/eks-anywhere",
+    "www/eks/eks-anywhere/faqs",
+    "docs/eks/latest/userguide/eks-deployment-options"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-anywhere-faq-customer-managed-product",
+    "eks-anywhere-faq-uses-eks-distro",
+    "eks-anywhere-faq-built-on-cluster-api-infrastructure",
+    "eks-anywhere-faq-bottlerocket-default-node-os",
+    "eks-anywhere-faq-aws-does-not-manage-clusters-or-capacity",
+    "eks-anywhere-deployment-options-control-plane-customer-managed",
+    "eks-anywhere-faq-not-supported-on-aws-cloud",
+    "eks-anywhere-faq-not-supported-on-outposts"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-anywhere-faq-customer-managed-product",
+    "eks-anywhere-faq-uses-eks-distro",
+    "eks-anywhere-faq-built-on-cluster-api-infrastructure",
+    "eks-anywhere-faq-bottlerocket-default-node-os",
+    "eks-anywhere-faq-aws-does-not-manage-clusters-or-capacity",
+    "eks-anywhere-deployment-options-control-plane-customer-managed",
+    "eks-anywhere-faq-not-supported-on-aws-cloud",
+    "eks-anywhere-faq-not-supported-on-outposts"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-082",
+   "bullet": "2.1.S4",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "eks-anywhere",
+   "question": "Does EKS Anywhere require internet connectivity to an AWS Region (can it run disconnected or air-gapped)?",
+   "look_in": [
+    "www/eks/eks-anywhere/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-anywhere-faq-connected-or-air-gapped",
+    "eks-faq-anywhere-for-isolated-or-air-gapped"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-anywhere-faq-connected-or-air-gapped",
+    "eks-faq-anywhere-for-isolated-or-air-gapped"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-083",
+   "bullet": "4.2.S3",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "eks-anywhere",
+   "question": "Pricing dimension of EKS Anywhere: is the software free to use, and what does the optional EKS Anywhere Enterprise Subscription cover (per cluster, term)? Dimension only, no price.",
+   "look_in": [
+    "www/eks/eks-anywhere/pricing",
+    "www/eks/eks-anywhere/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-anywhere-software-open-source",
+    "eks-anywhere-support-needs-enterprise-subscription",
+    "eks-anywhere-subscription-1-year-or-3-year-term",
+    "eks-anywhere-subscription-flat-per-cluster",
+    "eks-anywhere-faq-enterprise-subscription-prerequisite",
+    "eks-anywhere-faq-cancel-within-7-days"
+   ],
+   "note": "Dollar amounts are on the pricing page but deliberately not in claims.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-anywhere-software-open-source",
+    "eks-anywhere-support-needs-enterprise-subscription",
+    "eks-anywhere-subscription-1-year-or-3-year-term",
+    "eks-anywhere-subscription-flat-per-cluster",
+    "eks-anywhere-faq-enterprise-subscription-prerequisite",
+    "eks-anywhere-faq-cancel-within-7-days"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-084",
+   "bullet": "2.1.S4",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "eks-distro",
+   "question": "What is Amazon EKS Distro (the Kubernetes distribution used by Amazon EKS, open source, that customers deploy and manage themselves anywhere)? Which support model does it have?",
+   "look_in": [
+    "www/eks/eks-distro",
+    "www/eks/eks-distro/faqs",
+    "docs/eks/latest/userguide/eks-deployment-options"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-distro-faq-same-kubernetes-as-eks-run-it-yourself",
+    "eks-distro-faq-clusters-on-ec2-on-premises-other-clouds",
+    "eks-distro-faq-same-versions-as-eks",
+    "eks-distro-faq-you-set-up-servers-and-networking",
+    "eks-distro-faq-does-not-include-iam-authenticator-or-plugins",
+    "eks-distro-faq-release-channels-github-s3-ecr",
+    "eks-distro-faq-support-best-effort",
+    "eks-distro-extended-maintenance-up-to-14-months"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-distro-faq-same-kubernetes-as-eks-run-it-yourself",
+    "eks-distro-faq-clusters-on-ec2-on-premises-other-clouds",
+    "eks-distro-faq-same-versions-as-eks",
+    "eks-distro-faq-you-set-up-servers-and-networking",
+    "eks-distro-faq-does-not-include-iam-authenticator-or-plugins",
+    "eks-distro-faq-release-channels-github-s3-ecr",
+    "eks-distro-faq-support-best-effort",
+    "eks-distro-extended-maintenance-up-to-14-months"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-085",
+   "bullet": "2.1.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "eks",
+   "question": "Hybrid comparison: EKS Hybrid Nodes compared with EKS Anywhere compared with EKS on Outposts compared with ECS Anywhere. Who runs the control plane, where, and what is the stated use case of each?",
+   "look_in": [
+    "docs/eks/latest/userguide/eks-deployment-options",
+    "www/eks/faqs",
+    "www/ecs/anywhere/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-deployment-options-control-plane-location-hybrid-outposts",
+    "eks-deployment-options-data-plane-hybrid-outposts",
+    "eks-anywhere-deployment-options-control-plane-customer-managed",
+    "eks-faq-hybrid-nodes-vs-anywhere-connected-vs-air-gapped",
+    "eks-faq-outposts-managed-vs-hybrid-nodes-managed",
+    "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+    "eks-hybrid-nodes-need-reliable-connection",
+    "eks-outposts-extended-vs-local-clusters"
+   ],
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "eks-deployment-options-hybrid-outposts-control-plane-aws-managed"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "eks-deployment-options-control-plane-location-hybrid-outposts",
+    "eks-deployment-options-data-plane-hybrid-outposts",
+    "eks-anywhere-deployment-options-control-plane-customer-managed",
+    "eks-faq-hybrid-nodes-vs-anywhere-connected-vs-air-gapped",
+    "eks-faq-outposts-managed-vs-hybrid-nodes-managed",
+    "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+    "eks-hybrid-nodes-need-reliable-connection",
+    "eks-outposts-extended-vs-local-clusters"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-086",
+   "bullet": "2.1.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "What is Amazon ECR (a fully managed, secure, scalable and reliable container image registry; private and public repositories; Docker and OCI images and artifacts)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/what-is-ecr",
+    "www/ecr/faqs",
+    "www/ecr"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-managed-container-image-registry",
+    "ecr-private-repositories-iam-resource-based-permissions",
+    "ecr-faq-private-vs-public-repository",
+    "ecr-faq-oci-compatible",
+    "ecr-faq-public-gallery-anyone-can-download",
+    "ecr-faq-integrated-with-ecs-eks-lambda"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-managed-container-image-registry",
+    "ecr-private-repositories-iam-resource-based-permissions",
+    "ecr-faq-private-vs-public-repository",
+    "ecr-faq-oci-compatible",
+    "ecr-faq-public-gallery-anyone-can-download",
+    "ecr-faq-integrated-with-ecs-eks-lambda"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-087",
+   "bullet": "2.1.K8",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "ECR components: a private registry per account per Region, repositories, images, repository policies, an authorization token. How does a Docker client authenticate (get-login-password)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/concept-and-components",
+    "docs/AmazonECR/latest/userguide/Registries",
+    "docs/AmazonECR/latest/userguide/registry_auth"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-default-private-registry-per-account",
+    "ecr-repository-logical-collection-of-images",
+    "ecr-docker-cli-needs-token-get-login-password",
+    "ecr-authorization-token-permission-scope",
+    "ecr-credential-helper-no-mfa",
+    "ecr-get-authorization-token-requires-iam-policy",
+    "ecr-eks-image-name-full-registry-repository-tag"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-default-private-registry-per-account",
+    "ecr-repository-logical-collection-of-images",
+    "ecr-docker-cli-needs-token-get-login-password",
+    "ecr-authorization-token-permission-scope",
+    "ecr-credential-helper-no-mfa",
+    "ecr-get-authorization-token-requires-iam-policy",
+    "ecr-eks-image-name-full-registry-repository-tag"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-088",
+   "bullet": "2.1.K8",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecr",
+   "question": "How long is an ECR authorization token valid?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/registry_auth"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-authorization-token-valid-12-hours"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-authorization-token-valid-12-hours"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-089",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "How is access to ECR images controlled: IAM identity policies and repository policies (resource-based) for cross-account pulls; registry permissions for replication and pull through cache?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/repository-policies",
+    "docs/AmazonECR/latest/userguide/repository-policy-examples",
+    "docs/AmazonECR/latest/userguide/registry-permissions",
+    "www/ecr/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-repository-policy-default-account-only",
+    "ecr-repository-policy-vs-iam-policy-evaluation",
+    "ecr-registry-policy-private-registry-level",
+    "ecr-faq-resource-based-policies-for-access",
+    "ecr-faq-cross-account-image-sharing-by-policy",
+    "ecr-get-authorization-token-requires-iam-policy",
+    "ecr-ecs-agent-pull-permissions"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-repository-policy-default-account-only",
+    "ecr-repository-policy-vs-iam-policy-evaluation",
+    "ecr-registry-policy-private-registry-level",
+    "ecr-faq-resource-based-policies-for-access",
+    "ecr-faq-cross-account-image-sharing-by-policy",
+    "ecr-get-authorization-token-requires-iam-policy",
+    "ecr-ecs-agent-pull-permissions"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-090",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "What does image tag immutability do (prevents an image tag from being overwritten)? Can exclusion patterns be set (2025-07)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/image-tag-mutability",
+    "docs/AmazonECR/latest/userguide/doc-history"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-tag-immutability-prevent-overwrite"
+   ],
+   "note": "The exclusion date (2025-07) was not mined as a change fact.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-tag-immutability-prevent-overwrite"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-091",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "Image scanning: basic scanning (scan on push or manual, OS vulnerabilities) compared with enhanced scanning (Amazon Inspector, continuous, OS and programming language packages). Quote what each covers.",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/image-scanning",
+    "docs/AmazonECR/latest/userguide/image-scanning-basic",
+    "docs/AmazonECR/latest/userguide/image-scanning-enhanced",
+    "www/ecr/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-scanning-basic-vs-enhanced",
+    "ecr-scan-on-push-each-new-image",
+    "ecr-basic-scanning-aws-native-more-than-50-feeds",
+    "ecr-basic-scan-once-per-24-hours",
+    "ecr-basic-scan-100000-images-per-24-hours",
+    "ecr-enhanced-scanning-no-manual-scans",
+    "ecr-enhanced-scanning-inspector-cost",
+    "ecr-faq-basic-scan-and-inspector-enhanced-scan"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-scanning-basic-vs-enhanced",
+    "ecr-scan-on-push-each-new-image",
+    "ecr-basic-scanning-aws-native-more-than-50-feeds",
+    "ecr-basic-scan-once-per-24-hours",
+    "ecr-basic-scan-100000-images-per-24-hours",
+    "ecr-enhanced-scanning-no-manual-scans",
+    "ecr-enhanced-scanning-inspector-cost",
+    "ecr-faq-basic-scan-and-inspector-enhanced-scan"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-092",
+   "bullet": "2.1.K14",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecr",
+   "question": "Change: basic scanning moved from Clair to an AWS native technology (new basic scanning GA 2024-08-06) and the Clair deprecation completed on 2026-02-02. Quote the doc-history rows.",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/doc-history",
+    "docs/AmazonECR/latest/userguide/image-scanning-basic"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecr-change-clair-scanning-deprecation-completed-2026-02",
+    "ecr-basic-scanning-aws-native-more-than-50-feeds"
+   ],
+   "note": "Clair removal row (2 February 2026) found. Not found: the new basic scanning GA date 2024-08-06 (no saved page states it; the ECR history has no such row). | register-19: the 2024-08-06 GA date is in the What's New feed only; the post is blocked by robots.txt (fetch refused), so no fact.",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "ecr-change-clair-scanning-deprecation-completed-2026-02",
+    "ecr-basic-scanning-aws-native-more-than-50-feeds"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-093",
+   "bullet": "4.2.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "What do ECR lifecycle policies do (expire images by age or by count, by tag status or tag pattern) to control storage cost?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/LifecyclePolicies"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-lifecycle-policy-expires-images-within-24-hours",
+    "ecr-lifecycle-count-more-than-and-since-pushed",
+    "ecr-lifecycle-tag-pattern-or-prefix-not-both",
+    "ecr-rules-per-lifecycle-policy-limit",
+    "ecr-lifecycle-policy-length-limit"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-lifecycle-policy-expires-images-within-24-hours",
+    "ecr-lifecycle-count-more-than-and-since-pushed",
+    "ecr-lifecycle-tag-pattern-or-prefix-not-both",
+    "ecr-rules-per-lifecycle-policy-limit",
+    "ecr-lifecycle-policy-length-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-094",
+   "bullet": "2.1.K14",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "Can ECR replicate images across Regions and across accounts automatically (registry replication configuration)? Which images are replicated (only new pushes)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/replication",
+    "www/ecr/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-replication-cross-region-cross-account",
+    "ecr-replication-only-new-pushes",
+    "ecr-replication-destination-account-policy-only",
+    "ecr-faq-replicates-across-regions-and-accounts",
+    "ecr-replication-most-images-under-30-minutes"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-replication-cross-region-cross-account",
+    "ecr-replication-only-new-pushes",
+    "ecr-replication-destination-account-policy-only",
+    "ecr-faq-replicates-across-regions-and-accounts",
+    "ecr-replication-most-images-under-30-minutes"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-095",
+   "bullet": "2.1.K14",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecr",
+   "question": "How many replication rules per registry and destinations per rule? Note the change to 25 rules on 2026-08-17 (not examinable yet) and the earlier value.",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/replication",
+    "docs/AmazonECR/latest/userguide/service-quotas",
+    "www/about-aws/whats-new/2026/08/amazon-ecr-increased-replication-rules-limit"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-replication-rules-per-registry-limit",
+    "ecr-replication-config-25-destinations-25-rules",
+    "ecr-filters-per-replication-rule-limit",
+    "ecr-replication-most-images-under-30-minutes"
+   ],
+   "note": "Quota table and guide now say 25 rules and 25 unique destinations; What's New 2026-08-17 says it rose from 10 to 25 (GA after 2026-07-15: not examinable yet). Old value 10 is verbatim in the What's New post. Per rule: up to 100 filters.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-replication-rules-per-registry-limit",
+    "ecr-replication-config-25-destinations-25-rules",
+    "ecr-filters-per-replication-rule-limit",
+    "ecr-replication-most-images-under-30-minutes"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-096",
+   "bullet": "2.1.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "What is ECR pull through cache (cache images from an upstream registry such as ECR Public, Docker Hub, Quay, the Kubernetes registry, GitHub, GitLab, or another ECR private registry since 2025-03-12)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/pull-through-cache",
+    "www/about-aws/whats-new/2025/03/amazon-ecr-pull-through-cache"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-pull-through-cache-keeps-cache-current",
+    "ecr-pull-through-cache-upstream-registries-auth",
+    "ecr-pull-through-cache-revalidation-24-hours",
+    "ecr-pull-through-cache-rules-per-registry-limit",
+    "ecr-change-private-registry-pull-through-cache-2025-03",
+    "ecr-change-ecr-to-ecr-pull-through-cache-2025-03"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-pull-through-cache-keeps-cache-current",
+    "ecr-pull-through-cache-upstream-registries-auth",
+    "ecr-pull-through-cache-revalidation-24-hours",
+    "ecr-pull-through-cache-rules-per-registry-limit",
+    "ecr-change-private-registry-pull-through-cache-2025-03",
+    "ecr-change-ecr-to-ecr-pull-through-cache-2025-03"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-097",
+   "bullet": "2.1.K14",
+   "kind": "default",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "How are ECR images encrypted at rest by default (Amazon S3 server-side encryption with AES-256), and what are the KMS options (SSE-KMS, DSSE-KMS)? Can the encryption setting be changed after a repository is created?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/encryption-at-rest"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-encryption-default-sse-s3-aes256",
+    "ecr-encryption-kms-options-per-repository",
+    "ecr-encryption-settings-cannot-change-after-creation",
+    "ecr-dsse-kms-only-govcloud",
+    "ecr-faq-encrypted-at-rest-and-in-transit"
+   ],
+   "note": "register-19: the image-tag-mutability page says the encryption settings can't be changed once the repository is created (ecr-encryption-settings-cannot-change-after-creation).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-encryption-default-sse-s3-aes256",
+    "ecr-encryption-kms-options-per-repository",
+    "ecr-encryption-settings-cannot-change-after-creation",
+    "ecr-dsse-kms-only-govcloud",
+    "ecr-faq-encrypted-at-rest-and-in-transit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-098",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "Which VPC endpoints does a private workload need to pull from ECR without internet access (ecr.api and ecr.dkr interface endpoints plus the Amazon S3 gateway endpoint for image layers)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/vpc-endpoints"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+    "ecr-privatelink-no-internet-gateway-needed",
+    "ecr-vpc-endpoint-security-group-port-443",
+    "ecr-faq-privatelink-pull-without-public-internet"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+    "ecr-privatelink-no-internet-gateway-needed",
+    "ecr-vpc-endpoint-security-group-port-443",
+    "ecr-faq-privatelink-pull-without-public-internet"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-099",
+   "bullet": "2.1.K14",
+   "kind": "number",
+   "lens": "numbers",
+   "service": "ecr",
+   "question": "ECR quotas: repositories per registry (100,000 since 2024-11), images per repository, layer size, layer parts, rate of image pulls. Which are adjustable?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/service-quotas"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecr-registered-repositories-quota",
+    "ecr-images-per-repository-quota",
+    "ecr-layer-parts-limit",
+    "ecr-batchgetimage-request-rate-quota",
+    "ecr-getdownloadurlforlayer-request-rate-quota",
+    "ecr-getauthorizationtoken-request-rate-quota",
+    "ecr-putimage-request-rate-quota",
+    "ecr-tags-per-image-limit",
+    "ecr-rules-per-lifecycle-policy-limit",
+    "ecr-pull-through-cache-rules-per-registry-limit",
+    "ecr-change-image-layers-200-gb-2026-08"
+   ],
+   "note": "Repositories 100,000 and adjustable; images per repository 100,000 and adjustable; layer 52,000 MiB not adjustable. The date '100,000 since 2024-11' is not in any saved page (the What's New post is blocked by robots.txt), so no old value is recorded.",
+   "registered_by": "register-19",
+   "adjudication": [
+    {
+     "by": "adjudicate-19",
+     "removed": [
+      "ecr-max-layer-size-limit"
+     ],
+     "status_was": "found"
+    }
+   ],
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-registered-repositories-quota",
+    "ecr-images-per-repository-quota",
+    "ecr-batchgetimage-request-rate-quota",
+    "ecr-getdownloadurlforlayer-request-rate-quota",
+    "ecr-getauthorizationtoken-request-rate-quota",
+    "ecr-putimage-request-rate-quota",
+    "ecr-tags-per-image-limit",
+    "ecr-rules-per-lifecycle-policy-limit",
+    "ecr-pull-through-cache-rules-per-registry-limit",
+    "ecr-change-image-layers-200-gb-2026-08"
+   ],
+   "rejected_facts": [
+    "ecr-layer-parts-limit"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-100",
+   "bullet": "4.2.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "What is the ECR archive storage class (2025-11-19) for rarely accessed images, and how is an archived image restored before it can be pulled?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/archive_restore_image",
+    "www/about-aws/whats-new/2025/11/amazon-ecr-archive-storage-class-container-images"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-archive-storage-class-rarely-accessed",
+    "ecr-archived-image-restore-within-20-minutes",
+    "ecr-change-archive-storage-class-2025-11"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-archive-storage-class-rarely-accessed",
+    "ecr-archived-image-restore-within-20-minutes",
+    "ecr-change-archive-storage-class-2025-11"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-101",
+   "bullet": "4.2.S3",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "ecr",
+   "question": "ECR pricing dimensions: storage per GB-month, data transfer out; is data transfer from a private repository to ECS, EKS or EC2 in the same Region free? Free tier for public repositories. Dimensions only.",
+   "look_in": [
+    "www/ecr/pricing",
+    "www/ecr/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-faq-pricing-storage-and-internet-transfer",
+    "ecr-pricing-same-region-transfer-free",
+    "ecr-free-tier-private-500-mb-for-one-year",
+    "ecr-free-tier-public-50-gb-always-free",
+    "ecr-free-tier-public-transfer-5-tb-authenticated"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-faq-pricing-storage-and-internet-transfer",
+    "ecr-pricing-same-region-transfer-free",
+    "ecr-free-tier-private-500-mb-for-one-year",
+    "ecr-free-tier-public-50-gb-always-free",
+    "ecr-free-tier-public-transfer-5-tb-authenticated"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-102",
+   "bullet": "2.1.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "What is AWS App2Container (a command-line tool that containerizes existing Java and .NET applications running on premises or on EC2, and generates the image, ECS task definitions or EKS manifests)? Which application types does it support?",
+   "look_in": [
+    "docs/app2container/latest/UserGuide/what-is-a2c"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-app2container-modernizes-java-dotnet-into-containers",
+    "ecs-app2container-no-longer-open-to-new-customers"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-app2container-modernizes-java-dotnet-into-containers",
+    "ecs-app2container-no-longer-open-to-new-customers"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-103",
+   "bullet": "2.1.K8",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecr",
+   "question": "How does the ECR guide describe migrating container images from a third-party registry into ECR (copy, pull through cache, replication of tags)?",
+   "look_in": [
+    "docs/AmazonECR/latest/userguide/migrate-from-third-party"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-migrate-one-time-copy-no-auto-update",
+    "ecr-pull-through-cache-keeps-cache-current"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-migrate-one-time-copy-no-auto-update",
+    "ecr-pull-through-cache-keeps-cache-current"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-104",
+   "bullet": "2.1.K8",
+   "kind": "behavior",
+   "lens": "decisions",
+   "service": "ecs",
+   "question": "What do the AWS whitepapers and decision guides say about moving an existing application into containers with minimal code changes (packaging code and dependencies in an image; consistent environments; lift and shift of applications)?",
+   "look_in": [
+    "docs/whitepapers/latest/containers-on-aws/containers-services-on-aws",
+    "docs/whitepapers/latest/aws-overview/containers",
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "docs/app2container/latest/UserGuide/what-is-a2c"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-app2container-modernizes-java-dotnet-into-containers",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift",
+    "eks-whitepaper-natural-migration-path-for-kubernetes",
+    "eks-faq-migrate-standard-kubernetes-without-code-changes",
+    "ecs-containers-consistency-portability-benefits"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-app2container-modernizes-java-dotnet-into-containers",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift",
+    "eks-whitepaper-natural-migration-path-for-kubernetes",
+    "eks-faq-migrate-standard-kubernetes-without-code-changes",
+    "ecs-containers-consistency-portability-benefits"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-105",
+   "bullet": "2.1.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "fargate",
+   "question": "Fargate compared with Lambda (decision guide): which workload signals choose each (long-running or steady services, custom runtimes and full container control compared with short event-driven functions)? Quote the guide's criteria. Lambda's 15-minute maximum and 10 GB container image size come from the Lambda quotas page (chapter 18 owns them).",
+   "look_in": [
+    "docs/decision-guides/latest/decision-guides/fargate-or-lambda",
+    "docs/lambda/latest/dg/gettingstarted-limits",
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-guide-containers-run-indefinitely-no-hard-limit",
+    "fargate-guide-ideal-long-running-microservices-batch",
+    "fargate-guide-lambda-short-lived-15-minutes",
+    "fargate-guide-lambda-stateless-state-external",
+    "fargate-guide-not-natively-event-driven",
+    "fargate-guide-pricing-per-second-pay-for-what-you-provision",
+    "fargate-vs-lambda-lambda-best-for-event-driven",
+    "fargate-vs-lambda-shared-serverless-benefits",
+    "fargate-guide-lambda-mi-for-steady-state",
+    "ecs-faq-vs-lambda"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-guide-containers-run-indefinitely-no-hard-limit",
+    "fargate-guide-ideal-long-running-microservices-batch",
+    "fargate-guide-lambda-short-lived-15-minutes",
+    "fargate-guide-lambda-stateless-state-external",
+    "fargate-guide-not-natively-event-driven",
+    "fargate-guide-pricing-per-second-pay-for-what-you-provision",
+    "fargate-vs-lambda-lambda-best-for-event-driven",
+    "fargate-vs-lambda-shared-serverless-benefits",
+    "fargate-guide-lambda-mi-for-steady-state",
+    "ecs-faq-vs-lambda"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-106",
+   "bullet": "2.1.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "eks",
+   "question": "ECS compared with EKS (decision guide 'Choosing an AWS container service'): what does each suit (AWS-native simplicity and deep AWS integration compared with Kubernetes, existing Kubernetes tooling, portability across environments)? Quote the guide's criteria.",
+   "look_in": [
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "docs/whitepapers/latest/containers-on-aws/containers-services-on-aws",
+    "www/ecs/faqs",
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-decision-guide-ecs-more-control-eks-flexibility",
+    "ecs-decision-guide-serverless-or-kubernetes-operating-model",
+    "ecs-decision-guide-portability-and-managed-overhead",
+    "ecs-decision-guide-layers-capacity-orchestration-vertical",
+    "eks-decision-guide-kubernetes-skills-sre-teams",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift",
+    "eks-whitepaper-natural-migration-path-for-kubernetes"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-decision-guide-ecs-more-control-eks-flexibility",
+    "ecs-decision-guide-serverless-or-kubernetes-operating-model",
+    "ecs-decision-guide-portability-and-managed-overhead",
+    "ecs-decision-guide-layers-capacity-orchestration-vertical",
+    "eks-decision-guide-kubernetes-skills-sre-teams",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift",
+    "eks-whitepaper-natural-migration-path-for-kubernetes"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-107",
+   "bullet": "3.2.K1",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "fargate",
+   "question": "Fargate compared with EC2 capacity for ECS: control of the instance and instance type, GPUs, operational overhead, cost at steady high utilization. Quote the comparison page, the decision guide and the FAQ answer 'When should I use Amazon ECS with AWS Fargate?'",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison",
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "www/ecs/faqs",
+    "www/fargate/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-fargate-no-ec2-management",
+    "ecs-faq-ec2-for-greater-control",
+    "ecs-ec2-capacity-large-workloads-price-optimized",
+    "ecs-faq-ec2-root-access-to-os",
+    "fargate-faq-need-ec2-control-use-without-fargate",
+    "fargate-faq-gpu-not-supported",
+    "ecs-cluster-ec2-full-control-you-manage-instances",
+    "ecs-containers-not-security-boundary-use-fargate-for-isolation"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-fargate-no-ec2-management",
+    "ecs-faq-ec2-for-greater-control",
+    "ecs-ec2-capacity-large-workloads-price-optimized",
+    "ecs-faq-ec2-root-access-to-os",
+    "fargate-faq-need-ec2-control-use-without-fargate",
+    "fargate-faq-gpu-not-supported",
+    "ecs-cluster-ec2-full-control-you-manage-instances",
+    "ecs-containers-not-security-boundary-use-fargate-for-isolation"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-108",
+   "bullet": "3.2.K1",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "fargate",
+   "question": "Batch workloads on containers: can AWS Batch run jobs on Fargate as well as on EC2 and Spot? Which use cases does the Fargate FAQ list (microservices, batch, machine learning, migration)?",
+   "look_in": [
+    "docs/batch/latest/userguide/what-is-batch",
+    "www/fargate/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-whitepaper-batch-runs-on-fargate-or-ec2",
+    "fargate-guide-ideal-long-running-microservices-batch"
+   ],
+   "note": "Spot for AWS Batch on EC2 is not stated on the saved pages.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-whitepaper-batch-runs-on-fargate-or-ec2",
+    "fargate-guide-ideal-long-running-microservices-batch"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-109",
+   "bullet": "2.1.K4",
+   "kind": "behavior",
+   "lens": "decisions",
+   "service": "ecs",
+   "question": "Microservices on containers: what do the AWS pages say about one service per task definition, each service deployed and scaled separately, and decoupled services (design principles for microservices)?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/application_architecture",
+    "docs/whitepapers/latest/containers-on-aws/containers-services-on-aws",
+    "docs/AmazonECS/latest/developerguide/ecs-best-practices"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-one-task-definition-family-per-business-purpose",
+    "ecs-task-definition-revision-maps-to-app-version",
+    "ecs-case-study-smartsheet-fargate-independent-deployments"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-one-task-definition-family-per-business-purpose",
+    "ecs-task-definition-revision-maps-to-app-version",
+    "ecs-case-study-smartsheet-fargate-independent-deployments"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-110",
+   "bullet": "4.2.S3",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "fargate",
+   "question": "Pricing dimensions: ECS itself has no extra charge for EC2 capacity (pay for the resources); Fargate charges for vCPU, memory and ephemeral storage above the included amount, per second with a one-minute minimum, by operating system and architecture. Dimensions only, no prices.",
+   "look_in": [
+    "www/ecs/pricing",
+    "www/fargate/pricing",
+    "www/ecs/faqs",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecs-pricing-no-charge-for-orchestration",
+    "fargate-pricing-dimensions-vcpu-memory-storage-per-second",
+    "ecs-pricing-ec2-no-additional-charge",
+    "ecs-pricing-managed-instances-management-fee",
+    "ecs-pricing-managed-instances-per-second-one-minute",
+    "fargate-pricing-dimensions-vcpu-memory-os-arch-storage",
+    "fargate-pricing-per-second-one-minute-minimum",
+    "fargate-pricing-windows-5-minute-minimum",
+    "fargate-faq-20-gb-ephemeral-storage-included-in-price"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-pricing-dimensions-vcpu-memory-storage-per-second",
+    "ecs-pricing-ec2-no-additional-charge",
+    "ecs-pricing-managed-instances-management-fee",
+    "ecs-pricing-managed-instances-per-second-one-minute",
+    "fargate-pricing-dimensions-vcpu-memory-os-arch-storage",
+    "fargate-pricing-per-second-one-minute-minimum",
+    "fargate-pricing-windows-5-minute-minimum",
+    "fargate-faq-20-gb-ephemeral-storage-included-in-price"
+   ],
+   "rejected_facts": [
+    "ecs-pricing-no-charge-for-orchestration"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-111",
+   "bullet": "4.2.S3",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "eks",
+   "question": "EKS pricing dimensions: a charge per cluster per hour (standard support compared with extended support), EKS Auto Mode management fee per instance, Hybrid Nodes per vCPU-hour, Provisioned Control Plane tiers; plus the compute (EC2 or Fargate). Dimensions only.",
+   "look_in": [
+    "www/eks/pricing",
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-pricing-per-cluster-per-hour-fee",
+    "eks-pricing-extended-support-additional-cost-per-cluster-hour",
+    "eks-pricing-auto-mode-per-instance-duration-and-type",
+    "eks-pricing-auto-mode-per-second-one-minute",
+    "eks-hybrid-nodes-pricing-vcpu-hour",
+    "eks-pricing-provisioned-control-plane-hourly-tier",
+    "eks-pricing-fargate-pods-per-second-one-minute",
+    "eks-pricing-worker-node-resources-paid-separately"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-pricing-per-cluster-per-hour-fee",
+    "eks-pricing-extended-support-additional-cost-per-cluster-hour",
+    "eks-pricing-auto-mode-per-instance-duration-and-type",
+    "eks-pricing-auto-mode-per-second-one-minute",
+    "eks-hybrid-nodes-pricing-vcpu-hour",
+    "eks-pricing-provisioned-control-plane-hourly-tier",
+    "eks-pricing-fargate-pods-per-second-one-minute",
+    "eks-pricing-worker-node-resources-paid-separately"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-112",
+   "bullet": "4.2.S3",
+   "kind": "price",
+   "lens": "numbers",
+   "service": "fargate",
+   "question": "Which discounts apply to Fargate: Fargate Spot (stated percentage off On-Demand), Compute Savings Plans, and Graviton (stated price-performance claim)?",
+   "look_in": [
+    "www/fargate/pricing",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "fargate-faq-spot-up-to-70-percent-discount",
+    "fargate-pricing-savings-plans-up-to-50-percent",
+    "ecs-pricing-compute-savings-plans-up-to-52-percent"
+   ],
+   "note": "Graviton price-performance (up to 40%) is in the FAQ fact fargate-faq-graviton-price-performance (faq lens). CONFLICT: Fargate pricing page says Savings Plans up to 50%, ECS pricing page says up to 52%; both recorded with a note not to state one figure as exact.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-faq-spot-up-to-70-percent-discount",
+    "fargate-pricing-savings-plans-up-to-50-percent"
+   ],
+   "rejected_facts": [
+    "ecs-pricing-compute-savings-plans-up-to-52-percent"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-113",
+   "bullet": "4.2.S3",
+   "kind": "capability",
+   "lens": "decisions",
+   "service": "fargate",
+   "question": "Do Compute Savings Plans apply to Fargate (and Lambda), while EC2 Instance Savings Plans do not? Quote the Savings Plans types page.",
+   "look_in": [
+    "docs/savingsplans/latest/userguide/plan-types",
+    "www/fargate/pricing"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-compute-savings-plans-cover-fargate-lambda",
+    "fargate-faq-spot-and-compute-savings-plan-pricing",
+    "eks-savings-plans-for-cluster-compute"
+   ],
+   "note": "That EC2 Instance Savings Plans do not cover Fargate is not quoted here; the Savings Plans chapter owns plan types.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-compute-savings-plans-cover-fargate-lambda",
+    "fargate-faq-spot-and-compute-savings-plan-pricing",
+    "eks-savings-plans-for-cluster-compute"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-114",
+   "bullet": "4.2.K8",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "Right-sizing container compute: what do the task size best practices say (CPU units, memory, smaller tasks for stateless services), and how does the Fargate FAQ say to size workloads and optimize spend?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/capacity-tasksize",
+    "docs/AmazonECS/latest/developerguide/fargate-task-size-best-practice",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecs-task-size-load-test-for-requirements",
+    "ecs-task-size-stateless-small-reservations-cost",
+    "fargate-task-size-no-overhead-round-up",
+    "ecs-scaling-target-headroom-60-80-percent"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-task-size-load-test-for-requirements",
+    "ecs-task-size-stateless-small-reservations-cost",
+    "ecs-scaling-target-headroom-60-80-percent"
+   ],
+   "rejected_facts": [
+    "fargate-task-size-no-overhead-round-up"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-115",
+   "bullet": "4.2.K8",
+   "kind": "capability",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "How can cost per task or per pod be monitored (split cost allocation data in the AWS Cost and Usage Report for ECS and EKS; Container Insights)?",
+   "look_in": [
+    "www/ecs/faqs",
+    "docs/eks/latest/userguide/cost-monitoring"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-ec2-split-cost-allocation-opt-in",
+    "ecs-faq-fargate-cost-in-cur-automatically",
+    "ecs-faq-container-insights-ec2-and-fargate",
+    "eks-cost-monitoring-split-cost-allocation"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-ec2-split-cost-allocation-opt-in",
+    "ecs-faq-fargate-cost-in-cur-automatically",
+    "ecs-faq-container-insights-ec2-and-fargate",
+    "eks-cost-monitoring-split-cost-allocation"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-116",
+   "bullet": "4.2.S3",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "question": "ECS on EC2 Spot Instances: what does Spot Instance draining (ECS_ENABLE_SPOT_INSTANCE_DRAINING) do when a Spot interruption notice arrives?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/spot-instance-draining-linux-container"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecs-spot-instance-draining-off-by-default",
+    "ecs-draining-instance-no-new-tasks"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-draining-instance-no-new-tasks"
+   ],
+   "rejected_facts": [
+    "ecs-spot-instance-draining-off-by-default"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-117",
+   "bullet": "2.1.K4",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Change: Amazon EBS volumes attach to ECS tasks, including Fargate tasks, since 2024-01-11 (before, Fargate had no block storage beyond ephemeral storage). Quote the doc-history row.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/document_history",
+    "docs/AmazonECS/latest/developerguide/ebs-volumes"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-ebs-data-volume-per-task-2024-01",
+    "ecs-ebs-volume-one-per-task-new-volume",
+    "fargate-ebs-volumes-need-linux-platform-1-4-0"
+   ],
+   "note": "The history row of 2024-01-11 does not name Fargate; the ebs-volumes page does (Linux, platform 1.4.0 or later; not Windows).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-ebs-data-volume-per-task-2024-01",
+    "ecs-ebs-volume-one-per-task-new-volume",
+    "fargate-ebs-volumes-need-linux-platform-1-4-0"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-118",
+   "bullet": "2.1.K14",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Change: ECS native blue/green deployments (2025-07-15) and linear and canary deployments (2025-10-28) without CodeDeploy. Older questions may assume CodeDeploy is required. Quote the doc-history rows.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/document_history",
+    "docs/AmazonECS/latest/developerguide/deployment-type-blue-green"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-native-blue-green-deployments-2025-07",
+    "ecs-change-canary-deployments-2025-10",
+    "ecs-change-linear-deployments-2025-10"
+   ],
+   "note": "Old CodeDeploy blue/green: history row of 2018-11-27 and canary/linear CodeDeploy configurations 2020-02-06 (not stored as facts).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-native-blue-green-deployments-2025-07",
+    "ecs-change-canary-deployments-2025-10",
+    "ecs-change-linear-deployments-2025-10"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-119",
+   "bullet": "3.2.K6",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Change: predictive scaling for ECS services (2024-11-21). Quote the doc-history row and the predictive scaling page.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/document_history",
+    "docs/AmazonECS/latest/developerguide/predictive-auto-scaling"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-predictive-scaling-2024-11",
+    "ecs-predictive-scaling-needs-24-hours-of-history"
+   ],
+   "note": "History row is dated November 21, 2024 (FRESHNESS and the plan say 2024-11-21: same date).",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-predictive-scaling-2024-11",
+    "ecs-predictive-scaling-needs-24-hours-of-history"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-120",
+   "bullet": "3.2.K1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "fargate",
+   "question": "Change: maximum Fargate task size moved from 4 vCPU and 30 GB to 16 vCPU and 120 GB (2022-09-16) and to 32 vCPU (2026-06-05); ECS tasks on EC2 can use up to 192 vCPU (2025-02-19). Quote the doc-history row and What's New snapshots.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/document_history",
+    "www/about-aws/whats-new/2026/06/amazon-ecs-fargate-32vcpu",
+    "www/about-aws/whats-new/2025/02/amazon-ecs-increases-cpu-ecs-tasks"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-fargate-new-task-sizes-2022-09",
+    "ecs-change-fargate-32vcpu-2026-06",
+    "ecs-change-ec2-task-cpu-limit-192-vcpu-2025-02"
+   ],
+   "note": "The old maximum of 4 vCPU and 30 GB is not stated as an old value; the current table row for 4 vCPU shows 8 to 30 GB (fargate-task-size-4-vcpu-linux-windows). The 192 vCPU limit (EC2 tasks, was 10 vCPU) is only in the What's New post; no guide page states it.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-fargate-new-task-sizes-2022-09",
+    "ecs-change-fargate-32vcpu-2026-06",
+    "ecs-change-ec2-task-cpu-limit-192-vcpu-2025-02"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-121",
+   "bullet": "3.2.K1",
+   "kind": "change",
+   "lens": "changes",
+   "service": "fargate",
+   "question": "Change: Fargate quotas moved from task counts to vCPU-based quotas (2022-09). Quote the doc-history row 'New Fargate quotas'.",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/document_history"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-fargate-vcpu-based-quotas-2022-09",
+    "fargate-ondemand-vcpu-quota",
+    "fargate-spot-vcpu-quota"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-fargate-vcpu-based-quotas-2022-09",
+    "fargate-ondemand-vcpu-quota",
+    "fargate-spot-vcpu-quota"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-122",
+   "bullet": "2.1.K14",
+   "kind": "change",
+   "lens": "changes",
+   "service": "eks",
+   "question": "Change: EKS Pod Identity (2023-11-26) and EKS access entries (2023-12-18); older questions assume only IRSA and the aws-auth ConfigMap. Quote the doc-history rows.",
+   "look_in": [
+    "docs/eks/latest/userguide/doc-history"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-change-pod-identities-2023-11",
+    "eks-change-access-entries-2023-12",
+    "eks-change-pod-identity-target-roles-2025-06"
+   ],
+   "note": "IAM roles for service accounts has a history row of 2019-09-03.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-change-pod-identities-2023-11",
+    "eks-change-access-entries-2023-12",
+    "eks-change-pod-identity-target-roles-2025-06"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-123",
+   "bullet": "3.2.K6",
+   "kind": "change",
+   "lens": "changes",
+   "service": "ecs",
+   "question": "Change (recent, examinable): ECS faster service auto scaling (2026-06-18). What exactly changed (metric period, response time)? Quote the What's New snapshot.",
+   "look_in": [
+    "www/about-aws/whats-new/2026/06/amazon-ecs-faster-autoscaling",
+    "docs/AmazonECS/latest/developerguide/service-auto-scaling"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-change-target-tracking-20-second-metrics-2026-06",
+    "ecs-change-faster-service-auto-scaling-benchmark-2026-06"
+   ],
+   "note": "20-second metric resolution for CPU and memory target tracking, in addition to the default 60 seconds; benchmark: scale-out trigger 363 seconds to 86 seconds. No guide page states it yet.",
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-change-target-tracking-20-second-metrics-2026-06",
+    "ecs-change-faster-service-auto-scaling-benchmark-2026-06"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-124",
+   "bullet": "2.1.K14",
+   "kind": "change",
+   "lens": "changes",
+   "service": "eks",
+   "question": "Change (recent): EKS 99.99% SLA for Provisioned Control Plane clusters (2026-03-20). What is the standard EKS SLA in the FAQ? Quote both.",
+   "look_in": [
+    "www/about-aws/whats-new/2026/03/amazon-eks-announces-sla-8xl-scaling-tier",
+    "www/eks/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "eks-change-provisioned-control-plane-sla-99-99-2026-03"
+   ],
+   "note": "What's New states 99.99% for Provisioned Control Plane, up from 99.95% on the standard control plane. The EKS FAQ ('What is Amazon EKS Service Level Agreement (SLA)?') only says 'The Amazon EKS SLA can be found here' and gives no percentage: not found in the FAQ. ECS and Fargate: 99.99% Compute SLA (faq-lens facts ecs-faq-sla-monthly-uptime, fargate-faq-sla-monthly-uptime).",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "eks-change-provisioned-control-plane-sla-99-99-2026-03"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-125",
+   "bullet": "2.1.K14",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecs",
+   "question": "FAQ: What does the Amazon ECS SLA guarantee (monthly uptime percentage)?",
+   "look_in": [
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-sla-monthly-uptime",
+    "ecs-faq-sla-two-commitments",
+    "ecs-faq-sla-credit-condition"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-sla-monthly-uptime",
+    "ecs-faq-sla-two-commitments",
+    "ecs-faq-sla-credit-condition"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-126",
+   "bullet": "2.1.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecs",
+   "question": "FAQ: How is Amazon ECS different from AWS Lambda?",
+   "look_in": [
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-vs-lambda"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-vs-lambda"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-127",
+   "bullet": "3.2.K1",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecs",
+   "question": "FAQ: When should I use Amazon ECS with AWS Fargate?",
+   "look_in": [
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-fargate-no-ec2-management",
+    "ecs-faq-ec2-for-greater-control"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-fargate-no-ec2-management",
+    "ecs-faq-ec2-for-greater-control"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-128",
+   "bullet": "2.1.K14",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecs",
+   "question": "FAQ: Can I use my own Amazon Machine Image (AMI) with ECS? How does ECS isolate containers of different customers?",
+   "look_in": [
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-own-ami-allowed",
+    "ecs-faq-fargate-own-vm-and-network-interface",
+    "ecs-faq-ec2-root-access-to-os"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-own-ami-allowed",
+    "ecs-faq-fargate-own-vm-and-network-interface",
+    "ecs-faq-ec2-root-access-to-os"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-129",
+   "bullet": "3.2.K1",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "fargate",
+   "question": "FAQ (Fargate): Where does my workload run on AWS Fargate? Can I run stateful workloads on Fargate? Can I build container images within Fargate?",
+   "look_in": [
+    "www/fargate/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-faq-single-tenant-instance-per-workload",
+    "fargate-faq-ephemeral-storage-20-gib-erased",
+    "fargate-faq-ephemeral-storage-expand-max",
+    "fargate-faq-efs-for-persistent-storage",
+    "fargate-faq-no-privileged-mode-or-docker-socket",
+    "fargate-faq-kaniko-rootless-image-build"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-faq-single-tenant-instance-per-workload",
+    "fargate-faq-ephemeral-storage-20-gib-erased",
+    "fargate-faq-ephemeral-storage-expand-max",
+    "fargate-faq-efs-for-persistent-storage",
+    "fargate-faq-no-privileged-mode-or-docker-socket",
+    "fargate-faq-kaniko-rootless-image-build"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-130",
+   "bullet": "3.2.K1",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "fargate",
+   "question": "FAQ (Fargate): How should I choose when to use AWS Fargate? What does the Fargate SLA guarantee?",
+   "look_in": [
+    "www/fargate/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "fargate-faq-choose-for-isolation-and-no-ec2-management",
+    "fargate-faq-need-ec2-control-use-without-fargate",
+    "fargate-faq-sla-monthly-uptime",
+    "fargate-faq-sla-credit-condition"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "fargate-faq-choose-for-isolation-and-no-ec2-management",
+    "fargate-faq-need-ec2-control-use-without-fargate",
+    "fargate-faq-sla-monthly-uptime",
+    "fargate-faq-sla-credit-condition"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-131",
+   "bullet": "2.1.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "eks",
+   "question": "FAQ (EKS): Does Amazon EKS work with my existing Kubernetes applications and tools? Does Amazon EKS work with AWS Fargate?",
+   "look_in": [
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-faq-runs-open-source-kubernetes-compatible",
+    "eks-faq-migrate-standard-kubernetes-without-code-changes",
+    "eks-faq-works-with-fargate"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-faq-runs-open-source-kubernetes-compatible",
+    "eks-faq-migrate-standard-kubernetes-without-code-changes",
+    "eks-faq-works-with-fargate"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-132",
+   "bullet": "3.2.K6",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "eks",
+   "question": "FAQ (EKS): What is the difference between Amazon EKS Auto Mode and EKS with AWS Fargate? Does EKS Auto Mode support Compute Savings Plans and Reserved Instances?",
+   "look_in": [
+    "www/eks/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "eks-faq-auto-mode-vs-fargate-recommended",
+    "eks-faq-auto-mode-vs-fargate-conformant-istio",
+    "eks-faq-auto-mode-vs-fargate-gpu-spot-purchase-options",
+    "eks-faq-auto-mode-vs-fargate-same-isolation",
+    "eks-savings-plans-for-cluster-compute"
+   ],
+   "note": "Compute Savings Plans and Reserved Instances apply automatically for EKS Auto Mode: the only sentence is the FAQ answer 'Yes. Compute Savings Plans and Reserved Instances are automatically applied when eligible EC2 instances are launched.' It sits in a one-cell table row ('| ... |') of www/eks/faqs; check M4 refuses a sentence from table text and there is no parsed table to adopt. Searched: full-text search over all scopes (only www/eks/faqs and the FAQ index), docs/eks/latest/userguide/automode, auto-migrate-fargate. The four Auto Mode versus Fargate facts quote the user guide page auto-migrate-fargate, which repeats the FAQ answer word for word. | register-19: added eks-savings-plans-for-cluster-compute (what-is-eks: savings plans apply to compute used in EKS clusters). The Auto Mode specific answer stays in a FAQ table cell that check M4 refuses.",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "eks-faq-auto-mode-vs-fargate-recommended",
+    "eks-faq-auto-mode-vs-fargate-conformant-istio",
+    "eks-faq-auto-mode-vs-fargate-gpu-spot-purchase-options",
+    "eks-faq-auto-mode-vs-fargate-same-isolation",
+    "eks-savings-plans-for-cluster-compute"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-133",
+   "bullet": "2.1.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "eks",
+   "question": "FAQ (EKS): What are the differences between Amazon EKS Hybrid Nodes and Amazon EKS Anywhere? Between Hybrid Nodes and EKS on Outposts?",
+   "look_in": [
+    "www/eks/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-faq-hybrid-three-options",
+    "eks-faq-outposts-managed-vs-hybrid-nodes-managed",
+    "eks-faq-anywhere-for-isolated-or-air-gapped",
+    "eks-faq-hybrid-nodes-vs-anywhere-connected-vs-air-gapped",
+    "eks-faq-hybrid-nodes-feature-of-eks-anywhere-self-managed",
+    "eks-faq-anywhere-clusters-run-entirely-on-your-infrastructure",
+    "eks-faq-hybrid-nodes-own-machines-vs-outposts-ec2",
+    "eks-faq-outposts-pay-cluster-and-outposts-capacity",
+    "eks-faq-hybrid-nodes-aws-manages-control-plane"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-faq-hybrid-three-options",
+    "eks-faq-outposts-managed-vs-hybrid-nodes-managed",
+    "eks-faq-anywhere-for-isolated-or-air-gapped",
+    "eks-faq-hybrid-nodes-vs-anywhere-connected-vs-air-gapped",
+    "eks-faq-hybrid-nodes-feature-of-eks-anywhere-self-managed",
+    "eks-faq-anywhere-clusters-run-entirely-on-your-infrastructure",
+    "eks-faq-hybrid-nodes-own-machines-vs-outposts-ec2",
+    "eks-faq-outposts-pay-cluster-and-outposts-capacity",
+    "eks-faq-hybrid-nodes-aws-manages-control-plane"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-134",
+   "bullet": "2.1.K14",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecr",
+   "question": "FAQ (ECR): Is Amazon ECR a global service? Can Amazon ECR host public container images? Does Amazon ECR replicate images across AWS Regions? Can I share images across AWS accounts?",
+   "look_in": [
+    "www/ecr/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecr-faq-regional-service",
+    "ecr-faq-public-gallery-anyone-can-download",
+    "ecr-faq-private-vs-public-repository",
+    "ecr-faq-replicates-across-regions-and-accounts",
+    "ecr-faq-cross-account-image-sharing-by-policy"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecr-faq-regional-service",
+    "ecr-faq-public-gallery-anyone-can-download",
+    "ecr-faq-private-vs-public-repository",
+    "ecr-faq-replicates-across-regions-and-accounts",
+    "ecr-faq-cross-account-image-sharing-by-policy"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-135",
+   "bullet": "2.1.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecs-anywhere",
+   "question": "FAQ (ECS Anywhere): Can I have on-premises compute, EC2 instances and Fargate in the same ECS cluster? Can I use the same task definition? What happens if the connection to AWS is lost?",
+   "look_in": [
+    "www/ecs/anywhere/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-anywhere-faq-same-cluster-on-premises-ec2-fargate",
+    "ecs-anywhere-faq-one-task-definition-for-all-compute",
+    "ecs-anywhere-faq-disconnected-tasks-keep-running",
+    "ecs-anywhere-faq-task-role-credentials-6-hours",
+    "ecs-anywhere-faq-no-scaling-while-disconnected",
+    "ecs-anywhere-faq-needs-stable-internet-not-air-gapped"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-anywhere-faq-same-cluster-on-premises-ec2-fargate",
+    "ecs-anywhere-faq-one-task-definition-for-all-compute",
+    "ecs-anywhere-faq-disconnected-tasks-keep-running",
+    "ecs-anywhere-faq-task-role-credentials-6-hours",
+    "ecs-anywhere-faq-no-scaling-while-disconnected",
+    "ecs-anywhere-faq-needs-stable-internet-not-air-gapped"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-136",
+   "bullet": "2.1.S4",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "eks-distro",
+   "question": "FAQ (EKS Distro): What is Amazon EKS Distro, and where can I create EKS Distro clusters? What is the support model?",
+   "look_in": [
+    "www/eks/eks-distro/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-distro-faq-same-kubernetes-as-eks-run-it-yourself",
+    "eks-distro-faq-clusters-on-ec2-on-premises-other-clouds",
+    "eks-distro-faq-support-best-effort",
+    "eks-distro-extended-maintenance-up-to-14-months"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-distro-faq-same-kubernetes-as-eks-run-it-yourself",
+    "eks-distro-faq-clusters-on-ec2-on-premises-other-clouds",
+    "eks-distro-faq-support-best-effort",
+    "eks-distro-extended-maintenance-up-to-14-months"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-137",
+   "bullet": "3.2.K1",
+   "kind": "faq",
+   "lens": "faq",
+   "service": "ecs",
+   "question": "FAQ (ECS): What is the difference between Amazon ECS Managed Instances and Amazon ECS with AWS Fargate?",
+   "look_in": [
+    "www/ecs/faqs"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-faq-mi-same-operational-benefits-as-fargate",
+    "ecs-faq-mi-additional-benefits-over-fargate",
+    "ecs-faq-mi-compute-in-your-account-billing"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-faq-mi-same-operational-benefits-as-fargate",
+    "ecs-faq-mi-additional-benefits-over-fargate",
+    "ecs-faq-mi-compute-in-your-account-billing"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-138",
+   "bullet": "2.1.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "ecs",
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale's decision (ECS with Fargate, six services): which AWS sentences support 'no instances to patch' (Fargate), 'each service deploys and scales separately' (ECS services and service auto scaling), and 'ECS is the simpler AWS-native choice' (decision guide)? The story never teaches a fact; these items give the writer the grounded reasons.",
+   "look_in": [
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "docs/AmazonECS/latest/developerguide/AWS_Fargate",
+    "docs/AmazonECS/latest/developerguide/ecs_services",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "fargate-serverless-pay-as-you-go",
+    "fargate-retirement-no-opt-out",
+    "ecs-one-task-definition-family-per-business-purpose",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift",
+    "ecs-faq-fargate-no-ec2-management",
+    "ecs-decision-guide-ecs-more-control-eks-flexibility"
+   ],
+   "note": "No decision-guide sentence calls ECS simpler; use the grounded reasons listed (no control plane to manage, Fargate the easiest way to run containers, no instances to patch).",
+   "registered_by": "register-19",
+   "status_found": "partial",
+   "verified_facts": [
+    "fargate-serverless-pay-as-you-go",
+    "fargate-retirement-no-opt-out",
+    "ecs-one-task-definition-family-per-business-purpose",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift",
+    "ecs-faq-fargate-no-ec2-management",
+    "ecs-decision-guide-ecs-more-control-eks-flexibility"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-139",
+   "bullet": "4.2.S3",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "fargate",
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale accepts 'a higher price for each unit of compute' and 'less control of the host' with Fargate. Is there an AWS sentence that compares Fargate cost with EC2 capacity cost or says Fargate gives less control of the underlying instance? If the canon has none, the writer changes the stated reason (RULINGS).",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/capacity-launch-type-comparison",
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "docs/decision-guides/latest/decision-guides/fargate-or-lambda",
+    "www/fargate/faqs"
+   ],
+   "status": "partial-verified",
+   "facts": [
+    "ecs-ec2-capacity-large-workloads-price-optimized",
+    "fargate-guide-pricing-per-second-pay-for-what-you-provision",
+    "fargate-no-host-access-ecs-exec"
+   ],
+   "note": "No AWS sentence compares Fargate unit price with EC2 (register-19 searched 'more expensive', 'higher cost', 'cost more' near Fargate over all scopes). Writer: state the trade-off as less control of the host and paying for provisioned task size; never say Fargate costs more.",
+   "registered_by": "register-19",
+   "status_found": "not-found",
+   "verified_facts": [
+    "ecs-ec2-capacity-large-workloads-price-optimized",
+    "fargate-guide-pricing-per-second-pay-for-what-you-provision",
+    "fargate-no-host-access-ecs-exec"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-140",
+   "bullet": "2.1.S4",
+   "kind": "comparison",
+   "lens": "decisions",
+   "service": "eks",
+   "tags": [
+    "callvale"
+   ],
+   "question": "Ben's question 'ECS or EKS? My one Kubernetes engineer says EKS is the standard': which AWS sentences say when EKS is the better fit (Kubernetes expertise, Kubernetes ecosystem, portability) and when ECS is (no Kubernetes to learn, AWS-managed orchestration)?",
+   "look_in": [
+    "docs/decision-guides/latest/decision-guides/choosing-aws-container-service",
+    "www/eks/faqs",
+    "www/ecs/faqs",
+    "docs/whitepapers/latest/containers-on-aws/containers-services-on-aws"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-decision-guide-kubernetes-skills-sre-teams",
+    "ecs-decision-guide-ecs-more-control-eks-flexibility",
+    "eks-whitepaper-natural-migration-path-for-kubernetes",
+    "eks-faq-runs-open-source-kubernetes-compatible",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-decision-guide-kubernetes-skills-sre-teams",
+    "ecs-decision-guide-ecs-more-control-eks-flexibility",
+    "eks-whitepaper-natural-migration-path-for-kubernetes",
+    "eks-faq-runs-open-source-kubernetes-compatible",
+    "ecs-whitepaper-no-control-plane-ec2-easy-lift"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-141",
+   "bullet": "2.1.K14",
+   "kind": "behavior",
+   "lens": "behavior",
+   "service": "ecs",
+   "tags": [
+    "callvale"
+   ],
+   "question": "Callvale runs at least 3 tasks per service in 3 Availability Zones: does an ECS service spread tasks across Availability Zones by default (Fargate tasks spread across AZs; AZ rebalancing since 2024-11-20)? What does the availability best practice say?",
+   "look_in": [
+    "docs/AmazonECS/latest/developerguide/ecs_services",
+    "docs/AmazonECS/latest/developerguide/capacity-availability",
+    "docs/AmazonECS/latest/developerguide/fargate-tasks-services",
+    "docs/AmazonECS/latest/developerguide/document_history"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-replica-strategy-default-spreads-azs",
+    "ecs-placement-strategy-default-for-services-spread-az",
+    "fargate-no-placement-strategies-best-effort-az-spread",
+    "ecs-az-rebalancing-best-effort-spread",
+    "ecs-az-rebalancing-enabled-for-eligible-services",
+    "ecs-production-multi-az-lose-an-az",
+    "ecs-overprovision-for-az-failure-two-or-three-azs"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-replica-strategy-default-spreads-azs",
+    "ecs-placement-strategy-default-for-services-spread-az",
+    "fargate-no-placement-strategies-best-effort-az-spread",
+    "ecs-az-rebalancing-best-effort-spread",
+    "ecs-az-rebalancing-enabled-for-eligible-services",
+    "ecs-production-multi-az-lose-an-az",
+    "ecs-overprovision-for-az-failure-two-or-three-azs"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-142",
+   "bullet": "2.1.K4",
+   "kind": "example",
+   "lens": "decisions",
+   "service": "fargate",
+   "tags": [
+    "case-study"
+   ],
+   "question": "Real company example with ECS and Fargate: one quoted outcome each from the Smartsheet and Old Mutual case studies (deployment speed, operational overhead, cost).",
+   "look_in": [
+    "www/solutions/case-studies/smartsheet-ecs-fargate-case-study",
+    "www/solutions/case-studies/old-mutual-case-study",
+    "www/solutions/case-studies/flywire-ecs-case-study"
+   ],
+   "status": "verified",
+   "facts": [
+    "ecs-case-study-smartsheet-fargate-independent-deployments",
+    "ecs-case-study-old-mutual-fargate-no-idle-servers"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "ecs-case-study-smartsheet-fargate-independent-deployments",
+    "ecs-case-study-old-mutual-fargate-no-idle-servers"
+   ],
+   "verified_by": "close-facts-19"
+  },
+  {
+   "id": "d19-143",
+   "bullet": "3.2.K6",
+   "kind": "example",
+   "lens": "decisions",
+   "service": "eks",
+   "tags": [
+    "case-study"
+   ],
+   "question": "Real company example with EKS: one quoted outcome from the Miro or Sony case study (scale, cost, deployments).",
+   "look_in": [
+    "www/solutions/case-studies/miro-eks-case-study",
+    "www/solutions/case-studies/sony-eks-case-study"
+   ],
+   "status": "verified",
+   "facts": [
+    "eks-case-study-miro-managed-eks-cut-compute-cost"
+   ],
+   "registered_by": "register-19",
+   "status_found": "found",
+   "verified_facts": [
+    "eks-case-study-miro-managed-eks-cut-compute-cost"
+   ],
+   "verified_by": "close-facts-19"
+  }
+ ],
+ "verify_facts": {
+  "closed_by": "close-facts-19",
+  "closed_at": "2026-10-13"
+ }
+}

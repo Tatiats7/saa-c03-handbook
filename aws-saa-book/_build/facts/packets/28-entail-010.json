@@ -1,0 +1,781 @@
+{
+ "batch": "28-entail-010",
+ "lens": "entail",
+ "instructions": "For each fact, read only the quotes and their context. Verdict `support` when the quotes alone state every part of the claim and of each value, with the same scope and qualifiers; `partial` when a part is missing; `not-supported` when the quotes say something else; `unsure` otherwise. A quote with a `heading` is the value line under that heading on the page: read the two together. Do not use what you remember.",
+ "facts": [
+  {
+   "id": "dax-bypass-causes-inconsistent-values",
+   "rev": 3,
+   "kind": "behavior",
+   "claim": "If an item is still in the DAX item cache and someone else updates it directly in DynamoDB, bypassing DAX, DAX and DynamoDB hold inconsistent values for the same key until the TTL for the DAX item expires. An application that modifies data in the table and bypasses DAX needs to anticipate and tolerate these inconsistencies.",
+   "values": [
+    {
+     "key": "hold-inconsistent-values-for-the-same-ke",
+     "display": "hold inconsistent values for the same key"
+    },
+    {
+     "key": "until-the-ttl-for-the-dax-item-expires",
+     "display": "until the TTL for the DAX item expires"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per cached item",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "the item is in the DAX item cache when it is updated directly in DynamoDB"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.consistency.html",
+     "title": "DAX and DynamoDB consistency models",
+     "quote": "In this scenario, DAX and DynamoDB hold inconsistent values for the same key until the TTL for the DAX item expires.",
+     "table_header": null,
+     "context": "\n1. (Not shown) If the DAX cluster contains more than one node, the item is replicated to all the other nodes in the cluster.\n\nThe item remains in the DAX item cache, subject to the Time to Live (TTL) setting and the least recently used (LRU) algorithm for the cache. For more information, see [DAX: How it works](DAX.concepts.md). \n\nHowever, during this period, DAX doesn't re-read the item from DynamoDB. If someone else updates the item using a DynamoDB client, bypassing DAX entirely, a `GetItem` request using the DAX client yields different results from the same `GetItem` request using the DynamoDB client. In this scenario, DAX and DynamoDB hold inconsistent values for the same key until the TTL for the DAX item expires.\n\nIf an application modifies data in an underlying DynamoDB table, bypassing DAX, the application needs to anticipate and tolerate data inconsistencies that might arise.\n\n**Note**  \nIn addition to `GetItem`, the DAX client also supports `BatchGetItem` requests. `BatchGetItem` is essentially a wrapper around one or more `GetItem` requests, so DAX treats each of these as an individual `GetItem` operation.",
+     "headings": [
+      "DAX and DynamoDB consistency models",
+      "DAX item cache behavior",
+      "Consistency of reads"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.consistency.html",
+     "title": "DAX and DynamoDB consistency models",
+     "quote": "If an application modifies data in an underlying DynamoDB table, bypassing DAX, the application needs to anticipate and tolerate data inconsistencies that might arise.",
+     "table_header": null,
+     "context": "\nThe item remains in the DAX item cache, subject to the Time to Live (TTL) setting and the least recently used (LRU) algorithm for the cache. For more information, see [DAX: How it works](DAX.concepts.md). \n\nHowever, during this period, DAX doesn't re-read the item from DynamoDB. If someone else updates the item using a DynamoDB client, bypassing DAX entirely, a `GetItem` request using the DAX client yields different results from the same `GetItem` request using the DynamoDB client. In this scenario, DAX and DynamoDB hold inconsistent values for the same key until the TTL for the DAX item expires.\n\nIf an application modifies data in an underlying DynamoDB table, bypassing DAX, the application needs to anticipate and tolerate data inconsistencies that might arise.\n\n**Note**  \nIn addition to `GetItem`, the DAX client also supports `BatchGetItem` requests. `BatchGetItem` is essentially a wrapper around one or more `GetItem` requests, so DAX treats each of these as an individual `GetItem` operation.\n\n### Consistency of writes",
+     "headings": [
+      "DAX and DynamoDB consistency models",
+      "DAX item cache behavior",
+      "Consistency of reads"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dax-low-cache-hit-cold-data-not-worth-it",
+   "rev": 3,
+   "kind": "restriction",
+   "claim": "If an application accesses data infrequently or reads a wide range of rarely reused (cold) data, it will likely see a low DAX cache hit ratio, and the overhead of maintaining the cache might not justify the performance gains.",
+   "values": [
+    {
+     "key": "cold",
+     "display": "might not justify the performance gains",
+     "spoken": "cache overhead may not be worth the gain"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DAX suitability",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/evaluate-dax-suitability.html",
+     "title": "Evaluating the suitability of DAX for your use cases",
+     "quote": "**Infrequently read data** – If your application accesses data infrequently or a wide range of rarely reused data (cold data), you'll likely experience a low [cache hit ratio](pres-guide-monitor-dax.md#cachehitratio).",
+     "table_header": null,
+     "context": "While DAX is powerful, it's not suitable for all scenarios. The following list presents examples of scenarios in which integrating DAX with DynamoDB is unsuitable:\n+ **Write-heavy workloads** – The primary advantage of DAX is speeding up reads, but writes use more DAX resources than reads. If your application is predominantly write-heavy, DAX benefits might be limited.\n+ **Infrequently read data** – If your application accesses data infrequently or a wide range of rarely reused data (cold data), you'll likely experience a low [cache hit ratio](pres-guide-monitor-dax.md#cachehitratio). In this case, the overhead of maintaining the cache might not justify the performance gains.\n+ **Bulk reads or writes** – If your application performs more bulk writes than individual writes, you should write around DAX. In addition, for bulk reads, you should run full table scans directly against a DynamoDB table.\n+ **Strong consistency or transaction requirements** – DAX passes strongly consistent reads and [TransactGetItems](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactGetItems.html) calls to a DynamoDB table. You should make these reads around the DAX cluster to avoid using cluster resources. Items read this way won't be cached; therefore, routing such items through DAX serves no purpose.",
+     "headings": [
+      "Evaluating the suitability of DAX for your use cases",
+      "When not to use DAX"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/evaluate-dax-suitability.html",
+     "title": "Evaluating the suitability of DAX for your use cases",
+     "quote": "In this case, the overhead of maintaining the cache might not justify the performance gains.",
+     "table_header": null,
+     "context": "While DAX is powerful, it's not suitable for all scenarios. The following list presents examples of scenarios in which integrating DAX with DynamoDB is unsuitable:\n+ **Write-heavy workloads** – The primary advantage of DAX is speeding up reads, but writes use more DAX resources than reads. If your application is predominantly write-heavy, DAX benefits might be limited.\n+ **Infrequently read data** – If your application accesses data infrequently or a wide range of rarely reused data (cold data), you'll likely experience a low [cache hit ratio](pres-guide-monitor-dax.md#cachehitratio). In this case, the overhead of maintaining the cache might not justify the performance gains.\n+ **Bulk reads or writes** – If your application performs more bulk writes than individual writes, you should write around DAX. In addition, for bulk reads, you should run full table scans directly against a DynamoDB table.\n+ **Strong consistency or transaction requirements** – DAX passes strongly consistent reads and [TransactGetItems](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactGetItems.html) calls to a DynamoDB table. You should make these reads around the DAX cluster to avoid using cluster resources. Items read this way won't be cached; therefore, routing such items through DAX serves no purpose.",
+     "headings": [
+      "Evaluating the suitability of DAX for your use cases",
+      "When not to use DAX"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-dr-pitr-rpo-seconds",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "The DynamoDB disaster recovery guide says point-in-time recovery provides granular recovery with a minimal RPO of seconds and a reasonable RTO of minutes to hours.",
+   "values": [
+    {
+     "key": "rpo",
+     "display": "minimal RPO (seconds)",
+     "spoken": "an RPO of seconds"
+    },
+    {
+     "key": "rto",
+     "display": "reasonable RTO (minutes to hours)",
+     "spoken": "an RTO of minutes to hours"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB point-in-time recovery",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamodbDisasterRecoveryStrategy.html",
+     "title": "Choosing your disaster recovery strategy for Amazon DynamoDB workloads",
+     "quote": "The PITR feature provides granular recovery capabilities with minimal RPO (seconds) and reasonable RTO (minutes to hours), making it suitable for various DR requirements.",
+     "table_header": null,
+     "context": "<a name=\"DynamodbDisasterRecoveryStrategy.options.pitr\"></a>\n\nImagine an ecommerce retailer that uses DynamoDB for inventory management, product catalogs, and order processing. While preparing for a Black Friday event, the development team accidentally deletes their product catalog. Using PITR, they can restore thousands of records to the exact pre-incident moment in 30 minutes, preventing millions in potential revenue loss.\n\nWhen you enable PITR, DynamoDB automatically backs up your table data with per-second granularity. You can restore your table to any given second within your configured recovery period, which ranges from 1–35 days. Notably, reducing the retention period does not decrease costs, making extended retention periods cost-neutral. The PITR feature provides granular recovery capabilities with minimal RPO (seconds) and reasonable RTO (minutes to hours), making it suitable for various DR requirements. Real-world scenarios demonstrate how PITR's minimal RPO and reasonable RTO transform potential business disasters into manageable recovery operations, whether protecting against human error, application failures, or meeting stringent regulatory requirements.\n\nTo learn more, see [Enable point-in-time recovery in DynamoDB](Point-in-time-recovery.md), which provides detailed instructions on how to configure PITR and restore tables using CloudFormation, AWS CLI, and the DynamoDB API.\n\n### Flexible protection using on-demand backup and restore",
+     "headings": [
+      "Choosing your disaster recovery strategy for Amazon DynamoDB workloads",
+      "Disaster recovery options",
+      "Continuous data protection using PITR"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-faq-on-demand-billing-units",
+   "rev": 3,
+   "kind": "pricing-dimension",
+   "claim": "With on-demand pricing, DynamoDB lets you pay only for the resources you consume and scales to zero when not in use; while the database is in use, write request units and read request units are used to calculate charges.",
+   "values": [
+    {
+     "key": "v1",
+     "display": "write request units and read request units"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB on-demand capacity mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "charges apply while the database is in use"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://aws.amazon.com/dynamodb/faqs/",
+     "title": "Amazon DynamoDB FAQs | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "DynamoDB is unique as it's a serverless database that provides customers with the option of only paying for the resources they consume—while scaling to zero when not in use with on-demand pricing.",
+     "table_header": null,
+     "context": "DynamoDB is a fully serverless non-relational database. Compared to other databases that charge on various metrics, like storage, DynamoDB can scale-to-zero, meaning when customers utilize on-demand mode they only pay for active resources consumed.\n#### When should I use DynamoDB on-demand versus provisioned capacity mode and how does the pricing compare?\nSimply put, on-demand is better suited to customers who prefer to only pay for what they use or have unpredictable workloads. Provisioned capacity is popular with customers with applications that demonstrate consistent or predictable traffic and prefer to forecast capacity requirements to control costs.\n#### What are the billing units for DynamoDB serverless on-demand?\nDynamoDB is unique as it's a serverless database that provides customers with the option of only paying for the resources they consume—while scaling to zero when not in use with on-demand pricing. When the database is in-use, write request units and read request units are used to calculate charges.\n#### What are the extra cost options available for DynamoDB?\nDynamoDB includes a broad set of options that can be added to the service. A partial list includes:\n- On-demand backup which takes snapshot backups at specified points in time\n- Global tables for multi-region, multi-active replication",
+     "headings": [
+      "Amazon DynamoDB FAQs",
+      "Billing",
+      "What are the billing units for DynamoDB serverless on-demand?"
+     ]
+    },
+    {
+     "url": "https://aws.amazon.com/dynamodb/faqs/",
+     "title": "Amazon DynamoDB FAQs | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "When the database is in-use, write request units and read request units are used to calculate charges.",
+     "table_header": null,
+     "context": "DynamoDB is a fully serverless non-relational database. Compared to other databases that charge on various metrics, like storage, DynamoDB can scale-to-zero, meaning when customers utilize on-demand mode they only pay for active resources consumed.\n#### When should I use DynamoDB on-demand versus provisioned capacity mode and how does the pricing compare?\nSimply put, on-demand is better suited to customers who prefer to only pay for what they use or have unpredictable workloads. Provisioned capacity is popular with customers with applications that demonstrate consistent or predictable traffic and prefer to forecast capacity requirements to control costs.\n#### What are the billing units for DynamoDB serverless on-demand?\nDynamoDB is unique as it's a serverless database that provides customers with the option of only paying for the resources they consume—while scaling to zero when not in use with on-demand pricing. When the database is in-use, write request units and read request units are used to calculate charges.\n#### What are the extra cost options available for DynamoDB?\nDynamoDB includes a broad set of options that can be added to the service. A partial list includes:\n- On-demand backup which takes snapshot backups at specified points in time\n- Global tables for multi-region, multi-active replication",
+     "headings": [
+      "Amazon DynamoDB FAQs",
+      "Billing",
+      "What are the billing units for DynamoDB serverless on-demand?"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-faq-reasons-for-global-tables",
+   "rev": 3,
+   "kind": "behavior",
+   "claim": "Global tables improve an application's resiliency across multiple Regions and optionally across multiple AWS accounts, and they let applications maintain high availability in the unlikely event that an entire Region is isolated or degraded.",
+   "values": [
+    {
+     "key": "v1",
+     "display": "resiliency across multiple Regions"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB global tables",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://aws.amazon.com/dynamodb/faqs/",
+     "title": "Amazon DynamoDB FAQs | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "You should use global tables to improve your application's resiliency across multiple Regions and optionally across multiple AWS accounts.",
+     "table_header": null,
+     "context": "A global table is a collection of one or more replica tables, which can be owned by a single AWS account or multiple AWS accounts. A single Amazon DynamoDB global table can only have one replica table per AWS Region.\n#### Why should I use global tables?\nYou should use global tables to improve your application's resiliency across multiple Regions and optionally across multiple AWS accounts. Global tables also enables applications to maintain high availability in the unlikely event of isolation or degradation of an entire Region.\n#### Does DynamoDB global tables support automatic failover if a Region becomes unavailable?\nDynamoDB global tables uses multi-active replication across Regions, where all replica tables in all Regions in a global table support read and write traffic. A global table has no primary Region, and thus no database failover is required when directing read and write traffic to a different Region. In the unlikely event that an AWS Region becomes isolated or degraded, your application can simply read and write from a replica table in an unaffected Region. For more information, see Best practices for DynamoDB global table design.",
+     "headings": [
+      "Amazon DynamoDB FAQs",
+      "Availability and resilience",
+      "Why should I use global tables?"
+     ]
+    },
+    {
+     "url": "https://aws.amazon.com/dynamodb/faqs/",
+     "title": "Amazon DynamoDB FAQs | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "Global tables also enables applications to maintain high availability in the unlikely event of isolation or degradation of an entire Region.",
+     "table_header": null,
+     "context": "A global table is a collection of one or more replica tables, which can be owned by a single AWS account or multiple AWS accounts. A single Amazon DynamoDB global table can only have one replica table per AWS Region.\n#### Why should I use global tables?\nYou should use global tables to improve your application's resiliency across multiple Regions and optionally across multiple AWS accounts. Global tables also enables applications to maintain high availability in the unlikely event of isolation or degradation of an entire Region.\n#### Does DynamoDB global tables support automatic failover if a Region becomes unavailable?\nDynamoDB global tables uses multi-active replication across Regions, where all replica tables in all Regions in a global table support read and write traffic. A global table has no primary Region, and thus no database failover is required when directing read and write traffic to a different Region. In the unlikely event that an AWS Region becomes isolated or degraded, your application can simply read and write from a replica table in an unaffected Region. For more information, see Best practices for DynamoDB global table design.",
+     "headings": [
+      "Amazon DynamoDB FAQs",
+      "Availability and resilience",
+      "Why should I use global tables?"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-gateway-vs-interface-endpoint-onprem",
+   "rev": 3,
+   "kind": "behavior",
+   "claim": "A gateway endpoint is a gateway that you specify in your route table to access DynamoDB from your VPC over the AWS network. Interface endpoints use private IP addresses to route requests to DynamoDB from within your Amazon VPC, on premises, or from a VPC in another AWS Region by using VPC peering or AWS Transit Gateway. Interface endpoints are compatible with gateway endpoints, so you can use both types of endpoints in the same VPC.",
+   "values": [
+    {
+     "key": "gw",
+     "display": "specify in your route table",
+     "spoken": "a route table target"
+    },
+    {
+     "key": "if",
+     "display": "from within your Amazon VPC, on premises",
+     "spoken": "from the VPC, on premises or another Region"
+    },
+    {
+     "key": "both",
+     "display": "use both types of endpoints",
+     "spoken": "use both in one VPC"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB VPC endpoints",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "access from another Region needs VPC peering or AWS Transit Gateway"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/privatelink-interface-endpoints.html",
+     "title": "AWS PrivateLink for DynamoDB",
+     "quote": "A *gateway endpoint* is a gateway that you specify in your route table to access DynamoDB from your Amazon VPC over the AWS network.",
+     "table_header": null,
+     "context": "+ [Using AWS PrivateLink for DynamoDB Accelerator (DAX)](dax-private-link.md)\n\n## Types of Amazon VPC endpoints for Amazon DynamoDB\n<a name=\"types-of-vpc-endpoints-for-ddb\"></a>\n\nYou can use two types of Amazon VPC endpoints to access Amazon DynamoDB: *gateway endpoints* and *interface endpoints* (by using AWS PrivateLink). A *gateway endpoint* is a gateway that you specify in your route table to access DynamoDB from your Amazon VPC over the AWS network. *Interface endpoints* extend the functionality of gateway endpoints by using private IP addresses to route requests to DynamoDB from within your Amazon VPC, on premises, or from an Amazon VPC in another AWS Region by using Amazon VPC peering or AWS Transit Gateway. For more information, see [What is Amazon VPC peering?](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html) and [Transit Gateway vs Amazon VPC peering](https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/transit-gateway-vs-vpc-peering.html).\n\nInterface endpoints are compatible with gateway endpoints. If you have an existing gateway endpoint in the Amazon VPC, you can use both types of endpoints in the same Amazon VPC.\n\n\n<table>",
+     "headings": [
+      "AWS PrivateLink for DynamoDB",
+      "Types of Amazon VPC endpoints for Amazon DynamoDB"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/privatelink-interface-endpoints.html",
+     "title": "AWS PrivateLink for DynamoDB",
+     "quote": "Interface endpoints extend the functionality of gateway endpoints by using private IP addresses to route requests to DynamoDB from within your Amazon VPC, on premises, or from an Amazon VPC in another AWS Region by using Amazon VPC peering or AWS Transit Gateway.",
+     "table_header": null,
+     "context": "+ [Using AWS PrivateLink for DynamoDB Accelerator (DAX)](dax-private-link.md)\n\n## Types of Amazon VPC endpoints for Amazon DynamoDB\n<a name=\"types-of-vpc-endpoints-for-ddb\"></a>\n\nYou can use two types of Amazon VPC endpoints to access Amazon DynamoDB: *gateway endpoints* and *interface endpoints* (by using AWS PrivateLink). A *gateway endpoint* is a gateway that you specify in your route table to access DynamoDB from your Amazon VPC over the AWS network. *Interface endpoints* extend the functionality of gateway endpoints by using private IP addresses to route requests to DynamoDB from within your Amazon VPC, on premises, or from an Amazon VPC in another AWS Region by using Amazon VPC peering or AWS Transit Gateway. For more information, see [What is Amazon VPC peering?](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html) and [Transit Gateway vs Amazon VPC peering](https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/transit-gateway-vs-vpc-peering.html).\n\nInterface endpoints are compatible with gateway endpoints. If you have an existing gateway endpoint in the Amazon VPC, you can use both types of endpoints in the same Amazon VPC.\n\n\n<table>",
+     "headings": [
+      "AWS PrivateLink for DynamoDB",
+      "Types of Amazon VPC endpoints for Amazon DynamoDB"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/privatelink-interface-endpoints.html",
+     "title": "AWS PrivateLink for DynamoDB",
+     "quote": "Interface endpoints are compatible with gateway endpoints. If you have an existing gateway endpoint in the Amazon VPC, you can use both types of endpoints in the same Amazon VPC.",
+     "table_header": null,
+     "context": "## Types of Amazon VPC endpoints for Amazon DynamoDB\n<a name=\"types-of-vpc-endpoints-for-ddb\"></a>\n\nYou can use two types of Amazon VPC endpoints to access Amazon DynamoDB: *gateway endpoints* and *interface endpoints* (by using AWS PrivateLink). A *gateway endpoint* is a gateway that you specify in your route table to access DynamoDB from your Amazon VPC over the AWS network. *Interface endpoints* extend the functionality of gateway endpoints by using private IP addresses to route requests to DynamoDB from within your Amazon VPC, on premises, or from an Amazon VPC in another AWS Region by using Amazon VPC peering or AWS Transit Gateway. For more information, see [What is Amazon VPC peering?](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html) and [Transit Gateway vs Amazon VPC peering](https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/transit-gateway-vs-vpc-peering.html).\n\nInterface endpoints are compatible with gateway endpoints. If you have an existing gateway endpoint in the Amazon VPC, you can use both types of endpoints in the same Amazon VPC.\n\n\n<table>\n<thead>\n  <tr><th>Gateway endpoints for DynamoDB</th><th>Interface endpoints for DynamoDB</th></tr>",
+     "headings": [
+      "AWS PrivateLink for DynamoDB",
+      "Types of Amazon VPC endpoints for Amazon DynamoDB"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-global-table-replicas-share-name-key-data",
+   "rev": 4,
+   "kind": "behavior",
+   "claim": "All replicas in a global table share the same primary key schema and item data.",
+   "values": [
+    {
+     "key": "shared",
+     "display": "primary key schema, and item data"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per global table",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables-CoreConcepts.html",
+     "title": "Global tables core concepts",
+     "quote": "All replicas in a global table share the same table name, primary key schema, and item data.",
+     "table_header": null,
+     "context": "## Concepts\n<a name=\"globaltables-CoreConcepts.KeyConcepts\"></a>\n\n*Global tables* is a DynamoDB feature that replicates table data across AWS Regions.\n\nA *replica table* (or replica) is a DynamoDB table that functions as part of a global table. A global table consists of two or more replica tables across different AWS Regions. Each global table can have only one replica per AWS Region. All replicas in a global table share the same table name, primary key schema, and item data.\n\nWhen an application writes data to a replica in one Region, DynamoDB automatically replicates the write to all other replicas in the global table. For more information about how to get started with global tables, see [Tutorials: Creating global tables](V2globaltables.tutorial.md) or [Tutorials: Creating multi-account global tables](V2globaltables_MA.tutorial.md).\n\n## Versions\n<a name=\"globaltables-CoreConcepts.Versions\"></a>",
+     "headings": [
+      "Global tables core concepts",
+      "Concepts"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-gt-autoscaling-recommended-legacy-page",
+   "rev": 3,
+   "kind": "behavior",
+   "claim": "The global tables best-practices page, which is documentation for version 2017.11.29 (Legacy) of global tables, says DynamoDB auto scaling is the recommended way to manage throughput capacity settings for replica tables that use provisioned mode, and that you can use on-demand mode if auto scaling does not satisfy your capacity changes (unpredictable workload) or you do not want to configure its settings.",
+   "values": [
+    {
+     "key": "rec",
+     "display": "recommended way to manage throughput capacity settings",
+     "spoken": "auto scaling is the recommended way"
+    },
+    {
+     "key": "alt",
+     "display": "use on-demand mode to manage capacity",
+     "spoken": "on-demand mode is the alternative"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB global tables, provisioned replicas",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "the page is for version 2017.11.29 (Legacy) of global tables"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables_reqs_bestpractices.html",
+     "title": "Best practices and requirements for managing global tables",
+     "quote": "This documentation is for version 2017.11.29 (Legacy) of global tables, which should be avoided for new global tables.",
+     "table_header": null,
+     "context": "\n# Best practices and requirements for managing global tables\n<a name=\"globaltables_reqs_bestpractices\"></a>\n\n**Important**  \n This documentation is for version 2017.11.29 (Legacy) of global tables, which should be avoided for new global tables. Customers should use [Global Tables version 2019.11.21 (Current)](GlobalTables.md) when possible, as it provides greater flexibility, higher efficiency and consumes less write capacity than 2017.11.29 (Legacy).   \nTo determine which version you are using, see [Determining the version of a global table](V2globaltables_versions.md#globaltables.DetermineVersion). To update existing global tables from version 2017.11.29 (Legacy) to version 2019.11.21 (Current), see [DynamoDB global tables versions](V2globaltables_versions.md). \n\nUsing Amazon DynamoDB global tables, you can replicate your table data across AWS Regions. It is important that the replica tables and secondary indexes in your global table have identical write capacity settings to ensure proper replication of data.\n\n**Topics**",
+     "headings": [
+      "Best practices and requirements for managing global tables"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables_reqs_bestpractices.html",
+     "title": "Best practices and requirements for managing global tables",
+     "quote": "Using DynamoDB auto scaling is the recommended way to manage throughput capacity settings for replica tables that use the provisioned mode.",
+     "table_header": null,
+     "context": "Consider the following when managing capacity settings for replica tables in DynamoDB.\n\n### Using DynamoDB auto scaling\n<a name=\"globaltables_reqs_bestpractices.tables.autoscaling\"></a>\n\nUsing DynamoDB auto scaling is the recommended way to manage throughput capacity settings for replica tables that use the provisioned mode. DynamoDB auto scaling automatically adjusts read capacity units (RCUs) and write capacity units (WCUs) for each replica table based upon your actual application workload. For more information, see [Managing throughput capacity automatically with DynamoDB auto scaling](AutoScaling.md).\n\nIf you create your replica tables using the AWS Management Console, auto scaling is enabled by default for each replica table, with default auto scaling settings for managing read capacity units and write capacity units.\n\nChanges to auto scaling settings for a replica table or secondary index made through the DynamoDB console or using the `UpdateGlobalTableSettings` call are applied to all of the replica tables and matching secondary indexes in the global table automatically. These changes overwrite any existing auto scaling settings. This ensures that provisioned write capacity settings are consistent across the replica tables and secondary indexes in your global table. If you use the `UpdateTable`, `RegisterScalableTarget`, or `PutScalingPolicy` calls, you should apply the change to each replica table and matching secondary index individually. \n",
+     "headings": [
+      "Best practices and requirements for managing global tables",
+      "Best practices and requirements for managing capacity",
+      "Using DynamoDB auto scaling"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/globaltables_reqs_bestpractices.html",
+     "title": "Best practices and requirements for managing global tables",
+     "quote": "If auto scaling doesn't satisfy your application's capacity changes (unpredictable workload), or if you don't want to configure its settings (target settings for minimum, maximum, or utilization threshold), you can use on-demand mode to manage capacity for your global tables.",
+     "table_header": null,
+     "context": "\n**Note**  \n If auto scaling doesn't satisfy your application's capacity changes (unpredictable workload), or if you don't want to configure its settings (target settings for minimum, maximum, or utilization threshold), you can use on-demand mode to manage capacity for your global tables. For more information, see [On-demand mode](capacity-mode.md#capacity-mode-on-demand).   \nIf you enable on-demand mode on a global table, your consumption of replicated write request units (rWCUs) will be consistent with how rWCUs are provisioned. For example, if you perform 10 writes to a local table that is replicated in two additional Regions, you will consume 60 write request units (10 \\+ 10 \\+ 10 = 30; 30 x 2 = 60). The consumed 60 write request units include the extra write consumed by global tables Version 2017.11.29 (Legacy) to update the `aws:rep:deleting`, `aws:rep:updatetime`, and `aws:rep:updateregion` attributes. \n",
+     "headings": [
+      "Best practices and requirements for managing global tables",
+      "Best practices and requirements for managing capacity",
+      "Using DynamoDB auto scaling"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-mrec-strong-reads-may-be-stale",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "When choosing a global tables consistency mode, MREC is the mode to use when your application can tolerate stale data returned from strongly consistent read operations if that data was updated in another Region.",
+   "values": [
+    {
+     "key": "stale-data-returned-from-strongly-consis",
+     "display": "stale data returned from strongly consistent read operations"
+    },
+    {
+     "key": "updated-in-another-region",
+     "display": "updated in another Region"
+    }
+   ],
+   "qualifiers": {
+    "scope": "choosing a global tables consistency mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "MREC mode"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/V2globaltables_HowItWorks.html",
+     "title": "How DynamoDB global tables work",
+     "quote": "Your application can tolerate stale data returned from strongly consistent read operations if that data was updated in another Region.",
+     "table_header": null,
+     "context": "The key criteria for choosing a multi-Region consistency mode is whether your application prioritizes lower latency writes and strongly consistent reads, or prioritizes global strong consistency.\n\nMREC global tables will have lower write and strongly consistent read latencies compared to MRSC global tables. MREC global tables have a Recovery Point Objective (RPO) equal to the replication delay between replicas, usually a few seconds depending on the replica Regions.\n\nYou should use the MREC mode when:\n+ Your application can tolerate stale data returned from strongly consistent read operations if that data was updated in another Region.\n+ You prioritize lower write and strongly consistent read latencies over multi-Region read consistency.\n+ Your multi-Region high availability strategy can tolerate an RPO greater than zero.\n\nMRSC global tables will have higher write and strongly consistent read latencies compared to MREC global tables. MRSC global tables support a Recovery Point Objective (RPO) of zero.\n",
+     "headings": [
+      "How DynamoDB global tables work",
+      "Choosing a consistency mode"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-new-ondemand-table-4000-writes-12000-reads",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "New on-demand tables will be able to sustain up to 4,000 writes per second and 12,000 reads per second.",
+   "values": [
+    {
+     "key": "writes",
+     "display": "4,000 writes per second",
+     "spoken": "four thousand writes per second"
+    },
+    {
+     "key": "reads",
+     "display": "12,000 reads per second",
+     "spoken": "twelve thousand reads per second"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per new on-demand table",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "on-demand capacity mode, initial throughput"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/on-demand-capacity-mode.html",
+     "title": "DynamoDB on-demand capacity mode",
+     "quote": "New on-demand tables will be able to sustain up to 4,000 writes per second and 12,000 reads per second.",
+     "table_header": null,
+     "context": "<a name=\"on-demand-capacity-mode-initial\"></a>\n\nDynamoDB tables using on-demand capacity mode automatically adapt to your application’s traffic volume. New on-demand tables will be able to sustain up to 4,000 writes per second and 12,000 reads per second. On-demand capacity mode instantly accommodates up to double the previous peak traffic on a table. For example, say that your application’s traffic pattern varies between 25,000 and 50,000 strongly consistent reads per second. 50,000 reads per second is the previous traffic peak. On-demand capacity mode instantly accommodates sustained traffic of up to 100,000 reads per second. If your application sustains traffic of 100,000 reads per second, that peak becomes your new previous peak. This previous peak enables subsequent traffic to reach up to 200,000 reads per second.\n",
+     "headings": [
+      "DynamoDB on-demand capacity mode",
+      "Initial throughput and scaling properties"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-pricing-ondemand-recommended-when",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "The pricing page says on-demand mode is recommended in most scenarios, including if you have new or existing workloads and you do not want to manage capacity; it says provisioned capacity may be better if you have existing applications with steady and predictable throughput patterns.",
+   "values": [
+    {
+     "key": "ondemand",
+     "display": "On-demand mode is recommended in most scenarios",
+     "spoken": "on-demand is recommended in most scenarios"
+    },
+    {
+     "key": "provisioned",
+     "display": "steady and predictable throughput patterns",
+     "spoken": "steady and predictable throughput patterns"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB pricing guidance",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://aws.amazon.com/dynamodb/pricing/",
+     "title": "Amazon DynamoDB Pricing | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "On-demand mode is recommended in most scenarios including if you:",
+     "table_header": null,
+     "context": "With two pricing options (on-demand and provisioned) for reads and writes and two pricing options for storage (Standard and Standard - Infrequent Access), you can choose the best pricing option for your workload. Learn more about the different modes and storage classes in the DynamoDB developer guide.\n- On-demand capacity\n- Provisioned capacity\n- On-demand capacity\n- DynamoDB on-demand mode is a serverless option with pay-per-request pricing and automatic scaling, without the need to plan, provision, or manage capacity. You are billed per read or write request consumed, making it easy to balance costs and performance.\nOn-demand mode is recommended in most scenarios including if you:\n- Have new or existing workloads and you do not want to manage capacity\n- Want a serverless database that automatically scales\n- Prefer the ease of paying for only what you use\n- Provisioned capacity\n- With provisioned capacity, you must specify the number of reads and writes per second you want to provision for your application. You’ll be charged based on the hourly read and write capacity provisioned, and not how much your application has consumed.",
+     "headings": [
+      "Amazon DynamoDB pricing"
+     ]
+    },
+    {
+     "url": "https://aws.amazon.com/dynamodb/pricing/",
+     "title": "Amazon DynamoDB Pricing | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "Have new or existing workloads and you do not want to manage capacity",
+     "table_header": null,
+     "context": "- On-demand capacity\n- Provisioned capacity\n- On-demand capacity\n- DynamoDB on-demand mode is a serverless option with pay-per-request pricing and automatic scaling, without the need to plan, provision, or manage capacity. You are billed per read or write request consumed, making it easy to balance costs and performance.\nOn-demand mode is recommended in most scenarios including if you:\n- Have new or existing workloads and you do not want to manage capacity\n- Want a serverless database that automatically scales\n- Prefer the ease of paying for only what you use\n- Provisioned capacity\n- With provisioned capacity, you must specify the number of reads and writes per second you want to provision for your application. You’ll be charged based on the hourly read and write capacity provisioned, and not how much your application has consumed.\nProvisioned capacity may be better if you:",
+     "headings": [
+      "Amazon DynamoDB pricing"
+     ]
+    },
+    {
+     "url": "https://aws.amazon.com/dynamodb/pricing/",
+     "title": "Amazon DynamoDB Pricing | NoSQL Key-Value Database | Amazon Web Services",
+     "quote": "Have existing applications with steady and predictable throughput patterns",
+     "table_header": null,
+     "context": "- Want a serverless database that automatically scales\n- Prefer the ease of paying for only what you use\n- Provisioned capacity\n- With provisioned capacity, you must specify the number of reads and writes per second you want to provision for your application. You’ll be charged based on the hourly read and write capacity provisioned, and not how much your application has consumed.\nProvisioned capacity may be better if you:\n- Have existing applications with steady and predictable throughput patterns\n- Can forecast capacity requirements\n#### Reserved provisioned capacity\nWith DynamoDB reserved provisioned capacity, you can reduce costs of provisioned capacity by committing to a specified level of read and write capacity for a defined period. Reserved provisioned capacity is best suited for workloads with predictable, steady throughput requirements where long-term usage commitments can provide significant savings.\nFor more information regarding on-demand and provisioned capacity modes, see \"How throughput pricing works\".\nAdditional features",
+     "headings": [
+      "Amazon DynamoDB pricing"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-read-capacity-by-items-read-not-returned",
+   "rev": 3,
+   "kind": "behavior",
+   "claim": "For a Scan, DynamoDB calculates the read capacity units consumed based on the number of items and the size of those items, not on the amount of data that is returned to an application, so the capacity consumed is the same whether you request all attributes or use a projection expression, and whether or not you use a filter expression.",
+   "values": [
+    {
+     "key": "based-on-the-number-of-items-and-the-siz",
+     "display": "the number of items and the size"
+    },
+    {
+     "key": "not-on-the-amount-of-data-that-is-return",
+     "display": "not on the amount of data"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Scan request",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "Scan operation"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html",
+     "title": "Scanning tables in DynamoDB",
+     "quote": "DynamoDB calculates the number of read capacity units consumed based on the number of items and the size of those items, not on the amount of data that is returned to an application.",
+     "table_header": null,
+     "context": "+ `NONE` — No consumed capacity data is returned. (This is the default.)\n+ `TOTAL` — The response includes the aggregate number of read capacity units consumed.\n+ `INDEXES` — The response shows the aggregate number of read capacity units consumed, together with the consumed capacity for each table and index that was accessed.\n\nDynamoDB calculates the number of read capacity units consumed based on the number of items and the size of those items, not on the amount of data that is returned to an application. For this reason, the number of capacity units consumed is the same whether you request all of the attributes (the default behavior) or just some of them (using a projection expression). The number is also the same whether or not you use a filter expression. `Scan` consumes a minimum read capacity unit to perform one strongly consistent read per second, or two eventually consistent reads per second for an item up to 4 KB. If you need to read an item that is larger than 4 KB, DynamoDB needs additional read request units. Empty tables and very large tables which have a sparse amount of partition keys might see some additional RCUs charged beyond the amount of data scanned. This covers the cost of serving the `Scan` request, even if no data exists.\n\n## Read consistency for scan\n<a name=\"Scan.ReadConsistency\"></a>\n",
+     "headings": [
+      "Scanning tables in DynamoDB",
+      "Capacity units consumed by scan"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html",
+     "title": "Scanning tables in DynamoDB",
+     "quote": "For this reason, the number of capacity units consumed is the same whether you request all of the attributes (the default behavior) or just some of them (using a projection expression).",
+     "table_header": null,
+     "context": "+ `NONE` — No consumed capacity data is returned. (This is the default.)\n+ `TOTAL` — The response includes the aggregate number of read capacity units consumed.\n+ `INDEXES` — The response shows the aggregate number of read capacity units consumed, together with the consumed capacity for each table and index that was accessed.\n\nDynamoDB calculates the number of read capacity units consumed based on the number of items and the size of those items, not on the amount of data that is returned to an application. For this reason, the number of capacity units consumed is the same whether you request all of the attributes (the default behavior) or just some of them (using a projection expression). The number is also the same whether or not you use a filter expression. `Scan` consumes a minimum read capacity unit to perform one strongly consistent read per second, or two eventually consistent reads per second for an item up to 4 KB. If you need to read an item that is larger than 4 KB, DynamoDB needs additional read request units. Empty tables and very large tables which have a sparse amount of partition keys might see some additional RCUs charged beyond the amount of data scanned. This covers the cost of serving the `Scan` request, even if no data exists.\n\n## Read consistency for scan\n<a name=\"Scan.ReadConsistency\"></a>\n",
+     "headings": [
+      "Scanning tables in DynamoDB",
+      "Capacity units consumed by scan"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html",
+     "title": "Scanning tables in DynamoDB",
+     "quote": "The number is also the same whether or not you use a filter expression.",
+     "table_header": null,
+     "context": "+ `NONE` — No consumed capacity data is returned. (This is the default.)\n+ `TOTAL` — The response includes the aggregate number of read capacity units consumed.\n+ `INDEXES` — The response shows the aggregate number of read capacity units consumed, together with the consumed capacity for each table and index that was accessed.\n\nDynamoDB calculates the number of read capacity units consumed based on the number of items and the size of those items, not on the amount of data that is returned to an application. For this reason, the number of capacity units consumed is the same whether you request all of the attributes (the default behavior) or just some of them (using a projection expression). The number is also the same whether or not you use a filter expression. `Scan` consumes a minimum read capacity unit to perform one strongly consistent read per second, or two eventually consistent reads per second for an item up to 4 KB. If you need to read an item that is larger than 4 KB, DynamoDB needs additional read request units. Empty tables and very large tables which have a sparse amount of partition keys might see some additional RCUs charged beyond the amount of data scanned. This covers the cost of serving the `Scan` request, even if no data exists.\n\n## Read consistency for scan\n<a name=\"Scan.ReadConsistency\"></a>\n",
+     "headings": [
+      "Scanning tables in DynamoDB",
+      "Capacity units consumed by scan"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-read-capacity-formula",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Read capacity units are based on strongly consistent reads. To find the read capacity units that one strongly consistent read of an item needs, divide the item size of the operation by 4 KB, then round up to the nearest whole number.",
+   "values": [
+    {
+     "key": "formula",
+     "display": "divide the item size of the operation by 4 KB"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per read operation, strongly consistent",
+    "default_or_max": "fixed",
+    "adjustable": false,
+    "condition": "provisioned capacity mode; strongly consistent reads"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/provisioned-capacity-mode.html",
+     "title": "DynamoDB provisioned capacity mode",
+     "quote": "**Read consistency requirements** — Read capacity units are based on strongly consistent read operations, which consume twice as many database resources as eventually consistent reads.",
+     "table_header": null,
+     "context": "+ **Expected read and write request rates** — You should estimate the number of reads and writes you need to perform per second.\n+ **Item sizes** — Some items are small enough that they can be read or written using a single capacity unit. Larger items require multiple capacity units. By estimating the average size of the items that will be in your table, you can specify accurate settings for your table's provisioned throughput.\n+ **Read consistency requirements** — Read capacity units are based on strongly consistent read operations, which consume twice as many database resources as eventually consistent reads. You should determine whether your application requires strongly consistent reads, or whether it can relax this requirement and perform eventually consistent reads instead. Read operations in DynamoDB are eventually consistent, by default. You can request strongly consistent reads for these operations, if necessary.\n\nFor example, say that you want to read 80 items per second from a table. The size of these items is 3 KB, and you want strongly consistent reads. In this case, each read requires one provisioned read capacity unit. To determine this number, divide the item size of the operation by 4 KB. Then, round up to the nearest whole number, as shown in the following example:",
+     "headings": [
+      "DynamoDB provisioned capacity mode",
+      "Choosing initial throughput settings"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/provisioned-capacity-mode.html",
+     "title": "DynamoDB provisioned capacity mode",
+     "quote": "To determine this number, divide the item size of the operation by 4 KB. Then, round up to the nearest whole number, as shown in the following example:",
+     "table_header": null,
+     "context": "+ **Item sizes** — Some items are small enough that they can be read or written using a single capacity unit. Larger items require multiple capacity units. By estimating the average size of the items that will be in your table, you can specify accurate settings for your table's provisioned throughput.\n+ **Read consistency requirements** — Read capacity units are based on strongly consistent read operations, which consume twice as many database resources as eventually consistent reads. You should determine whether your application requires strongly consistent reads, or whether it can relax this requirement and perform eventually consistent reads instead. Read operations in DynamoDB are eventually consistent, by default. You can request strongly consistent reads for these operations, if necessary.\n\nFor example, say that you want to read 80 items per second from a table. The size of these items is 3 KB, and you want strongly consistent reads. In this case, each read requires one provisioned read capacity unit. To determine this number, divide the item size of the operation by 4 KB. Then, round up to the nearest whole number, as shown in the following example:\n+ 3 KB / 4 KB = 0.75 or **1** read capacity unit\n\nTherefore, to read 80 items per second from a table, set the table's provisioned read throughput to 80 read capacity units as shown in the following example:",
+     "headings": [
+      "DynamoDB provisioned capacity mode",
+      "Choosing initial throughput settings"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-streams-consumers-flink-eventbridge-lambda",
+   "rev": 3,
+   "kind": "capability",
+   "claim": "You can consume DynamoDB Streams records with AWS Lambda, which is synchronously invoked when new stream records are available (you can subscribe up to two Lambda functions to the same stream), with Apache Flink through Amazon Managed Service for Apache Flink, and with an Amazon EventBridge pipe, which consumes events from DynamoDB Streams and routes them to a target such as an EventBridge bus.",
+   "values": [
+    {
+     "key": "lambda",
+     "display": "your Lambda function is synchronously invoked",
+     "spoken": "Lambda is invoked synchronously"
+    },
+    {
+     "key": "two",
+     "display": "subscribe up to two Lambda functions",
+     "spoken": "up to two Lambda functions per stream"
+    },
+    {
+     "key": "flink",
+     "display": "Amazon Managed Service for Apache Flink",
+     "spoken": "Managed Service for Apache Flink"
+    }
+   ],
+   "qualifiers": {
+    "scope": "DynamoDB Streams consumers",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.Lambda.html",
+     "title": "DynamoDB Streams and AWS Lambda triggers",
+     "quote": "When new stream records are available, your Lambda function is synchronously invoked. You can subscribe up to two Lambda functions to the same DynamoDB stream.",
+     "table_header": null,
+     "context": "**Note**  \nIf you subscribe more than two Lambda functions to one DynamoDB stream, read throttling might occur.\n\nThe [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html) service polls the stream for new records four times per second. When new stream records are available, your Lambda function is synchronously invoked. You can subscribe up to two Lambda functions to the same DynamoDB stream. If you subscribe more than two Lambda functions to the same DynamoDB stream, read throttling might occur.\n\nThe Lambda function can send a notification, initiate a workflow, or perform many other actions that you specify. You can write a Lambda function to simply copy each stream record to persistent storage, such as Amazon S3 File Gateway (Amazon S3), and create a permanent audit trail of write activity in your table. Or suppose that you have a mobile gaming app that writes to a `GameScores` table. Whenever the `TopScore` attribute of the `GameScores` table is updated, a corresponding stream record is written to the table's stream. This event could then trigger a Lambda function that posts a congratulatory message on a social media network. This function could also be written to ignore any stream records that are not updates to `GameScores`, or that do not modify the `TopScore` attribute.\n",
+     "headings": [
+      "DynamoDB Streams and AWS Lambda triggers"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DocumentHistory.html",
+     "title": "Document history for DynamoDB",
+     "quote": "| [Ability to consume Amazon DynamoDB Streams records with Apache Flink](#DocumentHistory) | You can now consume Amazon DynamoDB Streams records with Apache Flink and leverage the Amazon Managed Service for Apache Flink to quickly build and manage end-to-end stream processing applications. For more information, see [DynamoDB Streams and Apache Flink](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/StreamsApacheFlink.html). | November 12, 2024 |",
+     "table_header": "| Change | Description | Date |",
+     "context": "| [DynamoDB introduces warm throughput for on-demand and provisioned tables](#DocumentHistory) | DynamoDB now supports warm throughput. Warm throughput provides visibility into the number of read and write operations your DynamoDB table can instantaneously support as well as the ability to pre-warm your DynamoDB tables. For more information, see [DynamoDB warm throughput](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/warm-throughput.html). | November 13, 2024 | \n| [Ability to consume Amazon DynamoDB Streams records with Apache Flink](#DocumentHistory) | You can now consume Amazon DynamoDB Streams records with Apache Flink and leverage the Amazon Managed Service for Apache Flink to quickly build and manage end-to-end stream processing applications. For more information, see [DynamoDB Streams and Apache Flink](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/StreamsApacheFlink.html). | November 12, 2024 | \n| [Published new billing topics for global tables and backups](#DocumentHistory) | Published two new topics regarding billing for global tables and billing for backups. For more information, see [Understanding Amazon DynamoDB billing for global tables](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/global-tables-billing.html) and [Understanding Amazon DynamoDB billing for backups](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/backup-restore-billing.html). | October 16, 2024 | ",
+     "headings": [
+      "Document history for DynamoDB"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/eventbridge-for-dynamodb.html",
+     "title": "Integrating DynamoDB with Amazon EventBridge",
+     "quote": "An EventBridge pipe consumes events from DynamoDB Streams and routes them to a target such as an EventBridge bus (an event bus is a router that receives events and delivers them to destinations, also called targets).",
+     "table_header": null,
+     "context": "The integration between DynamoDB and EventBridge pipes uses DynamoDB Streams to capture a time-ordered sequence of item-level changes in a DynamoDB table. Each record captured this way contains the data modified in the table.\n\n![Image showing how DynamoDB Streams integrate with an Amazon EventBridge bus.](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/images/eventbridge-dynamodb.png)\n\n\nAn EventBridge pipe consumes events from DynamoDB Streams and routes them to a target such as an EventBridge bus (an event bus is a router that receives events and delivers them to destinations, also called targets). Delivery is based on which rules match the contents of the event. Optionally, the pipe also includes the ability to filter for specific events and perform enrichments on the event data before sending it to the target.\n\nWhile EventBridge supports [multiple target types](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-targets.html), a common choice when implementing a fan-out design is to use a Lambda function as the target. The following example demonstrates an integration with a Lambda function target.\n\n## Creating an integration through the console\n<a name=\"eventbridge-for-dynamodb-create-integration-console\"></a>",
+     "headings": [
+      "Integrating DynamoDB with Amazon EventBridge",
+      "How it works"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-streams-vs-kds-processing-options",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "Kinesis Data Streams for DynamoDB records can be processed with AWS Lambda, Amazon Managed Service for Apache Flink, Kinesis Data Firehose or AWS Glue streaming ETL; DynamoDB Streams records are processed with AWS Lambda or the DynamoDB Streams Kinesis adapter.",
+   "values": [
+    {
+     "key": "kds",
+     "display": "Amazon Managed Service for Apache Flink",
+     "spoken": "Lambda, Flink, Firehose or Glue"
+    }
+   ],
+   "qualifiers": {
+    "scope": "change data capture streaming options",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/streamsmain.html",
+     "title": "Change data capture with Amazon DynamoDB",
+     "quote": "| Stream processing options | Process stream records using [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html), [Amazon Managed Service for Apache Flink](https://docs.aws.amazon.com/kinesisanalytics/latest/dev/what-is.html), [Kinesis data firehose](https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html) , or [AWS Glue streaming ETL](https://docs.aws.amazon.com/glue/latest/dg/add-job-streaming.html).  | Process stream records using [AWS Lambda](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.Lambda.html) or [DynamoDB Streams Kinesis adapter](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.KCLAdapter.html). |",
+     "table_header": "| Properties | Kinesis Data Streams for DynamoDB | DynamoDB Streams |",
+     "context": "| Duplicate records | Duplicate records might occasionally appear in the stream. | No duplicate records appear in the stream. | \n| Stream processing options | Process stream records using [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html), [Amazon Managed Service for Apache Flink](https://docs.aws.amazon.com/kinesisanalytics/latest/dev/what-is.html), [Kinesis data firehose](https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html) , or [AWS Glue streaming ETL](https://docs.aws.amazon.com/glue/latest/dg/add-job-streaming.html).  | Process stream records using [AWS Lambda](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.Lambda.html) or [DynamoDB Streams Kinesis adapter](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.KCLAdapter.html). | \n| Durability level | [ Availability zones](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/disaster-recovery-resiliency.html) to provide automatic failover without interruption. | [ Availability zones](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/disaster-recovery-resiliency.html) to provide automatic failover without interruption. | ",
+     "headings": [
+      "Change data capture with Amazon DynamoDB",
+      "Streaming options for change data capture"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-wa-relational-storage-upper-bounds",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "The performance pillar says relational databases have upper bounds on provisioned storage and often must be horizontally partitioned, for example by sharding, once they reach these limits.",
+   "values": [
+    {
+     "key": "upper",
+     "display": "upper bounds on provisioned storage",
+     "spoken": "upper bounds on provisioned storage"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Well-Architected PERF03-BP01",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/wellarchitected/latest/performance-efficiency-pillar/perf_data_use_purpose_built_data_store.html",
+     "title": "PERF03-BP01 Use a purpose-built data store that best supports your data access and storage requirements",
+     "quote": "Relational databases have upper bounds on provisioned storage, and often must be horizontally partitioned using mechanisms such as sharding once they reach these limits.",
+     "table_header": null,
+     "context": "  <tr><td> How will the storage requirements change over time? How does this impact scalability? </td><td> <ul><li>  Serverless databases such as <a href=\"https://aws.amazon.com/documentdb/\">DynamoDB</a> and <a href=\"https://aws.amazon.com/qldb/\">Amazon Quantum Ledger Database (Amazon QLDB)</a> will scale dynamically.  </li><li>  Relational databases have upper bounds on provisioned storage, and often must be horizontally partitioned using mechanisms such as sharding once they reach these limits.  </li></ul> </td></tr>",
+     "headings": [
+      "PERF03-BP01 Use a purpose-built data store that best supports your data access and storage requirements",
+      "Implementation guidance",
+      "Implementation steps"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dynamodb-write-capacity-formula",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "To find the write capacity units that one write of an item needs, divide the item size of the operation by 1 KB, then round up to the nearest whole number.",
+   "values": [
+    {
+     "key": "formula",
+     "display": "divide the item size of the operation by 1 KB"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per write operation",
+    "default_or_max": "fixed",
+    "adjustable": false,
+    "condition": "provisioned capacity mode"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/provisioned-capacity-mode.html",
+     "title": "DynamoDB provisioned capacity mode",
+     "quote": "To determine this number, divide the item size of the operation by 1 KB. Then, round up to the nearest whole number, as shown in the following example:",
+     "table_header": null,
+     "context": "+ 3 KB / 4 KB = 0.75 or **1** read capacity unit\n\nTherefore, to read 80 items per second from a table, set the table's provisioned read throughput to 80 read capacity units as shown in the following example:\n+ 1 read capacity unit per item × 80 reads per second = **80** read capacity units\n\nNow suppose that you want to write 100 items per second to your table and that the size of each item is 512 bytes. In this case, each write requires one provisioned write capacity unit. To determine this number, divide the item size of the operation by 1 KB. Then, round up to the nearest whole number, as shown in the following example:\n+ 512 bytes / 1 KB = 0.5 or **1** write capacity unit\n\nTo write 100 items per second to your table, set the table's provisioned write throughput to 100 write capacity units:\n+ 1 write capacity unit per item × 100 writes per second = **100** write capacity units\n",
+     "headings": [
+      "DynamoDB provisioned capacity mode",
+      "Choosing initial throughput settings"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,64 @@
+[docs/vpc/latest/userguide/flow-log-records] lines 1-63 of 102 | https://docs.aws.amazon.com/vpc/latest/userguide/flow-log-records.html | fetched 2026-10-11T21:26:49Z
+
+
+# Flow log records
+<a name="flow-log-records"></a>
+
+A flow log record represents a network flow in your VPC. By default, each record captures a network internet protocol (IP) traffic flow (characterized by a 5-tuple on a per network interface basis) that occurs within an *aggregation interval*, also referred to as a *capture window*.
+
+Each record is a string with fields separated by spaces. A record includes values for the different components of the IP flow, for example, the source, destination, and protocol.
+
+When you create a flow log, you can use the default format for the flow log record, or you can specify a custom format.
+
+**Topics**
++ [Aggregation interval](#flow-logs-aggregration-interval)
++ [Default format](#flow-logs-default)
++ [Custom format](#flow-logs-custom)
++ [Available fields](#flow-logs-fields)
+
+## Aggregation interval
+<a name="flow-logs-aggregration-interval"></a>
+
+The aggregation interval is the period of time during which a particular flow is captured and aggregated into a flow log record. By default, the maximum aggregation interval is 10 minutes. When you create a flow log, you can optionally specify a maximum aggregation interval of 1 minute. Flow logs with a maximum aggregation interval of 1 minute produce a higher volume of flow log records than flow logs with a maximum aggregation interval of 10 minutes.
+
+When a network interface is attached to a [Nitro-based instance](https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-nitro-instances.html), the aggregation interval is always 1 minute or less, regardless of the specified maximum aggregation interval.
+
+After data is captured within an aggregation interval, it takes additional time to process and publish the data to CloudWatch Logs or Amazon S3. The flow log service typically delivers logs to CloudWatch Logs in about 5 minutes and to Amazon S3 in about 10 minutes. However, log delivery is on a best effort basis, and your logs might be delayed beyond the typical delivery time.
+
+## Default format
+<a name="flow-logs-default"></a>
+
+With the default format, the flow log records include the version 2 fields, in the order shown in the [available fields](#flow-logs-fields) table. You cannot customize or change the default format. To capture additional fields or a different subset of fields, specify a custom format instead.
+
+## Custom format
+<a name="flow-logs-custom"></a>
+
+With a custom format, you specify which fields are included in the flow log records and in which order. This enables you to create flow logs that are specific to your needs and to omit fields that are not relevant. Using a custom format can reduce the need for separate processes to extract specific information from the published flow logs. You can specify any number of the available flow log fields, but you must specify at least one.
+
+## Available fields
+<a name="flow-logs-fields"></a>
+
+The following table describes all of the available fields for a flow log record. The **Version** column indicates the VPC Flow Logs version in which the field was introduced. The default format includes all version 2 fields, in the same order that they appear in the table.
+
+When publishing flow log data to Amazon S3, the data type for the fields depends on the flow log format. If the format is plain text, all fields are of type STRING. If the format is Parquet, see the table for the field data types.
+
+If a field is not applicable or could not be computed for a specific record, the record displays a '-' symbol for that entry. Metadata fields that do not come directly from the packet header are best effort approximations, and their values might be missing or inaccurate.
+
+
+| Field | Description | Version | 
+| --- | --- | --- | 
+| version | The VPC Flow Logs version. If you use the default format, the version is 2. If you use a custom format, the version is the highest version among the specified fields. For example, if you specify only fields from version 2, the version is 2. If you specify a mixture of fields from versions 2, 3, and 4, the version is 4.<br />**Parquet data type:** INT\_32 | 2 | 
+| account-id | The AWS account ID of the owner of the source network interface for which traffic is recorded. If the network interface is created by an AWS service, for example when creating a VPC endpoint or Network Load Balancer, the record might display unknown for this field.<br />**Parquet data type:** STRING | 2 | 
+| interface-id | The ID of the network interface for which the traffic is recorded. Returns a '-' symbol for flows associated with a regional NAT gateway.<br />**Parquet data type:** STRING | 2 | 
+| srcaddr |  For incoming traffic, this is the IP address of the source of traffic. For outgoing traffic, this is the private IPv4 address or the IPv6 address of the network interface sending the traffic. For outgoing traffic from regional NAT gateway, this is the same packet-level source IP address as in pkt-srcaddr. See also pkt-srcaddr.<br />**Parquet data type:** STRING | 2 | 
+| dstaddr | The destination address for outgoing traffic, or the IPv4 or IPv6 address of the network interface for incoming traffic on the network interface. The IPv4 address of the network interface is always its private IPv4 address. For incoming traffic to regional NAT gateway, this is the same packet-level destination IP address as in pkt-dstaddr. See also pkt-dstaddr.<br />**Parquet data type:** STRING | 2 | 
+| srcport | The source port of the traffic.<br />**Parquet data type:** INT\_32 | 2 | 
+| dstport | The destination port of the traffic.<br />**Parquet data type:** INT\_32 | 2 | 
+| protocol | The IANA protocol number of the traffic. For more information, see [ Assigned Internet Protocol Numbers](http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).<br />**Parquet data type:** INT\_32 | 2 | 
+| packets | The number of packets transferred during the flow.<br />**Parquet data type:** INT\_64 | 2 | 
+| bytes | The number of bytes transferred during the flow.<br />**Parquet data type:** INT\_64 | 2 | 
+| start | The time, in Unix seconds, when the first packet of the flow was received within the aggregation interval. This might be either up to 60 seconds before the packet was received on the network interface or up to 60 seconds after the packet was transmitted.<br />**Parquet data type:** INT\_64 | 2 | 
+| end | The time, in Unix seconds, when the last packet of the flow was received within the aggregation interval. This might be up to 60 seconds after the packet was transmitted or received on the network interface.<br />**Parquet data type:** INT\_64 | 2 | 
+| action | The action that is associated with the traffic:+  ACCEPT — The traffic was accepted. <br />+  REJECT — The traffic was rejected. For example, the traffic was not allowed by the security groups or network ACLs, or packets arrived after the connection was closed. <br />**Parquet data type:** STRING | 2 | 
+| log-status | The logging status of the flow log:+  OK — Data is logging normally to the chosen destinations. <br />+  NODATA — There was no network traffic to or from the network interface during the aggregation interval. <br />+  SKIPDATA — Some flow log records were skipped during the aggregation interval. This might be because of an internal capacity constraint, or an internal error. <br />Some flow log records may be skipped during the aggregation interval (see *log-status* in [Available fields](#flow-logs-fields)). This may be caused by an internal AWS capacity constraint or internal error. If you are using AWS Cost Explorer to view VPC flow log charges and some flow logs are skipped during the flow log aggregation interval, the number of flow logs reported in AWS Cost Explorer will be higher than the number of flow logs published by Amazon VPC. <br />**Parquet data type:** STRING | 2 | 
+| vpc-id | The ID of the VPC that contains the network interface for which the traffic is recorded.<br />**Parquet data type:** STRING | 3 | 

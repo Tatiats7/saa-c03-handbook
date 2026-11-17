@@ -1,0 +1,94 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "book.schema.json",
+ "title": "The registry: data/book.json (and its seed _build/registry/book.seed.json)",
+ "description": "The seed owns id, slug, title, part, tier, kind, xl, wave and services of a chapter. `registry build` and `registry set` own everything else. The seed is valid against this schema too, because the tool-owned keys are optional.",
+ "type": "object",
+ "required": ["book", "parts", "chapters"],
+ "additionalProperties": false,
+ "properties": {
+  "book": {
+   "type": "object",
+   "required": ["title", "exam", "snapshot_date", "change_window_start", "exam_eligibility_cutoff", "mock_seed", "domain_split"],
+   "additionalProperties": false,
+   "properties": {
+    "title": {"type": "string", "minLength": 3},
+    "exam": {"const": "SAA-C03"},
+    "snapshot_date": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"},
+    "change_window_start": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"},
+    "exam_eligibility_cutoff": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"},
+    "exam_date_target": {"type": ["string", "null"]},
+    "mock_seed": {"type": "integer", "minimum": 0},
+    "domain_split": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "integer", "minimum": 1}},
+    "style_version": {"type": "string"},
+    "fixture": {"type": "boolean"},
+    "exam_guide": {
+     "type": "object",
+     "required": ["root", "guide_id"],
+     "additionalProperties": false,
+     "properties": {
+      "root": {"type": "string", "pattern": "^https://docs\\.aws\\.amazon\\.com/"},
+      "guide_id": {"type": "string", "minLength": 3}
+     }
+    },
+    "exam_guide_counts": {
+     "type": "object",
+     "required": ["domains", "tasks", "bullets", "in_scope", "out_of_scope"],
+     "additionalProperties": false,
+     "properties": {
+      "domains": {"type": "integer"}, "tasks": {"type": "integer"}, "bullets": {"type": "integer"},
+      "in_scope": {"type": "integer"}, "out_of_scope": {"type": "integer"}
+     }
+    },
+    "fact_namespaces": {"type": "object", "description": "extra fact namespaces that are not service keys, each mapped to its home chapter id, for example {\"exam\": \"01\"}"},
+    "built_at": {"type": "string"},
+    "artifact_url": {"type": ["string", "null"], "description": "URL of the published web app; set by the orchestrator only"}
+   }
+  },
+  "parts": {"type": "array", "minItems": 1, "items": {
+   "type": "object",
+   "required": ["id", "title"],
+   "additionalProperties": false,
+   "properties": {"id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "title": {"type": "string", "minLength": 2}}
+  }},
+  "chapters": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/chapter"}},
+  "service_map": {"type": "object", "description": "official in-scope name (verbatim from the exam guide) -> list of registry service keys; set with `registry set --map`"}
+ },
+ "$defs": {
+  "chapter": {
+   "type": "object",
+   "required": ["id", "slug", "title", "part", "tier", "wave", "services"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^[0-9]{2}$"},
+    "slug": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "title": {"type": "string", "minLength": 2},
+    "part": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "tier": {"enum": ["deep", "medium", "light", "front", "synthesis", "mock"]},
+    "kind": {"enum": ["pattern"]},
+    "xl": {"type": "boolean"},
+    "wave": {"type": "string", "pattern": "^W([0-9]|1[0-5])$"},
+    "priority": {"type": "integer", "minimum": 1},
+    "services": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "uniqueItems": true},
+    "cards": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "uniqueItems": true, "description": "service keys of this chapter that are recognise-only: each gets a service card in 2-services.md instead of prose (tool-owned; set with `registry set`)"},
+    "tasks": {"type": "array", "items": {"type": "string", "pattern": "^[1-4]\\.[1-5]$"}, "uniqueItems": true},
+    "bullets": {"type": "array", "items": {"type": "string", "pattern": "^[1-4]\\.[1-5]\\.[KS][0-9]{1,2}$"}, "uniqueItems": true},
+    "sources": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "guides": {"type": "array", "items": {"type": "string", "pattern": "^https://docs\\.aws\\.amazon\\.com/.*/$"}, "uniqueItems": true, "description": "guide roots for `saa.py guide`"},
+      "pages": {"type": "array", "items": {"type": "string", "pattern": "^https://"}, "uniqueItems": true},
+      "faq": {"type": "array", "items": {"type": "string", "pattern": "^https://"}, "uniqueItems": true},
+      "history": {"type": "array", "items": {"type": "string", "pattern": "^https://"}, "uniqueItems": true},
+      "quotas": {"type": "array", "items": {"type": "string", "pattern": "^https://"}, "uniqueItems": true},
+      "pricing": {"type": "array", "items": {"type": "string", "pattern": "^https://"}, "uniqueItems": true},
+      "whatsnew_tags": {"type": "array", "items": {"type": "string", "minLength": 2}, "uniqueItems": true},
+      "case_tags": {"type": "array", "items": {"type": "string", "minLength": 2}, "uniqueItems": true}
+     }
+    },
+    "notes": {"type": "string"}
+   }
+  }
+ }
+}

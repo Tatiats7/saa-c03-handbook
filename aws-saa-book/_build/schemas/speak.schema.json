@@ -1,0 +1,80 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "speak.schema.json",
+ "title": "Spoken-answer file: data/<NN-slug>/speak.json",
+ "description": "Word counts, sentence length, the four starters and the number of must points are checked by the speak lint from SPEC.json (speak.*).",
+ "type": "object",
+ "required": ["v", "chapter", "items"],
+ "additionalProperties": false,
+ "properties": {
+  "v": {"const": 1},
+  "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+  "items": {"type": "array", "items": {"$ref": "#/$defs/speak"}}
+ },
+ "$defs": {
+  "speak": {
+   "type": "object",
+   "required": ["id", "chapter", "kind", "prompt", "persona", "ten_second", "sixty_second", "skeleton", "key_points", "must_not_say", "terms", "follow_ups", "facts", "section", "layer", "pass_route", "pack", "status", "rev"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-s[0-9]{2}$"},
+    "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "kind": {"enum": ["explain", "compare", "decide"]},
+    "prompt": {"type": "string", "minLength": 10, "description": "the customer's question, in customer wording"},
+    "persona": {"type": "string", "minLength": 3, "description": "who asks, for example 'Ben, CTO of the startup'"},
+    "ten_second": {"type": "string", "minLength": 10},
+    "sixty_second": {"type": "array", "minItems": 5, "maxItems": 14, "items": {"type": "string", "minLength": 5}, "description": "one line per breath group, in the four-move order"},
+    "skeleton": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string", "minLength": 2}},
+    "key_points": {"type": "array", "minItems": 3, "maxItems": 7, "items": {"$ref": "#/$defs/key_point"}},
+    "must_not_say": {"type": "array", "minItems": 1, "maxItems": 3, "items": {
+     "type": "object",
+     "required": ["error", "correct"],
+     "additionalProperties": false,
+     "properties": {
+      "error": {"type": "string", "minLength": 5, "description": "the wrong statement in words she might say"},
+      "correct": {"type": "string", "minLength": 5},
+      "fact": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}
+     }
+    }},
+    "terms": {"type": "array", "items": {
+     "type": "object",
+     "required": ["say", "avoid"],
+     "additionalProperties": false,
+     "properties": {
+      "say": {"type": "string", "minLength": 2},
+      "avoid": {"type": "array", "items": {"type": "string"}}
+     }
+    }},
+    "follow_ups": {"type": "array", "minItems": 2, "maxItems": 2, "items": {
+     "type": "object",
+     "required": ["question", "answer"],
+     "additionalProperties": false,
+     "properties": {
+      "question": {"type": "string", "minLength": 5},
+      "answer": {"type": "string", "minLength": 5},
+      "facts": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}}
+     }
+    }},
+    "facts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}, "uniqueItems": true},
+    "section": {"type": ["string", "null"], "pattern": "^([0-9]{2}-[a-z0-9-]+/)?[a-z0-9-]+\\.md#[a-z0-9-]+$", "description": "'<file>#<section id>' to re-read; '<NN-slug>/<file>#<section id>' for a section of another chapter (chapter 49)"},
+    "layer": {"enum": ["core", "extended"]},
+    "pass_route": {"type": "boolean", "description": "true for the one prompt of the chapter on the Pass route"},
+    "pack": {"type": "boolean", "description": "true when the prompt is one of the prompts in the speaking pack; writers set false, the orchestrator sets true (`speak set-pack`)"},
+    "status": {"enum": ["candidate", "verified", "ready", "rejected", "retired"]},
+    "rev": {"type": "integer", "minimum": 1}
+   }
+  },
+  "key_point": {
+   "type": "object",
+   "required": ["id", "kind", "point", "accept", "facts"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^kp[1-9]$"},
+    "kind": {"enum": ["must", "nice"]},
+    "point": {"type": "string", "minLength": 5},
+    "accept": {"type": "array", "items": {"type": "string"}, "description": "accepted paraphrases"},
+    "facts": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}}
+   }
+  }
+ }
+}

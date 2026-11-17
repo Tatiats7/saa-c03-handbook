@@ -1,0 +1,45 @@
+{
+  "id": "sample-vpc-two-az",
+  "kind": "arch",
+  "size": "s",
+  "sample": true,
+  "title": "A VPC across two Availability Zones",
+  "claim": "Private instances reach the internet through the NAT gateway in their own Availability Zone.",
+  "alt": "A VPC with two Availability Zones. Each zone has a public subnet with a NAT gateway and a private subnet with an app server. The app servers send internet traffic to the NAT gateway in the same zone, then to the internet gateway. Traffic for Amazon S3 goes through a gateway endpoint instead.",
+  "cols": 2,
+  "rows": 6,
+  "flow": "down",
+  "groups": [
+    {"id": "vpc", "type": "vpc", "label": "VPC 10.0.0.0/16", "cells": "A2:B5"},
+    {"id": "az1", "type": "az", "label": "Availability Zone a", "in": "vpc", "cells": "A3:A4"},
+    {"id": "az2", "type": "az", "label": "Availability Zone b", "in": "vpc", "cells": "B3:B4"},
+    {"id": "pub1", "type": "subnet-public", "label": "Public subnet", "in": "az1", "cells": "A3"},
+    {"id": "pub2", "type": "subnet-public", "label": "Public subnet", "in": "az2", "cells": "B3"},
+    {"id": "priv1", "type": "subnet-private", "label": "Private subnet", "in": "az1", "cells": "A4"},
+    {"id": "priv2", "type": "subnet-private", "label": "Private subnet", "in": "az2", "cells": "B4"}
+  ],
+  "nodes": [
+    {"id": "internet", "icon": "internet", "label": "Internet", "at": "A1:B1"},
+    {"id": "igw", "icon": "internet-gateway", "label": "Internet gateway", "at": "A2:B2"},
+    {"id": "nat1", "icon": "nat-gateway", "label": "NAT gateway", "at": "A3"},
+    {"id": "nat2", "icon": "nat-gateway", "label": "NAT gateway", "at": "B3"},
+    {"id": "app1", "icon": "instance", "label": "App server", "at": "A4"},
+    {"id": "app2", "icon": "instance", "label": "App server", "at": "B4"},
+    {"id": "s3ep", "icon": "endpoint", "label": "Gateway endpoint", "at": "A5:B5"},
+    {"id": "s3", "icon": "s3", "label": "Amazon S3", "at": "A6:B6"}
+  ],
+  "edges": [
+    {"from": "app1", "to": "nat1", "label": "0.0.0.0/0", "step": 1, "emph": true,
+     "say": "The private route table sends internet traffic to the NAT gateway in the same Availability Zone."},
+    {"from": "app2", "to": "nat2", "label": "0.0.0.0/0", "step": 1, "emph": true},
+    {"from": "nat1", "to": "igw", "step": 2,
+     "say": "The NAT gateway forwards the traffic to the internet gateway."},
+    {"from": "nat2", "to": "igw", "step": 2},
+    {"from": "igw", "to": "internet", "step": 3,
+     "say": "The internet gateway connects the VPC to the internet."},
+    {"from": "app1", "to": "s3ep", "step": 4,
+     "say": "Traffic for Amazon S3 follows the gateway endpoint route and does not use the NAT gateway."},
+    {"from": "app2", "to": "s3ep", "step": 4},
+    {"from": "s3ep", "to": "s3", "label": "S3 traffic"}
+  ]
+}

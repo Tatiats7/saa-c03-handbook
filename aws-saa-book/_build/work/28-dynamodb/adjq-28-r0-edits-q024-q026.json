@@ -1,0 +1,173 @@
+[
+ {
+  "id": "dynamodb-q024",
+  "section": "2-deep.md#a-query-reads-one-partition-key-but-a-scan-reads-every-item",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.K4"],
+  "topics": ["databases", "cost", "performance"],
+  "services": ["dynamodb", "dax", "lambda"],
+  "concept": "reduce-read-capacity-of-report-job",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "An online store keeps its orders in an Amazon DynamoDB table in provisioned capacity mode, and a mission-critical checkout API reads and writes items in the table. Two other workloads use most of the read capacity. A status page calls GetItem with strongly consistent reads for single orders, and the page can show data that is a few seconds old. Each night, a report job runs a Scan of the whole table with a filter expression that returns the orders whose status is OPEN; few orders are open at any time. The reads of the checkout API are throttled. Which TWO actions will reduce the read capacity that the two workloads consume with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "can show data that is a few seconds old",
+   "returns the orders whose status is OPEN",
+   "few orders are open at any time",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Make the filter expression of the nightly Scan more selective, so that the Scan returns fewer order items to the report job.",
+    "correct": false,
+    "why": "A filter runs after the read, so the Scan still [consumes the same amount of read capacity](../facts/dynamodb.md#dynamodb-scan-filter-same-read-capacity) as without it.",
+    "concept": "selective-filter",
+    "trap": "dynamodb-trap-filter-saves-capacity",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Add an attribute that only open orders carry, create a global secondary index on that attribute, and change the report job to query that index.",
+    "correct": true,
+    "why": "The index [only tracks data items](../facts/dynamodb.md#dynamodb-gsi-only-items-with-key-attributes) that carry its key, so it is [faster and less expensive to query that index](../facts/dynamodb.md#dynamodb-sparse-index-faster-cheaper-than-scan), and [DynamoDB maintains indexes automatically](../facts/dynamodb.md#dynamodb-indexes-maintained-automatically).",
+    "concept": "sparse-gsi",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Create a DAX cluster, and send the strongly consistent GetItem calls of the status page through the DAX client so that DAX serves them from memory.",
+    "correct": false,
+    "why": "[DAX passes strongly consistent read requests to DynamoDB](../facts/dax.md#dax-passes-through-strong-reads-and-transactions) without a cache, so the table still serves every one of these reads.",
+    "concept": "dax-for-strong-reads",
+    "trap": "dynamodb-trap-dax-speeds-every-read",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Change the GetItem calls of the status page from strongly consistent reads to eventually consistent reads by setting ConsistentRead to false.",
+    "correct": true,
+    "why": "[Eventually consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost) cost [half the cost of strongly consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost), and the page accepts older data.",
+    "concept": "eventually-consistent-reads",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Copy each open order into a second table with a Lambda function on the stream of the table, and change the report job to scan the second table.",
+    "correct": false,
+    "why": "It also lowers the reads of the table, but the company must then run copy code and a second table, while [DynamoDB maintains indexes automatically](../facts/dynamodb.md#dynamodb-indexes-maintained-automatically).",
+    "concept": "copy-table-for-report",
+    "trap": null,
+    "misconception": "A copy that custom code keeps in sync is the simplest way to take a report off a table.",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Each workload needs its own fix. The report filters after it reads, so it [consumes the same amount of read capacity](../facts/dynamodb.md#dynamodb-scan-filter-same-read-capacity) as an unfiltered Scan; a sparse index [only tracks data items](../facts/dynamodb.md#dynamodb-gsi-only-items-with-key-attributes) that carry its key attribute. A synced copy table also works, but [DynamoDB maintains indexes automatically](../facts/dynamodb.md#dynamodb-indexes-maintained-automatically). The status page accepts older data, and [Eventually consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost) cost half as much.",
+  "takeaway": "Filters and DAX do not cut these reads; a sparse index and eventually consistent reads do.",
+  "twin": "If the stem said \"the status page must show the latest write\" instead: keep its strongly consistent reads, because they return the [most up-to-date data](../facts/dynamodb.md#dynamodb-consistentread-parameter).",
+  "say": "For the report I query a sparse index, and for the status page I use eventually consistent reads.",
+  "facts": [
+   "dynamodb-scan-filter-same-read-capacity",
+   "dynamodb-gsi-only-items-with-key-attributes",
+   "dynamodb-sparse-index-faster-cheaper-than-scan",
+   "dynamodb-eventually-consistent-half-cost",
+   "dax-passes-through-strong-reads-and-transactions",
+   "dynamodb-consistentread-parameter",
+   "dynamodb-indexes-maintained-automatically"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-select-two", "ee-mission-critical"],
+  "twin_of": null
+ },
+ {
+  "id": "dynamodb-q026",
+  "section": "2-deep.md#conditional-writes-and-transactions-stop-one-write-from-overwriting-another",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.S2"],
+  "topics": ["databases"],
+  "services": ["dynamodb"],
+  "concept": "optimistic-locking-lost-updates",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company keeps customer profiles in an Amazon DynamoDB table in provisioned capacity mode, and several support agents can edit the same profile. The application reads the profile item, changes attributes such as the address and the phone number, and writes the whole item back with PutItem. Sometimes two agents save the same profile at almost the same time, and the change of the first agent is lost without an error. The application must detect such a conflict so that the second agent reloads the profile. Agents save thousands of profiles each hour, and the company wants each save to consume as little write capacity as possible. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "writes the whole item back with PutItem",
+   "must detect such a conflict",
+   "as little write capacity as possible",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a version attribute to each profile item, increase it on each save, and make each PutItem call conditional on the version that was read.",
+    "correct": true,
+    "why": "Each item gets a [version attribute that increments with every update](../facts/dynamodb.md#dynamodb-optimistic-locking-detects-conflicts-at-write), and the write fails when [another process modified the item in the meantime](../facts/dynamodb.md#dynamodb-optimistic-locking-condition-fails-on-concurrent-change).",
+    "concept": "optimistic-locking",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Send each save as a TransactWriteItems call that holds one Put action with a condition on a version attribute of the profile item.",
+    "correct": false,
+    "why": "It detects the conflict too, but each item in a write transaction requires [two write capacity units](../facts/dynamodb.md#dynamodb-transaction-two-units-prepare-commit), twice the cost of one conditional write.",
+    "concept": "transaction-for-one-item",
+    "trap": null,
+    "misconception": "A transaction is needed to protect a write to a single item.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Send each save of a profile through a BatchWriteItem call instead of PutItem, so that DynamoDB applies all the changes of the save as one unit.",
+    "correct": false,
+    "why": "A batch is not a transaction, and [only some of the actions](../facts/dynamodb.md#dynamodb-transactwriteitems-vs-batchwriteitem) might succeed; nothing compares versions, so the second save still replaces the first.",
+    "concept": "batch-write-for-conflicts",
+    "trap": "dynamodb-trap-batch-write-is-atomic",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Read the profile item with a strongly consistent read right before each PutItem call, and keep writing the whole item back without a condition.",
+    "correct": false,
+    "why": "Another save can land between the read and the write, and PutItem is [unconditional](../facts/dynamodb.md#dynamodb-writes-unconditional-by-default): it [overwrites an existing item](../facts/dynamodb.md#dynamodb-writes-unconditional-by-default) with the same key.",
+    "concept": "fresh-read-before-write",
+    "trap": null,
+    "misconception": "A fresh read right before a write prevents a lost update.",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "PutItem is [unconditional](../facts/dynamodb.md#dynamodb-writes-unconditional-by-default), so the second save [overwrites an existing item](../facts/dynamodb.md#dynamodb-writes-unconditional-by-default). Optimistic locking [detects conflicts at write time](../facts/dynamodb.md#dynamodb-optimistic-locking-detects-conflicts-at-write): the condition fails when [another process modified the item in the meantime](../facts/dynamodb.md#dynamodb-optimistic-locking-condition-fails-on-concurrent-change), and the second agent reloads. A transaction also detects it, but each item in it requires [two write capacity units](../facts/dynamodb.md#dynamodb-transaction-two-units-prepare-commit), so one conditional write uses less write capacity.",
+  "takeaway": "To catch a lost update on one item, make the write conditional on a version attribute.",
+  "twin": "If the stem said \"the debit of one item and the credit of another item must both happen or neither\" instead: use TransactWriteItems, because it gives a [guaranteed all-or-nothing result](../facts/dynamodb.md#dynamodb-transactwriteitems-all-or-nothing).",
+  "say": "I'd add a version attribute and make the write conditional, so a stale save fails instead of overwriting.",
+  "facts": [
+   "dynamodb-writes-unconditional-by-default",
+   "dynamodb-optimistic-locking-detects-conflicts-at-write",
+   "dynamodb-optimistic-locking-condition-fails-on-concurrent-change",
+   "dynamodb-transaction-two-units-prepare-commit",
+   "dynamodb-transactwriteitems-vs-batchwriteitem",
+   "dynamodb-transactwriteitems-all-or-nothing"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-cost-effective", "ee-must"],
+  "twin_of": null
+ }
+]

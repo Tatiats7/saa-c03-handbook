@@ -1,0 +1,469 @@
+[
+ {
+  "id": "kms-q004",
+  "section": "2-deep.md#automatic-rotation-changes-only-the-key-material-and-keeps-the-same-kms-key",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": [
+   "1.3.S7"
+  ],
+  "topics": [
+   "security",
+   "storage"
+  ],
+  "services": [
+   "kms",
+   "s3"
+  ],
+  "concept": "automatic-rotation-yearly",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company stores many terabytes of objects in Amazon S3. The objects are encrypted with a symmetric customer managed AWS KMS key, and the security team wrote its own key policy for that key. A new company policy requires the company to rotate the key material every year. The security team must keep control of the key policy. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "many terabytes",
+   "symmetric customer managed AWS KMS key",
+   "rotate the key material every year",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a new customer managed key every year, re-encrypt all objects in the bucket under the new key, and then schedule the old key for deletion.",
+    "correct": false,
+    "why": "It works, but KMS [keeps previous versions of keys](../facts/kms.md#kms-faq-auto-rotation-no-reencrypt) to decrypt old data, so the yearly re-encryption of many terabytes is work that rotation does not need.",
+    "concept": "new-key-and-reencrypt",
+    "trap": "kms-trap-rotation-reencrypts-data",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Enable automatic key rotation on the customer managed key, and keep the existing key policy and the key ID that the applications already use.",
+    "correct": true,
+    "why": "Automatic rotation [changes only the current key material](../facts/kms.md#kms-rotation-same-logical-key-transparent), so the key ID and the key policy that the team wrote stay the same.",
+    "concept": "automatic-rotation",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Run a scheduled AWS Lambda function every year that copies each object onto itself, so that Amazon S3 encrypts every object under new data keys.",
+    "correct": false,
+    "why": "New data keys are not new KMS key material. Key rotation [changes only the current key material](../facts/kms.md#kms-rotation-same-logical-key-transparent) of the KMS key, and this function does not touch it.",
+    "concept": "reencrypt-objects-as-rotation",
+    "trap": "kms-trap-rotation-reencrypts-data",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Switch the encryption of the bucket to the AWS managed key for Amazon S3, because AWS rotates the key material of that key every year.",
+    "correct": false,
+    "why": "The key would rotate, but the team would lose its own key policy, because you [cannot change any properties of AWS managed keys](../facts/kms.md#kms-aws-managed-key-cannot-change).",
+    "concept": "aws-managed-key-rotation",
+    "trap": "kms-trap-aws-managed-key-controllable",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Automatic rotation is the built-in answer for a symmetric customer managed key. KMS [keeps previous versions of keys](../facts/kms.md#kms-faq-auto-rotation-no-reencrypt) to decrypt old objects and encrypts new requests under the newest version. The key stays [the same logical resource](../facts/kms.md#kms-rotation-same-logical-key-transparent), so the key policy, the key ID and the applications stay as they are.",
+  "takeaway": "A yearly rotation rule on a symmetric customer managed key: enable automatic rotation, and re-encrypt nothing.",
+  "twin": "If the stem said \"an asymmetric RSA key that signs documents\" instead: create a new key and move the alias, because [automatic key rotation is not supported](../facts/kms.md#kms-faq-asym-hmac-no-auto-rotation-alias) for asymmetric keys.",
+  "say": "Turn on automatic rotation: KMS keeps the old key material, so you don't re-encrypt anything.",
+  "facts": [
+   "kms-rotation-only-customer-managed-symmetric",
+   "kms-rotation-default-period-365-days",
+   "kms-faq-auto-rotation-no-reencrypt",
+   "kms-rotation-same-logical-key-transparent",
+   "kms-rotation-retains-old-material",
+   "kms-aws-managed-key-cannot-change",
+   "kms-faq-asym-hmac-no-auto-rotation-alias"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-rotate",
+   "ee-mandates",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the solution with the LEAST operational overhead.",
+    "I mark the constraints: a symmetric customer managed key, many terabytes in Amazon S3, new key material every year, and the security team keeps its own key policy.",
+    "Before I look at the options, I predict automatic key rotation, because AWS KMS can rotate the key material of a symmetric customer managed key and keep the same key.",
+    "I remove the AWS managed key, because the team cannot change its key policy. I remove the yearly copy of the objects, because new data keys do not give the KMS key new key material.",
+    "Between automatic rotation and a new key with a full re-encryption, the difference is the work; the stem says many terabytes and LEAST operational overhead, and KMS keeps the old key material to decrypt old objects, so nothing needs re-encryption.",
+    "Check: automatic rotation gives new key material every year, keeps the key policy and the key ID, and moves no data. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ },
+ {
+  "id": "kms-q008",
+  "section": "2-deep.md#a-kms-key-stays-in-its-region-unless-you-create-a-multi-region-key",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": [
+   "1.3.S2"
+  ],
+  "topics": [
+   "security",
+   "resilience"
+  ],
+  "services": [
+   "kms"
+  ],
+  "concept": "multi-region-key-dr",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "An application encrypts data on the client side with a single-Region AWS KMS key in us-east-1. The application replicates the encrypted data to us-west-2 for disaster recovery. During an outage in us-east-1, an application role in us-west-2 must decrypt the replicated data without a cross-Region call to us-east-1. The company accepts a one-time re-encryption of the existing data. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "single-Region AWS KMS key",
+   "without a cross-Region call to us-east-1",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Update the existing single-Region key in us-east-1 so that it becomes a multi-Region key, and create a replica of that key in us-west-2.",
+    "correct": false,
+    "why": "The multi-Region property is fixed when a key is created: [you cannot convert a single-Region key](../facts/kms.md#kms-mrk-cannot-convert) to a multi-Region key.",
+    "concept": "convert-to-multi-region",
+    "trap": "kms-trap-key-is-global",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Allow the application role in us-west-2 to use kms:Decrypt on the ARN of the existing key in us-east-1, and call that ARN during the outage.",
+    "correct": false,
+    "why": "A single-Region key is [stored and used only in the Region](../facts/kms.md#kms-single-region-key-stays-in-region) where it was created, so each decryption calls us-east-1 and fails in the outage.",
+    "concept": "remote-key-arn",
+    "trap": "kms-trap-key-is-global",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Create a new multi-Region primary key in us-east-1, create a replica of it in us-west-2, and encrypt the data under the primary key.",
+    "correct": true,
+    "why": "Related multi-Region keys share [the same key material and key ID](../facts/kms.md#kms-mrk-same-material-no-cross-region-call), so the replica in us-west-2 decrypts the data with no call to us-east-1.",
+    "concept": "multi-region-primary-and-replica",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a single-Region key in us-west-2, and run a scheduled job that decrypts each replicated object and re-encrypts it under that key.",
+    "correct": false,
+    "why": "It works for objects that the job already handled, but it is a job to run, and related multi-Region keys decrypt [without re-encrypting or making a cross-Region call](../facts/kms.md#kms-mrk-same-material-no-cross-region-call).",
+    "concept": "reencrypt-job-second-region",
+    "trap": null,
+    "misconception": "believes that data must be re-encrypted in each Region where it is read",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Write a key policy for the replica key in us-west-2 that allows the application role in us-west-2 to use the replica key for decryption.",
+    "correct": true,
+    "why": "Each related key keeps its own policy, because you [manage each multi-Region key independently](../facts/kms.md#kms-mrk-independent-policies-grants-aliases), so the replica needs a statement for the role.",
+    "concept": "replica-key-policy",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The recovery Region needs its own key for the data. Related multi-Region keys have [the same key material and key ID](../facts/kms.md#kms-mrk-same-material-no-cross-region-call), so a replica decrypts locally. You [manage each multi-Region key independently](../facts/kms.md#kms-mrk-independent-policies-grants-aliases), so the replica gets its own key policy for the role.",
+  "takeaway": "Decrypt in a second Region with no cross-Region call: a multi-Region key with a replica that has its own key policy.",
+  "twin": "If the stem said \"data in each Region must be decryptable in that Region alone\" instead: use single-Region keys, because with them keys in a Region can [decrypt sensitive data only in that Region](../facts/kms.md#kms-mrk-data-residency-harder).",
+  "say": "Use a multi-Region key: the replica has the same key material, so the recovery Region decrypts on its own.",
+  "facts": [
+   "kms-mrk-same-material-no-cross-region-call",
+   "kms-mrk-independent-policies-grants-aliases",
+   "kms-mrk-cannot-convert",
+   "kms-single-region-key-stays-in-region",
+   "kms-mrk-data-residency-harder"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-cross-region",
+   "ee-select-two",
+   "ee-which-combination"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "kms-q009",
+  "section": "2-deep.md#a-disabled-kms-key-can-be-re-enabled-but-a-deleted-one-cannot-be-recovered",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": [
+   "1.3.K4"
+  ],
+  "topics": [
+   "security"
+  ],
+  "services": [
+   "kms"
+  ],
+  "concept": "end-access-disable-key",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company encrypts the data of one customer with a dedicated customer managed AWS KMS key. The contract with that customer ends today. The company must stop every cryptographic use of the key as soon as possible. A legal review in 60 days can require the company to read the data again, so the company must make sure that access can be restored. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "stop every cryptographic use of the key as soon as possible",
+   "A legal review in 60 days",
+   "make sure that access can be restored"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Schedule the key for deletion with the longest waiting period, and cancel the deletion if the legal review requires access to the data.",
+    "correct": false,
+    "why": "The waiting period is [7 – 30 days](../facts/kms.md#kms-deletion-waiting-period-7-to-30-days), shorter than the review, and after deletion [that data becomes unrecoverable](../facts/kms.md#kms-deletion-irreversible-data-unrecoverable).",
+    "concept": "schedule-deletion",
+    "trap": "kms-trap-delete-key-immediately",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Remove kms:Decrypt and kms:Encrypt from every IAM policy in the account that names the key, and keep the key policy as it is.",
+    "correct": false,
+    "why": "The key policy is [the primary way to control access](../facts/kms.md#kms-key-policy-primary-exactly-one), and it can still allow principals directly, so IAM changes do not stop every use.",
+    "concept": "remove-iam-allows",
+    "trap": "kms-trap-iam-policy-alone-opens-key",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Add a statement to the key policy that denies all cryptographic operations to every principal, and remove that statement after the legal review.",
+    "correct": false,
+    "why": "It works, but the policy edits are extra work: a disabled key is blocked from cryptographic use [until you re-enable it](../facts/kms.md#kms-disabled-key-no-crypto-until-reenabled).",
+    "concept": "deny-in-key-policy",
+    "trap": null,
+    "misconception": "writes a deny statement for what one key state already does",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Disable the key now, and enable the key again later if the legal review requires the company to read the data of the customer.",
+    "correct": true,
+    "why": "A disabled key cannot be used in any cryptographic operation [until you re-enable it](../facts/kms.md#kms-disabled-key-no-crypto-until-reenabled), so enabling it again restores access.",
+    "concept": "disable-key",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Disabling is the reversible switch. AWS suggests [disabling the KMS key instead of deleting it](../facts/kms.md#kms-disable-instead-of-delete) when you are not sure that you no longer need it. A disabled key cannot be used [until you re-enable it](../facts/kms.md#kms-disabled-key-no-crypto-until-reenabled), and enabling it again brings back access to the data.",
+  "takeaway": "Stop key use with a way back: disable the key. Schedule deletion for data that the company will not read again.",
+  "twin": "If the stem said \"the data must become unreadable for good\" instead: schedule the key for deletion, because after deletion [that data becomes unrecoverable](../facts/kms.md#kms-deletion-irreversible-data-unrecoverable).",
+  "say": "Disable the key: nothing can use it, and you can enable it again after the legal review.",
+  "facts": [
+   "kms-disabled-key-no-crypto-until-reenabled",
+   "kms-disable-instead-of-delete",
+   "kms-deletion-waiting-period-7-to-30-days",
+   "kms-deletion-irreversible-data-unrecoverable",
+   "kms-key-policy-primary-exactly-one"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-as-soon-as-possible",
+   "ee-ensure"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "kms-q010",
+  "section": "2-deep.md#automatic-rotation-changes-only-the-key-material-and-keeps-the-same-kms-key",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": [
+   "1.3.S7"
+  ],
+  "topics": [
+   "security"
+  ],
+  "services": [
+   "kms"
+  ],
+  "concept": "rotate-asymmetric-key-manually",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company signs contracts with an asymmetric RSA key in AWS KMS. Customers verify the signatures with the public key of that KMS key. The applications that sign contracts refer to the key through an alias, not through its key ID. A new security policy requires the company to rotate the signing key. The applications must keep working without code changes. What should the company do?",
+  "keywords": [
+   "asymmetric RSA key",
+   "through an alias",
+   "without code changes"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a new asymmetric RSA KMS key for signing, and update the alias so that it points to the new KMS key instead of the old one.",
+    "correct": true,
+    "why": "Asymmetric keys rotate by hand: a new KMS key, then [mapping an existing key alias](../facts/kms.md#kms-faq-asym-hmac-no-auto-rotation-alias) to it, so the applications keep the same alias.",
+    "concept": "manual-rotation-alias",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Enable automatic key rotation on the existing asymmetric KMS key, and keep the alias that points to the existing KMS key.",
+    "correct": false,
+    "why": "Asymmetric KMS keys are [not eligible for automatic or on-demand key rotation](../facts/kms.md#kms-rotation-not-for-asymmetric-hmac-custom-store), so this setting does not exist for the key.",
+    "concept": "auto-rotation-asymmetric",
+    "trap": null,
+    "misconception": "believes that automatic rotation works for every KMS key type",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Start an on-demand rotation of the existing asymmetric KMS key, and keep the alias that points to the existing KMS key.",
+    "correct": false,
+    "why": "On-demand rotation is a feature of symmetric keys, and asymmetric KMS keys are [not eligible for automatic or on-demand key rotation](../facts/kms.md#kms-rotation-not-for-asymmetric-hmac-custom-store).",
+    "concept": "on-demand-rotation-asymmetric",
+    "trap": null,
+    "misconception": "believes that on-demand rotation covers asymmetric keys",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Import new RSA key material into the existing asymmetric KMS key, and keep the alias that points to the existing KMS key.",
+    "correct": false,
+    "why": "An asymmetric key with imported material is [permanently associated with that key material](../facts/kms.md#kms-imported-asym-hmac-same-material-only), so different material cannot replace it.",
+    "concept": "reimport-asymmetric",
+    "trap": null,
+    "misconception": "believes that new key material can replace the material of an asymmetric KMS key",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "[Automatic key rotation is not supported](../facts/kms.md#kms-faq-asym-hmac-no-auto-rotation-alias) for asymmetric KMS keys, so the company rotates by hand. Manual rotation means a new KMS key. Without an alias, you must [update references to the KMS key ID](../facts/kms.md#kms-manual-rotation-new-key-alias); with an alias, the applications need no change.",
+  "takeaway": "To rotate an asymmetric or HMAC key, create a new KMS key and move the alias to it.",
+  "twin": "If the stem said \"a symmetric encryption KMS key\" instead: enable automatic key rotation, because for a customer managed key [automatic rotation is optional](../facts/kms.md#kms-rotation-only-customer-managed-symmetric).",
+  "say": "Asymmetric keys don't rotate automatically, so create a new key and point the alias at it.",
+  "facts": [
+   "kms-faq-asym-hmac-no-auto-rotation-alias",
+   "kms-manual-rotation-new-key-alias",
+   "kms-rotation-not-for-asymmetric-hmac-custom-store",
+   "kms-imported-asym-hmac-same-material-only",
+   "kms-rotation-only-customer-managed-symmetric"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-rotate"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "kms-q011",
+  "section": "2-deep.md#aws-cloudhsm-gives-you-single-tenant-hardware-security-modules-that-you-operate",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": [
+   "1.3.K4"
+  ],
+  "topics": [
+   "security"
+  ],
+  "services": [
+   "kms",
+   "cloudhsm"
+  ],
+  "concept": "kms-meets-fips-140-3-level-3",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A financial services company is moving a Java application to AWS. Regulations require that the application's encryption keys are protected by hardware security modules (HSMs) validated at FIPS 140-3 Level 3. The application calls AWS KMS through the AWS SDK. The security team must write the key policy of each key and must not depend on keys that an AWS service controls. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "hardware security modules (HSMs) validated at FIPS 140-3 Level 3",
+   "through the AWS SDK",
+   "must write the key policy of each key",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create customer managed keys in AWS KMS in the default key store, and allow the application role to use the keys in each key policy.",
+    "correct": true,
+    "why": "All AWS KMS keys are protected by HSMs validated under [FIPS 140-3 Security Level 3](../facts/kms.md#kms-change-hsm-fips-140-2-level-3-2023-05), and the security team writes the key policy of a customer managed key.",
+    "concept": "kms-default-key-store",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Run HSM appliances that the company owns in two of its data centers, and connect them to the VPC through AWS Direct Connect.",
+    "correct": false,
+    "why": "It adds hardware and network links to run, and the keys in AWS KMS already use HSMs validated under [FIPS 140-3 Security Level 3](../facts/kms.md#kms-hsm-fips-140-3-level-3).",
+    "concept": "own-hsm-appliances",
+    "trap": "kms-trap-fips-needs-cloudhsm",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Create an AWS CloudHSM cluster with two HSMs in two Availability Zones, and generate and use the keys through the CloudHSM client libraries.",
+    "correct": false,
+    "why": "It works, but the company operates the HSMs, and AWS suggests AWS KMS when you do not want to [operate your own HSMs](../facts/cloudhsm.md#cloudhsm-consider-kms-if-no-hsm-ops).",
+    "concept": "cloudhsm-cluster",
+    "trap": "kms-trap-fips-needs-cloudhsm",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Use the AWS managed keys that AWS KMS creates for each service, and limit their use by editing the key policy of each managed key.",
+    "correct": false,
+    "why": "You [cannot change any properties of AWS managed keys](../facts/kms.md#kms-aws-managed-key-cannot-change), so the security team cannot write their key policies.",
+    "concept": "edit-aws-managed-key-policy",
+    "trap": "kms-trap-aws-managed-key-controllable",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "AWS KMS meets this mandate without extra hardware: today all AWS KMS keys are protected by HSMs validated under [FIPS 140-3 Security Level 3](../facts/kms.md#kms-change-hsm-fips-140-2-level-3-2023-05). AWS recommends customer managed keys [created and stored in the KMS HSMs](../facts/kms.md#kms-recommend-cmk-in-kms-hsms), and their key policy is [exclusively controlled by the customer](../facts/kms.md#kms-key-type-key-policy-control).",
+  "takeaway": "A FIPS level mandate alone does not call for CloudHSM: all KMS keys use HSMs validated under [FIPS 140-3 Security Level 3](../facts/kms.md#kms-hsm-fips-140-3-level-3).",
+  "twin": "If the stem said \"single-tenant hardware security modules (HSMs) under the company's exclusive control\" instead: a CloudHSM cluster, because CloudHSM gives a [single-tenant HSM cluster](../facts/cloudhsm.md#cloudhsm-vs-kms-faq-single-tenant-vpc-exclusive).",
+  "say": "KMS keys already sit in FIPS Level 3 HSMs, so a customer managed key meets the rule without CloudHSM.",
+  "facts": [
+   "kms-change-hsm-fips-140-2-level-3-2023-05",
+   "kms-hsm-fips-140-3-level-3",
+   "kms-recommend-cmk-in-kms-hsms",
+   "kms-key-type-key-policy-control",
+   "cloudhsm-consider-kms-if-no-hsm-ops",
+   "kms-aws-managed-key-cannot-change",
+   "cloudhsm-vs-kms-faq-single-tenant-vpc-exclusive"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-mandates",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": "kms-q007"
+ }
+]

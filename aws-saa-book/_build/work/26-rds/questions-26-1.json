@@ -1,0 +1,1110 @@
+[
+ {
+  "id": "rds-q001",
+  "section": "2-deep.md#a-multi-az-db-instance-copies-every-write-to-a-standby-synchronously",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K6",
+   "2.2.S2"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "multi-az-for-zone-failure",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a production application on Amazon EC2 instances across multiple Availability Zones. The application stores customer orders in one Amazon RDS for PostgreSQL DB instance, and analysts run long reporting queries against the same DB instance every month. The database must keep accepting writes, without losing committed data, if its Availability Zone fails. Which solution will meet this requirement with the LEAST operational overhead?",
+  "keywords": [
+   "keep accepting writes, without losing committed data",
+   "if its Availability Zone fails",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run PostgreSQL on two EC2 instances in two Availability Zones, with replication and failover that the team manages, and reports on the second instance.",
+    "correct": false,
+    "why": "It can work, but on EC2 the team owns the [upgrades, patches, backups, capacity planning](../facts/rds.md#rds-decision-guide-rehost-ec2-tasks) and the failover itself.",
+    "concept": "self-managed-database-on-ec2",
+    "trap": null,
+    "misconception": "runs the database on instances for control, which adds operating work that RDS removes",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Modify the DB instance to a Multi-AZ DB instance deployment, and keep sending every query to the existing DB instance endpoint.",
+    "correct": true,
+    "why": "A Multi-AZ DB instance protects against [DB instance failure and Availability Zone disruption](../facts/rds.md#rds-multi-az-instance-protects-az-disruption), with [automatic failover to standby](../facts/rds.md#rds-compare-failover-vs-promote).",
+    "concept": "multi-az-db-instance",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Modify the DB instance to a Multi-AZ DB instance deployment, and send the reporting queries to the standby DB instance in the second Availability Zone.",
+    "correct": false,
+    "why": "The standby of a Multi-AZ DB instance [doesn't serve read traffic](../facts/rds.md#rds-multi-az-instance-standby-no-reads), so the reporting part of this design cannot work.",
+    "concept": "multi-az-standby-reads",
+    "trap": "rds-trap-standby-serves-reads",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Create a read replica of the DB instance in a second Availability Zone, and send the reporting queries to the read replica endpoint.",
+    "correct": false,
+    "why": "A read replica [can be manually promoted](../facts/rds.md#rds-compare-failover-vs-promote), and for write availability AWS advises to [run your DB instance as a Multi-AZ deployment](../facts/rds.md#rds-faq-multi-az-for-write-availability).",
+    "concept": "read-replica",
+    "trap": "rds-trap-read-replica-for-failover",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "In a Multi-AZ DB instance deployment, database writes are [concurrent on the primary and standby](../facts/rds.md#rds-faq-multiaz-replication-synchronous), so the standby holds every committed write. On a zone failure, RDS fails over and keeps the [name record for your DB instance](../facts/rds.md#rds-faq-multiaz-automatic-failover). The team turns it on [by modifying the DB instance](../facts/rds.md#rds-multi-az-convert-by-modifying) and runs no failover process.",
+  "takeaway": "Zone failure with no lost writes: Multi-AZ. Reports that slow the primary: a read replica.",
+  "twin": "If the stem said \"The reporting queries must stop slowing down the order writes on the primary DB instance\" instead: the read replica, because it serves [read-heavy database workloads](../facts/rds.md#rds-read-replica-definition).",
+  "say": "A zone failure with no lost writes points to Multi-AZ, because the standby gets every write at the same time.",
+  "facts": [
+   "rds-decision-guide-rehost-ec2-tasks",
+   "rds-multi-az-instance-protects-az-disruption",
+   "rds-compare-failover-vs-promote",
+   "rds-multi-az-instance-standby-no-reads",
+   "rds-faq-multi-az-for-write-availability",
+   "rds-faq-multiaz-replication-synchronous",
+   "rds-faq-multiaz-automatic-failover",
+   "rds-multi-az-convert-by-modifying",
+   "rds-read-replica-definition"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-across-availability-zones"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q003",
+  "section": "2-deep.md#automated-backups-restore-to-any-second-inside-the-retention-period",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": [
+   "4.3.S1"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "point-in-time-restore",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs an order database on an Amazon RDS for MySQL Multi-AZ DB instance. Automated backups are turned on, with a backup retention period of 7 days. The company has no manual DB snapshots. Two hours ago, an engineer deleted a table by mistake. The company must recover the table as it was at a specific time, 5 minutes before the deletion. What should a solutions architect do to meet this requirement?",
+  "keywords": [
+   "deleted a table by mistake",
+   "5 minutes before the deletion",
+   "backup retention period of 7 days"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Rely on the standby DB instance of the Multi-AZ deployment, which keeps a second copy of all of the data in another Availability Zone.",
+    "correct": false,
+    "why": "Writes are [concurrent on the primary and standby](../facts/rds.md#rds-faq-multiaz-replication-synchronous), so the standby lost the table at the same moment as the primary.",
+    "concept": "multi-az-standby-as-backup",
+    "trap": "rds-trap-multi-az-is-a-backup",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Roll back the existing DB instance in place to an earlier point in time, so that the application can keep using the same endpoint.",
+    "correct": false,
+    "why": "RDS restores by [creating a new DB instance](../facts/rds.md#rds-pitr-new-instance-within-retention), which is [created with a new endpoint](../facts/rds.md#rds-faq-restore-creates-new-instance); the existing DB instance stays as it is.",
+    "concept": "in-place-rollback",
+    "trap": "rds-trap-restore-overwrites-instance",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Restore the database to a point in time as a new DB instance, copy back the needed data, and delete the new instance.",
+    "correct": true,
+    "why": "A restore can reach [any second during your retention period](../facts/rds.md#rds-faq-pitr-any-second-latest-restorable), and two hours ago is inside the 7 days, so the table comes back on the new DB instance.",
+    "concept": "point-in-time-restore",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Take a manual DB snapshot of the DB instance now, and keep the snapshot until the company decides to delete it.",
+    "correct": false,
+    "why": "A snapshot taken now holds the database after the deletion, so the deleted table is missing from it.",
+    "concept": "manual-snapshot",
+    "trap": null,
+    "misconception": "a new snapshot can bring back data that was deleted before the snapshot",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "Automated backups enable [point-in-time recovery](../facts/rds.md#rds-faq-automated-backups-enable-pitr): RDS keeps a daily snapshot and the transaction logs. So RDS can recover [any point in time](../facts/rds.md#rds-automated-backup-pitr-in-retention) inside the 7-day retention period. The restore creates a new DB instance, and the team copies the table back from it.",
+  "takeaway": "Undo a recent mistake: a point-in-time restore to a new DB instance. Keep a copy for years: a manual snapshot.",
+  "twin": "If the stem said \"retain a copy of the database as it is today for 7 years\" instead: the manual snapshot, because manual snapshots are [kept until you explicitly delete them](../facts/rds.md#rds-faq-snapshots-user-initiated-kept-until-deleted).",
+  "say": "A recent mistake inside the retention period calls for a point-in-time restore to a new DB instance.",
+  "facts": [
+   "rds-faq-multiaz-replication-synchronous",
+   "rds-pitr-new-instance-within-retention",
+   "rds-faq-restore-creates-new-instance",
+   "rds-faq-pitr-any-second-latest-restorable",
+   "rds-faq-automated-backups-enable-pitr",
+   "rds-automated-backup-pitr-in-retention",
+   "rds-faq-snapshots-user-initiated-kept-until-deleted"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-point-in-time"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q005",
+  "section": "2-deep.md#rds-proxy-keeps-client-connections-open-while-the-database-fails-over",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K9",
+   "2.2.K6"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds-proxy",
+   "rds"
+  ],
+  "concept": "proxy-keeps-connections-on-failover",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "BEST meet these requirements",
+  "stem": "A web application on Amazon EC2 instances connects to an Amazon RDS for PostgreSQL Multi-AZ DB instance. During a failover test, the application lost all its open database connections, and some clients kept using the old IP address of the database for several minutes. The company wants minimal downtime during future failovers, and it accepts only minimal code changes. Which solution will BEST meet these requirements?",
+  "keywords": [
+   "lost all its open database connections",
+   "kept using the old IP address",
+   "minimal code changes"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Make no change, because the DB instance endpoint name stays the same after a failover and the open connections move to the standby.",
+    "correct": false,
+    "why": "At failover RDS [changes the Domain Name System (DNS) record](../facts/rds.md#rds-multi-az-failover-dns-change-reconnect), and the application must [re-establish any existing connections](../facts/rds.md#rds-multi-az-failover-dns-change-reconnect).",
+    "concept": "failover-connections",
+    "trap": "rds-trap-failover-keeps-connections",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Add connection retry logic to every application component, and lower the DNS cache time to live on every EC2 instance to a few seconds.",
+    "correct": false,
+    "why": "AWS advises to [implement database connection retry at the application layer](../facts/rds.md#rds-multi-az-cname-flip-retry), but this changes code in every component and still drops each open connection.",
+    "concept": "retry-and-dns-ttl",
+    "trap": null,
+    "misconception": "rewrites every component when a managed proxy keeps the connections",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Create an Amazon RDS Proxy for the DB instance, and change the database endpoint in the application configuration to the proxy endpoint.",
+    "correct": true,
+    "why": "The proxy accepts connections [at the same IP address](../facts/rds-proxy.md#rds-proxy-failover-same-ip-no-dns) and [directs connections to the new primary](../facts/rds-proxy.md#rds-proxy-failover-same-ip-no-dns), with [no code changes](../facts/rds-proxy.md#rds-proxy-faq-no-code-changes) for most applications.",
+    "concept": "rds-proxy",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a read replica in a second Availability Zone, and send the application's writes to the read replica while a failover runs.",
+    "correct": false,
+    "why": "Clients have [read-only access to the replica](../facts/rds.md#rds-read-replica-async-read-only), and RDS does not allow a PostgreSQL read replica [to be made writable](../facts/rds.md#rds-replica-postgresql-not-writable).",
+    "concept": "read-replica-writes",
+    "trap": "rds-trap-replica-accepts-writes",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "RDS Proxy [bypasses Domain Name System (DNS) caches](../facts/rds-proxy.md#rds-proxy-faq-bypasses-dns-caches) and reduces failover times by [up to 66%](../facts/rds-proxy.md#rds-proxy-failover-66-percent) for Multi-AZ DB instances. Through the proxy, [most connections stay alive during failovers](../facts/rds-proxy.md#rds-proxy-failover-idle-connections-kept). The application changes one endpoint setting.",
+  "takeaway": "Failover drops connections and DNS caches lag: put RDS Proxy in front of the DB instance.",
+  "twin": "If the stem said \"the application must keep connecting directly to the database\" instead: retry logic and a DNS cache time to live of [less than 30 seconds](../facts/rds.md#rds-bp-dns-ttl-under-30-seconds).",
+  "say": "Put RDS Proxy in front of the database: it keeps the client connections and sends them to the new primary.",
+  "facts": [
+   "rds-multi-az-failover-dns-change-reconnect",
+   "rds-multi-az-cname-flip-retry",
+   "rds-proxy-failover-same-ip-no-dns",
+   "rds-proxy-faq-no-code-changes",
+   "rds-read-replica-async-read-only",
+   "rds-replica-postgresql-not-writable",
+   "rds-proxy-faq-bypasses-dns-caches",
+   "rds-proxy-failover-66-percent",
+   "rds-proxy-failover-idle-connections-kept",
+   "rds-bp-dns-ttl-under-30-seconds"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-minimal-downtime",
+   "ee-minimal-code-changes"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q009",
+  "section": "2-deep.md#a-read-replica-receives-changes-later-and-serves-only-reads",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": [
+   "3.3.S1",
+   "3.3.K7"
+  ],
+  "topics": [
+   "databases",
+   "performance"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "replica-needs-automated-backups",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs an Amazon RDS for MariaDB DB instance in a single Availability Zone. A reporting team wants its own copy of the data to query. When an administrator tries to create a read replica of the DB instance, RDS refuses the request. The DB instance uses a general-purpose instance class, and its backup retention period is set to 0. What should the administrator do first to create the read replica?",
+  "keywords": [
+   "backup retention period is set to 0",
+   "RDS refuses the request"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Convert the source DB instance to a Multi-AZ DB instance deployment, because RDS creates read replicas from the standby.",
+    "correct": false,
+    "why": "A Single-AZ source works and sees an I/O pause of [about one second](../facts/rds.md#rds-read-replica-create-io-suspension); the retention period of 0 is what blocks the request.",
+    "concept": "replica-source-multi-az",
+    "trap": "rds-trap-replica-needs-multi-az-source",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Take a manual DB snapshot of the source DB instance, and create the read replica from that manual snapshot.",
+    "correct": false,
+    "why": "RDS [takes a snapshot of the source instance](../facts/rds.md#rds-read-replica-created-from-snapshot) itself when it creates a replica, and a manual snapshot does not turn on automated backups.",
+    "concept": "replica-from-manual-snapshot",
+    "trap": null,
+    "misconception": "a read replica is created from a manual snapshot that the administrator takes",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Modify the source DB instance to a larger memory-optimized instance class, and then retry the creation of the read replica.",
+    "correct": false,
+    "why": "The class is not the cause: before a replica you must [enable automatic backups on the source DB instance](../facts/rds.md#rds-read-replica-requires-automated-backups).",
+    "concept": "instance-class-size",
+    "trap": null,
+    "misconception": "the size of the source instance blocks the creation of a read replica",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Set the backup retention period of the source DB instance to more than 0, which turns on automated backups.",
+    "correct": true,
+    "why": "The source of a read replica needs a backup retention period of [a value other than 0](../facts/rds.md#rds-read-replica-requires-automated-backups), which turns on automated backups.",
+    "concept": "automated-backups-for-replica",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "A retention period of 0 means no automated backups: [Setting the backup retention period to 0 disables automated backups](../facts/rds.md#rds-backup-retention-range). A read replica needs automated backups on its source, and [Backups must remain enabled](../facts/rds.md#rds-faq-read-replica-needs-backups) while the replica exists. After the change, RDS can create the replica.",
+  "takeaway": "No automated backups on the source means no read replica: set a retention period above 0 first.",
+  "twin": "If the stem said \"its backup retention period is set to 7 days\" instead: create the read replica directly, because the source already has automated backups.",
+  "say": "A read replica needs automated backups on its source, so set the retention period above zero first.",
+  "facts": [
+   "rds-read-replica-create-io-suspension",
+   "rds-read-replica-created-from-snapshot",
+   "rds-read-replica-requires-automated-backups",
+   "rds-backup-retention-range",
+   "rds-faq-read-replica-needs-backups"
+  ],
+  "sources": [],
+  "exam_english": [],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q007",
+  "section": "2-deep.md#a-read-replica-receives-changes-later-and-serves-only-reads",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K15"
+  ],
+  "topics": [
+   "databases",
+   "performance"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "read-replica-for-reporting",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a production application on Amazon EC2 instances across multiple Availability Zones. The application stores customer orders in one Amazon RDS for PostgreSQL DB instance, and analysts run long reporting queries against the same DB instance every month. The reporting queries must stop slowing down the order writes on the primary DB instance. Which solution will meet this requirement with the LEAST operational overhead?",
+  "keywords": [
+   "reporting queries must stop slowing down the order writes",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run PostgreSQL on two EC2 instances in two Availability Zones, with replication and failover that the team manages, and reports on the second instance.",
+    "correct": false,
+    "why": "It can work, but on EC2 the team owns the [upgrades, patches, backups, capacity planning](../facts/rds.md#rds-decision-guide-rehost-ec2-tasks) and the replication itself.",
+    "concept": "self-managed-database-on-ec2",
+    "trap": null,
+    "misconception": "runs the database on instances for control, which adds operating work that RDS removes",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Modify the DB instance to a Multi-AZ DB instance deployment, and keep sending every query to the existing DB instance endpoint.",
+    "correct": false,
+    "why": "A Multi-AZ DB instance [isn't a scaling solution for read-only scenarios](../facts/rds.md#rds-multi-az-instance-not-read-scaling), so the reports still run on the primary.",
+    "concept": "multi-az-db-instance",
+    "trap": "rds-trap-standby-serves-reads",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Modify the DB instance to a Multi-AZ DB instance deployment, and send the reporting queries to the standby DB instance in the second Availability Zone.",
+    "correct": false,
+    "why": "The standby of a Multi-AZ DB instance [doesn't serve read traffic](../facts/rds.md#rds-multi-az-instance-standby-no-reads), so the reports cannot move to it.",
+    "concept": "multi-az-standby-reads",
+    "trap": "rds-trap-standby-serves-reads",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Create a read replica of the DB instance in a second Availability Zone, and send the reporting queries to the read replica endpoint.",
+    "correct": true,
+    "why": "A read replica serves [business reporting or data warehousing scenarios](../facts/rds.md#rds-read-replica-use-reporting) on its own endpoint, so the reports leave the primary.",
+    "concept": "read-replica",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "A read replica is a [read-only copy of a DB instance](../facts/rds.md#rds-read-replica-definition). RDS takes the updates of the primary and [copies them asynchronously to the read replica](../facts/rds.md#rds-read-replica-async-read-only). The reporting queries move to the replica endpoint, and the primary keeps its capacity for the order writes. RDS creates and maintains the replica, so the team runs no replication software.",
+  "takeaway": "Reports that slow the primary: a read replica. A Multi-AZ DB instance standby serves no reads.",
+  "twin": "If the stem said \"The database must keep accepting writes, without losing committed data, if its Availability Zone fails\" instead: Multi-AZ, which protects against [DB instance failure and Availability Zone disruption](../facts/rds.md#rds-multi-az-instance-protects-az-disruption).",
+  "say": "Reporting that slows the primary points to a read replica, because the Multi-AZ standby serves no reads.",
+  "facts": [
+   "rds-decision-guide-rehost-ec2-tasks",
+   "rds-multi-az-instance-not-read-scaling",
+   "rds-multi-az-instance-standby-no-reads",
+   "rds-read-replica-use-reporting",
+   "rds-read-replica-definition",
+   "rds-read-replica-async-read-only",
+   "rds-multi-az-instance-protects-az-disruption"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-across-availability-zones"
+  ],
+  "twin_of": "rds-q001"
+ },
+ {
+  "id": "rds-q011",
+  "section": "2-deep.md#a-multi-az-db-instance-copies-every-write-to-a-standby-synchronously",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.S2",
+   "2.2.K6"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds",
+   "ec2-auto-scaling",
+   "elb"
+  ],
+  "concept": "ha-web-tier-and-multi-az-database",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on three Amazon EC2 instances in one Availability Zone. The application stores its data in a Single-AZ Amazon RDS for MySQL DB instance in the same Availability Zone. The company must make the application highly available, so that it keeps working if one Availability Zone fails. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "highly available",
+   "if one Availability Zone fails",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Launch three more EC2 instances in the same Availability Zone, and put an Application Load Balancer in front of all six instances.",
+    "correct": false,
+    "why": "Every instance stays in the zone that can fail, and an Application Load Balancer needs [at least two Availability Zone subnets](../facts/elb.md#elb-alb-subnets-two-azs-different).",
+    "concept": "instances-in-one-az",
+    "trap": "aws-map-trap-one-az-is-highly-available",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Create an Auto Scaling group that launches the instances across two Availability Zones behind an Application Load Balancer.",
+    "correct": true,
+    "why": "With two zones, the [desired capacity is distributed across these Availability Zones](../facts/ec2-auto-scaling.md#ec2-auto-scaling-desired-spread-across-azs), so instances keep running when one zone fails.",
+    "concept": "auto-scaling-across-azs",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Create a read replica of the DB instance in the same Availability Zone, and point the application to the replica if the primary fails.",
+    "correct": false,
+    "why": "The replica sits in the same zone, and a replica [can be manually promoted](../facts/rds.md#rds-compare-failover-vs-promote) instead of failing over by itself.",
+    "concept": "read-replica",
+    "trap": "rds-trap-read-replica-for-failover",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Install MySQL on an EC2 instance in a second Availability Zone, and run replication and failover scripts that the team maintains.",
+    "correct": false,
+    "why": "It can work, but the team then owns the [upgrades, patches, backups, capacity planning](../facts/rds.md#rds-decision-guide-rehost-ec2-tasks) and the failover scripts.",
+    "concept": "self-managed-database-on-ec2",
+    "trap": null,
+    "misconception": "builds its own standby database when RDS offers a managed one",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Modify the DB instance to a Multi-AZ DB instance deployment, so that RDS keeps a synchronous standby in a second Availability Zone.",
+    "correct": true,
+    "why": "RDS keeps a [synchronous standby replica in a different Availability Zone](../facts/rds.md#rds-multi-az-instance-standby-no-reads) and has [automatic failover to standby](../facts/rds.md#rds-compare-failover-vs-promote).",
+    "concept": "multi-az-db-instance",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Both tiers sit in the zone that can fail, so both need a second zone. EC2 Auto Scaling [maintains balance across all of the Availability Zones](../facts/ec2-auto-scaling.md#ec2-auto-scaling-desired-spread-across-azs) of the group. A Multi-AZ DB instance protects against [DB instance failure and Availability Zone disruption](../facts/rds.md#rds-multi-az-instance-protects-az-disruption), and RDS runs the failover.",
+  "takeaway": "High availability puts every tier in two zones: an Auto Scaling group behind a load balancer, and Multi-AZ RDS.",
+  "twin": "If the stem said \"if the whole AWS Region fails\" instead: a copy in a second Region, such as a cross-Region read replica, which stays available [if one Region becomes unavailable](../facts/rds.md#rds-multi-region-async-replica-survives-region).",
+  "say": "Both tiers need a second zone: an Auto Scaling group across two zones, and a Multi-AZ database.",
+  "facts": [
+   "elb-alb-subnets-two-azs-different",
+   "ec2-auto-scaling-desired-spread-across-azs",
+   "rds-compare-failover-vs-promote",
+   "rds-decision-guide-rehost-ec2-tasks",
+   "rds-multi-az-instance-standby-no-reads",
+   "rds-multi-az-instance-protects-az-disruption",
+   "rds-multi-region-async-replica-survives-region"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-highly-available",
+   "ee-select-two",
+   "ee-which-combination"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q013",
+  "section": "2-deep.md#a-multi-az-db-cluster-has-two-readable-standbys-and-fails-over-faster",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K6"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "multi-az-db-cluster",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST operationally efficient",
+  "stem": "A company runs an order service on a Single-AZ Amazon RDS for PostgreSQL DB instance. The company needs automatic failover that typically completes in under a minute if the primary fails. The company also wants the standby capacity to serve the dashboard read queries through a separate read-only endpoint, so that the dashboards stop loading the primary. Which deployment option will meet these requirements in the MOST operationally efficient way?",
+  "keywords": [
+   "under a minute",
+   "standby capacity to serve the dashboard read queries",
+   "MOST operationally efficient"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Deploy a Multi-AZ DB cluster, send the writes to its writer endpoint, and send the dashboard queries to its reader endpoint.",
+    "correct": true,
+    "why": "The cluster's readers [act as automatic failover targets](../facts/rds.md#rds-multi-az-cluster-native-replication-failover-target), failover typically takes [under 35 seconds](../facts/rds.md#rds-multi-az-cluster-failover-time), and the [reader endpoint](../facts/rds.md#rds-multi-az-cluster-writer-reader-endpoints) serves the dashboards.",
+    "concept": "multi-az-db-cluster",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Deploy a Multi-AZ DB instance, and send the dashboard queries to the standby DB instance in the second Availability Zone.",
+    "correct": false,
+    "why": "The standby [doesn't serve read traffic](../facts/rds.md#rds-multi-az-instance-standby-no-reads), and its failover typically takes [60–120 seconds](../facts/rds.md#rds-multi-az-instance-failover-time).",
+    "concept": "multi-az-standby-reads",
+    "trap": "rds-trap-standby-serves-reads",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Keep the Single-AZ DB instance, add two read replicas for the dashboards, and run a script that promotes a replica on failure.",
+    "correct": false,
+    "why": "A replica [can be manually promoted](../facts/rds.md#rds-compare-failover-vs-promote), and promotion takes [several minutes or longer](../facts/rds.md#rds-read-replica-promote-reboot-minutes), so the failover is slow.",
+    "concept": "scripted-replica-promotion",
+    "trap": "rds-trap-read-replica-for-failover",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Run PostgreSQL on three EC2 instances in three Availability Zones, with replication, failover and a read-only endpoint that the team manages.",
+    "correct": false,
+    "why": "It can work, but on EC2 the team owns the [upgrades, patches, backups, capacity planning](../facts/rds.md#rds-decision-guide-rehost-ec2-tasks) and the failover design.",
+    "concept": "self-managed-database-on-ec2",
+    "trap": null,
+    "misconception": "builds its own cluster when RDS offers a managed one",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "A Multi-AZ DB cluster runs a writer and [two reader DB instances](../facts/rds.md#rds-multi-az-cluster-three-azs-all-read) in [three separate Availability Zones](../facts/rds.md#rds-multi-az-cluster-three-azs-all-read), and [all three DB instances can serve read traffic](../facts/rds.md#rds-multi-az-cluster-three-azs-all-read). RDS runs the replication and the failover, so the cluster meets both needs as a managed option.",
+  "takeaway": "Fast failover plus readable standbys on MySQL or PostgreSQL: a Multi-AZ DB cluster.",
+  "twin": "If the stem said \"failover within a few minutes, and the dashboards can stay on the primary\" instead: a Multi-AZ DB instance, with failover in [60–120 seconds](../facts/rds.md#rds-multi-az-instance-failover-time).",
+  "say": "Fast failover and standbys that serve reads point to a Multi-AZ DB cluster.",
+  "facts": [
+   "rds-multi-az-cluster-native-replication-failover-target",
+   "rds-multi-az-cluster-failover-time",
+   "rds-multi-az-cluster-writer-reader-endpoints",
+   "rds-multi-az-instance-standby-no-reads",
+   "rds-multi-az-instance-failover-time",
+   "rds-compare-failover-vs-promote",
+   "rds-read-replica-promote-reboot-minutes",
+   "rds-decision-guide-rehost-ec2-tasks",
+   "rds-multi-az-cluster-three-azs-all-read",
+   "rds-multi-az-cluster-engines-mysql-postgresql"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-operationally-efficient"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the deployment option that is MOST operationally efficient.",
+    "I mark the constraints: RDS for PostgreSQL, automatic failover that typically finishes in under a minute, and standby capacity that serves the dashboard reads through a separate endpoint.",
+    "Before I look at the options, I predict a Multi-AZ DB cluster, because its two reader DB instances are automatic failover targets that also serve reads, and its failover typically takes under 35 seconds.",
+    "I remove the Multi-AZ DB instance, because its standby serves no reads and its failover typically takes 60 to 120 seconds. I remove the read replicas with a script, because a replica is promoted manually and promotion takes several minutes or longer.",
+    "Between the Multi-AZ DB cluster and PostgreSQL on EC2 the difference is who runs the replication and the failover; the stem says MOST operationally efficient, so the managed cluster wins over a design that the team builds and operates.",
+    "Check: the Multi-AZ DB cluster runs on PostgreSQL, fails over automatically in under a minute, serves the dashboards from its reader endpoint and needs no scripts. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ },
+ {
+  "id": "rds-q010",
+  "section": "2-deep.md#manual-snapshots-stay-until-you-delete-them-and-can-leave-the-region",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": [
+   "4.3.K4",
+   "4.3.S1"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "long-term-retention-manual-snapshot",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company runs an order database on an Amazon RDS for MySQL Multi-AZ DB instance. Automated backups are turned on, with a backup retention period of 7 days. The company has no manual DB snapshots. A new regulation mandates that the company retain a copy of the database as it is today for 7 years. What should a solutions architect do to meet this requirement?",
+  "keywords": [
+   "retain a copy of the database as it is today",
+   "for 7 years"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Rely on the standby DB instance of the Multi-AZ deployment, which keeps a second copy of all of the data in another Availability Zone.",
+    "correct": false,
+    "why": "The standby changes with every write, because writes are [concurrent on the primary and standby](../facts/rds.md#rds-faq-multiaz-replication-synchronous), so it keeps no copy of the database as it is today.",
+    "concept": "multi-az-standby-as-backup",
+    "trap": "rds-trap-multi-az-is-a-backup",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Roll back the existing DB instance in place to an earlier point in time, so that the application can keep using the same endpoint.",
+    "correct": false,
+    "why": "RDS restores by [creating a new DB instance](../facts/rds.md#rds-pitr-new-instance-within-retention), not by a rollback in place, and a rollback would keep no copy for 7 years.",
+    "concept": "in-place-rollback",
+    "trap": "rds-trap-restore-overwrites-instance",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Restore the database to a point in time as a new DB instance, copy back the needed data, and delete the new instance.",
+    "correct": false,
+    "why": "The new DB instance is deleted at the end, so nothing is kept, and automated backups are kept for [between 0 and 35 days](../facts/rds.md#rds-backup-retention-range).",
+    "concept": "point-in-time-restore",
+    "trap": null,
+    "misconception": "a short-term restore also keeps a long-term copy",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Take a manual DB snapshot of the DB instance now, and keep the snapshot until the company decides to delete it.",
+    "correct": true,
+    "why": "Manual snapshots [aren't subject to the backup retention period](../facts/rds.md#rds-manual-snapshots-dont-expire), so the copy of today's database stays until the company deletes it.",
+    "concept": "manual-snapshot",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Manual DB snapshots are [kept until you explicitly delete them](../facts/rds.md#rds-faq-snapshots-user-initiated-kept-until-deleted), while automated backups last [between 0 and 35 days](../facts/rds.md#rds-backup-retention-range). A snapshot taken now holds the database as it is today, and it outlives the 7-day automated backups, so it meets the regulation.",
+  "takeaway": "Keep a copy for years: a manual snapshot. Automated backups expire with their retention period.",
+  "twin": "If the stem said \"Two hours ago, an engineer deleted a table by mistake\" instead: the point-in-time restore to a new DB instance, which reaches [any second during your retention period](../facts/rds.md#rds-faq-pitr-any-second-latest-restorable).",
+  "say": "A copy to keep for years is a manual snapshot, because manual snapshots do not expire.",
+  "facts": [
+   "rds-faq-multiaz-replication-synchronous",
+   "rds-pitr-new-instance-within-retention",
+   "rds-backup-retention-range",
+   "rds-manual-snapshots-dont-expire",
+   "rds-faq-snapshots-user-initiated-kept-until-deleted",
+   "rds-faq-pitr-any-second-latest-restorable"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-retain",
+   "ee-mandates"
+  ],
+  "twin_of": "rds-q003"
+ },
+ {
+  "id": "rds-q015",
+  "section": "2-deep.md#the-instance-class-sets-compute-and-the-storage-type-sets-iops",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": [
+   "3.3.K4"
+  ],
+  "topics": [
+   "databases",
+   "performance",
+   "storage"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "provisioned-iops-for-oltp-latency",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LOWEST latency",
+  "stem": "A company runs a mission-critical transactional (OLTP) database on Amazon RDS for PostgreSQL. The DB instance uses a general-purpose instance class and General Purpose SSD (gp3) storage. At peak, the workload performs many small random writes, and commit times vary with the storage response time. The company needs consistent, low storage latency for this workload. Which storage configuration will provide the LOWEST latency for the database storage?",
+  "keywords": [
+   "consistent, low storage latency",
+   "many small random writes",
+   "LOWEST latency"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Keep General Purpose SSD (gp3) storage, and turn on storage autoscaling so that RDS adds storage before each peak.",
+    "correct": false,
+    "why": "When free space runs low, [it automatically scales up your storage](../facts/rds.md#rds-storage-autoscaling-unpredictable), but gp3 latency stays [single-digit millisecond, provided consistently 99% of the time](../facts/rds.md#rds-storage-latency-by-type).",
+    "concept": "storage-autoscaling",
+    "trap": null,
+    "misconception": "storage autoscaling makes the storage faster",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Move the storage to a larger General Purpose SSD (gp2) volume, so that the baseline IOPS grow with the volume size.",
+    "correct": false,
+    "why": "The gp2 baseline grows at [3 IOPS for each GiB](../facts/rds.md#rds-storage-gp2-baseline-per-gib), but its latency stays [single-digit millisecond, provided consistently 99% of the time](../facts/rds.md#rds-storage-latency-by-type).",
+    "concept": "gp2-size-for-iops",
+    "trap": "ebs-trap-grow-gp-volume-for-iops",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Move the storage to Provisioned IOPS SSD (io2 Block Express), and provision the IOPS rate that the peak workload needs.",
+    "correct": true,
+    "why": "io2 Block Express gives [sub-millisecond, provided consistently 99.9% of the time](../facts/rds.md#rds-storage-latency-by-type) latency, and Provisioned IOPS fits [high-performance OLTP workloads](../facts/rds.md#rds-storage-choice-oltp-moderate).",
+    "concept": "provisioned-iops-io2",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Change the DB instance to a memory-optimized instance class, and keep the General Purpose SSD (gp3) storage as it is.",
+    "correct": false,
+    "why": "More memory helps reads when the working set [resides almost completely in memory](../facts/rds.md#rds-bp-working-set-in-memory), but each commit still waits for the gp3 storage.",
+    "concept": "memory-optimized-class",
+    "trap": null,
+    "misconception": "more memory lowers the latency of storage writes",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Provisioned IOPS storage is built for [low I/O latency and consistent I/O throughput](../facts/rds.md#rds-storage-piops-for-production). Each commit waits for the storage, so the storage type sets the commit time. More memory or more capacity leaves the gp3 latency class as it is.",
+  "takeaway": "Consistent sub-millisecond storage latency for OLTP: Provisioned IOPS SSD (io2 Block Express).",
+  "twin": "If the stem said \"a development database with moderate I/O and a small budget\" instead: General Purpose SSD (gp3), which is [best suited for development and testing environments](../facts/rds.md#rds-storage-gp-for-dev-test).",
+  "say": "Consistent low storage latency for OLTP points to Provisioned IOPS on io2 Block Express.",
+  "facts": [
+   "rds-storage-autoscaling-unpredictable",
+   "rds-storage-latency-by-type",
+   "rds-storage-gp2-baseline-per-gib",
+   "rds-storage-choice-oltp-moderate",
+   "rds-bp-working-set-in-memory",
+   "rds-storage-piops-for-production",
+   "rds-storage-gp-for-dev-test"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-transactional",
+   "ee-lowest-latency",
+   "ee-mission-critical"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q017",
+  "section": "2-deep.md#the-instance-class-sets-compute-and-the-storage-type-sets-iops",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": [
+   "4.3.S2"
+  ],
+  "topics": [
+   "databases",
+   "cost"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "dev-database-stop-start-cost",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective way",
+  "stem": "A development team uses an Amazon RDS for PostgreSQL DB instance for testing from 08:00 to 18:00 on weekdays. The schedule is predictable, and nobody uses the DB instance at night or on weekends. The data in the database must stay between working days, and the team wants no manual steps each day. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "nobody uses the DB instance at night or on weekends",
+   "The data in the database must stay",
+   "MOST cost-effective way"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Stop the DB instance every Friday evening and start it every Monday morning, and keep it running on weekday nights.",
+    "correct": false,
+    "why": "It removes the weekend hours. A stopped DB instance is billed for storage [but not for DB instance hours](../facts/rds.md#rds-faq-billing-stopped-instance), and this design still pays for every weekday night.",
+    "concept": "weekend-stop",
+    "trap": null,
+    "misconception": "stopping the DB instance at weekends removes most of the idle cost",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Use an automated schedule that stops the DB instance every evening and starts it again every working morning.",
+    "correct": true,
+    "why": "While it is stopped, [you're not charged for DB instance hours](../facts/rds.md#rds-stop-billing), and each stop lasts far less than [7 consecutive days](../facts/rds.md#rds-stop-max-seven-days).",
+    "concept": "scheduled-stop-start",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Buy a three-year Reserved DB instance for the instance class, and keep the DB instance running all day, every day.",
+    "correct": false,
+    "why": "A reservation is a [one or three year term](../facts/rds.md#rds-faq-ri-terms-one-or-three-year) commitment that pays for every hour, but this DB instance is idle most hours of each week.",
+    "concept": "reserved-db-instance",
+    "trap": null,
+    "misconception": "a commitment discount is cheaper than stopping an instance that is idle most of the week",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Delete the DB instance every evening without a final snapshot, and restore it every morning from its automated backups.",
+    "correct": false,
+    "why": "Without a final snapshot, [all automated backups are deleted](../facts/rds.md#rds-delete-instance-automated-backups-deleted) with the DB instance, so nothing is left to restore in the morning.",
+    "concept": "delete-and-restore",
+    "trap": "rds-trap-automated-backups-survive-delete",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The DB instance is idle every night and every weekend. RDS bills a stopped DB instance for storage [but not for DB instance hours](../facts/rds.md#rds-faq-billing-stopped-instance), so a daily stop and start removes the instance cost of every idle period. A schedule does this with no manual steps, and the data stays in the stopped DB instance.",
+  "takeaway": "Idle every night and weekend on a known schedule: stop and start the DB instance automatically.",
+  "twin": "If the stem said \"the database serves production traffic all day, every day\" instead: a Reserved DB instance, a [one or three year term](../facts/rds.md#rds-faq-ri-terms-one-or-three-year) commitment for steady use.",
+  "say": "A database that sits idle every night should be stopped on a schedule, because a stopped instance pays no instance hours.",
+  "facts": [
+   "rds-faq-billing-stopped-instance",
+   "rds-stop-billing",
+   "rds-stop-max-seven-days",
+   "rds-faq-ri-terms-one-or-three-year",
+   "rds-delete-instance-automated-backups-deleted"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-predictable"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q019",
+  "section": "2-deep.md#a-multi-az-db-instance-copies-every-write-to-a-standby-synchronously",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": [
+   "3.3.S2"
+  ],
+  "topics": [
+   "databases",
+   "resilience"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "blue-green-for-major-upgrade",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a production database on an Amazon RDS for MySQL Multi-AZ DB instance. The company must upgrade the database to a new major engine version. Before the switch, the team wants to test the new version on a copy of the database that stays in sync with production. The switch must cause minimal downtime. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "stays in sync with production",
+   "minimal downtime",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Upgrade the engine version in place, because the Multi-AZ deployment upgrades the standby first and then fails over to it.",
+    "correct": false,
+    "why": "An engine upgrade [modifies both primary and secondary DB instances](../facts/rds.md#rds-multi-az-engine-upgrade-both-down), and it [causes downtime until the upgrade is complete](../facts/rds.md#rds-multi-az-engine-upgrade-both-down).",
+    "concept": "in-place-engine-upgrade",
+    "trap": "rds-trap-multi-az-hides-upgrade-downtime",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Take a DB snapshot, restore it to a new DB instance, upgrade the new DB instance, and move the application to it.",
+    "correct": false,
+    "why": "A copy made by [restoring from the DB snapshot](../facts/rds.md#rds-faq-test-upgrade-on-restored-copy) is good for a test, but it receives no production writes after the snapshot.",
+    "concept": "snapshot-restore-upgrade",
+    "trap": null,
+    "misconception": "a copy restored from a snapshot stays in sync with production",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Use AWS Database Migration Service to replicate the data to a new DB instance on the new version, test it, and then cut over.",
+    "correct": false,
+    "why": "It can work, but the team builds, runs and cuts over the replication itself, which a blue/green deployment does for the team.",
+    "concept": "dms-replication-upgrade",
+    "trap": null,
+    "misconception": "builds its own replication for an upgrade that RDS can stage",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create an Amazon RDS Blue/Green Deployment, upgrade the green environment to the new version, test it, and then switch over.",
+    "correct": true,
+    "why": "The green environment [stays in sync with the current production environment](../facts/rds.md#rds-blue-green-staging-in-sync), and blue/green deployments suit [major or minor version database engine upgrades](../facts/rds.md#rds-faq-blue-green-use-cases).",
+    "concept": "blue-green-deployment",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "An engine upgrade needs downtime, [even for Multi-AZ instances](../facts/rds.md#rds-faq-upgrade-downtime-even-multiaz), and AWS advises to minimize it by [using a blue/green deployment](../facts/rds.md#rds-engine-upgrade-downtime-blue-green). The switch has [short, predictable downtime](../facts/rds.md#rds-faq-blue-green-use-cases), and RDS keeps the green copy in sync, so the team runs no replication of its own.",
+  "takeaway": "Major upgrade, tested on a synced copy, short switch: an RDS Blue/Green Deployment.",
+  "twin": "If the stem said \"a minor engine version, and a short outage in the maintenance window is acceptable\" instead: an in-place upgrade with [Auto Minor Version Upgrade](../facts/rds.md#rds-faq-auto-minor-version-upgrade).",
+  "say": "A major upgrade tested on a synced copy with a short switch points to a Blue/Green Deployment.",
+  "facts": [
+   "rds-multi-az-engine-upgrade-both-down",
+   "rds-faq-test-upgrade-on-restored-copy",
+   "rds-blue-green-staging-in-sync",
+   "rds-faq-blue-green-use-cases",
+   "rds-faq-upgrade-downtime-even-multiaz",
+   "rds-engine-upgrade-downtime-blue-green",
+   "rds-faq-auto-minor-version-upgrade"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-minimal-downtime"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q021",
+  "section": "2-deep.md#rds-proxy-keeps-client-connections-open-while-the-database-fails-over",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": [
+   "4.3.K6"
+  ],
+  "topics": [
+   "databases",
+   "cost",
+   "performance"
+  ],
+  "services": [
+   "rds-proxy",
+   "rds",
+   "lambda"
+  ],
+  "concept": "proxy-not-needed-with-app-pool",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective way",
+  "stem": "A company runs a latency-sensitive application on two Amazon EC2 instances. The application reads and writes orders through its own pool of 20 long-lived connections to an Amazon RDS for PostgreSQL DB instance. The number of connections stays far below the limit of the DB instance. An architect proposes Amazon RDS Proxy for every database of the company. The application needs low latency for every query. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "its own pool of 20 long-lived connections",
+   "low latency for every query",
+   "MOST cost-effective way"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Keep the application connected directly to the DB instance endpoint, and keep using the connection pool of the application.",
+    "correct": true,
+    "why": "The application already pools its connections, so a direct connection avoids the average of [5 milliseconds](../facts/rds-proxy.md#rds-proxy-faq-adds-5-ms-connect-directly) that a proxy can add, and the proxy charge.",
+    "concept": "direct-connection",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Put Amazon RDS Proxy in front of the DB instance, because every RDS database needs a proxy to pool its connections.",
+    "correct": false,
+    "why": "A proxy would work, but it is [priced per vCPU per hour](../facts/rds-proxy.md#rds-proxy-pricing-per-vcpu) and adds latency for an application that already pools.",
+    "concept": "rds-proxy",
+    "trap": "rds-trap-proxy-for-every-database",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Move the application to AWS Lambda functions that open a new database connection in each invocation, and remove the EC2 instances.",
+    "correct": false,
+    "why": "Many concurrent functions can [exhaust database connection limits](../facts/lambda.md#lambda-vpc-db-connections-rds-proxy), and a new connection for each invocation adds setup time to each request.",
+    "concept": "lambda-connection-per-invocation",
+    "trap": "lambda-trap-connection-per-invocation",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Create a read replica of the DB instance, and move the connection pool of the application to the read replica endpoint.",
+    "correct": false,
+    "why": "The application also writes orders, and clients have [read-only access to the replica](../facts/rds.md#rds-read-replica-async-read-only); the replica is also a second DB instance to pay for.",
+    "concept": "read-replica-writes",
+    "trap": "rds-trap-replica-accepts-writes",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "RDS Proxy helps applications that [don't have built-in connection pooling mechanisms](../facts/rds-proxy.md#rds-proxy-candidate-no-builtin-pool). This application already keeps its own pool far below the connection limit. AWS notes that the proxy can add [5 milliseconds](../facts/rds-proxy.md#rds-proxy-faq-adds-5-ms-connect-directly) on average, so an application that needs no connection management can connect directly.",
+  "takeaway": "An application with its own pool and few connections connects directly; RDS Proxy would add cost and latency.",
+  "twin": "If the stem said \"thousands of short-lived Lambda invocations open new connections\" instead: RDS Proxy, because functions make [frequent short database connections](../facts/rds-proxy.md#rds-proxy-lambda-connection-pooling).",
+  "say": "This application already pools its connections, so it connects directly and avoids the proxy's latency and cost.",
+  "facts": [
+   "rds-proxy-faq-adds-5-ms-connect-directly",
+   "rds-proxy-pricing-per-vcpu",
+   "lambda-vpc-db-connections-rds-proxy",
+   "rds-read-replica-async-read-only",
+   "rds-proxy-candidate-no-builtin-pool",
+   "rds-proxy-lambda-connection-pooling"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-lowest-latency"
+  ],
+  "twin_of": null
+ }
+]

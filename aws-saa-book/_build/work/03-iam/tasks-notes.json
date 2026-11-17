@@ -1,0 +1,40 @@
+{
+ "by": "tasks-03",
+ "written_at": "2026-10-12",
+ "items": {
+  "iam-t01": "added from exemplar/tasks.json unchanged (frozen Look)",
+  "iam-t02": "added from exemplar/tasks.json unchanged (frozen Try, pass_route true)",
+  "iam-t03": "new Try from brief.tasks[2]; source file _build/work/03-iam/tasks-t03.json"
+ },
+ "iam_t03_changes_from_brief_plan": [
+  "Trust policy names the service principal ec2.amazonaws.com (as iam-t02), not the reader's own account: no account-ID capture and no quote splicing in CloudShell, and no person can assume the role. The role still is never assumed.",
+  "One read-only step added after the boundary is set: get-role with --query Role.PermissionsBoundary.PermissionsBoundaryArn, so the reader sees the boundary on the role before the break step.",
+  "Inline policy allows s3:* on arn:aws:s3:::saa-example-bucket/* (the brief said s3:*; scoped to the example bucket, as in iam-t02).",
+  "Read-only alternative: one simulate-custom-policy command with --permissions-boundary-policy-input-list and three actions (GetObject in both policies: allowed; PutObject only in the identity-based policy and DeleteObject only in the boundary: implicitDeny)."
+ ],
+ "sources_fetched": [
+  "https://docs.aws.amazon.com/cli/latest/reference/iam/put-role-permissions-boundary.html (example 2 sets an AWS managed policy as a role's boundary)",
+  "https://docs.aws.amazon.com/cli/latest/reference/iam/simulate-principal-policy.html",
+  "https://docs.aws.amazon.com/cli/latest/reference/iam/simulate-custom-policy.html",
+  "https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html, put-role-policy, delete-role-policy, delete-role-permissions-boundary, delete-role",
+  "https://docs.aws.amazon.com/IAM/latest/APIReference/API_SimulatePrincipalPolicy.html (an attached boundary is used in the simulation unless another one is passed)",
+  "https://docs.aws.amazon.com/IAM/latest/APIReference/API_EvaluationResult.html",
+  "https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-iam-awsmanpol.html (AmazonS3ReadOnlyAccess 'grants permissions that allow read-only access to Amazon S3')",
+  "https://docs.aws.amazon.com/ARG/latest/userguide/supported-resources.html",
+  "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+ ],
+ "fr_0019_evidence_for_orchestrator": {
+  "request": "fr-0019: Does the Resource Groups Tagging API GetResources operation return IAM roles?",
+  "finding": "Probably no. The Resource Groups and Tag Editor resource table lists AWS::IAM::Role with 'Tag Editor Tagging: No' and 'Tag-based Groups: No' (only 'CloudFormation Stack-based Groups: Yes'), while AWS::IAM::ManagedPolicy, InstanceProfile and the other IAM types are Yes, with a footnote that they are global resources hosted in us-east-1.",
+  "evidence": {
+   "url": "https://docs.aws.amazon.com/ARG/latest/userguide/supported-resources.html",
+   "table_header": "| **Resources** | **Tag Editor Tagging** | **Tag-based Groups** | **CloudFormation Stack-based Groups** |",
+   "row": "| `AWS::IAM::Role` | No | No | Yes² |",
+   "note": "The page is about Tag Editor and tag-based groups, not GetResources by name, so a registrar must decide whether it answers fr-0019. The page https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/supported-services.html saved with no text."
+  },
+  "effect": "If IAM roles are not returned, the verify of iam-t02 and iam-t03 (resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=<id>) prints an empty list even when the role was not deleted: the verify cannot fail.",
+  "suggested_fix_needs_T108_exception": "aws iam list-roles --query \"Roles[?RoleName=='saa-iam-t03'].RoleName\" expects an empty list and exits 0 after the cleanup (better than get-role, which exits non-zero with NoSuchEntity and would count as a failed command in tasks emulate). It does not filter by a tag, so T108 needs the exception named in exemplar/README.md."
+ },
+ "emulate_not_run": "tasks emulate is optional. Its rule 'a break-it step must fail' does not fit the simulator break steps of iam-t02 and iam-t03 (the command exits 0 and prints explicitDeny or implicitDeny), so an emulation would report fail and T114 would then block the tasks gate.",
+ "checks": "tasks lint 03: 0 errors, 0 warnings; tasks check-cli 03 and check-cli 03 --reference: 20 commands ok (awscli 1.46.1). tasks lint 03 --ship fails only T201 because no task is ready yet (the reviewer sets ready)."
+}

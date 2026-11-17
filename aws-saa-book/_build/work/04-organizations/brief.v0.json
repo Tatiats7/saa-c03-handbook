@@ -1,0 +1,2928 @@
+{
+  "chapter": "04",
+  "slug": "organizations",
+  "title": "Organizations, SCPs, Control Tower and RAM",
+  "template": "medium",
+  "services": [
+    "organizations",
+    "control-tower",
+    "ram"
+  ],
+  "written_by": "plan-04",
+  "written_at": "2026-10-11",
+  "note": "Plan stage, run plan-04. Every demand item is a question; no answer is recorded here. 'reuse' lists fact ids that already exist in the canon (mostly verified in chapter 03 IAM, namespace iam/organizations/vpc); miners check each reuse id first and add a new fact only where it does not answer the question. FREQUENCY.md and FRESHNESS.md items appear only as hypotheses ('hypothesis') to check against saved pages. GA after 2026-07-15 is 'not examinable yet' (RULINGS rule 7): RCP quota of 2,000 per organization (2026-07-22), account departure security controls by default (2026-07-10), RAM sharing of EBS volumes (2026-08-20) and EventBridge custom buses (2026-09-24), GuardDuty policies (2026-09-25).",
+  "sources_fetched": 102,
+  "fetch_failures": [
+    {
+      "url": "https://aws.amazon.com/solutions/case-studies/sixth-street-case-study/",
+      "source_id": "www/solutions/case-studies/sixth-street-case-study",
+      "reason": "status 200 but the snapshot is the generic case-study listing page (title 'Customer Success Stories...'; the text 'Sixth Street' is not in it). Demand d113 falls back to the Volkswagen Financial Services and Norstella snapshots; a miner may retry with --revalidate."
+    }
+  ],
+  "guides": {
+    "organizations-userguide": "aws-saa-book/_build/corpus/index/organizations-userguide.json",
+    "controltower-userguide": "aws-saa-book/_build/corpus/index/controltower-userguide.json",
+    "controltower-controlreference": "aws-saa-book/_build/corpus/index/controltower-controlreference.json",
+    "ram-userguide": "aws-saa-book/_build/corpus/index/ram-userguide.json"
+  },
+  "feeds": {
+    "faq": [
+      "aws-saa-book/_build/corpus/faq/organizations.jsonl",
+      "aws-saa-book/_build/corpus/faq/controltower.jsonl",
+      "aws-saa-book/_build/corpus/faq/ram.jsonl"
+    ],
+    "changes": [
+      "aws-saa-book/_build/corpus/changes/organizations.jsonl",
+      "aws-saa-book/_build/corpus/changes/control-tower.jsonl",
+      "aws-saa-book/_build/corpus/changes/ram.jsonl"
+    ],
+    "cases": [
+      "aws-saa-book/_build/work/04-organizations/cases-organizations.txt",
+      "aws-saa-book/_build/work/04-organizations/cases-control-tower.txt",
+      "aws-saa-book/_build/work/04-organizations/cases-ram.txt"
+    ],
+    "work_files": [
+      "urls-1.txt",
+      "urls-2.txt",
+      "urls-3.txt",
+      "urls-4.txt",
+      "fetch-1.txt",
+      "fetch-2.txt",
+      "fetch-3.txt",
+      "fetch-4.txt"
+    ]
+  },
+  "story": {
+    "stage": "3, month 18, order 20",
+    "trigger": "Ostell Bank's questionnaire asks how production is separated from testing. Everything is in one account. Chen joins Callvale to lead security.",
+    "problem": "Callvale runs development, testing and production in one AWS account. The bank requires an isolated production environment and audit logs that operators cannot change. No workload can run outside two approved Regions. The rules must apply to every account, including future accounts.",
+    "choice": "AWS Control Tower with seven accounts in three organizational units, and service control policies.",
+    "qualifier": "least operational overhead",
+    "question": "How do I make sure that even a production administrator cannot turn off the audit log?",
+    "note": "AWS RAM shares the transit gateway of chapter 11 with the workload accounts.",
+    "demand_items": [
+      "d109",
+      "d110",
+      "d111",
+      "d112",
+      "d106",
+      "d087"
+    ]
+  },
+  "orchestrator_focus": [
+    "Security block chapter; reader's weakest domain (Secure 45%).",
+    "Completeness of can-or-cannot facts: SCP/RCP scope (management account, root user, service-linked roles, outside principals), what policies grant, what member accounts can change.",
+    "Comparisons with neighbours: IAM policy vs SCP vs RCP vs permissions boundary vs declarative policy; Control Tower vs Organizations alone vs Config/Security Hub; RAM vs resource-based policy vs cross-account role.",
+    "Changes since mid-2022: SCP full IAM language, SCP quotas 10 / 10,240, RCPs, declarative policies, accounts per organization, Control Tower controls on RCPs and declarative policies, auto-enrollment.",
+    "Displays of number-free facts: at most 8 words copied verbatim from a quote."
+  ],
+  "sources": [
+    "docs/organizations/latest/userguide/orgs_introduction",
+    "docs/organizations/latest/userguide/orgs_getting-started_concepts",
+    "docs/organizations/latest/userguide/orgs_manage_org_support-all-features",
+    "docs/organizations/latest/userguide/orgs-manage_accounts_management",
+    "docs/organizations/latest/userguide/orgs_best-practices_mgmt-acct",
+    "docs/organizations/latest/userguide/orgs-manage_accounts_members",
+    "docs/organizations/latest/userguide/orgs_manage_accounts_create",
+    "docs/organizations/latest/userguide/orgs_manage_accounts_access",
+    "docs/organizations/latest/userguide/orgs_manage_accounts_remove",
+    "docs/organizations/latest/userguide/orgs_manage_accounts_invites",
+    "docs/organizations/latest/userguide/orgs_manage_ous",
+    "docs/organizations/latest/userguide/orgs_manage_policies",
+    "docs/organizations/latest/userguide/orgs_manage_policies_authorization_policies",
+    "docs/organizations/latest/userguide/orgs_manage_policies_scps",
+    "docs/organizations/latest/userguide/orgs_manage_policies_scps_evaluation",
+    "docs/organizations/latest/userguide/orgs_manage_policies_scps_syntax",
+    "docs/organizations/latest/userguide/orgs_manage_policies_scps_examples",
+    "docs/organizations/latest/userguide/orgs_manage_policies_rcps",
+    "docs/organizations/latest/userguide/orgs_manage_policies_rcps_evaluation",
+    "docs/organizations/latest/userguide/orgs_manage_policies_declarative_policies",
+    "docs/organizations/latest/userguide/orgs_manage_policies_inheritance_mgmt",
+    "docs/organizations/latest/userguide/orgs_manage_policies_tag-policies",
+    "docs/organizations/latest/userguide/orgs_manage_policies_backup",
+    "docs/organizations/latest/userguide/orgs_manage_policies_ai-opt-out",
+    "docs/organizations/latest/userguide/orgs_integrate_services",
+    "docs/organizations/latest/userguide/orgs_integrate_delegated_admin",
+    "docs/organizations/latest/userguide/services-that-can-integrate-cloudtrail",
+    "docs/organizations/latest/userguide/services-that-can-integrate-ram",
+    "docs/organizations/latest/userguide/services-that-can-integrate-awsaccountbilling",
+    "docs/organizations/latest/userguide/pricing",
+    "docs/organizations/latest/userguide/orgs_reference_limits",
+    "docs/organizations/latest/userguide/document-history",
+    "docs/organizations/latest/userguide/orgs_best-practices",
+    "docs/organizations/latest/userguide/orgs_manage_accounts_close",
+    "docs/awsaccountbilling/latest/aboutv2/consolidated-billing",
+    "docs/awsaccountbilling/latest/aboutv2/useconsolidatedbilling-effective",
+    "docs/awsaccountbilling/latest/aboutv2/useconsolidatedbilling-credits",
+    "docs/vpc/latest/userguide/vpc-sharing",
+    "docs/controltower/latest/userguide/what-is-control-tower",
+    "docs/controltower/latest/userguide/how-control-tower-works",
+    "docs/controltower/latest/userguide/what-shared",
+    "docs/controltower/latest/userguide/how-controls-work",
+    "docs/controltower/latest/userguide/terminology",
+    "docs/controltower/latest/userguide/account-factory",
+    "docs/controltower/latest/userguide/enroll-account",
+    "docs/controltower/latest/userguide/account-auto-enrollment",
+    "docs/controltower/latest/userguide/drift",
+    "docs/controltower/latest/userguide/region-deny",
+    "docs/controltower/latest/userguide/about-logging",
+    "docs/controltower/latest/userguide/about-extending-governance",
+    "docs/controltower/latest/userguide/aws-multi-account-landing-zone",
+    "docs/controltower/latest/userguide/limits",
+    "docs/controltower/latest/userguide/pricing",
+    "docs/controltower/latest/userguide/doc-history",
+    "docs/controltower/latest/controlreference/controls",
+    "docs/controltower/latest/controlreference/control-behavior",
+    "docs/controltower/latest/controlreference/mandatory-controls",
+    "docs/controltower/latest/controlreference/preventive-controls",
+    "docs/controltower/latest/controlreference/detective-controls",
+    "docs/controltower/latest/controlreference/proactive-controls",
+    "docs/controltower/latest/controlreference/rcp-controls",
+    "docs/controltower/latest/controlreference/declarative-controls",
+    "docs/controltower/latest/controlreference/primary-region-deny-policy",
+    "docs/controltower/latest/controlreference/strongly-recommended-controls",
+    "docs/ram/latest/userguide/what-is",
+    "docs/ram/latest/userguide/shareable",
+    "docs/ram/latest/userguide/getting-started-terms-and-concepts",
+    "docs/ram/latest/userguide/getting-started-sharing",
+    "docs/ram/latest/userguide/getting-started-shared",
+    "docs/ram/latest/userguide/working-with-regional-vs-global",
+    "docs/ram/latest/userguide/working-with-az-ids",
+    "docs/ram/latest/userguide/security-ram-permissions",
+    "docs/ram/latest/userguide/security-scp",
+    "docs/ram/latest/userguide/tshoot-sharing-outside-org",
+    "docs/ram/latest/userguide/service-quotas",
+    "docs/ram/latest/userguide/doc-history",
+    "docs/whitepapers/latest/organizing-your-aws-environment/organizing-your-aws-environment",
+    "docs/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts",
+    "docs/whitepapers/latest/organizing-your-aws-environment/design-principles-for-your-multi-account-strategy",
+    "docs/whitepapers/latest/organizing-your-aws-environment/recommended-ous-and-accounts",
+    "docs/whitepapers/latest/organizing-your-aws-environment/foundational-ous",
+    "docs/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-organizational-units-ous",
+    "docs/whitepapers/latest/organizing-your-aws-environment/how-does-aws-control-tower-establish-your-multi-account-environment",
+    "docs/prescriptive-guidance/latest/security-reference-architecture/introduction",
+    "docs/wellarchitected/latest/security-pillar/sec_securely_operate_aws_account",
+    "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose",
+    "docs/decision-guides/latest/decision-guides/cloud-governance-on-aws-how-to-choose",
+    "www/controltower/pricing",
+    "www/solutions/case-studies/volkswagen-financial-services-case-study",
+    "www/solutions/case-studies/norstella",
+    "docs/awsaccountbilling/latest/aboutv2/ri-turn-off",
+    "docs/controltower/latest/userguide/config-costs",
+    "docs/organizations/latest/userguide/orgs_manage_policies_rcps_syntax",
+    "docs/organizations/latest/userguide/orgs_account_close_policy",
+    "docs/vpc/latest/tgw/share-accept-tgw",
+    "docs/vpc/latest/tgw/acccept-tgw-attach",
+    "docs/vpc/latest/userguide/vpc-share-billing",
+    "docs/vpc/latest/userguide/vpc-share-limitations",
+    "docs/vpc/latest/userguide/security-group-sharing",
+    "www/organizations/faqs",
+    "www/controltower/faqs",
+    "www/ram/faqs"
+  ],
+  "demand": [
+    {
+      "id": "d001",
+      "bullet": "1.1.K1",
+      "question": "What is AWS Organizations, and what does it let an administrator manage centrally across accounts?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-central-manage-govern-accounts"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_introduction",
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d002",
+      "bullet": "1.1.K1",
+      "question": "What are the parts of an organization (management account, member account, root, organizational unit, policy), and how does AWS define each one?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-organization-is-tree-of-accounts",
+        "organizations-ou-is-group-of-accounts",
+        "organizations-management-account-pays-all-charges",
+        "organizations-member-account-one-organization-at-a-time",
+        "organizations-one-root-per-organization"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_getting-started_concepts",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "organizations-one-root-per-organization"
+      ],
+      "revote": [
+        "organizations-one-root-per-organization"
+      ]
+    },
+    {
+      "id": "d003",
+      "bullet": "1.1.K1",
+      "question": "Can the management account of an organization be changed to another account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-management-account-cannot-be-changed"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs",
+        "docs/organizations/latest/userguide/orgs-manage_accounts_management"
+      ]
+    },
+    {
+      "id": "d004",
+      "bullet": "1.1.K1",
+      "question": "What is the difference between the 'all features' and the 'consolidated billing' feature sets, and which capabilities (SCPs, RCPs, declarative policies, IAM Identity Center) need all features?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-all-features-is-default-feature-set",
+        "organizations-consolidated-billing-no-policies-or-integrations",
+        "organizations-all-features-cannot-revert",
+        "organizations-all-features-invited-accounts-must-approve",
+        "organizations-policies-need-all-features",
+        "organizations-rcp-only-with-all-features",
+        "iam-scp-needs-all-features-enabled",
+        "iam-idc-accounts-need-organizations-all-features"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_org_support-all-features",
+        "docs/organizations/latest/userguide/orgs_getting-started_concepts"
+      ],
+      "reuse": [
+        "iam-scp-needs-all-features-enabled",
+        "iam-idc-accounts-need-organizations-all-features"
+      ],
+      "revote": [
+        "organizations-policies-need-all-features"
+      ]
+    },
+    {
+      "id": "d005",
+      "bullet": "1.1.K1",
+      "question": "Can one AWS account be a member of more than one organization at the same time?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-member-account-one-organization-at-a-time"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d006",
+      "bullet": "1.1.K1",
+      "question": "Can an account belong to more than one OU, and can an OU have more than one parent?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-faq-account-one-ou-at-a-time",
+        "organizations-faq-ou-one-parent-ou-at-a-time"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs",
+        "docs/organizations/latest/userguide/orgs_manage_ous"
+      ]
+    },
+    {
+      "id": "d007",
+      "bullet": "1.1.K1",
+      "question": "How many levels deep can OUs be nested under the root?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-ou-max-nesting-five-levels"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "organizations-ou-max-nesting-five-levels"
+      ],
+      "register_note": "register-04: teach the quotas-page wording (five levels of OUs under a root); the FAQ counts the root and accounts in the five levels.",
+      "revote": [
+        "organizations-ou-max-nesting-five-levels"
+      ],
+      "adjudicate_note": "adjudicate-04: removed organizations-faq-hierarchy-five-levels-including-root-and-accounts (rejected or superseded)."
+    },
+    {
+      "id": "d008",
+      "bullet": "1.1.K1",
+      "question": "How many accounts can an organization have by default, and what is the maximum after a quota increase?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-max-accounts-default-10",
+        "organizations-max-accounts-increase-50000",
+        "organizations-change-accounts-10000-2024-08",
+        "organizations-invitations-and-closed-accounts-count-toward-quota"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits",
+        "www/organizations/faqs"
+      ],
+      "hypothesis": "FRESHNESS: 5,000 became 10,000 on 2024-08-14; quota page may say up to 50,000.",
+      "register_note": "mine-numbers+changes: SOURCE CONTRADICTS THE HYPOTHESIS: the current quota page gives a DEFAULT maximum of 10 accounts (adjustable; newly created organizations may get less), with increases granted up to 50,000. The 2024-08-14 history row says up to 10,000 member accounts, doubling the previous limit of 5,000. Teach 10 (default) and 50,000 (ceiling for increases); 5,000 and 10,000 are history."
+    },
+    {
+      "id": "d009",
+      "bullet": "1.1.K1",
+      "question": "How many OUs, roots and policies can an organization have?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-ous-per-organization",
+        "organizations-one-root-per-organization",
+        "organizations-policies-per-organization",
+        "organizations-policy-targets-unlimited",
+        "organizations-tags-per-root-ou-account"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "reuse": [
+        "organizations-ous-per-organization",
+        "organizations-one-root-per-organization",
+        "organizations-policies-per-organization"
+      ],
+      "revote": [
+        "organizations-one-root-per-organization",
+        "organizations-tags-per-root-ou-account"
+      ]
+    },
+    {
+      "id": "d010",
+      "bullet": "1.1.K1",
+      "question": "What are the two ways an account joins an organization (create or invite), and how long does an invitation stay open?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-create-invite-only-from-management-account"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_accounts_invites",
+        "docs/organizations/latest/userguide/orgs_manage_accounts_create",
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "register_note": "mine-behavior+decisions: invitation expiry is numbers lens (organizations-invitation-expires-15-days)"
+    },
+    {
+      "id": "d011",
+      "bullet": "1.1.K1",
+      "question": "Which IAM role does Organizations create in a new member account, what permissions does it have, and who can assume it?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-created-account-gets-access-role",
+        "iam-faq-org-created-account-has-admin-role"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_accounts_access",
+        "docs/organizations/latest/userguide/orgs_manage_accounts_create",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "iam-faq-org-created-account-has-admin-role"
+      ]
+    },
+    {
+      "id": "d012",
+      "bullet": "1.1.K1",
+      "question": "Does an invited (existing) account get the OrganizationAccountAccessRole automatically, or must an administrator create it?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-invited-account-access-role-optional"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_accounts_access"
+      ]
+    },
+    {
+      "id": "d013",
+      "bullet": "1.1.K1",
+      "question": "Can a member account leave or be removed from an organization, and what must it have before it can stand alone?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-remove-account-needs-standalone-info",
+        "organizations-removed-account-not-subject-to-policies",
+        "organizations-removed-account-access-role-not-deleted",
+        "organizations-remove-delegated-admin-deregister-first",
+        "organizations-remove-created-account-wait-four-days",
+        "organizations-scp-deny-leave-and-close-recommended"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_accounts_remove",
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d014",
+      "bullet": "1.1.K1",
+      "question": "Can an account move directly from one organization to another without first becoming standalone?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-direct-account-transfer-by-invitation",
+        "organizations-change-direct-account-transfers-2025-11",
+        "organizations-migration-org-min-age-seven-days",
+        "organizations-migration-created-account-min-age-four-days",
+        "organizations-closed-or-suspended-account-cannot-migrate"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history",
+        "www/organizations/faqs"
+      ],
+      "hypothesis": "What's New 2025-11-19: direct account transfers between organizations. Older questions assume leave-then-accept.",
+      "revote": [
+        "organizations-change-direct-account-transfers-2025-11"
+      ]
+    },
+    {
+      "id": "d015",
+      "bullet": "1.1.K1",
+      "question": "What quotas apply to invitations and to account creation (invitations per day, concurrent account creations)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-invitation-attempts-per-24-hours",
+        "organizations-concurrent-account-creations-5",
+        "organizations-invitation-expires-15-days"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "revote": [
+        "organizations-invitation-attempts-per-24-hours"
+      ]
+    },
+    {
+      "id": "d016",
+      "bullet": "1.1.S4",
+      "question": "What does AWS recommend for the management account (no workloads, limited access), and why do SCPs not protect it?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-keep-resources-out-of-management-account",
+        "control-tower-no-workloads-in-management-account",
+        "organizations-scp-no-effect-on-management-account"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_best-practices_mgmt-acct",
+        "docs/organizations/latest/userguide/orgs-manage_accounts_management"
+      ],
+      "reuse": [
+        "organizations-scp-no-effect-on-management-account",
+        "iam-scp-no-effect-on-management-account"
+      ]
+    },
+    {
+      "id": "d017",
+      "bullet": "1.1.S4",
+      "question": "What is a delegated administrator account, and why use it instead of the management account for security services?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-delegated-admin-for-service-permissions",
+        "organizations-scp-applies-to-delegated-admin-accounts",
+        "organizations-security-tooling-account-delegated-admin"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_integrate_delegated_admin",
+        "docs/organizations/latest/userguide/orgs_integrate_services",
+        "docs/prescriptive-guidance/latest/security-reference-architecture/introduction"
+      ]
+    },
+    {
+      "id": "d018",
+      "bullet": "1.1.K1",
+      "question": "What is trusted access for an integrated service, and which security services work across the organization through it?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-trusted-access-service-acts-on-behalf",
+        "organizations-disable-trusted-access-does-not-block-users"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_integrate_services",
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d019",
+      "bullet": "1.1.S4",
+      "question": "Can users in a member account stop, change or delete an organization trail created by the management account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-org-trail-members-cannot-modify-or-delete",
+        "organizations-org-trail-only-from-management-account"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/services-that-can-integrate-cloudtrail"
+      ],
+      "revote": [
+        "organizations-org-trail-only-from-management-account"
+      ]
+    },
+    {
+      "id": "d020",
+      "bullet": "1.1.K1",
+      "question": "What happens when a member account is closed: for how long can it be reopened, and how many accounts can be closed in a period?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-closed-account-reopen-within-90-days",
+        "organizations-closed-member-account-permanent-after-90-days",
+        "organizations-accounts-closable-per-30-days",
+        "organizations-concurrent-account-closures-3",
+        "organizations-remove-created-account-wait-four-days"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_accounts_close",
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ]
+    },
+    {
+      "id": "d021",
+      "bullet": "1.1.S4",
+      "question": "How can an organization protect member accounts from being closed?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-protect-accounts-from-closure-iam-policy",
+        "organizations-scp-deny-leave-and-close-recommended"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_account_close_policy",
+        "docs/organizations/latest/userguide/orgs_manage_accounts_close"
+      ]
+    },
+    {
+      "id": "d022",
+      "bullet": "1.1.S4",
+      "question": "Which policy types does Organizations support, and which are authorization policies and which are management policies?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-policy-categories-authorization-declarative"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies",
+        "docs/organizations/latest/userguide/orgs_manage_policies_authorization_policies",
+        "www/organizations/faqs"
+      ],
+      "register_note": "mine-behavior+decisions: AWS now calls the second category 'declarative policies' (the brief says 'management policies')"
+    },
+    {
+      "id": "d023",
+      "bullet": "1.1.S4",
+      "question": "What does an authorization policy control compared with a management policy?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-policy-categories-authorization-declarative",
+        "organizations-declarative-policy-control-plane-not-api"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies",
+        "docs/organizations/latest/userguide/orgs_manage_policies_authorization_policies"
+      ]
+    },
+    {
+      "id": "d024",
+      "bullet": "1.1.S4",
+      "question": "Does a service control policy grant permissions, or does it only set the maximum available permissions?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-never-grants-permissions",
+        "iam-scp-limits-permissions-does-not-grant",
+        "organizations-scp-user-without-iam-policy-has-no-access"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "iam-scp-never-grants-permissions",
+        "iam-scp-limits-permissions-does-not-grant",
+        "iam-scp-allow-is-a-filter-not-a-grant"
+      ]
+    },
+    {
+      "id": "d025",
+      "bullet": "1.1.S4",
+      "question": "Do SCPs affect users and roles in the management account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-no-effect-on-management-account",
+        "organizations-scp-applies-to-delegated-admin-accounts"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "organizations-scp-no-effect-on-management-account",
+        "iam-scp-no-effect-on-management-account"
+      ]
+    },
+    {
+      "id": "d026",
+      "bullet": "1.1.S4",
+      "question": "Do SCPs restrict the root user of a member account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-applies-to-member-root-user",
+        "iam-root-user-limited-by-scps-and-rcps"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "iam-scp-applies-to-member-root-user",
+        "iam-root-user-limited-by-scps-and-rcps"
+      ]
+    },
+    {
+      "id": "d027",
+      "bullet": "1.1.S4",
+      "question": "Do SCPs restrict service-linked roles?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-no-effect-on-service-linked-roles",
+        "organizations-scp-no-effect-on-management-account",
+        "organizations-declarative-governs-service-linked-roles-row"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "iam-scp-no-effect-on-service-linked-roles"
+      ]
+    },
+    {
+      "id": "d028",
+      "bullet": "1.1.S4",
+      "question": "What is the FullAWSAccess SCP, and what happens to an account when it is detached and no other Allow remains?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-fullawsaccess-attached-by-default",
+        "organizations-fullawsaccess-removed-blocks-actions",
+        "organizations-scp-disable-type-detaches-all",
+        "iam-scp-faq-empty-scp-denies-all"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_evaluation",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "iam-scp-faq-empty-scp-denies-all"
+      ]
+    },
+    {
+      "id": "d029",
+      "bullet": "1.1.S4",
+      "question": "How are SCPs inherited down the tree: what is the effect of a Deny at any level, and why must an Allow exist at every level from the root to the account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-allow-needed-at-every-level",
+        "organizations-scp-deny-at-any-level-applies-below",
+        "organizations-scp-deny-by-default-model",
+        "organizations-scp-admin-policy-cannot-override"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_evaluation"
+      ]
+    },
+    {
+      "id": "d030",
+      "bullet": "1.1.S4",
+      "question": "What is the difference between a deny-list and an allow-list SCP strategy, and which one does Organizations use by default?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-allow-list-strategy",
+        "organizations-scp-deny-list-strategy",
+        "organizations-scp-examples-coarse-grained-deny-list",
+        "organizations-fullawsaccess-attached-by-default"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_evaluation",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "register_note": "mine-behavior+decisions: default is deny list (FullAWSAccess attached everywhere); the page states the attachment, not the word 'default strategy'"
+    },
+    {
+      "id": "d031",
+      "bullet": "1.1.S4",
+      "question": "Which IAM policy language elements can SCPs use now (Condition, NotAction, Resource ARNs, NotResource, in Allow and Deny)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-change-scp-full-iam-language",
+        "iam-scp-condition-in-allow-and-deny",
+        "iam-scp-resource-element-allow-and-deny"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_syntax",
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "reuse": [
+        "iam-change-scp-full-iam-language",
+        "iam-scp-condition-in-allow-and-deny",
+        "iam-scp-resource-element-allow-and-deny"
+      ],
+      "hypothesis": "FRESHNESS: full IAM language from 2025-09-19; older questions assume Allow statements cannot use conditions or resource ARNs.",
+      "register_note": "mine-numbers+changes: History 2026-06-23 also clarifies that each SCP statement must include a Resource or NotResource element (row 2 of the Organizations history); left to the behavior lens."
+    },
+    {
+      "id": "d032",
+      "bullet": "1.1.S4",
+      "question": "How many SCPs can be attached to one root, OU or account, and how large can one SCP be?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-max-attached-per-entity",
+        "organizations-scp-max-document-size",
+        "iam-change-scp-quotas-doubled-2026-05",
+        "organizations-attachment-limits-direct-only-hard"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "reuse": [
+        "organizations-scp-max-attached-per-entity",
+        "organizations-scp-max-document-size",
+        "iam-change-scp-quotas-doubled-2026-05"
+      ],
+      "hypothesis": "FRESHNESS: 5 and 5,120 became 10 and 10,240 on 2026-05-15 (RCPs stay at 5 and 5,120).",
+      "register_note": "mine-numbers+changes: Quota page confirms 10 per root/OU/account and 10,240 characters."
+    },
+    {
+      "id": "d033",
+      "bullet": "1.1.S4",
+      "question": "Do SCPs restrict principals from outside the organization, or permissions granted through resource-based policies to them?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-not-outside-principals-or-resource-policies",
+        "organizations-rcp-affects-external-principals-scp-only-internal"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "iam-scp-not-outside-principals-or-resource-policies"
+      ]
+    },
+    {
+      "id": "d034",
+      "bullet": "1.1.S4",
+      "question": "What are the effective permissions of a principal when an SCP, an identity-based policy and a permissions boundary all apply?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-faq-effective-permissions-intersection",
+        "iam-scp-boundary-identity-all-must-allow",
+        "organizations-scp-user-without-iam-policy-has-no-access"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_evaluation",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "iam-scp-faq-effective-permissions-intersection",
+        "iam-scp-boundary-identity-all-must-allow",
+        "iam-scp-faq-intersection-example"
+      ]
+    },
+    {
+      "id": "d035",
+      "bullet": "1.1.S4",
+      "question": "Comparison: IAM identity policy vs permissions boundary vs SCP vs RCP: who each applies to, where it is attached, and whether it can grant access.",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-principal-centric-rcp-resource-centric",
+        "organizations-when-scp-when-rcp",
+        "organizations-rcp-affects-external-principals-scp-only-internal",
+        "organizations-declarative-governs-service-linked-roles-row",
+        "organizations-declarative-policy-at-root-includes-management",
+        "iam-scp-boundary-identity-all-must-allow"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_authorization_policies",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps",
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps"
+      ],
+      "reuse": [
+        "iam-rcp-never-grants-limits-resources",
+        "iam-scp-never-grants-permissions"
+      ]
+    },
+    {
+      "id": "d036",
+      "bullet": "1.1.S4",
+      "question": "Which example SCPs does AWS publish for denying Regions outside an approved list (and which global services are exempt), for preventing accounts from leaving the organization, and for protecting CloudTrail, Config and GuardDuty?",
+      "status": "partial-verified",
+      "status_found": "partial",
+      "facts": [
+        "organizations-scp-notaction-region-limit-example",
+        "organizations-scp-deny-leave-and-close-recommended",
+        "control-tower-mandatory-log-archive-bucket-controls",
+        "control-tower-mandatory-cloudtrail-controls-before-lz4",
+        "control-tower-region-deny-exemptions"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_examples"
+      ],
+      "gaps": [
+        "mine-behavior+decisions: AWS example SCPs that protect CloudTrail, Config and GuardDuty are no longer on docs.aws.amazon.com: orgs_manage_policies_scps_examples points to a GitHub repository (not on the allow-list) and orgs_manage_policies_scps_examples_general fetched as an empty page. Searched the corpus for 'StopLogging', 'DeleteTrail' in Organizations pages: none."
+      ],
+      "register_note": "register-04: SCP example library moved to GitHub (not on the allow-list); CloudTrail/Config/GuardDuty protection examples stay unfilled. Use the Control Tower mandatory log-archive and CloudTrail controls instead.",
+      "revote": [
+        "control-tower-mandatory-log-archive-bucket-controls"
+      ]
+    },
+    {
+      "id": "d037",
+      "bullet": "1.1.S4",
+      "question": "How can an SCP exempt an administrator role (condition on the principal ARN) or require tags on resource creation?",
+      "status": "partial-verified",
+      "status_found": "partial",
+      "facts": [
+        "organizations-scp-condition-principal-arn-allow"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_examples",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_syntax"
+      ],
+      "gaps": [
+        "mine-behavior+decisions: An SCP example that requires tags on resource creation (aws:RequestTag) is not on any saved AWS doc page; the example library moved to GitHub. Looked in orgs_manage_policies_scps_syntax, orgs_manage_policies_scps_examples, orgs_manage_policies_scps_examples_general (empty)."
+      ],
+      "register_note": "register-04: no saved AWS page holds an SCP example that requires tags; teach the aws:PrincipalArn exemption only."
+    },
+    {
+      "id": "d038",
+      "bullet": "1.1.S4",
+      "question": "Can the effect of an SCP be tested before it is attached?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-faq-policy-simulator-includes-scps"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "iam-scp-faq-policy-simulator-includes-scps",
+        "iam-policy-simulator-scps-yes-rcps-no"
+      ],
+      "register_note": "mine-faq: reuse; verified in chapter 03"
+    },
+    {
+      "id": "d039",
+      "bullet": "1.1.S4",
+      "question": "Can principals in a member account (including its administrators) change or detach the SCPs that apply to their account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-faq-member-principals-cannot-change-scps",
+        "organizations-scp-admin-policy-cannot-override"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps"
+      ],
+      "reuse": [
+        "iam-scp-faq-member-principals-cannot-change-scps"
+      ]
+    },
+    {
+      "id": "d040",
+      "bullet": "1.1.S4",
+      "question": "What is a resource control policy, and which services does it support?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-rcp-subset-of-services",
+        "iam-rcp-faq-maximum-permissions-on-resources",
+        "organizations-scp-principal-centric-rcp-resource-centric"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "iam-rcp-subset-of-services",
+        "iam-rcp-faq-maximum-permissions-on-resources",
+        "iam-change-rcp-more-services-2026-01"
+      ]
+    },
+    {
+      "id": "d041",
+      "bullet": "1.1.S4",
+      "question": "Who do RCPs apply to: principals outside the organization, the root user, the management account, service-linked roles?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-rcp-applies-to-own-resources-even-external-callers",
+        "organizations-rcp-resource-policy-cannot-override",
+        "organizations-rcp-not-aws-managed-kms-keys",
+        "iam-rcp-applies-to-outside-principals-and-root",
+        "iam-rcp-no-effect-on-management-account",
+        "iam-rcp-no-effect-on-service-linked-roles"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps",
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps_evaluation"
+      ],
+      "reuse": [
+        "iam-rcp-applies-to-outside-principals-and-root",
+        "iam-rcp-no-effect-on-management-account",
+        "iam-rcp-no-effect-on-service-linked-roles"
+      ]
+    },
+    {
+      "id": "d042",
+      "bullet": "1.1.S4",
+      "question": "How many RCPs can be attached per root, OU or account, how large can one be, and how many can an organization have?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-rcp-max-attached-per-entity",
+        "organizations-scp-max-document-size",
+        "organizations-policies-per-organization",
+        "organizations-change-rcp-quota-2000-2026-07",
+        "organizations-attachment-limits-direct-only-hard"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "reuse": [
+        "organizations-rcp-max-attached-per-entity",
+        "organizations-scp-max-document-size",
+        "organizations-policies-per-organization"
+      ],
+      "hypothesis": "What's New 2026-07-22: RCP quota raised to 2,000 per organization (after 2026-07-15: not examinable yet).",
+      "register_note": "mine-numbers+changes: RCP: 5 per entity, 5120 characters, 2000 per organization (2000 since 2026-07-22: not examinable yet; was 1,000).",
+      "revote": [
+        "organizations-change-rcp-quota-2000-2026-07"
+      ]
+    },
+    {
+      "id": "d043",
+      "bullet": "1.1.S4",
+      "question": "Comparison: SCP vs RCP: identity side vs resource side, and how the two build a data perimeter with aws:PrincipalOrgID and aws:ResourceOrgID.",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-rcp-independent-data-perimeter",
+        "organizations-scp-controls-which-resources-identities-access",
+        "iam-data-perimeter-identity-rcp-principalorgid",
+        "iam-data-perimeter-resource-scp-resourceorgid"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "iam-data-perimeter-identity-rcp-principalorgid",
+        "iam-data-perimeter-resource-scp-resourceorgid",
+        "iam-rcp-allow-all-still-needs-iam-policies"
+      ]
+    },
+    {
+      "id": "d044",
+      "bullet": "1.1.S4",
+      "question": "What is the RCPFullAWSAccess policy, and can it be detached?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-rcpfullawsaccess-cannot-detach",
+        "organizations-rcp-allow-only-in-rcpfullawsaccess"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps",
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps_syntax"
+      ]
+    },
+    {
+      "id": "d045",
+      "bullet": "1.1.S4",
+      "question": "What is a declarative policy, which service settings can it enforce (for example VPC Block Public Access, snapshot block public access, IMDS defaults, Allowed AMIs, serial console), and how does it differ from an SCP?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-declarative-policy-maintained-for-new-features",
+        "organizations-declarative-policy-blocks-vpc-public-access",
+        "organizations-declarative-policy-control-plane-not-api",
+        "organizations-ec2-declarative-policy-attributes",
+        "organizations-ec2-policy-snapshot-bpa",
+        "organizations-ec2-policy-custom-error-messages",
+        "organizations-declarative-new-accounts-inherit-detach-rolls-back"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_declarative_policies",
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "vpc-bpa-declarative-policy-change"
+      ],
+      "hypothesis": "FRESHNESS: declarative policies launched 2024-12-01."
+    },
+    {
+      "id": "d046",
+      "bullet": "1.1.S4",
+      "question": "How does AWS say to think about declarative policies, SCPs and RCPs together?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-scp-principal-centric-rcp-resource-centric",
+        "organizations-faq-declarative-customizable-error-messages",
+        "organizations-faq-declarative-no-scp-updates-for-new-apis",
+        "organizations-faq-declarative-plus-scp-additional-layer",
+        "organizations-faq-config-detective-and-proactive-rules-alongside",
+        "organizations-faq-declarative-prevents-noncompliant-actions"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d047",
+      "bullet": "4.1.K2",
+      "question": "What do tag policies do, and do they on their own prevent creating a resource without a required tag?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-tag-policy-standardizes-tags",
+        "organizations-tag-policy-enforced-blocks-noncompliant-tagging"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_tag-policies"
+      ],
+      "register_note": "mine-behavior+decisions: untagged resources are not evaluated, so a tag policy alone does not require a tag at creation"
+    },
+    {
+      "id": "d048",
+      "bullet": "1.1.S4",
+      "question": "What do backup policies do across an organization?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-backup-policy-effective-plan-immutable"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_backup"
+      ]
+    },
+    {
+      "id": "d049",
+      "bullet": "1.1.S4",
+      "question": "What do AI services opt-out policies do?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-ai-opt-out-policy"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_ai-opt-out"
+      ],
+      "revote": [
+        "organizations-ai-opt-out-policy"
+      ]
+    },
+    {
+      "id": "d050",
+      "bullet": "1.1.S4",
+      "question": "How are management policies inherited and combined into an effective policy (inheritance operators), compared with SCP inheritance?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-declarative-inheritance-root-ou-account",
+        "organizations-declarative-effective-policy"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_inheritance_mgmt"
+      ],
+      "register_note": "mine-behavior+decisions: inheritance operators are on a sub-page (policy-operators) not saved; the effective-policy rule is covered"
+    },
+    {
+      "id": "d051",
+      "bullet": "1.1.S4",
+      "question": "At which levels can a policy be attached (root, OU, account)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-faq-attach-at-root-ou-or-account"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs",
+        "docs/organizations/latest/userguide/orgs_manage_policies"
+      ],
+      "reuse": [
+        "iam-scp-rcp-attach-levels",
+        "iam-scp-faq-attach-at-root-ou-or-account",
+        "iam-scp-faq-targets-accounts-and-ous"
+      ],
+      "register_note": "mine-faq: reuse; verified in chapter 03"
+    },
+    {
+      "id": "d052",
+      "bullet": "4.1.K2",
+      "question": "What is consolidated billing, and which account pays for the usage of member accounts?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-management-account-pays-all-charges",
+        "organizations-billing-management-account-charged-monthly",
+        "organizations-consolidated-billing-combined-usage-shares-discounts"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/awsaccountbilling/latest/aboutv2/consolidated-billing",
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d053",
+      "bullet": "4.1.K2",
+      "question": "How does consolidated billing combine usage across accounts for volume pricing tiers?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-billing-treats-accounts-as-one-for-tiers",
+        "organizations-consolidated-billing-combined-usage-shares-discounts",
+        "organizations-free-tier-applies-to-total-org-usage"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/awsaccountbilling/latest/aboutv2/consolidated-billing",
+        "docs/awsaccountbilling/latest/aboutv2/useconsolidatedbilling-effective"
+      ]
+    },
+    {
+      "id": "d054",
+      "bullet": "4.1.K2",
+      "question": "Are Reserved Instance and Savings Plans discounts shared across the accounts of an organization, and can the management account turn sharing off?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-management-account-controls-ri-sp-sharing",
+        "organizations-ri-sp-benefit-owner-account-first"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/awsaccountbilling/latest/aboutv2/ri-turn-off",
+        "docs/awsaccountbilling/latest/aboutv2/useconsolidatedbilling-effective"
+      ]
+    },
+    {
+      "id": "d055",
+      "bullet": "4.1.K2",
+      "question": "How are AWS credits shared across accounts in an organization?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-credit-sharing-payer-controls",
+        "organizations-credit-sharing-on-by-default"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/awsaccountbilling/latest/aboutv2/useconsolidatedbilling-credits"
+      ]
+    },
+    {
+      "id": "d056",
+      "bullet": "4.1.K2",
+      "question": "Does the bill reflect the OU structure, and what does AWS suggest for cost reporting by group?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-faq-bill-does-not-reflect-ou-structure",
+        "organizations-faq-cost-allocation-tags-in-consolidated-bill"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d057",
+      "bullet": "4.1.K2",
+      "question": "What does AWS Organizations cost?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-no-additional-charge",
+        "organizations-faq-management-account-owner-pays-all-usage"
+      ],
+      "lens": "numbers",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs",
+        "docs/organizations/latest/userguide/pricing"
+      ]
+    },
+    {
+      "id": "d058",
+      "bullet": "4.1.K2",
+      "question": "What is Billing Transfer for multi-organization billing, and is it examinable?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-change-billing-transfer-2025-11"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "hypothesis": "What's New 2025-11-19: Billing Transfer launched. Low exam relevance; record date only."
+    },
+    {
+      "id": "d059",
+      "bullet": "4.1.K2",
+      "question": "In an organization, which account activates cost allocation tags so they apply to all member accounts?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-cost-allocation-tags-management-account"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/awsaccountbilling/latest/aboutv2/consolidated-billing",
+        "docs/organizations/latest/userguide/services-that-can-integrate-awsaccountbilling"
+      ],
+      "note": "Shared with chapter 41 (cost); fetch account-tags-cost-allocation on demand if the two pages are silent."
+    },
+    {
+      "id": "d060",
+      "bullet": "1.1.S4",
+      "question": "What is AWS Control Tower, what is a landing zone, and how is Control Tower related to Organizations?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-sets-up-governs-multi-account",
+        "control-tower-extends-organizations",
+        "control-tower-landing-zone-definition"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/what-is-control-tower",
+        "www/controltower/faqs",
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d061",
+      "bullet": "1.1.S4",
+      "question": "Who should use Control Tower, according to AWS?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-faq-who-should-use",
+        "control-tower-faq-full-landing-zone-or-controls-only"
+      ],
+      "lens": "faq",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/faqs"
+      ]
+    },
+    {
+      "id": "d062",
+      "bullet": "1.1.S4",
+      "question": "What does Control Tower create when it sets up a landing zone: which shared accounts (management, log archive, audit) and which OUs?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-landing-zone-setup-actions",
+        "control-tower-shared-accounts",
+        "control-tower-log-archive-and-audit-roles"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/how-control-tower-works",
+        "docs/controltower/latest/userguide/what-shared",
+        "docs/whitepapers/latest/organizing-your-aws-environment/how-does-aws-control-tower-establish-your-multi-account-environment"
+      ],
+      "register_note": "mine-behavior+decisions: landing zone 4.0 no longer requires a Security OU (how-control-tower-works); changes lens records it",
+      "revote": [
+        "control-tower-landing-zone-setup-actions"
+      ]
+    },
+    {
+      "id": "d063",
+      "bullet": "1.1.S4",
+      "question": "How does Control Tower centralize logs (organization trail, log archive bucket, AWS Config), and who can change them?",
+      "status": "partial-verified",
+      "status_found": "found",
+      "gap": "close-facts-04: control-tower-organization-level-trail was rejected after the second vote (entail partial, currency unsure: the claim dated the optional CloudTrail integration to landing zone 4.0, while the guide says opt-in/opt-out of organization-level trails exists from 3.0, and on opt-out Control Tower still creates the trail with status Off). The remaining facts cover what is logged and who may change the log archive; the organization trail itself has no verified fact. Do not state it without a new verified fact.",
+      "facts": [
+        "control-tower-logs-all-actions-including-management",
+        "control-tower-mandatory-log-archive-bucket-controls",
+        "control-tower-log-archive-and-audit-roles"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/about-logging",
+        "docs/controltower/latest/userguide/what-shared"
+      ],
+      "revote": [
+        "control-tower-organization-level-trail",
+        "control-tower-logs-all-actions-including-management",
+        "control-tower-mandatory-log-archive-bucket-controls"
+      ]
+    },
+    {
+      "id": "d064",
+      "bullet": "1.1.S4",
+      "question": "What is a control (formerly guardrail), and what are preventive, detective and proactive controls and the mechanisms behind each (SCPs, RCPs, declarative policies, AWS Config rules, CloudFormation hooks)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-control-types-mechanisms",
+        "control-tower-preventive-detective-proactive-defined",
+        "control-tower-control-applies-to-whole-ou",
+        "control-tower-guardrail-renamed-control",
+        "control-tower-preventive-not-on-management-account"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/how-controls-work",
+        "docs/controltower/latest/controlreference/controls",
+        "docs/controltower/latest/userguide/terminology"
+      ]
+    },
+    {
+      "id": "d065",
+      "bullet": "1.1.S4",
+      "question": "What do the control guidance levels mandatory, strongly recommended and elective mean?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-guidance-levels",
+        "control-tower-strongly-recommended-elective-off-by-default"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/controlreference/controls",
+        "docs/controltower/latest/controlreference/control-behavior",
+        "docs/controltower/latest/controlreference/strongly-recommended-controls"
+      ]
+    },
+    {
+      "id": "d066",
+      "bullet": "1.1.S4",
+      "question": "Can mandatory controls be turned off, and which mandatory controls protect the log archive and CloudTrail configuration?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-mandatory-controls-cannot-change",
+        "control-tower-mandatory-log-archive-bucket-controls",
+        "control-tower-mandatory-cloudtrail-controls-before-lz4",
+        "control-tower-lz4-mandatory-not-default"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/controlreference/mandatory-controls"
+      ],
+      "register_note": "mine-behavior+decisions: source contradiction to flag for writers: mandatory-controls page says mandatory controls 'can't be deactivated' and are applied by default; control-behavior page says from landing zone 4.0 they are no longer applied by default | register-04: mandatory controls are always applied up to landing zone 3.x; from landing zone 4.0 they are no longer applied by default. Teach both with the version.",
+      "revote": [
+        "control-tower-mandatory-controls-cannot-change",
+        "control-tower-mandatory-log-archive-bucket-controls"
+      ]
+    },
+    {
+      "id": "d067",
+      "bullet": "1.1.S4",
+      "question": "What does the Region deny control do, which actions or services does it exempt, and can it be applied to the whole landing zone or to one OU?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-two-region-deny-controls",
+        "control-tower-region-deny-landing-zone-not-per-ou",
+        "control-tower-region-deny-exemptions",
+        "control-tower-region-deny-blocks-unlisted-regions",
+        "control-tower-region-deny-existing-resources-inaccessible",
+        "control-tower-region-deny-elective-preventive"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/region-deny",
+        "docs/controltower/latest/controlreference/primary-region-deny-policy"
+      ],
+      "revote": [
+        "control-tower-region-deny-elective-preventive"
+      ]
+    },
+    {
+      "id": "d068",
+      "bullet": "1.1.S4",
+      "question": "What is Account Factory, how does it provision a new account with a baseline, and what is Account Factory for Terraform?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-account-factory-template",
+        "control-tower-account-factory-on-service-catalog",
+        "control-tower-new-account-vpc-replaced-enrolled-kept"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/account-factory"
+      ],
+      "register_note": "mine-behavior+decisions: Account Factory for Terraform: only the FAQ fact control-tower-faq-cfct-and-aft-customizations (faq lens); the account-factory page does not describe AFT",
+      "revote": [
+        "control-tower-new-account-vpc-replaced-enrolled-kept"
+      ]
+    },
+    {
+      "id": "d069",
+      "bullet": "1.1.S4",
+      "question": "Can Control Tower govern an existing organization: how are existing OUs registered and existing accounts enrolled?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-existing-org-one-landing-zone",
+        "control-tower-register-ous-enroll-accounts",
+        "control-tower-accounts-outside-not-bound",
+        "control-tower-enrollment-applies-baseline-config",
+        "control-tower-enroll-needs-execution-role-no-config"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/about-extending-governance",
+        "docs/controltower/latest/userguide/enroll-account",
+        "www/controltower/faqs"
+      ],
+      "revote": [
+        "control-tower-accounts-outside-not-bound",
+        "control-tower-enrollment-applies-baseline-config"
+      ]
+    },
+    {
+      "id": "d070",
+      "bullet": "1.1.S4",
+      "question": "What is automatic account enrollment, and what happens to an account moved into a registered OU?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-auto-enrollment-baseline-from-destination-ou",
+        "control-tower-change-auto-enrollment-2025-10"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/account-auto-enrollment",
+        "docs/controltower/latest/userguide/doc-history"
+      ],
+      "hypothesis": "Document history 2025-10-15: automatic account enrollment."
+    },
+    {
+      "id": "d071",
+      "bullet": "1.1.S4",
+      "question": "What is drift in Control Tower, how is it detected, and how is it resolved?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-drift-detected-automatically",
+        "control-tower-drift-reset-landing-zone",
+        "control-tower-moved-account-keeps-old-controls"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/drift"
+      ],
+      "revote": [
+        "control-tower-drift-detected-automatically",
+        "control-tower-drift-reset-landing-zone"
+      ]
+    },
+    {
+      "id": "d072",
+      "bullet": "1.1.S4",
+      "question": "What are the Control Tower quotas (accounts per OU, concurrent operations, OUs) and limitations?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-one-operation-at-a-time",
+        "control-tower-100-concurrent-control-operations",
+        "control-tower-5-concurrent-account-operations",
+        "control-tower-10-scps-per-ou",
+        "control-tower-10000-accounts-per-landing-zone",
+        "control-tower-ou-over-1000-accounts-cannot-register",
+        "control-tower-enablecontrol-10-in-progress",
+        "control-tower-change-100-concurrent-control-ops-2024-05"
+      ],
+      "lens": "numbers",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/limits"
+      ],
+      "hypothesis": "Document history 2024-08-30: up to 1,000 accounts per OU; 2024-05-20: up to 100 concurrent control operations.",
+      "register_note": "mine-numbers+changes: No 'OUs per landing zone' quota is stated on the limits page.",
+      "revote": [
+        "control-tower-one-operation-at-a-time",
+        "control-tower-100-concurrent-control-operations",
+        "control-tower-5-concurrent-account-operations",
+        "control-tower-10-scps-per-ou",
+        "control-tower-10000-accounts-per-landing-zone",
+        "control-tower-enablecontrol-10-in-progress"
+      ]
+    },
+    {
+      "id": "d073",
+      "bullet": "4.1.K2",
+      "question": "What does Control Tower cost, and which underlying services (AWS Config, CloudTrail, S3, Service Catalog) create charges?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-no-additional-charge",
+        "control-tower-billed-underlying-services",
+        "control-tower-ephemeral-workloads-raise-config-costs"
+      ],
+      "lens": "numbers",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/pricing",
+        "docs/controltower/latest/userguide/pricing",
+        "www/controltower/faqs",
+        "docs/controltower/latest/userguide/config-costs"
+      ]
+    },
+    {
+      "id": "d074",
+      "bullet": "1.1.S4",
+      "question": "Comparison: how does Control Tower differ from Organizations alone and from Security Hub CSPM?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-extends-organizations",
+        "organizations-decision-guide-governance-services",
+        "organizations-decision-guide-control-tower-layered-on-orgs",
+        "control-tower-detective-security-hub-standard"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/faqs",
+        "www/organizations/faqs",
+        "docs/decision-guides/latest/decision-guides/cloud-governance-on-aws-how-to-choose"
+      ]
+    },
+    {
+      "id": "d075",
+      "bullet": "1.1.K1",
+      "question": "How does Control Tower set up access for people (IAM Identity Center by default), and can the landing zone use an existing or self-managed identity provider?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-landing-zone-setup-actions"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/how-control-tower-works",
+        "www/controltower/faqs"
+      ],
+      "revote": [
+        "control-tower-landing-zone-setup-actions"
+      ]
+    },
+    {
+      "id": "d076",
+      "bullet": "1.1.S4",
+      "question": "Which Control Tower controls are implemented with RCPs and declarative policies, and since when?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-change-rcp-controls-2024-11",
+        "control-tower-change-declarative-controls-2024-12"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/controlreference/rcp-controls",
+        "docs/controltower/latest/controlreference/declarative-controls",
+        "docs/controltower/latest/userguide/doc-history"
+      ],
+      "hypothesis": "Document history 2024-11-15 (RCP controls) and 2024-12-01 (declarative policy controls)."
+    },
+    {
+      "id": "d077",
+      "bullet": "1.1.S4",
+      "question": "How does Control Tower integrate with AWS Backup?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-change-backup-integration-2024-11"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/doc-history"
+      ],
+      "hypothesis": "Document history 2024-11-25: AWS Backup integration."
+    },
+    {
+      "id": "d078",
+      "bullet": "1.1.S4",
+      "question": "What changed with landing zone version 4.0 and the controls-dedicated experience?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-change-landing-zone-4-2025-11",
+        "control-tower-lz4-mandatory-not-default"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/doc-history"
+      ],
+      "hypothesis": "Document history 2025-11-17. Low exam relevance; record date only."
+    },
+    {
+      "id": "d079",
+      "bullet": "1.1.S4",
+      "question": "How do detective controls work (AWS Config rules), and what does an administrator see when a resource is noncompliant?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-detective-alerts-dashboard-status",
+        "control-tower-preventive-apply-unenrolled-detective-enrolled-only"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/controlreference/detective-controls",
+        "docs/controltower/latest/userguide/how-controls-work"
+      ]
+    },
+    {
+      "id": "d080",
+      "bullet": "1.1.S4",
+      "question": "How do proactive controls check resources before they are provisioned?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-proactive-only-cloudformation",
+        "control-tower-proactive-status-pass-fail-skip"
+      ],
+      "lens": "behavior",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/controlreference/proactive-controls"
+      ]
+    },
+    {
+      "id": "d081",
+      "bullet": "1.1.S4",
+      "question": "What does the Well-Architected landing zone guidance recommend for a multi-account setup with Control Tower?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-accounts-isolated-containers-blast-radius",
+        "control-tower-staging-distinct-from-production",
+        "control-tower-recommended-additional-ous"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/aws-multi-account-landing-zone"
+      ],
+      "revote": [
+        "control-tower-staging-distinct-from-production",
+        "control-tower-recommended-additional-ous"
+      ]
+    },
+    {
+      "id": "d082",
+      "bullet": "1.1.K1",
+      "question": "What is AWS RAM, and with whom can resources be shared (accounts, OUs, the organization, IAM roles and users, service principals)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-share-across-accounts-ous-org-roles",
+        "ram-share-by-account-id-any-account",
+        "ram-cannot-add-outside-org-or-ous"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/what-is",
+        "www/ram/faqs",
+        "docs/ram/latest/userguide/getting-started-terms-and-concepts"
+      ],
+      "register_note": "mine-behavior+decisions: service principals: the shareable table has a 'Can share with service principals' column; not mined as a separate fact"
+    },
+    {
+      "id": "d083",
+      "bullet": "1.1.K1",
+      "question": "Which resource types that the exam uses can be shared with RAM (subnets, transit gateways, Route 53 Resolver rules, prefix lists, IPAM pools, License Manager configurations, Aurora DB clusters, others)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-share-subnets-only-within-organization",
+        "ram-share-security-groups-only-within-organization",
+        "ram-share-transit-gateway-any-account",
+        "ram-share-resolver-rules-any-account",
+        "ram-share-aurora-cluster-for-cloning",
+        "ram-share-prefix-lists-any-account",
+        "ram-share-ipam-pools-any-account",
+        "ram-share-license-configurations-any-account"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/shareable",
+        "www/ram/faqs"
+      ],
+      "register_note": "mine-behavior+decisions: prefix lists, IPAM pools and License Manager rows exist in shareable tables 41 and 24; not adopted | register-04: shareable rows adopted from docs/ram/latest/userguide/shareable (prefix lists, IPAM pools, License Manager) next to subnets, transit gateways, Resolver rules, Aurora clusters and security groups."
+    },
+    {
+      "id": "d084",
+      "bullet": "1.1.K1",
+      "question": "What changes when sharing with AWS Organizations is turned on: are invitations still needed inside the organization, and what is needed to share outside it?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-org-sharing-no-invitations",
+        "ram-outside-org-needs-invitation",
+        "ram-enable-sharing-in-ram-console-not-orgs"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/getting-started-sharing",
+        "docs/ram/latest/userguide/tshoot-sharing-outside-org",
+        "docs/organizations/latest/userguide/services-that-can-integrate-ram"
+      ]
+    },
+    {
+      "id": "d085",
+      "bullet": "1.1.K1",
+      "question": "Which resources can only be shared within the same organization (for example VPC subnets)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-share-subnets-only-within-organization",
+        "ram-some-types-only-within-organization",
+        "vpc-sharing-owner-shares-subnets-same-org"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/shareable",
+        "docs/vpc/latest/userguide/vpc-sharing"
+      ],
+      "reuse": [
+        "vpc-sharing-owner-shares-subnets-same-org"
+      ],
+      "revote": [
+        "ram-some-types-only-within-organization"
+      ]
+    },
+    {
+      "id": "d086",
+      "bullet": "1.1.K1",
+      "question": "In VPC sharing, what can participants do in a shared subnet, what can they not change, and who pays for which resources?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-vpc-participants-no-route-tables-nat",
+        "ram-vpc-only-owner-attaches-transit-gateway",
+        "ram-vpc-participant-resources-count-participant-quota",
+        "vpc-sharing-participants-cannot-modify-vpc-subnets",
+        "vpc-sharing-participant-pays-resources",
+        "vpc-sharing-owner-pays-nat-endpoints-ipv4"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/vpc/latest/userguide/vpc-sharing",
+        "docs/vpc/latest/userguide/vpc-share-limitations",
+        "docs/vpc/latest/userguide/vpc-share-billing",
+        "docs/vpc/latest/userguide/security-group-sharing"
+      ],
+      "reuse": [
+        "vpc-quota-subnets-shared-with-account"
+      ]
+    },
+    {
+      "id": "d087",
+      "bullet": "1.1.K1",
+      "question": "How is a transit gateway shared with other accounts, and who creates the attachments?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-share-transit-gateway-any-account",
+        "ram-tgw-shared-attachment-accept",
+        "ram-vpc-only-owner-attaches-transit-gateway"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/vpc/latest/tgw/share-accept-tgw",
+        "docs/vpc/latest/tgw/acccept-tgw-attach",
+        "docs/ram/latest/userguide/shareable"
+      ]
+    },
+    {
+      "id": "d088",
+      "bullet": "1.1.K1",
+      "question": "Are shared resources Regional or global: can a Regional resource be used in another Region?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-regional-resources-used-in-their-region"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/working-with-regional-vs-global"
+      ]
+    },
+    {
+      "id": "d089",
+      "bullet": "1.1.K1",
+      "question": "Why do AZ IDs matter when sharing subnets across accounts (AZ names map differently per account)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-az-names-differ-use-az-ids"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/working-with-az-ids"
+      ]
+    },
+    {
+      "id": "d090",
+      "bullet": "1.1.K1",
+      "question": "What are AWS managed permissions and customer managed permissions in RAM, and when is each used?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-faq-aws-managed-permission-default-per-type",
+        "ram-managed-permissions-aws-and-customer",
+        "ram-faq-one-managed-permission-per-resource-type"
+      ],
+      "lens": "faq",
+      "service": "ram",
+      "sources": [
+        "www/ram/faqs",
+        "docs/ram/latest/userguide/security-ram-permissions"
+      ]
+    },
+    {
+      "id": "d091",
+      "bullet": "4.1.K2",
+      "question": "Does sharing resources with RAM add a charge?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-faq-no-additional-cost"
+      ],
+      "lens": "numbers",
+      "service": "ram",
+      "sources": [
+        "www/ram/faqs"
+      ]
+    },
+    {
+      "id": "d092",
+      "bullet": "1.1.K1",
+      "question": "What are the RAM quotas (resource shares, pending invitations, principals or resources per share)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-resource-shares-per-region",
+        "ram-resources-per-resource-share",
+        "ram-principals-per-resource-share",
+        "ram-customer-managed-permissions-quota",
+        "ram-resource-associations-per-region",
+        "ram-pending-invitations-per-sharing-account",
+        "ram-whole-organization-counts-as-one-principal",
+        "ram-change-pending-invitations-250-2023-06"
+      ],
+      "lens": "numbers",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/service-quotas"
+      ],
+      "revote": [
+        "ram-resource-shares-per-region",
+        "ram-resources-per-resource-share",
+        "ram-principals-per-resource-share",
+        "ram-customer-managed-permissions-quota",
+        "ram-resource-associations-per-region",
+        "ram-pending-invitations-per-sharing-account",
+        "ram-change-pending-invitations-250-2023-06"
+      ]
+    },
+    {
+      "id": "d093",
+      "bullet": "1.1.K1",
+      "question": "What happens to consumers when an owner stops sharing a resource or a consumer leaves a share?",
+      "status": "partial-verified",
+      "status_found": "found",
+      "gap": "close-facts-04: ram-account-leaving-org-loses-access was rejected after the second vote (entail partial twice: the RetainSharingOnAccountLeaveOrganization exception drops its conditions, account-to-account shares only and allowExternalPrincipals True). Stop sharing and disabling trusted access are verified; what happens when a consumer leaves the organization has no verified fact. Do not state it without a new verified fact.",
+      "facts": [
+        "ram-faq-stop-sharing",
+        "ram-disable-trusted-access-removes-org-principals"
+      ],
+      "lens": "faq",
+      "service": "ram",
+      "sources": [
+        "www/ram/faqs",
+        "docs/ram/latest/userguide/getting-started-shared"
+      ],
+      "register_note": "register-04: stop sharing (FAQ), loss of access when a consumer leaves the organization (getting-started-sharing), removal of org principals when trusted access is disabled.",
+      "revote": [
+        "ram-account-leaving-org-loses-access"
+      ]
+    },
+    {
+      "id": "d094",
+      "bullet": "1.1.S4",
+      "question": "How can SCPs restrict RAM sharing (for example deny sharing with principals outside the organization)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-scp-can-prevent-external-sharing"
+      ],
+      "lens": "behavior",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/security-scp"
+      ]
+    },
+    {
+      "id": "d095",
+      "bullet": "1.1.K1",
+      "question": "Comparison: sharing a resource with RAM vs a resource-based policy vs a cross-account IAM role: which to choose for which resource.",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-vs-resource-policy-org-ou-without-ids",
+        "ram-reduces-overhead-no-duplicate-resources",
+        "ram-consumer-account-policies-apply",
+        "ram-managed-permission-generates-resource-policy",
+        "iam-ram-share-without-resource-policies"
+      ],
+      "lens": "decisions",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/what-is",
+        "www/ram/faqs"
+      ],
+      "reuse": [
+        "iam-ram-share-without-resource-policies"
+      ],
+      "register_note": "mine-behavior+decisions: cross-account IAM role side comes from chapter 03 facts"
+    },
+    {
+      "id": "d096",
+      "bullet": "1.1.K1",
+      "question": "Which shareable resource types were added since mid-2022 that change exam answers (for example security groups shared through VPC sharing, VPC Lattice, customer managed permissions)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-change-security-groups-shareable-2024-10",
+        "ram-change-vpc-lattice-shareable-2023-03",
+        "ram-change-customer-managed-permissions-2023-04",
+        "ram-change-ebs-volumes-shareable-2026-08",
+        "ram-change-eventbridge-buses-shareable-2026-09"
+      ],
+      "lens": "changes",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/doc-history",
+        "docs/ram/latest/userguide/shareable"
+      ],
+      "hypothesis": "FRESHNESS: security groups shareable across the organization from 2024-10-30. EBS volume sharing 2026-08-20 and EventBridge custom buses 2026-09-24 are after 2026-07-15: not examinable yet.",
+      "register_note": "mine-numbers+changes: VPC-side current truth exists: vpc-security-group-sharing-change.",
+      "revote": [
+        "ram-change-security-groups-shareable-2024-10"
+      ]
+    },
+    {
+      "id": "d097",
+      "bullet": "1.1.K1",
+      "question": "How are changes to resource shares monitored (EventBridge, CloudTrail)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-faq-monitor-cloudtrail-and-events"
+      ],
+      "lens": "faq",
+      "service": "ram",
+      "sources": [
+        "www/ram/faqs"
+      ],
+      "register_note": "mine-faq: FAQ uses the former name Amazon CloudWatch Events; the EventBridge name must come from the RAM user guide."
+    },
+    {
+      "id": "d098",
+      "bullet": "1.1.S4",
+      "question": "What benefits of multiple AWS accounts does AWS list (security boundary, billing separation, quotas, limiting the blast radius)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-separate-accounts-prod-nonprod-by-default",
+        "organizations-account-isolation-limits-blast-radius",
+        "organizations-sensitive-data-dedicated-accounts",
+        "organizations-account-default-cost-allocation",
+        "organizations-accounts-distribute-quotas"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts",
+        "docs/whitepapers/latest/organizing-your-aws-environment/organizing-your-aws-environment"
+      ],
+      "reuse": [
+        "organizations-account-is-security-access-billing-boundary"
+      ]
+    },
+    {
+      "id": "d099",
+      "bullet": "1.1.S4",
+      "question": "Which OUs and accounts does AWS recommend (Security OU with log archive and security tooling, Infrastructure, Workloads, Sandbox, Policy Staging, Suspended)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-recommended-foundational-ous",
+        "organizations-recommended-workloads-sandbox-ous",
+        "organizations-recommended-suspended-policy-staging-ous",
+        "organizations-log-archive-account-consolidates-logs"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/whitepapers/latest/organizing-your-aws-environment/recommended-ous-and-accounts",
+        "docs/whitepapers/latest/organizing-your-aws-environment/foundational-ous"
+      ],
+      "revote": [
+        "organizations-log-archive-account-consolidates-logs"
+      ]
+    },
+    {
+      "id": "d100",
+      "bullet": "1.1.S4",
+      "question": "Why does AWS recommend grouping accounts by function and attaching policies to OUs rather than to single accounts?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-attach-policies-to-ous-not-accounts",
+        "organizations-ou-policy-inherited-by-accounts",
+        "organizations-ous-by-controls-not-reporting-structure",
+        "organizations-single-organization-recommended"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-organizational-units-ous",
+        "docs/whitepapers/latest/organizing-your-aws-environment/design-principles-for-your-multi-account-strategy",
+        "docs/organizations/latest/userguide/orgs_manage_ous"
+      ],
+      "revote": [
+        "organizations-ous-by-controls-not-reporting-structure"
+      ]
+    },
+    {
+      "id": "d101",
+      "bullet": "1.1.S4",
+      "question": "What does the Well-Architected security pillar say about separating workloads with accounts and securing the root user and account properties?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-wa-root-user-most-privileged"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/wellarchitected/latest/security-pillar/sec_securely_operate_aws_account"
+      ]
+    },
+    {
+      "id": "d102",
+      "bullet": "1.1.S4",
+      "question": "In the AWS Security Reference Architecture, which accounts hold security tooling and logs, and how are security services delegated?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-security-tooling-account-delegated-admin",
+        "organizations-log-archive-account-consolidates-logs"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/prescriptive-guidance/latest/security-reference-architecture/introduction"
+      ],
+      "register_note": "mine-behavior+decisions: the SRA introduction page does not name the accounts; the whitepaper foundational-ous page does",
+      "revote": [
+        "organizations-log-archive-account-consolidates-logs"
+      ]
+    },
+    {
+      "id": "d103",
+      "bullet": "1.1.K1",
+      "question": "What do the AWS decision guides say about choosing between Organizations, Control Tower, IAM Identity Center and IAM for identity and governance?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-decision-guide-governance-services",
+        "organizations-decision-guide-control-tower-layered-on-orgs",
+        "organizations-decision-guide-identity-center-workforce"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose",
+        "docs/decision-guides/latest/decision-guides/cloud-governance-on-aws-how-to-choose"
+      ]
+    },
+    {
+      "id": "d104",
+      "bullet": "1.1.S4",
+      "question": "What is centralized root access management for member accounts, and what can it do (remove root credentials, run privileged tasks)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-change-central-root-access-2024-11",
+        "iam-root-centralized-root-access-member-accounts"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "reuse": [
+        "iam-change-central-root-access-2024-11",
+        "iam-root-centralized-root-access-member-accounts"
+      ],
+      "hypothesis": "FRESHNESS: 2024-11-14.",
+      "register_note": "mine-numbers+changes: Organizations history row 15 (2024-11-14) confirms the date."
+    },
+    {
+      "id": "d105",
+      "bullet": "1.1.K1",
+      "question": "How does the aws:PrincipalOrgID condition key let a resource policy allow every account in the organization without listing account IDs?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-condition-key-principalorgid"
+      ],
+      "lens": "behavior",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_rcps"
+      ],
+      "reuse": [
+        "iam-condition-key-principalorgid"
+      ]
+    },
+    {
+      "id": "d106",
+      "bullet": "1.1.S4",
+      "question": "Comparison for 'least operational overhead': Control Tower vs Organizations with hand-built baselines (CloudFormation StackSets) vs one account with tags and IAM policies.",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-easiest-way-secure-multi-account",
+        "control-tower-orchestration-for-many-accounts",
+        "control-tower-uses-stacksets",
+        "organizations-stacksets-provision-to-accounts",
+        "organizations-separate-accounts-prod-nonprod-by-default"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/faqs",
+        "docs/controltower/latest/userguide/what-is-control-tower",
+        "docs/decision-guides/latest/decision-guides/cloud-governance-on-aws-how-to-choose"
+      ]
+    },
+    {
+      "id": "d107",
+      "bullet": "1.1.S4",
+      "question": "Comparison: Control Tower detective controls vs AWS Config rules vs Security Hub CSPM: what each one does.",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-decision-guide-governance-services",
+        "control-tower-detective-security-hub-standard",
+        "control-tower-control-types-mechanisms"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/faqs",
+        "docs/controltower/latest/controlreference/detective-controls",
+        "docs/decision-guides/latest/decision-guides/cloud-governance-on-aws-how-to-choose"
+      ]
+    },
+    {
+      "id": "d108",
+      "bullet": "1.1.K1",
+      "question": "Comparison: SCPs vs IAM Identity Center permission sets vs Firewall Manager: which one limits accounts, which grants people access, which applies network rules.",
+      "status": "partial-verified",
+      "status_found": "partial",
+      "facts": [
+        "organizations-decision-guide-identity-center-workforce",
+        "organizations-scp-principal-centric-rcp-resource-centric"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_integrate_services",
+        "docs/decision-guides/latest/decision-guides/identity-on-aws-how-to-choose"
+      ],
+      "gaps": [
+        "mine-behavior+decisions: No saved chapter-04 page compares SCPs with Firewall Manager; Firewall Manager behaviour lives in data/facts/firewall-manager.jsonl (other chapter). Looked in orgs_integrate_services and identity-on-aws-how-to-choose."
+      ]
+    },
+    {
+      "id": "d109",
+      "bullet": "1.1.S4",
+      "question": "Callvale: which AWS facts make audit logs unchangeable by a production administrator (organization trail that member accounts cannot change, mandatory controls on the log archive, SCP deny on StopLogging and DeleteTrail)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-org-trail-members-cannot-modify-or-delete",
+        "control-tower-mandatory-log-archive-bucket-controls",
+        "organizations-log-archive-account-consolidates-logs",
+        "control-tower-preventive-not-on-management-account"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/services-that-can-integrate-cloudtrail",
+        "docs/controltower/latest/controlreference/mandatory-controls",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_examples",
+        "docs/controltower/latest/userguide/about-logging"
+      ],
+      "register_note": "mine-behavior+decisions: an SCP denying cloudtrail:StopLogging/DeleteTrail is not on a saved AWS doc page (see d036)",
+      "revote": [
+        "control-tower-mandatory-log-archive-bucket-controls",
+        "organizations-log-archive-account-consolidates-logs"
+      ]
+    },
+    {
+      "id": "d110",
+      "bullet": "1.1.S4",
+      "question": "Callvale: which AWS facts let an organization keep workloads in two approved Regions (Region deny control, SCP with aws:RequestedRegion and exemptions for global services)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-two-region-deny-controls",
+        "control-tower-region-deny-exemptions",
+        "control-tower-region-deny-blocks-unlisted-regions",
+        "organizations-scp-notaction-region-limit-example"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/region-deny",
+        "docs/controltower/latest/controlreference/primary-region-deny-policy",
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_examples"
+      ]
+    },
+    {
+      "id": "d111",
+      "bullet": "1.1.S4",
+      "question": "Callvale: which AWS facts make rules apply to future accounts too (policy inheritance from OUs, Account Factory baselines, automatic enrollment)?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-nested-ous-inherit-parent-policies",
+        "organizations-ou-policy-inherited-by-accounts",
+        "organizations-scp-deny-at-any-level-applies-below",
+        "control-tower-account-factory-template",
+        "control-tower-auto-enrollment-unenroll-by-moving",
+        "control-tower-accounts-outside-not-bound",
+        "organizations-declarative-new-accounts-inherit-detach-rolls-back"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_manage_policies_scps_evaluation",
+        "docs/controltower/latest/userguide/account-factory",
+        "docs/controltower/latest/userguide/account-auto-enrollment"
+      ],
+      "revote": [
+        "control-tower-accounts-outside-not-bound"
+      ]
+    },
+    {
+      "id": "d112",
+      "bullet": "1.1.S4",
+      "question": "Callvale: why is a separate production account a stronger isolation boundary than tags and IAM policies inside one account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-separate-accounts-prod-nonprod-by-default",
+        "organizations-account-isolation-limits-blast-radius",
+        "control-tower-accounts-isolated-containers-blast-radius",
+        "organizations-account-is-security-access-billing-boundary"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "docs/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts",
+        "docs/wellarchitected/latest/security-pillar/sec_securely_operate_aws_account"
+      ],
+      "reuse": [
+        "organizations-account-is-security-access-billing-boundary"
+      ]
+    },
+    {
+      "id": "d113",
+      "bullet": "1.1.S4",
+      "question": "Real company: what did Sixth Street build with a multi-account environment on AWS, and with which services?",
+      "status": "not-found",
+      "facts": [],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "www/solutions/case-studies/sixth-street-case-study"
+      ],
+      "gaps": [
+        "mine-behavior+decisions: www/solutions/case-studies/sixth-street-case-study is the generic case-study listing (0 hits for 'Sixth Street'). Fallback case studies used: Volkswagen Financial Services (d114) and Norstella (d115)."
+      ],
+      "register_note": "register-04: Sixth Street snapshot is the generic listing; use Volkswagen Financial Services (d114) and Norstella (d115)."
+    },
+    {
+      "id": "d114",
+      "bullet": "1.1.S4",
+      "question": "Real company: how does Volkswagen Financial Services govern many accounts with a small team using Organizations?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-case-vwfs-eight-engineers-1600-accounts",
+        "organizations-case-vwfs-four-accounts-per-workload-scps"
+      ],
+      "lens": "decisions",
+      "service": "organizations",
+      "sources": [
+        "www/solutions/case-studies/volkswagen-financial-services-case-study"
+      ],
+      "reuse": [
+        "iam-case-clearwater-scps-federated-access-350-accounts"
+      ]
+    },
+    {
+      "id": "d115",
+      "bullet": "1.1.S4",
+      "question": "Real company (spare): how did Norstella build an enterprise environment with Control Tower, and how fast?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-case-norstella-under-5-months",
+        "control-tower-case-norstella-acquisitions-automation"
+      ],
+      "lens": "decisions",
+      "service": "control-tower",
+      "sources": [
+        "www/solutions/case-studies/norstella"
+      ],
+      "revote": [
+        "control-tower-case-norstella-under-5-months"
+      ]
+    },
+    {
+      "id": "d116",
+      "bullet": "1.1.K1",
+      "question": "FAQ quick-fire: can an organization be defined and managed per Region, or is it global?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-faq-entities-global-except-china",
+        "organizations-faq-no-region-needed-china-separate-org"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d117",
+      "bullet": "1.1.K1",
+      "question": "FAQ quick-fire: can MFA be set up programmatically on accounts created through Organizations?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-faq-programmatic-mfa-not-supported"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d118",
+      "bullet": "1.1.K1",
+      "question": "FAQ quick-fire: can an account created with Organizations be removed and made a standalone account?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-faq-created-account-can-become-standalone",
+        "organizations-remove-account-needs-standalone-info"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d119",
+      "bullet": "1.1.S4",
+      "question": "FAQ quick-fire: if an empty SCP is attached to an account, are all actions allowed?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-scp-faq-empty-scp-denies-all"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ],
+      "reuse": [
+        "iam-scp-faq-empty-scp-denies-all"
+      ],
+      "register_note": "mine-faq: reuse; verified in chapter 03"
+    },
+    {
+      "id": "d120",
+      "bullet": "1.1.S4",
+      "question": "FAQ quick-fire: can an organization be created and managed without enforcing any SCP?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-faq-org-without-scp-consolidated-billing-only",
+        "organizations-faq-consolidated-billing-single-payer-tiered-pricing"
+      ],
+      "lens": "faq",
+      "service": "organizations",
+      "sources": [
+        "www/organizations/faqs"
+      ]
+    },
+    {
+      "id": "d121",
+      "bullet": "1.1.K1",
+      "question": "FAQ quick-fire: can an existing directory be used with Control Tower?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-faq-identity-center-default-directory"
+      ],
+      "lens": "faq",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/faqs"
+      ]
+    },
+    {
+      "id": "d122",
+      "bullet": "1.1.S4",
+      "question": "FAQ quick-fire: is there an API for Control Tower, and how does Control Tower interoperate with Organizations?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-faq-api-available-console-for-rest",
+        "control-tower-faq-organizations-framework-control-tower-layer",
+        "control-tower-faq-landing-zone-sets-ous-config-cloudtrail",
+        "control-tower-faq-built-on-organizations-scps-rcps"
+      ],
+      "lens": "faq",
+      "service": "control-tower",
+      "sources": [
+        "www/controltower/faqs"
+      ]
+    },
+    {
+      "id": "d123",
+      "bullet": "1.1.K1",
+      "question": "FAQ quick-fire: how can an account control access to resources shared with it through RAM?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-faq-control-access-with-iam-policies"
+      ],
+      "lens": "faq",
+      "service": "ram",
+      "sources": [
+        "www/ram/faqs"
+      ]
+    },
+    {
+      "id": "d124",
+      "bullet": "1.1.K1",
+      "question": "FAQ quick-fire: who can resources be shared with in RAM, and what types of resources can be shared?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-share-across-accounts-ous-org-roles",
+        "ram-faq-share-with-any-account-ous-if-enabled",
+        "ram-faq-iam-roles-users-supported-types",
+        "ram-outside-org-needs-invitation",
+        "ram-share-subnets-only-within-organization",
+        "ram-share-transit-gateway-any-account",
+        "ram-share-prefix-lists-any-account"
+      ],
+      "lens": "faq",
+      "service": "ram",
+      "sources": [
+        "www/ram/faqs"
+      ],
+      "register_note": "register-04: the FAQ points to the shareable-resources page; its rows are in the canon (see d083)."
+    },
+    {
+      "id": "d125",
+      "bullet": "1.1.S4",
+      "question": "Change check: when did the SCP quotas become 10 per entity and 10,240 characters, and do RCP quotas stay at 5 and 5,120?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-change-scp-quotas-doubled-2026-05",
+        "organizations-scp-max-attached-per-entity",
+        "organizations-scp-max-document-size",
+        "organizations-rcp-max-attached-per-entity"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/orgs_reference_limits",
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "reuse": [
+        "iam-change-scp-quotas-doubled-2026-05"
+      ],
+      "hypothesis": "FRESHNESS: 2026-05-15.",
+      "register_note": "mine-numbers+changes: Confirmed: SCP 10 / 10,240 since 2026-05-15; RCP stays 5 and 5120."
+    },
+    {
+      "id": "d126",
+      "bullet": "1.1.S4",
+      "question": "Change check: when did RCPs launch, and when were more services added?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "iam-change-rcps-launched-2024-11",
+        "iam-change-rcp-more-services-2026-01"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "reuse": [
+        "iam-change-rcps-launched-2024-11",
+        "iam-change-rcp-more-services-2026-01"
+      ],
+      "hypothesis": "FRESHNESS: 2024-11-13 and 2026-01-23."
+    },
+    {
+      "id": "d127",
+      "bullet": "1.1.S4",
+      "question": "Change check: when were declarative policies added?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-change-declarative-policies-2024-12"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "hypothesis": "FRESHNESS: 2024-12-01."
+    },
+    {
+      "id": "d128",
+      "bullet": "1.1.K1",
+      "question": "Change check: when did the default accounts-per-organization quota change, and from what to what?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-change-accounts-10000-2024-08",
+        "organizations-max-accounts-default-10",
+        "organizations-max-accounts-increase-50000"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history",
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "hypothesis": "FRESHNESS: 2024-08-14, 5,000 to 10,000."
+    },
+    {
+      "id": "d129",
+      "bullet": "1.1.S4",
+      "question": "Change check: which new management policy types were added since mid-2022 (chat applications, Security Hub, Inspector, upgrade rollout, GuardDuty) and when?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-change-chat-applications-policies-2024-09",
+        "organizations-change-security-hub-policies-2025-06",
+        "organizations-change-inspector-policies-2025-11",
+        "organizations-change-upgrade-rollout-policy-2025-11",
+        "organizations-change-guardduty-policies-2026-09"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history",
+        "docs/organizations/latest/userguide/orgs_manage_policies"
+      ],
+      "hypothesis": "FRESHNESS: chat 2024-09-26; Security Hub 2025-06-17; GuardDuty 2026-09-25 (not examinable yet). Change feed: Inspector 2025-11-19, upgrade rollout 2025-11-21."
+    },
+    {
+      "id": "d130",
+      "bullet": "1.1.S4",
+      "question": "Change check: when were guardrails renamed controls, and when did comprehensive controls management and proactive controls become generally available?",
+      "status": "partial-verified",
+      "status_found": "partial",
+      "facts": [
+        "control-tower-change-proactive-controls-ga-2023-01"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/doc-history",
+        "docs/controltower/latest/userguide/terminology"
+      ],
+      "hypothesis": "Change feed: comprehensive controls management GA 2023-01-24; proactive controls GA 2023-01-24.",
+      "gaps": [
+        "mine-numbers+changes: The date when guardrails were renamed controls is not stated in any saved page. Looked in: docs/controltower/latest/userguide/doc-history (all 125 rows; the 2021-07-26 row 'Control names changed, functionality unchanged' is about individual control names, not the guardrail-to-control rename), docs/controltower/latest/userguide/terminology and what-is-control-tower (they say 'also known as a guardrail' with no date), the control-tower change feed. Comprehensive controls management GA 2023-01-24 exists only as a What's New item in the change feed; the 2023 What's New page was not fetched (older posts are refused by robots.txt)."
+      ],
+      "register_note": "register-04: rename date of guardrail to control is not on any saved page (miner searched doc history, terminology, change feed); teach \"control (formerly guardrail)\" without a date."
+    },
+    {
+      "id": "d131",
+      "bullet": "1.1.S4",
+      "question": "Change check: when did Control Tower raise the limit to 1,000 accounts per OU?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "control-tower-change-1000-accounts-per-ou-2024-08",
+        "control-tower-ou-over-1000-accounts-cannot-register"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/doc-history",
+        "docs/controltower/latest/userguide/limits"
+      ],
+      "hypothesis": "Document history 2024-08-30.",
+      "register_note": "mine-numbers+changes: History row states no old value."
+    },
+    {
+      "id": "d132",
+      "bullet": "1.1.K1",
+      "question": "Change check (not examinable yet): account departure security controls by default for new organizations (2026-07-10) and RCP quota of 2,000 per organization (2026-07-22): record date only.",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "organizations-change-departure-controls-default-2026-07",
+        "organizations-change-rcp-quota-2000-2026-07"
+      ],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history",
+        "docs/organizations/latest/userguide/orgs_reference_limits"
+      ],
+      "hypothesis": "What's New items dated after 2026-07-15.",
+      "register_note": "mine-numbers+changes: Departure controls are dated 2026-07-10, which is BEFORE the 2026-07-15 cut-off, so by RULINGS rule 7 they are not automatically 'not examinable yet' (the brief said they were); the RCP 2,000 quota (2026-07-22) is after the cut-off.",
+      "revote": [
+        "organizations-change-rcp-quota-2000-2026-07"
+      ]
+    },
+    {
+      "id": "d133",
+      "bullet": "1.1.S4",
+      "question": "Change check: since when does Control Tower use an organization-level CloudTrail trail (landing zone 3.0)?",
+      "status": "verified",
+      "status_found": "found",
+      "close_note": "close-facts-04: control-tower-organization-level-trail was rejected after the second vote and removed; the dated change fact control-tower-change-landing-zone-3-org-trail-2022-07 is verified and answers 'since when'.",
+      "facts": [
+        "control-tower-change-landing-zone-3-org-trail-2022-07"
+      ],
+      "lens": "changes",
+      "service": "control-tower",
+      "sources": [
+        "docs/controltower/latest/userguide/doc-history",
+        "docs/controltower/latest/userguide/about-logging"
+      ],
+      "hypothesis": "Change feed 2022-07-29: Control Tower adopts CloudTrail organization logging (version 3.0).",
+      "revote": [
+        "control-tower-organization-level-trail"
+      ]
+    },
+    {
+      "id": "d134",
+      "bullet": "1.1.K1",
+      "question": "Change check: when did RAM add customer managed permissions?",
+      "status": "verified",
+      "status_found": "found",
+      "facts": [
+        "ram-change-customer-managed-permissions-2023-04",
+        "ram-customer-managed-permissions-quota"
+      ],
+      "lens": "changes",
+      "service": "ram",
+      "sources": [
+        "docs/ram/latest/userguide/doc-history",
+        "docs/ram/latest/userguide/security-ram-permissions"
+      ],
+      "hypothesis": "Change feed 2023-04-19 / 2023-04-25.",
+      "revote": [
+        "ram-customer-managed-permissions-quota"
+      ]
+    },
+    {
+      "id": "d135",
+      "bullet": "1.1.S4",
+      "question": "What is multi-party approval in Organizations, and does it matter for the exam?",
+      "status": "not-found",
+      "facts": [],
+      "lens": "changes",
+      "service": "organizations",
+      "sources": [
+        "docs/organizations/latest/userguide/document-history"
+      ],
+      "hypothesis": "Change feed 2025 to 2026 (OTP voting 2026-02-02). Low exam relevance; record only if a saved page states it plainly.",
+      "gaps": [
+        "mine-numbers+changes: No saved Organizations page says plainly what multi-party approval is or ties it to the exam. Looked in: docs/organizations/latest/userguide/document-history (no multi-party approval row), the Organizations change feed (only What's New items on approval team baselining 2026-03-05 and OTP voting 2026-02-02), www/about-aws/whats-new/2026/02/aws-multi-party-approval-requires-one-time-password-verification-for-voting (fetched: describes OTP voting only). RAM history row 20 says Multi-party approval approval teams became shareable. Recommend: leave out of the chapter (low exam relevance)."
+      ],
+      "register_note": "register-04: no saved page defines multi-party approval for Organizations; leave out of the chapter (low exam relevance)."
+    }
+  ],
+  "registered_by": "register-04",
+  "registered_at": "2026-10-12",
+  "adjudicated_by": "adjudicate-04",
+  "adjudicated_note": "verify-facts attempt 2: 42 disputed facts repaired once (revote batches 04-entail-010, 04-entail-011, 04-currency-005), 1 rejected; 'revote' lists fact ids of a demand item that still wait for fresh votes.",
+  "verify_facts": {
+    "closed": {
+      "by": "close-facts-04",
+      "date": "2026-10-12",
+      "final_finalize": {
+        "verified": 305,
+        "rejected": 3,
+        "superseded": 21,
+        "disputed": 0,
+        "pending": 0
+      },
+      "open_conflicts_on_chapter_facts": 0,
+      "demand_statuses": {
+        "verified": 127,
+        "partial-verified": 6,
+        "not-found": 2
+      },
+      "note": "status: 'verified' = registrar status found and every named fact verified; 'partial-verified' = gap remains (see 'gap'/'gaps'), named facts verified; 'not-found' = nothing quotable. 'status_found' keeps the registrar's found/partial value. Final finalize (after the second vote) set 40 facts verified and rejected 2 (control-tower-organization-level-trail, ram-account-leaving-org-loses-access); both were removed from the 'facts' of d063, d093 and d133 (d063 and d093 now partial-verified; d133 stays verified on its dated change fact). 'revote' lists are historical. Every iam-* and vpc-* id the brief names was checked and is verified. No chapter-04 fact sat in an open conflict; none pending."
+    }
+  }
+}

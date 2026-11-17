@@ -1,0 +1,117 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "question.schema.json",
+ "title": "Question file: data/<NN-slug>/questions.json",
+ "description": "One file per chapter. Counts, word ranges and cross-field rules (number of correct options equals select, option count per type, keywords inside the stem, trap or misconception on wrong options) are checked by the question lint from SPEC.json, not here.",
+ "type": "object",
+ "required": ["v", "chapter", "items"],
+ "additionalProperties": false,
+ "properties": {
+  "v": {"const": 1},
+  "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "chapter slug"},
+  "items": {"type": "array", "items": {"$ref": "#/$defs/question"}}
+ },
+ "$defs": {
+  "question": {
+   "type": "object",
+   "required": ["id", "chapter", "section", "pool", "layer", "domain", "task", "bullets", "topics", "services", "concept", "difficulty", "type", "select", "qualifier", "stem", "keywords", "options", "explanation", "takeaway", "twin", "facts", "sources", "twin_of", "volatile", "rev", "keyRev", "status", "verification"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-q[0-9]{3}$"},
+    "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "section": {"type": ["string", "null"], "pattern": "^([0-9]{2}-[a-z0-9-]+/)?[a-z0-9-]+\\.md#[a-z0-9-]+$", "description": "review link: '<file>#<section id>' inside the item's own chapter, for example '2-deep.md#a-shelf-belongs-to-one-region', or '<NN-slug>/<file>#<section id>' for a section of another chapter (required form for pool mock and drill). The section id is the heading anchor without the time box. Null only before the brief names a section."},
+    "pool": {"enum": ["chapter", "mock", "drill"]},
+    "layer": {"enum": ["core", "extended"]},
+    "domain": {"type": "integer", "minimum": 1, "maximum": 4},
+    "task": {"type": "string", "pattern": "^[1-4]\\.[1-5]$", "description": "exam guide task statement"},
+    "bullets": {"type": "array", "items": {"type": "string", "pattern": "^[1-4]\\.[1-5]\\.[KS][0-9]{1,2}$"}, "uniqueItems": true},
+    "topics": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "uniqueItems": true},
+    "services": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "uniqueItems": true, "description": "in-scope service keys; services[0] is the focus service"},
+    "exam_english": {"type": "array", "items": {"type": "string", "pattern": "^ee-[a-z0-9]+(-[a-z0-9]+)*$"}, "uniqueItems": true, "description": "exam-English words that the stem uses on purpose; the word or one of its 'also' forms stands in the stem"},
+    "concept": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "the one concept the question tests; with the traps it forms the coverage signature"},
+    "difficulty": {"enum": [1, 2, 3]},
+    "type": {"enum": ["single", "multi"]},
+    "select": {"enum": [1, 2, 3]},
+    "qualifier": {"type": "string", "minLength": 4, "description": "the capitalised qualifier phrase exactly as in the stem, for example 'LEAST operational overhead', or 'none'"},
+    "stem": {"type": "string", "minLength": 40},
+    "keywords": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string", "minLength": 2}, "description": "deciding phrases, each copied exactly from the stem"},
+    "options": {"type": "array", "minItems": 4, "maxItems": 6, "items": {"$ref": "#/$defs/option"}},
+    "explanation": {"type": "string", "minLength": 20, "description": "why the key is right, with the mechanism; no option letters"},
+    "takeaway": {"type": "string", "minLength": 10},
+    "twin": {"type": "string", "pattern": "^If the stem said ", "description": "one line: the changed phrase and the answer it would lead to"},
+    "say": {"type": ["string", "null"], "description": "optional one-sentence spoken version"},
+    "facts": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}, "uniqueItems": true},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}, "description": "extra AWS pages beyond the evidence of the facts; usually empty"},
+    "twin_of": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-q[0-9]{3}$", "description": "set on the later question of a twin pair only; the earlier one has null"},
+    "worked": {"$ref": "#/$defs/worked"},
+    "volatile": {"type": "boolean", "description": "true when the key depends on a fact that changed in the volatile window"},
+    "rev": {"type": "integer", "minimum": 1},
+    "keyRev": {"type": "integer", "minimum": 1, "description": "raise when the set of correct options changes"},
+    "status": {"enum": ["candidate", "verified", "ready", "rejected", "retired"]},
+    "authors": {"type": "array", "items": {"type": "string"}, "description": "set by `q add`: the labels (--by) of every agent that wrote or replaced the question; none of them can be a solver of it"},
+    "verification": {"$ref": "#/$defs/verification"}
+   }
+  },
+  "option": {
+   "type": "object",
+   "required": ["id", "text", "correct", "why", "concept", "trap", "misconception", "distractor_type"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^[a-f]$"},
+    "text": {"type": "string", "minLength": 2},
+    "correct": {"type": "boolean"},
+    "why": {"type": "string", "minLength": 10, "description": "why this option is right, or which constraint or belief makes it wrong"},
+    "concept": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "trap": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-trap-[a-z0-9]+(-[a-z0-9]+)*$"},
+    "misconception": {"type": ["string", "null"], "description": "the false belief in words, when no trap id fits"},
+    "distractor_type": {"enum": [null, "violates-qualifier", "sibling-confusion", "wrong-configuration", "different-problem", "keyword-bait", "impossible-feature"]}
+   }
+  },
+  "source": {
+   "type": "object",
+   "required": ["title", "url"],
+   "additionalProperties": false,
+   "properties": {
+    "title": {"type": "string", "minLength": 2},
+    "url": {"type": "string", "pattern": "^https://(docs\\.aws\\.amazon\\.com|aws\\.amazon\\.com|d1\\.awsstatic\\.com|repost\\.aws)/"}
+   }
+  },
+  "worked": {
+   "type": "object",
+   "required": ["steps", "wrong_path"],
+   "additionalProperties": false,
+   "properties": {
+    "steps": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "string", "minLength": 10}},
+    "wrong_path": {"type": "boolean", "description": "true when the think-aloud first follows a plausible wrong path: step 3 states the wrong prediction and step 5 holds the sentence that starts with questions.worked_wrong_path_marker"}
+   }
+  },
+  "verification": {
+   "type": "object",
+   "required": ["status", "round", "solvers"],
+   "additionalProperties": false,
+   "properties": {
+    "status": {"enum": ["candidate", "pass", "edited-pass", "rejected"]},
+    "round": {"type": "integer", "minimum": 0, "maximum": 2},
+    "checked": {"type": ["string", "null"], "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"},
+    "solvers": {"type": "array", "items": {
+     "type": "object",
+     "required": ["lens", "answer", "agree"],
+     "additionalProperties": false,
+     "properties": {
+      "lens": {"enum": ["closed", "open", "ambiguity"]},
+      "answer": {"type": "array", "items": {"type": "string", "pattern": "^[a-f]$"}},
+      "agree": {"type": "boolean"},
+      "flag": {"type": ["string", "null"]},
+      "citations": {"type": "array", "items": {"type": "string"}, "description": "sorted unique fact ids; a quote citation is stored as '<source_id>#<first 40 characters of the quote>'"},
+      "citations_ok": {"type": "boolean", "description": "open lens: every label had a citation and every citation verified"},
+      "solver": {"type": "string", "description": "label of the solving agent"},
+      "stem_only": {"type": ["string", "null"], "description": "closed lens: the solution stated before reading the options"},
+      "case_option": {"type": ["string", "null"], "pattern": "^[a-f]$", "description": "ambiguity lens: the option id the solver argued for"}
+     }
+    }},
+    "note": {"type": ["string", "null"]},
+    "edits": {"type": "integer", "minimum": 0, "maximum": 1, "description": "set by `q add --replace` in round 1: the one edit after a failed round is used"}
+   }
+  }
+ }
+}

@@ -1,0 +1,202 @@
+[
+ {
+  "id": "dynamodb-ttl-deletes-within-days-no-wcu",
+  "service": "dynamodb", "home_chapter": "28", "kind": "behavior",
+  "claim": "DynamoDB automatically deletes expired items within a few days of their expiration time, without consuming write throughput.",
+  "question": "How soon after expiry does TTL delete an item, and does the delete use write capacity?",
+  "values": [{"key": "delay", "display": "within a few days of their expiration time"}],
+  "qualifiers": {"scope": "per item with a valid, expired TTL attribute", "default_or_max": "", "adjustable": false, "condition": "deletion consumes no write throughput"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/TTL", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html", "quote": "DynamoDB automatically deletes expired items within a few days of their expiration time, without consuming write throughput."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["4.3.K4"]
+ },
+ {
+  "id": "dynamodb-ttl-typically-few-days-any-time",
+  "service": "dynamodb", "home_chapter": "28", "kind": "behavior",
+  "claim": "Items with valid, expired TTL attributes might be deleted by the system at any time, typically within a few days after their expiration.",
+  "question": "Is TTL deletion immediate after the expiration time?",
+  "values": [{"key": "timing", "display": "typically within a few days after their expiration"}],
+  "qualifiers": {"scope": "per item with a valid, expired TTL attribute", "default_or_max": "", "adjustable": false, "condition": "expired items can still be read until deleted"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/TTL", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html", "quote": "Items with valid, expired TTL attributes might be deleted by the system at any time, typically within a few days after their expiration."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["4.3.K4"]
+ },
+ {
+  "id": "dynamodb-ttl-attribute-number-epoch-seconds",
+  "service": "dynamodb", "home_chapter": "28", "kind": "restriction",
+  "claim": "The TTL timestamp must be stored as a Number data type in Unix epoch time format at the seconds granularity. Items with a TTL attribute that is not a Number are ignored by the TTL process.",
+  "question": "What data type and format must the TTL attribute have?",
+  "values": [{"key": "format", "display": "Unix epoch time format at the seconds granularity"}],
+  "qualifiers": {"scope": "per TTL attribute", "default_or_max": "fixed", "adjustable": false, "condition": "Number type, epoch seconds"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/TTL", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html", "quote": "The timestamp must be stored as a Number data type in Unix epoch time format at the seconds granularity."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["4.3.K4"]
+ },
+ {
+  "id": "dynamodb-ttl-five-years-past-ignored",
+  "service": "dynamodb", "home_chapter": "28", "kind": "limit",
+  "claim": "To be considered for expiry and deletion, the TTL can't be more than five years in the past. There is no minimum TTL duration.",
+  "question": "How far in the past can a TTL timestamp be and still be deleted?",
+  "values": [{"key": "past", "display": "more than five years in the past"}],
+  "qualifiers": {"scope": "per TTL timestamp", "default_or_max": "max", "adjustable": false, "condition": "no minimum TTL duration; any future time works"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/time-to-live-ttl-before-you-start", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/time-to-live-ttl-before-you-start.html", "quote": "To be considered for expiry and deletion, the TTL can't be more than five years in the past."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended", "bullets": ["4.3.K4"]
+ },
+ {
+  "id": "dynamodb-ttl-global-table-initial-delete-no-wcu",
+  "service": "dynamodb", "home_chapter": "28", "kind": "behavior",
+  "claim": "With global tables, the initial TTL delete does not consume write capacity units in the Region where the expiry occurs. The replicated TTL delete in each replica Region does consume replicated write units and is charged.",
+  "question": "Does a TTL delete consume write capacity in a global table?",
+  "values": [{"key": "initial", "display": "does not consume Write Capacity Units (WCU)"}],
+  "qualifiers": {"scope": "global tables version 2019.11.21 (Current) with TTL", "default_or_max": "", "adjustable": false, "condition": "replicated deletes consume replicated write units in each replica Region"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/TTL", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html", "quote": "The initial TTL delete does not consume Write Capacity Units (WCU) in the region in which the TTL expiry occurs."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "reference", "bullets": ["4.3.K4"]
+ },
+ {
+  "id": "dynamodb-pitr-latest-restorable-five-minutes",
+  "service": "dynamodb", "home_chapter": "28", "kind": "behavior",
+  "claim": "LatestRestorableDateTime is typically five minutes before the current time, so you can restore to any point between EarliestRestorableDateTime and LatestRestorableDateTime.",
+  "question": "How close to the current time can a point-in-time restore go?",
+  "values": [{"key": "latest", "display": "five minutes before the current time"}],
+  "qualifiers": {"scope": "per table with PITR enabled", "default_or_max": "", "adjustable": false, "condition": "typical value"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/PointInTimeRecovery_Howitworks", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery_Howitworks.html", "quote": "`LatestRestorableDateTime` is typically five minutes before the current time."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["2.2.S5"]
+ },
+ {
+  "id": "dynamodb-pitr-recovery-period-1-to-35",
+  "service": "dynamodb", "home_chapter": "28", "kind": "limit",
+  "claim": "You can set the recovery period for continuous backups to any number between 1 and 35 days. For example, with 30 days you can restore to any point in time within the past 30 days.",
+  "question": "What recovery period can you configure for point-in-time recovery?",
+  "values": [{"key": "range", "display": "between 1 and 35 days"}],
+  "qualifiers": {"scope": "per table with PITR enabled", "default_or_max": "max", "adjustable": true, "condition": "configurable recovery period"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/PointInTimeRecovery_Howitworks", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery_Howitworks.html", "quote": "You can set the recovery period for continuous backups to be any number between 1 and 35 days."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["2.2.S5"]
+ },
+ {
+  "id": "dynamodb-pitr-restores-to-new-table",
+  "service": "dynamodb", "home_chapter": "28", "kind": "behavior",
+  "claim": "The point-in-time recovery process always restores to a new table.",
+  "question": "Does a PITR restore overwrite the existing table?",
+  "values": [{"key": "target", "display": "always restores to a new table"}],
+  "qualifiers": {"scope": "per PITR restore", "default_or_max": "fixed", "adjustable": false, "condition": ""},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/PointInTimeRecovery_Howitworks", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery_Howitworks.html", "quote": "The point-in-time recovery process always restores to a new table."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["2.2.S5"]
+ },
+ {
+  "id": "dax-cluster-up-to-11-nodes",
+  "service": "dax", "home_chapter": "28", "kind": "limit",
+  "claim": "A DAX cluster can support up to 11 nodes per cluster: the primary node plus a maximum of 10 read replicas.",
+  "question": "What is the maximum number of nodes in a DAX cluster?",
+  "values": [{"key": "max", "display": "up to 11 nodes per cluster"}],
+  "qualifiers": {"scope": "per DAX cluster", "default_or_max": "max", "adjustable": false, "condition": "one primary plus a maximum of 10 read replicas"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.concepts.cluster", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.concepts.cluster.html", "quote": "A DAX cluster can support up to 11 nodes per cluster (the primary node plus a maximum of 10 read replicas)."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-production-three-nodes-three-azs",
+  "service": "dax", "home_chapter": "28", "kind": "behavior",
+  "claim": "For production, AWS strongly recommends DAX with at least three nodes, each placed in a different Availability Zone. Three nodes are required for a DAX cluster to be fault-tolerant.",
+  "question": "How many nodes does a fault-tolerant production DAX cluster need?",
+  "values": [{"key": "nodes", "display": "at least three nodes"}],
+  "qualifiers": {"scope": "per DAX cluster", "default_or_max": "min", "adjustable": false, "condition": "one-node and two-node clusters are not fault-tolerant; use them for development or test only"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.concepts.cluster", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.concepts.cluster.html", "quote": "Three nodes are required for a DAX cluster to be fault-tolerant."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-item-cache-ttl-default-5-minutes",
+  "service": "dax", "home_chapter": "28", "kind": "default",
+  "claim": "The DAX item cache has a Time to Live (TTL) setting, which is 5 minutes by default.",
+  "question": "What is the default TTL of the DAX item cache?",
+  "values": [{"key": "ttl", "display": "5 minutes by default"}],
+  "qualifiers": {"scope": "per DAX cluster, item cache", "default_or_max": "default", "adjustable": true, "condition": "set when you create the cluster; zero means items refresh only on LRU eviction or write-through"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.concepts", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.concepts.html", "quote": "The item cache has a Time to Live (TTL) setting, which is 5 minutes by default."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-query-cache-ttl-zero-not-cached",
+  "service": "dax", "home_chapter": "28", "kind": "behavior",
+  "claim": "If you specify zero as the query cache TTL setting, the query response will not be cached.",
+  "question": "What happens when the DAX query cache TTL is zero?",
+  "values": [{"key": "zero", "display": "will not be cached"}],
+  "qualifiers": {"scope": "per DAX cluster, query cache", "default_or_max": "", "adjustable": true, "condition": "TTL set to zero"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.concepts", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.concepts.html", "quote": "If you specify zero as the *query cache* TTL setting, the query response will not be cached."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "reference", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-sizing-typical-hit-rate-85-95",
+  "service": "dax", "home_chapter": "28", "kind": "behavior",
+  "claim": "Typical cache hit rates for applications using DAX are 85 to 95 percent, and hit rates are heavily influenced by the cluster's TTL setting.",
+  "question": "What cache hit rate is typical for DAX applications?",
+  "values": [{"key": "range", "display": "85–95 percent"}],
+  "qualifiers": {"scope": "typical DAX workload", "default_or_max": "", "adjustable": false, "condition": "varies by application and TTL setting"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.sizing-guide", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.sizing-guide.html", "quote": "Typical hit rates for applications using DAX are 85–95 percent."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-sizing-consumed-rcu-only-cache-misses",
+  "service": "dax", "home_chapter": "28", "kind": "behavior",
+  "claim": "With a DAX cluster in front of a table, the DynamoDB ConsumedReadCapacityUnits metric only accounts for cache misses.",
+  "question": "Which reads does the ConsumedReadCapacityUnits metric count when DAX is in use?",
+  "values": [{"key": "metric", "display": "only accounts for cache misses"}],
+  "qualifiers": {"scope": "DynamoDB table behind a DAX cluster", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.sizing-guide", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.sizing-guide.html", "quote": "If you also already have a DAX cluster, remember that the DynamoDB `ConsumedReadCapacityUnits` metric only accounts for cache misses."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "reference", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-performance-10x-microseconds",
+  "service": "dax", "home_chapter": "28", "kind": "capability",
+  "claim": "DAX delivers up to a 10 times performance improvement, from milliseconds to microseconds, even at millions of requests per second.",
+  "question": "What performance improvement does DAX claim?",
+  "values": [{"key": "speedup", "display": "up to a 10 times performance improvement"}],
+  "qualifiers": {"scope": "read-heavy workloads cached by DAX", "default_or_max": "max", "adjustable": false, "condition": "marketing claim: from milliseconds to microseconds"},
+  "evidence": [{"source_id": "www/dynamodbaccelerator", "url": "https://aws.amazon.com/dynamodbaccelerator/", "quote": "DAX delivers up to a 10 times performance improvement—from milliseconds to microseconds—even at millions of requests per second."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-same-region-as-tables",
+  "service": "dax", "home_chapter": "28", "kind": "restriction",
+  "claim": "A DAX cluster in an AWS Region can only interact with DynamoDB tables that are in the same Region.",
+  "question": "Can a DAX cluster cache tables from another Region?",
+  "values": [{"key": "scope", "display": "only interact with DynamoDB tables that are in the same Region"}],
+  "qualifiers": {"scope": "per DAX cluster", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.concepts.cluster", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.concepts.cluster.html", "quote": "A DAX cluster in an AWS Region can only interact with DynamoDB tables that are in the same Region."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-security-group-port-8111",
+  "service": "dax", "home_chapter": "28", "kind": "default",
+  "claim": "A DAX cluster security group needs an ingress rule for the protocol (TCP) and port number (8111) of the cluster so that applications in the VPC can reach it.",
+  "question": "Which protocol and port must a security group allow to reach a DAX cluster?",
+  "values": [{"key": "port", "display": "port number (8111)"}],
+  "qualifiers": {"scope": "per DAX cluster security group", "default_or_max": "default", "adjustable": false, "condition": "ingress rule for TCP"},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/DAX.concepts.cluster", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DAX.concepts.cluster.html", "quote": "The ingress rule specifies the protocol (TCP) and port number (8111) for your cluster."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dax-pricing-pay-for-provisioned-capacity",
+  "service": "dax", "home_chapter": "28", "kind": "pricing-dimension",
+  "claim": "Similar to DynamoDB, with DAX you only pay for the capacity you provision.",
+  "question": "How is DAX billed: by provisioned capacity or by requests?",
+  "values": [{"key": "model", "display": "only pay for the capacity you provision"}],
+  "qualifiers": {"scope": "per DAX cluster", "default_or_max": "", "adjustable": false, "condition": "node capacity, charged per node-hour by instance type"},
+  "evidence": [{"source_id": "www/dynamodbaccelerator", "url": "https://aws.amazon.com/dynamodbaccelerator/", "quote": "Similar to DynamoDB, you only pay for the capacity you provision."}],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "frequently-changing", "changed": null, "exam_relevance": "extended", "bullets": ["3.3.K2"]
+ },
+ {
+  "id": "dynamodb-intro-single-digit-ms-any-scale",
+  "service": "dynamodb", "home_chapter": "28", "kind": "capability",
+  "claim": "DynamoDB delivers consistent single-digit millisecond performance for your application, whether you have 100 or 100 million users.",
+  "question": "What latency does DynamoDB deliver at any scale?",
+  "values": [{"key": "latency", "display": "single-digit millisecond performance"}],
+  "qualifiers": {"scope": "per application", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [{"source_id": "docs/amazondynamodb/latest/developerguide/Introduction", "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html", "quote": "DynamoDB delivers consistent single-digit millisecond performance for your application, whether you have 100 or 100 million users."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["3.3.S4"]
+ },
+ {
+  "id": "dynamodb-sla-standard-vs-global-tables",
+  "service": "dynamodb", "home_chapter": "28", "kind": "sla",
+  "claim": "The DynamoDB SLA commits to a Monthly Uptime Percentage for each AWS Region of at least 99.99% if the Standard SLA applies, or at least 99.999% if the Global Tables SLA applies.",
+  "question": "What availability does the DynamoDB SLA promise for a standard table and for a global table?",
+  "values": [{"key": "standard", "display": "99.99%"}, {"key": "global", "display": "99.999%"}],
+  "qualifiers": {"scope": "per AWS Region, per monthly billing cycle", "default_or_max": "min", "adjustable": false, "condition": "99.99% under the Standard SLA; 99.999% under the Global Tables SLA"},
+  "evidence": [{"source_id": "www/dynamodb/sla", "url": "https://aws.amazon.com/dynamodb/sla/", "quote": "AWS will use commercially reasonable efforts to make DynamoDB available with a Monthly Uptime Percentage for each AWS region, during any monthly billing cycle, of (a) at least 99.99% if the Standard SLA applies, or (b) at least 99.999% if the Global Tables SLA applies (the \"Service Commitment\")."}],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core", "bullets": ["3.3.K1"]
+ }
+]

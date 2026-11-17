@@ -1,0 +1,243 @@
+{
+ "lens": "claims",
+ "chapter": "12",
+ "reviewer": "review-12-claims",
+ "lenses": [
+  "claims",
+  "technical"
+ ],
+ "checked": "2026-10-22",
+ "findings": [
+  {
+   "id": "claims-12-01",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Direct Connect traffic is private but not encrypted unless you add encryption (4 min)",
+   "quote": "| Not on | [Dedicated or hosted connection of any speed](../facts/direct-connect.md#direct-connect-vif-transit-access-transit-gateways-any-speed) | [Not supported on 1 Gbps dedicated connections](...) or [any hosted connections](...) |",
+   "type": "claims: link does not support the sentence; technical: misleading table row",
+   "severity": "blocking",
+   "evidence": "Fact direct-connect-vif-transit-access-transit-gateways-any-speed quotes only transit virtual interfaces: \"You can use transit virtual interfaces with any Direct Connect dedicated or hosted connection of any speed.\" It says nothing about an IPsec VPN. Worse, under the row label \"Not on\" the IPsec cell reads as \"IPsec VPN is not on dedicated or hosted connections of any speed\", the opposite of the intended meaning (and of question q003, whose key is an IPsec VPN on a 1 Gbps hosted connection). Fix: rename the row (for example \"Runs on\"), give IPsec \"any dedicated or hosted connection\" grounded by a VPN-over-Direct Connect fact (for example site-to-site-vpn-private-ip-vpn-ipsec-over-dx-no-public-ip together with the transit VIF fact, stated as what it is), and give MACsec its supported speeds.",
+   "status": "fixed",
+   "resolution": "fix-12: row renamed 'Runs on'. IPsec cell now states the transit fact as what it is: 'A transit virtual interface, on a dedicated or hosted connection of any speed' (direct-connect-vif-transit-access-transit-gateways-any-speed). MACsec cell: 'Dedicated connections: not supported on 1 Gbps dedicated connections or any hosted connections'. Step 3 now says how the VPN runs: over a public virtual interface, or as a private IP VPN over Direct Connect transit VIFs (site-to-site-vpn-private-ip-vpn-transit-vif-instead-of-public-vif)."
+  },
+  {
+   "id": "claims-12-02",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "BGP moves traffic between tunnels and prefers Direct Connect routes over VPN routes (4 min)",
+   "quote": "**Stop and answer.** A static route and a propagated route both name 172.16.0.0/16. Which one wins? ... The static route, for [the same destination CIDR block](../facts/site-to-site-vpn.md#site-to-site-vpn-static-route-beats-propagated-same-cidr).",
+   "type": "technical: scope dropped, contradicts the table above it",
+   "severity": "blocking",
+   "evidence": "Fact site-to-site-vpn-static-route-beats-propagated-same-cidr has scope \"VPC route table\" (static routes in the subnet route table beat propagated routes). Three lines earlier the section's own table, from fact site-to-site-vpn-route-priority-dx-bgp-before-vpn-static-before-vpn-bgp, says that on the virtual private gateway \"BGP propagated routes from an Direct Connect connection\" beat \"Manually added static routes\" of a VPN. The question says only \"a static route\" and \"a propagated route\", so a reader who just read the table (a VPN static route against a Direct Connect propagated route) gets the opposite gist. Fix: say \"In the VPC route table, a static route you added and a propagated route both name ...\" and add one line that separates the two levels (route table vs. virtual private gateway route selection).",
+   "status": "fixed",
+   "resolution": "fix-12: the prompt now names the layer ('In a subnet route table, a static route you added and a propagated route ...'); the answer adds 'The table above is another level: the virtual private gateway's own choice.' Step 3 says the VPC uses the most specific route first, then, for equal prefixes, the virtual private gateway uses the order table."
+  },
+  {
+   "id": "claims-12-03",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Client VPN connects people to a VPC through an endpoint in a subnet (4 min)",
+   "quote": "3. **Authenticate.** Users sign in with **mutual authentication** (certificates) or **federated authentication** (SAML 2.0).",
+   "type": "claims: unlinked claim stated as a closed list; technical: incomplete",
+   "severity": "blocking",
+   "evidence": "No fact link, and the list is incomplete. docs/vpn/latest/clientvpn-admin/client-authentication (saved 2026-10-14): \"Client VPN offers the following types of client authentication: + Active Directory authentication (user-based) + Mutual authentication (certificate-based) + Single sign-on (SAML-based federated authentication) (user-based)\" and \"You can use one of the preceding methods alone, or you can use a combination of mutual authentication with a user-based method\". Active Directory authentication is a common exam answer for Client VPN. Fix: name all three methods and the allowed combination, with a fact (register one from this page if none exists).",
+   "status": "fixed",
+   "resolution": "fix-12: step 3 names all three methods with fact client-vpn-authentication-methods-ad-certificate-saml (Active Directory, certificate-based = mutual, federated SAML 2.0). The combination sentence (client-vpn-authentication-alone-or-mutual-plus-user-based) was written and then cut to keep 2-deep.md under its 2,400-word cap (L201)."
+  },
+  {
+   "id": "claims-12-04",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Direct Connect resilience comes from a second location and not from more links (4 min)",
+   "quote": "Why not a VPN backup? [AWS Direct Connect connections with a VPN backup](...) cost less, but a tunnel carries [up to 1.25 Gbps throughput per VPN tunnel](../facts/direct-connect.md#direct-connect-backup-vpn-bandwidth-limit-not-above-1-gbps).",
+   "type": "technical: scope dropped, outdated for transit gateway",
+   "severity": "should",
+   "evidence": "Fact direct-connect-backup-vpn-bandwidth-limit-not-above-1-gbps has scope \"VPN backup for Direct Connect, virtual private gateway\" (quote: \"...does not support Equal Cost Multi Path (ECMP) for egress data path in the case of multiple AWS Site to Site VPN tunnels terminating on the same VGW\"). The sentence drops the virtual private gateway. The chapter's own decision record puts the backup VPN on a transit gateway, and the current VPN guide (full:vpn-s2svpn, Large Bandwidth Tunnels) names this exact use: \"**Direct Connect backup**: Provide backup or overlay connectivity for high-capacity Direct Connect circuits (10 Gbps+) to on-premises data centers or colocation facilities.\" Fix: say \"on a virtual private gateway, a tunnel carries ...\" and add that a transit gateway with large bandwidth tunnels and ECMP raises the backup capacity.",
+   "status": "fixed",
+   "resolution": "fix-12: now 'On a virtual private gateway, one tunnel carries up to 1.25 Gbps throughput per VPN tunnel. A transit gateway with ECMP allows a throughput of up to 50Gbps' (direct-connect-backup-vpn-on-tgw-ecmp-up-to-50-gbps). The large-bandwidth-tunnel backup sentence was not added: no verified fact holds it."
+  },
+  {
+   "id": "claims-12-05",
+   "file": "data/12-hybrid-networking/questions.json",
+   "section": "hybrid-networking-q009 (5-quiz.md Question 8), option b why",
+   "quote": "VPN connections on one virtual private gateway share an aggregate throughput of [up to 1.25 Gbps](../facts/site-to-site-vpn.md#site-to-site-vpn-faq-vgw-aggregate-throughput), far below the 10 Gbps load.",
+   "type": "technical: condition dropped from a fact (direction)",
+   "severity": "should",
+   "evidence": "Fact site-to-site-vpn-faq-vgw-aggregate-throughput, scope \"AWS to on-premises\"; www/vpn/faqs: \"Multiple VPN connections to the same Virtual Private Gateway are bound by an aggregate throughput limit from AWS to on-premises of up to 1.25 Gbps.\" The stem's load runs \"from its data center to a virtual private gateway\" (on-premises to AWS), so the cited limit does not apply as written. The key stays right (one tunnel per gateway is selected: site-to-site-vpn-ecmp-not-on-vgw-supported-on-tgw, \"one tunnel across all Site-to-Site VPN connections on the gateway will be selected\"). Fix: cite that fact instead, or add \"toward the data center\". The key is unchanged, so no re-verification of the answer is needed beyond the edit rule.",
+   "status": "fixed",
+   "resolution": "fix-12: q009 option b why re-grounded: 'On a virtual private gateway ECMP is not supported for Site-to-Site VPN connections, so one tunnel of up to 1.25 Gbps carries the backup' (site-to-site-vpn-ecmp-not-on-vgw-supported-on-tgw, site-to-site-vpn-limit-bandwidth-standard-tunnel; both added to facts). Stem, options and key unchanged, so the pack hash and the verification stand."
+  },
+  {
+   "id": "claims-12-06",
+   "file": "data/12-hybrid-networking/questions.json",
+   "section": "hybrid-networking-q002 (5-quiz.md Question 7), option b why",
+   "quote": "VPN connections on one virtual private gateway share an aggregate throughput of [up to 1.25 Gbps](../facts/site-to-site-vpn.md#site-to-site-vpn-faq-vgw-aggregate-throughput), so more connections add no bandwidth.",
+   "type": "technical: condition dropped from a fact (direction)",
+   "severity": "should",
+   "evidence": "Same fact scope as claims-12-05: the aggregate limit is \"from AWS to on-premises\". The stem says only \"Nightly transfers\" without a direction, so \"more connections add no bandwidth\" is stated more widely than the source. Better ground: site-to-site-vpn-ecmp-not-on-vgw-supported-on-tgw (\"one tunnel across all Site-to-Site VPN connections on the gateway will be selected\"), which holds in both directions.",
+   "status": "fixed",
+   "resolution": "fix-12: q002 option b why re-grounded on site-to-site-vpn-ecmp-not-on-vgw-supported-on-tgw ('so the gateway uses one tunnel and more connections add no bandwidth'). Stem, options and key unchanged."
+  },
+  {
+   "id": "claims-12-07",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Direct Connect resilience comes from a second location and not from more links (4 min)",
+   "quote": "[Two single connections to multiple locations](...) give [an SLA of 99.9%](...). ... [Separate devices in more than one location](...) give [an SLA of 99.99%](...).",
+   "type": "claims: condition dropped from a fact",
+   "severity": "should",
+   "evidence": "Facts direct-connect-resiliency-high-sla-99-9 and direct-connect-resiliency-maximum-sla-99-99 both carry the condition \"It requires you to meet all of the requirements for achieving the SLA that are specified in the Direct Connect Service Level Agreement\" (scope: \"you meet all requirements of the Direct Connect Service Level Agreement\"). \"give\" states the SLA as automatic. Question q004 keeps the condition (\"when you meet the SLA requirements\"); the deep file should match. Fix: \"can reach ... when you meet the SLA requirements\".",
+   "status": "fixed",
+   "resolution": "fix-12: steps 2 and 3 now say 'can reach an SLA of 99.9% when you meet the SLA requirements' and 'can reach an SLA of 99.99% on the same terms'."
+  },
+  {
+   "id": "claims-12-08",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Numbers that decide answers (2 min), B-list and its Changed recently note",
+   "quote": "> **Old:** [100 each for IPv4 and IPv6](...).<br> > **Now:** [up to 1,000 prefixes each for IPv4 and IPv6](...).",
+   "type": "claims: Old/Now framing says more than the facts",
+   "severity": "should",
+   "evidence": "Fact direct-connect-change-prefix-controls: \"The default allocation stays 100.\" Fact direct-connect-quota-routes-per-bgp-session-private-transit quotes the current quota row: \"Default of 100 each for IPv4 and IPv6. Can be increased using prefix controls up to 1,000 each for IPv4 and IPv6.\" So 100 is not an old value: it is still the default, and what changed is the maximum (\"Previously, Direct Connect VIFs accepted a maximum of 100 route prefixes\"). Fix: \"Old: a maximum of 100 ... Now: default 100, raise up to 1,000 with prefix controls\". The B-list row also drops the direction \"from on-premises to AWS\" from the fact scope.",
+   "status": "fixed",
+   "resolution": "fix-12: Old: 'the default was also the maximum.' Now: 'you can allocate up to 1,000 prefixes each for IPv4 and IPv6; the default stays 100 each for IPv4 and IPv6'. B-list row now says 'from on-premises'. 'The exam probably expects: the default of 100.'"
+  },
+  {
+   "id": "claims-12-09",
+   "file": "data/12-hybrid-networking/questions.json",
+   "section": "hybrid-networking-q010 (5-quiz.md Question 10), explanation",
+   "quote": "a hosted connection from a partner comes in small sizes such as 200 Mbps, so the company pays for no unused port capacity.",
+   "type": "claims: capability claim without a fact link",
+   "severity": "should",
+   "evidence": "The key's reason (a hosted connection can be 200 Mbps) has no link. The verified fact exists: direct-connect-limit-hosted-port-speeds, \"For hosted connections, the possible values are 50 Mbps, 100 Mbps, 200 Mbps, ...\". Link it, for example [200 Mbps](../facts/direct-connect.md#direct-connect-limit-hosted-port-speeds) in a sentence that holds the canonical value string, or the full list.",
+   "status": "removed",
+   "resolution": "fix-12: the unlinked clause 'comes in small sizes such as 200 Mbps' was removed from the q010 explanation and replaced with a linked reason (direct-connect-hosted-connection-provisioned-by-partner). Linking direct-connect-limit-hosted-port-speeds in the explanation is refused by Q112 (the fact is volatile). The hosted speed floor is now a B-list row in 2-deep.md (50 Mbps). Key unchanged."
+  },
+  {
+   "id": "claims-12-10",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "Choose it or not (2 min), Virtual private gateway or transit gateway for a VPN",
+   "quote": "| Which VPCs? | One: ... | Many, through [an AWS-managed VPN endpoint](../facts/site-to-site-vpn.md#site-to-site-vpn-tgw-vpn-many-vpcs-without-multiple-vpn-connections) |",
+   "type": "claims: scope dropped",
+   "severity": "should",
+   "evidence": "Fact site-to-site-vpn-tgw-vpn-many-vpcs-without-multiple-vpn-connections: \"...an AWS-managed VPN endpoint for connecting to multiple VPCs in the same region...\". The cell says \"Many\" without \"in the same Region\"; in a chapter that also teaches the global Direct Connect gateway, a glance reader can take a transit gateway VPN to reach VPCs in any Region. Fix: \"Many in the same Region\".",
+   "status": "fixed",
+   "resolution": "fix-12: cell now reads 'Many in the same Region, through an AWS-managed VPN endpoint'."
+  },
+  {
+   "id": "claims-12-11",
+   "file": "data/12-hybrid-networking/tasks.json",
+   "section": "hybrid-networking-t02, verify and still_costs",
+   "quote": "\"verify\": {\"command\": \"aws ec2 describe-vpn-gateways --filters Name=tag:task,Values=hybrid-networking-t02 Name=state,Values=pending,available ...\", \"expect\": \"An empty list.\"}",
+   "type": "technical: verify cannot prove the whole cleanup",
+   "severity": "should",
+   "evidence": "Rule RULINGS hard rule 9 (verify step on every Try) and the lens check \"does the cleanup really remove what was created\". The task creates a VPC, a customer gateway and two virtual private gateways, but verify checks only the gateways; the customer gateway and VPC checks are in still_costs as prose, so a reader who skips cleanup steps 4 and 5 still sees the verify pass. Fix: make verify check all three resource types (the two describe commands already written in still_costs), or add them as verify lines if the schema allows more than one.",
+   "status": "rejected",
+   "resolution": "fix-12: the task schema holds one verify command. The customer gateway and VPC checks are printed as commands in still_costs. Changing the verify command would also make the CLI check report of the task commands stale (T113, needs tasks check-cli). Left for the orchestrator if a second verify line becomes possible."
+  },
+  {
+   "id": "claims-12-12",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Direct Connect traffic is private but not encrypted unless you add encryption (4 min)",
+   "quote": "4. **Or add MACsec.** **MACsec** (MAK-sek) works on [10 Gbps, 100 Gbps, and 400 Gbps dedicated AWS Direct Connect connections](...).",
+   "type": "claims: condition dropped from a fact",
+   "severity": "should",
+   "evidence": "Fact direct-connect-macsec-supported-dedicated-10-100-400-gbps: \"MACsec is supported on 10 Gbps, 100 Gbps, and 400 Gbps dedicated AWS Direct Connect connections at selected points of presence.\" The bullet drops \"at selected points of presence\" (and the need for a MACsec-capable device, fact direct-connect-faq-macsec-needs-capable-device). Task t01 step 3 even shows that the MACsec port list can be empty at a location. Fix: add \"at selected locations\".",
+   "status": "fixed",
+   "resolution": "fix-12: step 4 now adds 'at selected points of presence' (same fact)."
+  },
+  {
+   "id": "claims-12-13",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Client VPN connects people to a VPC through an endpoint in a subnet (4 min)",
+   "quote": "The **Client VPN endpoint** gives users addresses from the **client CIDR range**, [at least /22](../facts/client-vpn.md#client-vpn-client-cidr-between-slash-22-and-slash-12).",
+   "type": "technical: ambiguous for the reader, half of the fact",
+   "severity": "note",
+   "evidence": "Fact client-vpn-client-cidr-between-slash-22-and-slash-12: \"Client CIDR ranges must have a block size of at least /22 and must not be greater than /12.\" For a reader who forgets terms under stress, \"at least /22\" can read as \"/22 or a higher number\" (a smaller block), the wrong way round. Consider \"a block of /22 or larger, up to /12\".",
+   "status": "fixed",
+   "resolution": "fix-12: 'The block is at least /22, the smallest, and must not be greater than /12' with both displays linked."
+  },
+  {
+   "id": "claims-12-14",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "A Direct Connect connection is a port and its virtual interfaces choose the destination (4 min)",
+   "quote": "Why does a new port take so long? A provider builds the circuit, which can take [from several weeks to a few months](../facts/direct-connect.md#direct-connect-vs-vpn-time-dedicated-weeks-to-months).",
+   "type": "claims: sentence says more than the link",
+   "severity": "note",
+   "evidence": "Fact direct-connect-vs-vpn-time-dedicated-weeks-to-months: \"Depending on the service provider, location of your site, and other physical factors, the installation of a Direct Connect Dedicated Connection can take from several weeks to a few months.\" The fact gives three factors, not \"a provider builds the circuit\" as the cause. Consider \"It depends on the service provider, your site's location and other physical factors\".",
+   "status": "removed",
+   "resolution": "fix-12: the ungrounded cause 'A provider builds the circuit' was removed. Now: 'A new port takes from several weeks to a few months, depending on the service provider and your site.'"
+  },
+  {
+   "id": "claims-12-15",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "Each VPN tunnel has a bandwidth limit and a transit gateway combines tunnels (4 min)",
+   "quote": "4. **Bigger tunnels.** A large bandwidth tunnel supports [up to 5 Gbps](...) ... > **Exam signal:** \"consistent VPN performance from a distant office\" points to an **accelerated Site-to-Site VPN** ...",
+   "type": "technical: missing restriction between two adjacent recommendations",
+   "severity": "note",
+   "evidence": "full:vpn-s2svpn, Large Bandwidth Tunnels, Requirements and limitations: \"Accelerated VPN is not supported.\" and \"Customer Gateways (CGWs) only with a fixed IP can be used with Large Bandwidth Tunnels.\" The section puts large tunnels and acceleration next to each other with no word that they do not combine; the exam signal also omits that acceleration needs a transit gateway (it is only in FAQ 2). Consider one line in the Go deeper block.",
+   "status": "fixed",
+   "resolution": "fix-12: the Go deeper block now says 'With large bandwidth tunnels, Accelerated VPN is not supported' (site-to-site-vpn-restriction-lbt-no-accelerated), and the exam signal says 'an accelerated Site-to-Site VPN on a transit gateway' (FAQ 2 quotes 'Only Transit Gateway supports Accelerated Site-to-Site VPN')."
+  },
+  {
+   "id": "claims-12-16",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "Changed recently (1 min)",
+   "quote": "> **Changed recently:** (2025-11-12) Large bandwidth tunnels.",
+   "type": "claims: date",
+   "severity": "note",
+   "evidence": "Fact site-to-site-vpn-change-large-bandwidth-tunnels: \"the document history lists Large Bandwidth Tunnels for transit gateway and Cloud WAN attachments on September 25, 2025\" and the announcement on November 12, 2025. Either date keeps the item examinable; consider naming the announcement explicitly, or the earlier date, so the note matches the fact claim.",
+   "status": "rejected",
+   "resolution": "fix-12: L107 requires the callout date to equal changed.date of the fact linked in Now, which is 2025-11-12 (the announcement). Both dates keep the item examinable."
+  },
+  {
+   "id": "claims-12-17",
+   "file": "data/12-hybrid-networking/cards.json",
+   "section": "hybrid-networking-c010",
+   "quote": "\"front\": \"... can the VPN carry part of the traffic while Direct Connect is up?\", \"back\": \"No. The VPN carries traffic after a failure.\"",
+   "type": "technical: absolute answer without the same-prefix condition",
+   "severity": "note",
+   "evidence": "Fact direct-connect-vpn-same-vpc-failover-only-dx-path-preferred is about the same routes on both paths. The chapter's own step 4 (\"the most specific route in your route table\", fact site-to-site-vpn-longest-prefix-match-most-specific-route) means a more specific prefix advertised only over the VPN does use the VPN while Direct Connect is up. Consider \"With the same prefixes on both, can ...\".",
+   "status": "fixed",
+   "resolution": "fix-12: c010 front now says 'Direct Connect and a Site-to-Site VPN reach one VPC with the same routes.'"
+  },
+  {
+   "id": "claims-12-18",
+   "file": "diagrams/src/hybrid-networking-after.json",
+   "section": "Callvale after (2-deep.md Decision record)",
+   "quote": "{\"id\": \"sub\", \"type\": \"subnet-private\", \"label\": \"Private subnet\", \"in\": \"vpc\", \"cells\": \"A6:B6\"} with the Client VPN endpoint at A6",
+   "type": "technical: picture contradicts the chapter's best practice",
+   "severity": "note",
+   "evidence": "Fact client-vpn-high-availability-multiple-subnets-different-azs: \"We recommend that you associate at least two subnets to provide Availability Zone redundancy.\" The after picture shows the Client VPN endpoint in a single private subnet, while 2-deep step 2 tells the reader to associate at least two. Consider labelling the group \"Private subnets (two AZs)\".",
+   "status": "rejected",
+   "resolution": "fix-12: a label change in the after spec reopens the diagrams gate (re-render, D04). Step 2 of the Client VPN subsection states the two-subnet recommendation. Left for the W14 diagram pass."
+  },
+  {
+   "id": "claims-12-19",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "BGP moves traffic between tunnels and prefers Direct Connect routes over VPN routes (4 min)",
+   "quote": "3. **Reach the subnets.** With **route propagation**, VPN routes enter the route table on their own.",
+   "type": "claims: mechanism stated without a fact link",
+   "severity": "note",
+   "evidence": "No fact link for how route propagation works (and it applies to virtual private gateways; a transit gateway uses its own route tables and the VPC needs a route to the transit gateway). Link a VPC route-propagation fact from chapter 10 or 11, or scope the sentence to a virtual private gateway.",
+   "status": "fixed",
+   "resolution": "fix-12: step now reads 'On a virtual private gateway, enable route propagation for your route table: VPN routes then enter the route table on their own' (site-to-site-vpn-vpc-route-table-route-to-vgw-and-propagation)."
+  },
+  {
+   "id": "claims-12-20",
+   "file": "data/12-hybrid-networking/tasks.json",
+   "section": "hybrid-networking-t01, step 2 expect",
+   "quote": "A location gives access to AWS in the Region with which it is associated, so you choose a location near your data center and its Region.",
+   "type": "technical: half of the fact, conflicts with the Direct Connect gateway teaching",
+   "severity": "note",
+   "evidence": "Fact direct-connect-location-gives-access-to-associated-region-and-all-public-regions also says \"you can use a single connection in a public Region or AWS GovCloud (US) to access public AWS services in all other public Regions\", and fact direct-connect-dxgw-global-resource-any-region-not-china says \"You can connect to any Region globally using a Direct Connect gateway.\" \"choose a location near your data center and its Region\" implies the location limits the Regions you reach, which question q006 teaches is not so. Consider \"choose a location near your data center; a Direct Connect gateway then reaches VPCs in other Regions\".",
+   "status": "fixed",
+   "resolution": "fix-12: t01 step 2 expect now ends 'so you choose a location near your data center. A Direct Connect gateway then reaches VPCs in other Regions.'; direct-connect-dxgw-global-resource-any-region-not-china added to the task facts. Commands unchanged."
+  },
+  {
+   "id": "claims-12-21",
+   "file": "data/12-hybrid-networking/questions.json",
+   "section": "hybrid-networking-q001 (5-quiz.md Question 4), explanation",
+   "quote": "A Site-to-Site VPN gives [Internet Protocol security (IPsec) VPN connections](...) between the data center and the VPC with no hardware to order.",
+   "type": "claims: unlinked clause",
+   "severity": "note",
+   "evidence": "\"with no hardware to order\" has no fact; the grounded reason is direct-connect-faq-vpn-ipsec-over-internet-quick-low-bandwidth (\"VPN connections can be configured in minutes\"), which the twin already uses. Consider replacing the clause with that link.",
+   "status": "removed",
+   "resolution": "fix-12: 'with no hardware to order' removed from the q001 explanation; replaced by 'and it can be configured in minutes' (direct-connect-faq-vpn-ipsec-over-internet-quick-low-bandwidth). Key unchanged."
+  }
+ ]
+}

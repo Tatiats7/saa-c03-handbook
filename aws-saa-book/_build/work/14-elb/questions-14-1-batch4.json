@@ -1,0 +1,148 @@
+[
+ {
+  "id": "elb-q009",
+  "section": "2-deep.md#encryption-to-the-targets-needs-a-second-tls-connection-or-a-pass-through",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": ["1.3.S3"],
+  "topics": ["security", "networking"],
+  "services": ["elb"],
+  "concept": "tls-passthrough-nlb",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a web application on Amazon EC2 instances in two Availability Zones. Clients connect over HTTPS on port 443 through a new load balancer. The company wants to protect the data in transit on every network hop. Each instance must decrypt the client traffic with its own certificate and private key. Which solution will meet these requirements in the MOST secure way?",
+  "keywords": ["protect the data in transit on every network hop", "decrypt the client traffic with its own certificate", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Use an Application Load Balancer with an HTTPS listener that has an ACM certificate, and forward the requests to an HTTP target group of the instances on port 80.",
+    "correct": false,
+    "why": "The HTTPS listener uses its certificate to [terminate the front-end connection](../facts/elb.md#elb-alb-https-listener-terminates-and-decrypts), so the instances receive plain HTTP and decrypt nothing.",
+    "concept": "http-target-group",
+    "trap": "elb-trap-https-listener-end-to-end",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Use an Application Load Balancer with an HTTPS listener that has an ACM certificate, and forward the requests to an HTTPS target group of the instances, which hold certificates.",
+    "correct": false,
+    "why": "It works, but the listener has to [terminate the front-end connection](../facts/elb.md#elb-alb-https-listener-terminates-and-decrypts) first, so the data is plain text inside the load balancer.",
+    "concept": "https-target-group",
+    "trap": null,
+    "misconception": "believes that re-encryption keeps the data hidden from the load balancer",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Use a Network Load Balancer with a TCP listener on port 443, and forward the connections to a TCP target group of the instances, which hold certificates.",
+    "correct": true,
+    "why": "A TCP listener on port 443 [passes encrypted traffic through to the targets](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp), so each instance ends the client's TLS session with its own certificate.",
+    "concept": "nlb-tcp-passthrough",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Use a Network Load Balancer with a TLS listener that has an ACM certificate, and forward the connections to a TLS target group of the instances, which hold certificates.",
+    "correct": false,
+    "why": "It works, but a TLS listener decrypts at the load balancer; for decryption on the targets, AWS says to [create a TCP listener on port 443](../facts/elb.md#elb-nlb-tls-listener-terminate-tcp-passthrough).",
+    "concept": "nlb-tls-listener",
+    "trap": null,
+    "misconception": "believes that a TLS listener passes the encrypted traffic through",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The most secure design keeps the data hidden from the load balancer. When the targets have to decrypt, AWS points to [a Network Load Balancer with a TCP listener on port 443](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp), which [passes encrypted traffic through to the targets](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp). Both Application Load Balancer options and the TLS listener decrypt at the load balancer first, even when they encrypt the next hop again.",
+  "takeaway": "For TLS that ends on the instances, use a TCP listener on port 443 of a Network Load Balancer.",
+  "twin": "If the stem said \"The load balancer must route each request to a target group by its URL path\" instead: the Application Load Balancer with an HTTPS target group, because a Network Load Balancer works at [Layer 4](../facts/elb.md#elb-compare-layer-per-type).",
+  "say": "If the instances must decrypt, use a Network Load Balancer with a TCP listener on 443; it passes TLS through untouched.",
+  "facts": [
+   "elb-alb-https-listener-terminates-and-decrypts",
+   "elb-alb-https-decrypt-at-target-use-nlb-tcp",
+   "elb-nlb-tls-listener-terminate-tcp-passthrough",
+   "elb-compare-layer-per-type"
+  ],
+  "sources": [],
+  "exam_english": ["ee-in-transit", "ee-most-secure", "ee-must"],
+  "twin_of": "elb-q005"
+ },
+ {
+  "id": "elb-q017",
+  "section": "2-deep.md#sticky-sessions-send-a-user-back-to-one-target-and-bypass-the-algorithm",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": ["3.4.S4"],
+  "topics": ["performance", "resilience"],
+  "services": ["elb", "elasticache"],
+  "concept": "central-session-store",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer. The application keeps each user's session data in the memory of the instance that served the user's first request. Users are signed out when a later request reaches a different instance. Users must keep their sessions when an instance is terminated, so the web tier must become stateless and scalable. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["session data in the memory of the instance", "keep their sessions when an instance is terminated", "stateless and scalable", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Turn on duration-based stickiness for the target group, so that the load balancer sends all requests of a user to the same instance.",
+    "correct": false,
+    "why": "Sticky sessions [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what), so the session is lost with that instance at scale-in.",
+    "concept": "duration-stickiness",
+    "trap": "elb-trap-sticky-sessions-keep-state",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Store the session data in an Amazon ElastiCache cluster that every instance reads and writes, and change the application to use the cluster.",
+    "correct": true,
+    "why": "A [centralized session management data store](../facts/elb.md#elb-session-store-centralized-not-on-servers) keeps sessions outside the instances, so any instance can serve any user after scale-in.",
+    "concept": "elasticache-session-store",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Replace the Application Load Balancer with a Network Load Balancer, and turn on source IP stickiness for the target group of the instances.",
+    "correct": false,
+    "why": "Source IP stickiness still keeps the session on one instance, and it can cause [uneven distribution of connections and flows](../facts/elb.md#elb-sticky-uneven-load-nat).",
+    "concept": "nlb-source-ip-stickiness",
+    "trap": null,
+    "misconception": "believes that source IP stickiness keeps sessions when an instance goes away",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Run a session database on one new EC2 instance that every web instance reads and writes, and change the application to use that database.",
+    "correct": false,
+    "why": "It works, but the team patches and scales one self-managed database instance, and that instance becomes a single point of failure for every session.",
+    "concept": "self-managed-session-db",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "To make a web tier stateless, AWS says to offload session data to a [database, cache, or external files](../facts/ec2-auto-scaling.md#ec2-auto-scaling-wa-offload-session-data). AWS calls a [centralized session management data store](../facts/elb.md#elb-session-store-centralized-not-on-servers) the ideal solution [when your fleet of web servers is elastic](../facts/elb.md#elb-session-store-centralized-not-on-servers). A managed ElastiCache cluster keeps the sessions when Auto Scaling terminates an instance, and the team runs no database instance of its own.",
+  "takeaway": "To keep sessions through scale-in, move them to a shared store such as ElastiCache; stickiness does not keep them.",
+  "twin": "If the stem said \"The company wants a fix as soon as possible, with minimal code changes\" instead: duration-based stickiness, because sticky sessions [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what) without code changes.",
+  "say": "Move the sessions to ElastiCache; then any instance can serve any user, and scale-in loses nothing.",
+  "facts": [
+   "elb-alb-sticky-sessions-what",
+   "elb-session-store-centralized-not-on-servers",
+   "elb-sticky-uneven-load-nat",
+   "ec2-auto-scaling-wa-offload-session-data"
+  ],
+  "sources": [],
+  "exam_english": ["ee-stateless", "ee-scalable", "ee-must"],
+  "twin_of": "elb-q013"
+ }
+]

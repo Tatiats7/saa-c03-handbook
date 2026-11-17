@@ -1,0 +1,226 @@
+{
+ "lens": "reader",
+ "chapter": "12",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "bgp-moves-traffic-between-tunnels-and-prefers-direct-connect-routes-over-vpn-routes",
+   "quote": "**Stop and answer.** A static route and a propagated route both name 172.16.0.0/16. Which one wins? ... The static route, for [the same destination CIDR block]",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "The answer contradicts the table directly above it, where row 1 'BGP propagated routes from an Direct Connect connection' beats row 2 'Manually added static routes' (site-to-site-vpn-route-priority-dx-bgp-before-vpn-static-before-vpn-bgp, scope: virtual private gateway route selection). The linked fact site-to-site-vpn-static-route-beats-propagated-same-cidr has scope 'VPC route table' and only covers 'static routes whose targets are an internet gateway, a virtual private gateway, a network interface, an instance ID, a VPC peering connection, a NAT gateway, a transit gateway, or a gateway VPC endpoint' (docs/vpn/latest/s2svpn/vpn-route-priority). The text never says there are two levels (the VPC route table, then the virtual private gateway's own choice among VPN and Direct Connect routes), so the reader learns 'static always wins' and 'Direct Connect BGP beats static' at the same time. Fix: name the layer in the prompt (a static route in the VPC route table versus a route that the virtual private gateway propagates) and add one cause-and-effect sentence that separates the two levels.",
+   "status": "fixed",
+   "resolution": "fix-12: see claims-12-02. The prompt names the subnet route table, and the answer separates the two levels."
+  },
+  {
+   "id": "reader-02",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "direct-connect-traffic-is-private-but-not-encrypted-unless-you-add-encryption",
+   "quote": "| Not on | [Dedicated or hosted connection of any speed](../facts/direct-connect.md#direct-connect-vif-transit-access-transit-gateways-any-speed) | [Not supported on 1 Gbps dedicated connections] ... |",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "Under the row label 'Not on', the IPsec VPN cell reads as 'an IPsec VPN does not run on a dedicated or hosted connection of any speed', the opposite of the intended meaning; a skimmer takes this gist from the table. The linked fact is about transit virtual interfaces, not IPsec VPN: 'You can use transit virtual interfaces with any Direct Connect dedicated or hosted connection of any speed.' (docs/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces). Fix: relabel the row (for example 'Runs on'), and ground the VPN cell in direct-connect-encrypt-private-connection-vpn-over-dx-or-macsec (VPN over a public or transit virtual interface).",
+   "status": "fixed",
+   "resolution": "fix-12: see claims-12-01. Row 'Runs on'; step 3 says a public virtual interface or a private IP VPN over transit VIFs."
+  },
+  {
+   "id": "reader-03",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "decision-record",
+   "quote": "**Requirement.** Encrypted within 3 weeks, private within 6 months, fastest to implement. ... Direct Connect after 10 weeks; the VPN route stays, [which is the backup route](...)",
+   "type": "contradiction",
+   "severity": "should",
+   "evidence": "Once Direct Connect becomes the main path, the bank's recordings travel unencrypted: Direct Connect 'does not encrypt your traffic' by default (direct-connect-not-encrypted-by-default-use-service-encryption). This is the chapter's own first trap, and the spoken answer hybrid-networking-s01 says 'In your case, I'd run a private IP VPN over the transit virtual interface', which the decision record and the after diagram do not show. The STARTUP.md problem also says 'a private connection with consistent throughput', which the Requirement drops. Fix: keep the decision, but add how the Direct Connect path is encrypted (private IP VPN over the transit virtual interface, site-to-site-vpn-private-ip-vpn-needs-transit-gateway-and-dx-attachment), or state the bank's acceptance explicitly; restore 'consistent throughput' in the Requirement.",
+   "status": "fixed",
+   "resolution": "fix-12: Requirement now 'Encrypted in 3 weeks; private, with consistent throughput, in 6 months.' Decision adds 'Direct Connect after 10 weeks, with a private IP VPN over it for encryption', which matches s01. The after diagram is unchanged (it shows the paths, not the encryption)."
+  },
+  {
+   "id": "reader-04",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "a-direct-connect-connection-is-a-port-and-its-virtual-interfaces-choose-the-destination",
+   "quote": "**Stop and answer.** A private virtual interface on a virtual private gateway in us-east-1 must reach a VPC in eu-west-1. What do you add? ... A Direct Connect gateway.",
+   "type": "leap",
+   "severity": "should",
+   "evidence": "The answer suggests that adding a Direct Connect gateway is enough. The chapter's own question hybrid-networking-q006 keys 'Create a Direct Connect gateway, attach a new private virtual interface to it, and associate the virtual private gateways of both VPCs with it'; a private virtual interface attaches to one gateway (direct-connect-private-vif-one-dxgw-or-one-vgw). The reader cannot explain the steps to a customer from this answer. Fix: answer 'A Direct Connect gateway, a new private virtual interface on it, and both virtual private gateways associated with it'.",
+   "status": "fixed",
+   "resolution": "fix-12: answer now 'A Direct Connect gateway, with a new private virtual interface and both virtual private gateways associated.'"
+  },
+  {
+   "id": "reader-05",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "bgp-moves-traffic-between-tunnels-and-prefers-direct-connect-routes-over-vpn-routes",
+   "quote": "> **Exam signal:** \"use the VPN only if Direct Connect fails\" points to the same routes on both: [Yes, but only for failover](../facts/direct-connect.md#direct-connect-vpn-same-vpc-failover-only-dx-path-preferred).",
+   "type": "unclear-sentence",
+   "severity": "should",
+   "evidence": "The link text is the FAQ's answer to a question that the sentence does not show, so the sentence does not parse ('points to the same routes on both: Yes, but only for failover'). STYLE plain English: one clear clause per idea. Fix: 'points to advertising the same routes over both: AWS allows both to the same VPC, [Yes, but only for failover]' or use the display 'will always be preferred, when established'.",
+   "status": "fixed",
+   "resolution": "fix-12: 'points to the same routes on both paths: the Direct Connect path will always be preferred, when established.'"
+  },
+  {
+   "id": "reader-06",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "direct-connect-traffic-is-private-but-not-encrypted-unless-you-add-encryption",
+   "quote": "**Stop and answer.** MACsec negotiation fails in the default mode. Does traffic stop? ... No. It can [fall back to unencrypted communication].",
+   "type": "missing-cause-and-fix",
+   "severity": "should",
+   "evidence": "The answer names the effect but not the cause or the fix. The fact direct-connect-macsec-new-connections-default-should-encrypt says 'By default, new MACsec-enabled connections are set to \"should_encrypt\" mode' and 'must_encrypt — ... the connection will not transmit any traffic' (docs/directconnect/latest/UserGuide/MACsec). For a reader whose weakest domain is Secure (45%), the lesson is the setting: name the default mode and say that must_encrypt stops unencrypted traffic.",
+   "status": "fixed",
+   "resolution": "fix-12: answer names the default mode ('New MACsec-enabled connections are set to \"should_encrypt\" mode') and says 'The must_encrypt mode stops that traffic.'"
+  },
+  {
+   "id": "reader-07",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "client-vpn-connects-people-to-a-vpc-through-an-endpoint-in-a-subnet",
+   "quote": "The **Client VPN endpoint** gives users addresses from the **client CIDR range**, [at least /22](../facts/client-vpn.md#client-vpn-client-cidr-between-slash-22-and-slash-12).",
+   "type": "ambiguous-number",
+   "severity": "should",
+   "evidence": "'At least /22' is easy to read backwards (a prefix number of at least 22, so /24 would be allowed). The fact has both bounds: 'Client CIDR ranges must have a block size of at least /22 and must not be greater than /12.' (docs/vpn/latest/clientvpn-admin/what-is-best-practices). For an ESL reader who rushes: say 'a block of size /22 or bigger, up to /12' with both displays linked.",
+   "status": "fixed",
+   "resolution": "fix-12: see claims-12-13."
+  },
+  {
+   "id": "reader-08",
+   "file": "12-hybrid-networking/3-do.md",
+   "section": "(whole file; also 1-fast.md#look-first and 4-say.md)",
+   "quote": "Nothing here yet.",
+   "type": "empty-generated-file",
+   "severity": "should",
+   "evidence": "3-do.md and 4-say.md print 'Nothing here yet.', the Look first region <!-- task:start id=hybrid-networking-t01 --> in 1-fast.md is empty, and the Try it callout in 2-deep.md sends the reader to the empty 3-do.md. Cause: tasks t01 and t02, speak s01 and s02, and all 12 cards have status candidate; TOOLS-items.md 6.2: 'Only items with status: ready are printed'. The reader currently gets no hands-on task and no spoken answers in this chapter. The item statuses must reach ready (and sync run) before finalize; the counts gate should catch it, but flag it now.",
+   "status": "fixed",
+   "resolution": "fix-12: item lints clean; cards c001 to c012, speak s01 and s02 and tasks t01 and t02 set to ready; sync printed 3-do.md, 4-say.md and the Look first task region."
+  },
+  {
+   "id": "reader-09",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "### Virtual private gateway or transit gateway for a VPN",
+   "type": "term-before-definition",
+   "severity": "should",
+   "evidence": "'transit gateway' is used in the fast file, the hero diagram, three deep subsections and the decision record, but the chapter never says what it is in one line and never links chapter 11, where it is taught (lint W901: first use of the term `transit gateway` is not bold). READER.md: she forgets terminology under stress. Fix: a one-line plain meaning at first use (a Regional router that connects many VPCs and VPN or Direct Connect attachments) with a link to 11-vpc-connectivity.",
+   "status": "fixed",
+   "resolution": "fix-12: the fast file defines it before the VGW-or-TGW table: 'A transit gateway can interconnect virtual private clouds (VPCs) and on-premises networks' (transit-gateway-def-network-transit-hub), and 2-deep.md bolds it at first use. Chapter 11 is not drafted, so L601 forbids the link: xref markers '11 transit gateway' are in both files."
+  },
+  {
+   "id": "reader-10",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "direct-connect-resilience-comes-from-a-second-location-and-not-from-more-links",
+   "quote": "> **Exam trap:** Many think that a **link aggregation group** at one location is resilient.",
+   "type": "term-before-definition",
+   "severity": "should",
+   "evidence": "The trap bolds 'link aggregation group' but never says what it is (several connections at one location bundled into one logical connection), so the trap's truth 'will not protect against a single device failure' has no cause for the reader. Two questions (q004, q009) use LAG as a distractor. Rule: STYLE, explain a term at first use; lint W901 class.",
+   "status": "fixed",
+   "resolution": "fix-12: the trap now says 'It bundles connections so you treat them as a single, managed connection' (direct-connect-lag-definition-lacp-single-managed-connection). The short form 'LAG' is a banned variant in prose (L901 maps it to latency), so the prose uses the full term."
+  },
+  {
+   "id": "reader-11",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "client-vpn-connects-people-to-a-vpc-through-an-endpoint-in-a-subnet",
+   "quote": "3. **Authenticate.** Users sign in with **mutual authentication** (certificates) or **federated authentication** (SAML 2.0).",
+   "type": "incomplete-list",
+   "severity": "should",
+   "evidence": "The sentence reads as the complete list, but Active Directory authentication is a third method: verified fact client-vpn-authentication-methods-ad-certificate-saml (display 'authentication with Active Directory using AWS Directory Services'). If she repeats this sentence to a customer, it is wrong. Fix: add Active Directory with its fact link.",
+   "status": "fixed",
+   "resolution": "fix-12: see claims-12-03."
+  },
+  {
+   "id": "reader-12",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "bgp-moves-traffic-between-tunnels-and-prefers-direct-connect-routes-over-vpn-routes",
+   "quote": "> **Say it:** The short answer is: Direct Connect routes win over VPN routes. The thing to watch is a static route.",
+   "type": "spoken-answer-teaches-nothing",
+   "severity": "should",
+   "evidence": "'The thing to watch is a static route' does not say what to watch, so she cannot say it to a customer. The four-move pattern (STARTUP A3: 'the thing to watch') needs a concrete consequence, for example: 'a static VPN route beats a BGP VPN route, but a Direct Connect BGP route beats both'. The same weakness: 'The thing to watch is static routing.' in the VPN bandwidth subsection (say: 'ECMP needs BGP; static routes use one tunnel').",
+   "status": "fixed",
+   "resolution": "fix-12: 'The thing to watch is that a static VPN route beats a BGP VPN route.' and 'The thing to watch is static routing: ECMP needs BGP.' (Say it limit 25 words, L202)."
+  },
+  {
+   "id": "reader-13",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "check",
+   "quote": "**Check 1.** Can MACsec encrypt a 1 Gbps dedicated Direct Connect connection?",
+   "type": "check-answerable-from-skim",
+   "severity": "should",
+   "evidence": "READER.md: 'questions must test what the gist misses'. Check 1 is answered word for word by the signals table cell 'MACsec is not supported on 1 Gbps dedicated connections: the VPN', and Check 2 by the compare table ('Yes, with Border Gateway Protocol (BGP)'); Check 2 also repeats the third Stop and answer of 2-deep.md almost verbatim. Fix: a Check that needs the reasoning, for example why more VPN connections on one virtual private gateway do not raise the throughput toward the data center.",
+   "status": "fixed",
+   "resolution": "fix-12: Check 1 now asks which encryption works on a hosted connection (answer: IPsec, MACsec does not run on any hosted connections). Check 2 asks for two changes to a static-route VPN on a virtual private gateway (transit gateway for ECMP, plus BGP). Both need two table rows combined."
+  },
+  {
+   "id": "reader-14",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "> **Old:** [100 each for IPv4 and IPv6]... > **Now:** [up to 1,000 prefixes each for IPv4 and IPv6]",
+   "type": "misleading-change-note",
+   "severity": "should",
+   "evidence": "The Old/Now pair suggests the quota changed from 100 to 1,000. The fact direct-connect-change-prefix-controls says you can allocate up to 1,000, and 'If you don't select any value, AWS applies the default allocation of 100 prefixes per address family.' (docs/directconnect/latest/UserGuide/prefix-controls). Fix: 'Now: default still 100; you can allocate up to 1,000'.",
+   "status": "fixed",
+   "resolution": "fix-12: see claims-12-08."
+  },
+  {
+   "id": "reader-15",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "direct-connect-resilience-comes-from-a-second-location-and-not-from-more-links",
+   "quote": "### Direct Connect resilience comes from a second location and not from more links (4 min)",
+   "type": "gist-heading",
+   "severity": "should",
+   "evidence": "The heading gist 'not from more links' conflicts with the maximum resiliency model the subsection teaches: 'separate devices in more than one location' means two connections in each of two locations (q004 key: 'each of the two locations has two connections that end on separate devices'). A skimmer may conclude that more connections never help. Fix: 'from separate devices in a second location, not from a LAG at one location'.",
+   "status": "rejected",
+   "resolution": "fix-12: the H3 text is fixed by brief.json; a changed heading is an L905 error (brief section missing). Reported to the orchestrator for the brief. The body names 'separate devices in more than one location' as the maximum model."
+  },
+  {
+   "id": "reader-16",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "## In one breath (2 min)",
+   "type": "length",
+   "severity": "should",
+   "evidence": "Lint W201: 'In one breath' has 230 words, the section allows 0 to 200; the Decision record in 2-deep.md has 201 words, the section allows 0 to 150. READER.md: long text is not finished. Trim the step list of the picture or the Startup example; shorten the decision record's Decision field.",
+   "status": "fixed",
+   "resolution": "fix-12: In one breath 230 to 213 words, Decision record 201 to 188 words. The rest is the hero alt text, caption and steps and the decision figures, which must equal the diagram specs (L702, L703); the remaining W201 warnings need a diagram text change."
+  },
+  {
+   "id": "reader-17",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "changed-recently",
+   "quote": "on attachments to [a transit gateway or to Cloud WAN]",
+   "type": "term-before-definition",
+   "severity": "note",
+   "evidence": "'Cloud WAN' appears here and in the deep VPN bandwidth subsection ('on [a transit gateway or to Cloud WAN]', also ungrammatical) without any explanation. A two-word gloss (AWS Cloud WAN, a managed global network) or dropping it is enough.",
+   "status": "fixed",
+   "resolution": "fix-12: the deep phrase is now 'on connections to a transit gateway or to Cloud WAN', and the fast Now line 'for connections attached to a transit gateway or to Cloud WAN'. No gloss added: the canon has no short verified definition of Cloud WAN, and the display holds the words."
+  },
+  {
+   "id": "reader-18",
+   "file": "12-hybrid-networking/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| How soon? | It [can be configured in minutes] | ... | After you create an endpoint |",
+   "type": "cell-teaches-nothing",
+   "severity": "note",
+   "evidence": "'After you create an endpoint' is true of any service and gives no comparison value; also the Direct Connect 'Encrypted?' cell says 'No' without 'by default', while MACsec exists. Fill the Client VPN cell with something that decides (for example: no hardware to order) or leave it as a dash.",
+   "status": "fixed",
+   "resolution": "fix-12: Client VPN cell 'Not the deciding question'; Direct Connect cell 'Not by default: it does not encrypt your traffic'."
+  },
+  {
+   "id": "reader-19",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "each-vpn-tunnel-has-a-bandwidth-limit-and-a-transit-gateway-combines-tunnels",
+   "quote": "four large tunnels with ECMP reach [20 Gbps]",
+   "type": "precision",
+   "severity": "note",
+   "evidence": "The fact site-to-site-vpn-limit-ecmp-20-gbps-example says 'two VPN connections with Large Bandwidth Tunnels and using ECMP across all four tunnels'. Say 'two VPN connections, four large tunnels', so the reader does not order four connections.",
+   "status": "fixed",
+   "resolution": "fix-12: 'two VPN connections, four large tunnels and ECMP reach 20 Gbps'."
+  },
+  {
+   "id": "reader-20",
+   "file": "12-hybrid-networking/2-deep.md",
+   "section": "a-direct-connect-connection-is-a-port-and-its-virtual-interfaces-choose-the-destination",
+   "quote": "Why does a new port take so long? A provider builds the circuit, which can take [from several weeks to a few months]",
+   "type": "ungrounded-cause",
+   "severity": "note",
+   "evidence": "The cause 'A provider builds the circuit' is not in the linked fact direct-connect-vs-vpn-time-dedicated-weeks-to-months, which gives only the duration. The nearest grounded cause is direct-connect-aws-is-not-first-or-last-mile-provider (local service providers carry the line); link it or rephrase.",
+   "status": "removed",
+   "resolution": "fix-12: see claims-12-14."
+  }
+ ]
+}

@@ -1,0 +1,151 @@
+{
+ "v": 1,
+ "chapter": "secrets-certificates",
+ "items": [
+  {
+   "id": "secrets-certificates-t01",
+   "type": "try",
+   "title": "Store a SecureString parameter and read it with and without decryption",
+   "kills": "\"A SecureString parameter returns its plain value to anyone who calls GetParameter.\"",
+   "trap": null,
+   "section": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0. Standard parameters have no additional charge, and the few AWS KMS requests of this task fall inside the KMS free tier of 20,000 requests/month.",
+   "cost_if_forgotten": "$0 a day. A standard parameter that stays in the account has no storage charge.",
+   "cost_facts": [
+    "parameter-store-price-advanced-parameter",
+    "parameter-store-price-api-interactions",
+    "parameter-store-securestring-no-charge-kms-may",
+    "kms-free-tier-20000-requests",
+    "kms-pricing-aws-managed-free-storage-requests-charged"
+   ],
+   "permissions": [
+    "ssm:PutParameter",
+    "ssm:AddTagsToResource",
+    "ssm:GetParameter",
+    "ssm:GetParametersByPath",
+    "ssm:DescribeParameters",
+    "ssm:DeleteParameter"
+   ],
+   "read_only_alternative": "Use this when you cannot create parameters. It changes nothing. Read the public parameters that AWS maintains for Amazon Linux: aws ssm get-parameters-by-path --path /aws/service/ami-amazon-linux-latest --query \"Parameters[].Name\" Each name is a path under /aws/service, and each value points to the latest Amazon Linux AMI in your Region. Then list the parameters of your account: aws ssm describe-parameters --query \"Parameters[].[Name,Type,KeyId]\" A SecureString parameter shows its name, its type and its KMS key in plain text, and no value.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store a plain configuration value as a String parameter under the path /saa/secrets-t01, with the two book tags.",
+     "command": "aws ssm put-parameter --name /saa/secrets-t01/log-level --type String --value INFO --tags Key=book,Value=saa Key=task,Value=secrets-certificates-t01",
+     "expect": "\"Version\": 1 and \"Tier\": \"Standard\", unless your account sets a different default tier.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store a value that needs encryption, a vendor account ID, as a SecureString parameter. Name no key, so the AWS managed key aws/ssm encrypts it.",
+     "command": "aws ssm put-parameter --name /saa/secrets-t01/vendor/account-id --type SecureString --value vendor-739482 --tags Key=book,Value=saa Key=task,Value=secrets-certificates-t01",
+     "expect": "\"Version\": 1 and \"Tier\": \"Standard\".",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the SecureString parameter with GetParameter, as an application would without extra options.",
+     "command": "aws ssm get-parameter --name /saa/secrets-t01/vendor/account-id --query \"Parameter.[Type,Value]\"",
+     "expect": "SecureString and a long string of letters and digits. You do not see vendor-739482.",
+     "break_it": true,
+     "predict": "You stored vendor-739482, and you are allowed to read this parameter. Does GetParameter show vendor-739482?",
+     "explain": "Unless the call sets WithDecryption to true, [its value is encrypted](../facts/parameter-store.md#parameter-store-with-decryption) in the response. Parameter Store [does not perform any cryptographic operations](../facts/parameter-store.md#parameter-store-standard-securestring-direct-kms) itself: with WithDecryption, it asks AWS KMS to decrypt the value under the [AWS managed key that Systems Manager automatically creates](../facts/parameter-store.md#parameter-store-securestring-kms-keys)."
+    },
+    {
+     "text": "Fix it: read the same parameter again and ask for decryption.",
+     "command": "aws ssm get-parameter --name /saa/secrets-t01/vendor/account-id --with-decryption --query \"Parameter.Value\"",
+     "expect": "\"vendor-739482\"",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the whole /saa/secrets-t01 branch in one call. The recursive option also returns the parameter one level lower, under vendor.",
+     "command": "aws ssm get-parameters-by-path --path /saa/secrets-t01 --recursive --query \"Parameters[].[Name,Type,Value]\"",
+     "expect": "Both parameters. The String parameter shows INFO. The SecureString parameter shows the encrypted string again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the metadata of the SecureString parameter. Look for what is not encrypted.",
+     "command": "aws ssm describe-parameters --parameter-filters \"Key=Name,Values=/saa/secrets-t01/vendor/account-id\" --query \"Parameters[].[Name,Type,Tier,KeyId]\"",
+     "expect": "The name in plain text, SecureString, Standard and alias/aws/ssm. Keep secrets out of parameter names.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the SecureString parameter.",
+     "command": "aws ssm delete-parameter --name /saa/secrets-t01/vendor/account-id"
+    },
+    {
+     "text": "Delete the String parameter.",
+     "command": "aws ssm delete-parameter --name /saa/secrets-t01/log-level"
+    }
+   ],
+   "verify": {
+    "command": "aws ssm describe-parameters --parameter-filters \"Key=tag:task,Values=secrets-certificates-t01\" --query \"Parameters[].Name\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing after the cleanup. A standard parameter that stays costs $0 a day.",
+    "The AWS managed key aws/ssm stays in the account after the cleanup. AWS KMS does not charge for the creation and storage of AWS managed keys; requests to the key count toward the KMS free tier."
+   ],
+   "facts": [
+    "parameter-store-with-decryption",
+    "parameter-store-standard-securestring-direct-kms",
+    "parameter-store-securestring-kms-keys",
+    "parameter-store-hierarchy-forward-slashes",
+    "parameter-store-standard-is-default-tier",
+    "parameter-store-only-value-encrypted",
+    "parameter-store-securestring-not-for-secrets",
+    "parameter-store-public-ami-parameter-latest",
+    "parameter-store-price-advanced-parameter",
+    "parameter-store-price-api-interactions",
+    "parameter-store-securestring-no-charge-kms-may",
+    "kms-free-tier-20000-requests",
+    "kms-pricing-aws-managed-free-storage-requests-charged"
+   ],
+   "sources": [
+    {
+     "title": "Getting started with Parameter Store (AWS CLI tutorial: put-parameter, get-parameter, get-parameters-by-path, delete-parameter)",
+     "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-how-to-retrieve.html"
+    },
+    {
+     "title": "Searching for Parameter Store parameters (describe-parameters with a tag filter)",
+     "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-search.html"
+    },
+    {
+     "title": "Reference the latest AMIs using Systems Manager public parameters",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami-parameter-store.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: put-parameter",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/put-parameter.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-parameter",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/get-parameter.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-parameters-by-path",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/get-parameters-by-path.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-parameters",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/describe-parameters.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-parameter",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/delete-parameter.html"
+    }
+   ],
+   "chapter": "secrets-certificates",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-12"
+  }
+ ]
+}

@@ -1,0 +1,142 @@
+[
+ {
+  "id": "aws-map-t01",
+  "type": "look",
+  "title": "List the Availability Zones and Regions of your account",
+  "kills": "\"A Region is one data center.\"",
+  "trap": null,
+  "section": "1-fast.md#look-first",
+  "pass_route": false,
+  "minutes": 4,
+  "cost": "$0",
+  "cost_if_forgotten": "$0",
+  "cost_facts": [],
+  "permissions": ["ec2:DescribeAvailabilityZones", "ec2:DescribeRegions"],
+  "read_only_alternative": "This task is read-only. It needs no alternative. If your account does not let you start AWS CloudShell, read the AZ ID table of your Region on the AWS Availability Zones page of the Regions and Availability Zones guide.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell from the console. List the Availability Zones of the Region that the shell uses, with the name and the AZ ID of each zone.",
+    "command": "aws ec2 describe-availability-zones --filters Name=zone-type,Values=availability-zone --query \"AvailabilityZones[].{Region:RegionName,ZoneName:ZoneName,ZoneId:ZoneId}\" --output table",
+    "expect": "One row per zone, and every row shows the same Region. Names such as us-east-1a sit next to IDs such as use1-az1.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "List every Region, also the Regions that your account has not enabled, with the opt-in status of each one.",
+    "command": "aws ec2 describe-regions --all-regions --query \"Regions[].{Region:RegionName,OptIn:OptInStatus}\" --output table",
+    "expect": "One row per Region. Most rows show opt-in-not-required. Some rows show opted-in or not-opted-in.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Pick one Region code from that list as <OTHER_REGION>: not your shell's Region, and with the status opt-in-not-required. List the Availability Zones of that Region.",
+    "command": "aws ec2 describe-availability-zones --region <OTHER_REGION> --filters Name=zone-type,Values=availability-zone --query \"AvailabilityZones[].{Region:RegionName,ZoneName:ZoneName,ZoneId:ZoneId}\" --output table",
+    "expect": "A second set of zones with other names and other IDs. No zone appears in both tables.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [],
+  "verify": null,
+  "still_costs": [],
+  "facts": [
+   "global-infrastructure-region-is-separate-geographic-area",
+   "global-infrastructure-az-definition-discrete-data-centers",
+   "global-infrastructure-az-code-is-region-code-plus-letter",
+   "global-infrastructure-az-id-same-physical-location-every-account",
+   "global-infrastructure-opt-in-regions-after-march-2019",
+   "management-console-cloudshell-region-follows-console-region",
+   "management-console-cloudshell-no-additional-charge"
+  ],
+  "sources": [
+   {"title": "AWS Availability Zones: View Availability Zone information", "url": "https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-availability-zones.html"},
+   {"title": "AWS CLI Command Reference: describe-regions, Example 3", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-regions.html"}
+  ]
+ },
+ {
+  "id": "aws-map-t03",
+  "type": "try",
+  "title": "Create a resource in one Region and look for it in another",
+  "kills": "\"AWS copies my resources to every Region.\"",
+  "trap": "aws-map-trap-region-auto-replicates",
+  "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there",
+  "pass_route": true,
+  "minutes": 10,
+  "cost": "$0",
+  "cost_if_forgotten": "$0",
+  "cost_facts": [],
+  "permissions": [
+   "ec2:DescribeAvailabilityZones",
+   "ec2:DescribeVpcs",
+   "ec2:CreateSecurityGroup",
+   "ec2:CreateTags",
+   "ec2:DescribeSecurityGroups",
+   "ec2:DeleteSecurityGroup"
+  ],
+  "read_only_alternative": "This creates nothing. List the default VPC of your shell's Region: aws ec2 describe-vpcs --filters Name=is-default,Values=true --query \"Vpcs[].VpcId\" Then run the same command again with --region <OTHER_REGION>. Expect two different VPC IDs, or an empty list where a Region has no default VPC: each Region holds its own resources.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Keep the code of the Region that your shell uses.",
+    "command": "aws ec2 describe-availability-zones",
+    "capture": {"name": "MY_REGION", "query": "AvailabilityZones[0].RegionName"},
+    "expect": "A Region code, for example us-west-2.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Find the default VPC of that Region and keep its ID.",
+    "command": "aws ec2 describe-vpcs --filters Name=is-default,Values=true",
+    "capture": {"name": "VPC_ID", "query": "Vpcs[0].VpcId"},
+    "expect": "A VPC ID that starts with vpc-. If you see None, this Region has no default VPC: use the read-only alternative instead.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Create a security group in that VPC, with the two book tags. You add no rules to it.",
+    "command": "aws ec2 create-security-group --group-name saa-aws-map-t03 --description \"SAA book task aws-map-t03\" --vpc-id $VPC_ID --tag-specifications 'ResourceType=security-group,Tags=[{Key=book,Value=saa},{Key=task,Value=aws-map-t03}]'",
+    "capture": {"name": "GROUP_ID", "query": "GroupId"},
+    "expect": "A security group ID that starts with sg-.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Pick a Region from the Look task as <OTHER_REGION>: not your shell's Region, and with the status opt-in-not-required. Ask that Region for groups with this task's tag.",
+    "command": "aws ec2 describe-security-groups --region <OTHER_REGION> --filters Name=tag:task,Values=aws-map-t03 --query \"SecurityGroups[].{Id:GroupId,Name:GroupName,Vpc:VpcId}\"",
+    "expect": "An empty list.",
+    "break_it": true,
+    "predict": "You created the group one minute ago, in your shell's Region. Does the other Region list it too?",
+    "explain": "A regional resource is [specific to the Region in which you create it](../facts/global-infrastructure.md#global-infrastructure-regional-resource-visible-only-in-its-region). When you ask a Region, [you see only the resources that are tied to that Region](../facts/global-infrastructure.md#global-infrastructure-regional-resource-visible-only-in-its-region). No copy appears in the other Region [unless you explicitly use a replication or copy feature offered by an AWS service or replicate the resource yourself](../facts/global-infrastructure.md#global-infrastructure-no-automatic-cross-region-replication)."
+   },
+   {
+    "text": "Fix it: send the same request to the Region that holds the group.",
+    "command": "aws ec2 describe-security-groups --region $MY_REGION --filters Name=tag:task,Values=aws-map-t03 --query \"SecurityGroups[].{Id:GroupId,Name:GroupName,Vpc:VpcId}\"",
+    "expect": "One group: saa-aws-map-t03, with your GROUP_ID and your VPC_ID.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {"text": "Delete the security group.", "command": "aws ec2 delete-security-group --region $MY_REGION --group-id $GROUP_ID"}
+  ],
+  "verify": {
+   "command": "aws ec2 describe-security-groups --region $MY_REGION --filters Name=tag:task,Values=aws-map-t03 --query \"SecurityGroups[].GroupId\"",
+   "expect": "An empty list."
+  },
+  "still_costs": [
+   "Nothing: there is no additional charge for using security groups, and none for AWS CloudShell. Delete the group anyway, so that no unused group stays in the default VPC."
+  ],
+  "facts": [
+   "global-infrastructure-regional-resource-visible-only-in-its-region",
+   "global-infrastructure-no-automatic-cross-region-replication",
+   "vpc-default-vpc-in-each-region",
+   "vpc-sg-new-no-inbound-rules",
+   "vpc-sg-no-charge",
+   "management-console-cloudshell-no-additional-charge"
+  ],
+  "sources": [
+   {"title": "Creating, configuring, and deleting Amazon EC2 security groups in the AWS CLI", "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-sg.html"},
+   {"title": "AWS CLI Command Reference: create-security-group", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-security-group.html"},
+   {"title": "AWS CLI Command Reference: describe-security-groups", "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-security-groups.html"}
+  ]
+ }
+]

@@ -1,0 +1,161 @@
+{
+ "lens": "exam",
+ "chapter": "27",
+ "fixer": "fix-27",
+ "findings": [
+  {
+   "id": "exam-01",
+   "file": "27-aurora/5-quiz.md",
+   "section": "whole quiz; bullets 4.3.K9 and 3.3.S4",
+   "quote": "**Answer.** Migrate the database to an Aurora PostgreSQL DB cluster with Aurora Replicas, and send the dashboard queries to the reader endpoint of the cluster.",
+   "type": "bullet-without-question",
+   "severity": "should",
+   "evidence": "Registry bullet 4.3.K9 ('Database types and services (for example, relational compared with non-relational, Amazon Aurora, Amazon DynamoDB)') has no shipped question: its only item, aurora-q022, was rejected. Bullet 3.3.S4 ('Determining an appropriate database type (for example, Amazon Aurora, Amazon DynamoDB)') ships only on aurora-q002 (Question 7, quoted), which has no DynamoDB option at all; aurora-q005 (3.3.S4) was rejected. No shipped question has DynamoDB as the key, so she is never trained to reject Aurora. FREQUENCY.md section 'RDS/Aurora vs DynamoDB | Joins, transactions, SQL vs key-value at any scale' lists it as a commonly decided pair. Write a replacement candidate for 4.3.K9 whose key is DynamoDB (key-value access at any scale, no joins: dynamodb-no-joins-heart-of-nosql-modeling, dynamodb-decision-guide-key-value-session-store) with Aurora as the trap option.",
+   "status": "rejected",
+   "resolution": "Not fixable in the fix stage: a new question must pass the three-lens blind panel, and a candidate added now cannot ship in this run. The shipped set (18 verified) meets the deep counts. Logged for the orchestrator: write a DynamoDB-keyed candidate for 4.3.K9 in a later questions run (chapter 28 also carries the Aurora-versus-DynamoDB decision)."
+  },
+  {
+   "id": "exam-02",
+   "file": "27-aurora/1-fast.md",
+   "section": "Signals and traps, row 'low-latency reads around the world'; and Choose it or not, Aurora Global Database or DynamoDB global tables, Deciding question",
+   "quote": "| \"low-latency reads around the world\" | Aurora Global Database | it serves [low-latency read operations for applications](../facts/aurora.md#aurora-cmp-global-db-low-latency-reads-worldwide) | users write in every Region too: DynamoDB global tables |",
+   "type": "guard-does-not-hold",
+   "severity": "should",
+   "evidence": "The 'but not if' sends any stem where users write in every Region to DynamoDB, but Question 1 (aurora-q017) keys the opposite: European users make a few writes and the answer is an Aurora global database with write forwarding (aurora-global-db-occasional-writes-use-secondary-reader-with-write-forwarding: 'occasional DML statements'). The compare table's deciding question ('Must every Region accept writes, or is one writer Region enough?') has the same gap. The real decider is: must every Region write locally at full speed, as an equal writer (multi-active), on key-value data (dynamodb-global-table-any-replica-serves-reads-writes)? Rewrite the guard as 'every Region must be a full writer and the data is key-value: DynamoDB global tables', and the deciding question to match; mention write forwarding for occasional writes.",
+   "status": "fixed",
+   "resolution": "Guard: 'every Region must write as an equal writer: DynamoDB global tables'. Deciding question: 'Must every Region write as an equal writer, or is one writer Region enough?'. Write forwarding is now named in the Predict 2 answer of the Check section."
+  },
+  {
+   "id": "exam-03",
+   "file": "27-aurora/1-fast.md",
+   "section": "Choose it or not, Aurora Replica RDS read replica or Multi-AZ standby, compare table",
+   "quote": "| Serves reads? | Yes | Yes | No: [a Multi-AZ standby cannot serve read requests](../facts/rds.md#rds-faq-multiaz-standby-no-reads) |",
+   "type": "scope-dropped",
+   "severity": "should",
+   "evidence": "The fact is scoped to the Multi-AZ DB instance deployment: rds-faq-multiaz-standby-no-reads has scope 'Multi-AZ DB instance deployments' and the note 'A Multi-AZ DB cluster has two readable standbys ...; prose must keep the two apart.' Chapter 26 teaches that a Multi-AZ DB cluster's standbys can serve reads (rds-multi-az-one-vs-two-standbys), and that is an exam distractor. A column titled 'Multi-AZ standby' with 'Serves reads? No' teaches the unscoped rule. Title the column 'Multi-AZ DB instance standby' (and the Words-table row 'Multi-AZ' the same way where it contrasts with reads).",
+   "status": "fixed",
+   "resolution": "Column header is now 'Multi-AZ DB instance standby'. The Words-table row 'Multi-AZ' no longer contrasts it with reads ('read replica: for read scaling; Aurora readers do both'). Same fix as claims-03."
+  },
+  {
+   "id": "exam-04",
+   "file": "27-aurora/2-deep.md",
+   "section": "Aurora Global Database copies the cluster volume to read-only Regions (4 min)",
+   "quote": "> **Exam trap:** Many think that Aurora PostgreSQL has a cross-Region read replica. It has no [cross-Region Aurora Replicas](../facts/aurora.md#aurora-postgres-no-cross-region-aurora-replicas), so use Aurora Global Database. <!-- trap: aurora-trap-postgres-cross-region-replica -->",
+   "type": "missing-examinable-option",
+   "severity": "should",
+   "evidence": "Two problems. (1) The belief is worded as 'a cross-Region read replica', but the fact restricts only 'cross-Region Aurora Replicas' (quote: 'Aurora PostgreSQL doesn't support cross-Region Aurora Replicas.'), and FAQ 4 in the same file says cross-Region replicas exist through physical or logical replication (aurora-faq-cross-region-physical-or-logical). Reword the belief to 'a cross-Region Aurora Replica'. (2) The Aurora MySQL cross-Region read replica (binlog replication) is never taught, although verified facts exist (aurora-cmp-binlog-cross-region-replica-more-lag: 'In a cross-Region scenario, there is more lag time between the source DB cluster and the read replica due to the longer network channels between AWS Regions.') and FREQUENCY.md lists 'Aurora Global DB vs cross-Region replica vs DynamoDB Global Tables | Relational RPO ~1 s / RTO <1 min vs a cheaper DR copy vs multi-active NoSQL' as a commonly decided triple. Add one sentence or a Go deeper block: Aurora MySQL can add a cross-Region read replica (more lag); Global Database is the low-lag, managed-failover option for both engines.",
+   "status": "fixed",
+   "resolution": "(1) fixed: belief now 'Many think that Aurora PostgreSQL can add an Aurora Replica in another Region.', and FAQ 4 adds 'Physical means Aurora Global Database.'. (2) not added: 2-deep.md is at its 4,500-word cap (4,492 after the fixes); logged for the W14 review as a Go deeper candidate."
+  },
+  {
+   "id": "exam-05",
+   "file": "27-aurora/5-quiz.md",
+   "section": "Worked example Question 2 (aurora-q014), Core Question 8 (aurora-q006), Core Question 9 (aurora-q008)",
+   "quote": "- Depend on the cluster volume, which keeps six copies across three Availability Zones, to restart the writer in another zone within seconds.",
+   "type": "redundant-items",
+   "severity": "should",
+   "evidence": "Three of 18 questions test the same two decisions with the same distractors. Question 2 is Question 8 plus Question 9 combined: 'one DB instance, add a reader in another AZ' (Q2, Q8, both with the 'cluster volume ... within seconds' distractor quoted) and 'Aurora PostgreSQL cross-Region DR: Global Database, not a cross-Region Aurora Replica' (Q2, Q9, both with the cross-Region Aurora Replica distractor and the snapshot-script distractor). Bullet 2.2.K6 carries 6 of 18 shipped questions, while 4.3.K9 has none (exam-01) and Serverless v2 auto-pause, cloning and the Aurora MySQL cross-Region read replica have none. Retire Question 8 or 9 in favour of one of those once a replacement passes the panel.",
+   "status": "rejected",
+   "resolution": "No change now, as the finding itself conditions it on a replacement that has passed the panel. The only spare verified question (aurora-q016) is extended, while Questions 8 and 9 are core, so retiring one would break the 9 core / 9 extended split. Logged with exam-01 and exam-13 for the next questions run."
+  },
+  {
+   "id": "exam-06",
+   "file": "27-aurora/5-quiz.md",
+   "section": "Extended, Question 15 (aurora-q021), Review link",
+   "quote": "**Review.** [When the writer fails Aurora promotes a replica behind the same endpoint](2-deep.md#when-the-writer-fails-aurora-promotes-a-replica-behind-the-same-endpoint-4-min)",
+   "type": "untaught-but-tested",
+   "severity": "should",
+   "evidence": "The question tests promotion tiers (tier order, ties go to the largest replica, equal sizes give an arbitrary choice), but the review subsection never mentions promotion tiers; the chapter has only a B-list row ('0 for the highest priority to 15 for the lowest priority | Promotion tiers', aurora-promotion-priority-range) and one fast trap. The tie-break facts used in the explanation (aurora-faq-promotion-tie-largest-wins, aurora-promotion-tie-break-arbitrary) appear nowhere in the prose. Teach them in the failover subsection (see reader-06).",
+   "status": "fixed",
+   "resolution": "The failover subsection has a new step 4: 'You set the order. A [promotion priority tier] ranks replicas, [0 for the highest priority to 15 for the lowest priority]. A tie [promotes the largest one].' (facts aurora-faq-promotion-highest-priority-first, aurora-promotion-priority-range, aurora-faq-promotion-tie-largest-wins). The B-list row moved into this step."
+  },
+  {
+   "id": "exam-07",
+   "file": "27-aurora/5-quiz.md",
+   "section": "Extended, Question 14 (aurora-q019), Review link",
+   "quote": "**Review.** [The reader endpoint spreads connections not single queries across replicas](2-deep.md#the-reader-endpoint-spreads-connections-not-single-queries-across-replicas-4-min)",
+   "type": "untaught-but-tested",
+   "severity": "should",
+   "evidence": "One of the two keys is RDS Proxy for Lambda connection storms (FREQUENCY.md: 'RDS Proxy | Lambda connection storms, \"too many connections\", faster failover'). This chapter never teaches RDS Proxy (one unexplained mention in the Serverless v2 table, see reader-07), and the Review link points only to the reader endpoint subsection. Chapter 26 teaches it ('RDS Proxy shares a small pool of connections among many clients'). Add an xref to chapter 26 in the reader endpoint subsection or as an Exam signal: '\"too many connections\" from Lambda points to RDS Proxy (chapter 26)'.",
+   "status": "fixed",
+   "resolution": "The reader endpoint subsection (the Review target of Question 14) now says: 'If clients [frequently open and close connections], as Lambda functions do, use **RDS Proxy** (chapter 26).' (verified fact aurora-frequent-connections-use-rds-proxy)."
+  },
+  {
+   "id": "exam-08",
+   "file": "27-aurora/1-fast.md",
+   "section": "Signals and traps, row 'undo a bad change; keep the same cluster'",
+   "quote": "| \"undo a bad change; keep the same cluster\" | Backtrack (Aurora MySQL) | it [rewinds the DB cluster in minutes](../facts/aurora.md#aurora-backtrack-in-minutes-no-new-cluster) | Aurora PostgreSQL: a point-in-time restore to a new cluster |",
+   "type": "guard-incomplete",
+   "severity": "should",
+   "evidence": "The 'but not if' names only the engine. The guard the exam turns on is whether the cluster was created with Backtrack: aurora-backtrack-only-if-enabled-at-creation ('Backtracking is only available for DB clusters that were created with the Backtrack feature enabled. You can't modify a DB cluster to enable the Backtrack feature.'). Question 18 (aurora-q020) and its twin decide on exactly that phrase. Write the guard as 'Aurora PostgreSQL, or a cluster created without Backtrack: a point-in-time restore to a new cluster'.",
+   "status": "fixed",
+   "resolution": "Guard: 'Aurora PostgreSQL, or created without Backtrack: a point-in-time restore to a new cluster'. Same fix as claims-20."
+  },
+  {
+   "id": "exam-09",
+   "file": "27-aurora/2-deep.md",
+   "section": "Numbers that decide answers, A-list",
+   "quote": "| [less than 1 minute](../facts/aurora.md#aurora-global-promote-secondary-under-1-minute) | Promotion of a secondary Region, in AWS marketing | Regional recovery in minutes |",
+   "type": "muddled-number",
+   "severity": "should",
+   "evidence": "The row gives 'less than 1 minute' and then 'Regional recovery in minutes' as the reason, and labels the value 'in AWS marketing', although the fact's second quote is from the Aurora FAQ ('you can promote a secondary Region to take full read/write workloads in under a minute'). FREQUENCY.md row 8 reports the exam scenario 'RPO 1 s / RTO under 1 min' for Global Database. She needs one clear rule: exam stems use 'under a minute'; the user guide plans for minutes (aurora-global-rto-order-of-minutes-guide). Rewrite: what it is 'Promotion of a secondary Region (AWS FAQ; the user guide says minutes)'; why it decides 'RTO under a minute across Regions: Global Database'.",
+   "status": "fixed",
+   "resolution": "Row now: '[less than 1 minute] | Secondary Region promotion (FAQ; the user guide says minutes) | Cross-Region RTO under a minute: Global Database'. Checked: the fact's second evidence item is the Aurora FAQ page."
+  },
+  {
+   "id": "exam-10",
+   "file": "27-aurora/5-quiz.md",
+   "section": "Core, Question 7 (aurora-q002), option A",
+   "quote": "- Stay on RDS for PostgreSQL and add two larger read replicas, because Aurora Replicas would also copy every change into their own storage.",
+   "type": "distractor-self-refuting",
+   "severity": "note",
+   "evidence": "The option argues against another option with a false clause ('because Aurora Replicas would also copy ...'). Real exam options describe an action, not a rebuttal of a competing option, and the false clause gives the option away to anyone who read the chapter. Cut the 'because' clause; the misconception (larger replicas fix replay lag) stands on its own.",
+   "status": "rejected",
+   "resolution": "Not edited now: any option edit of a verified question resets its verification (R5), and this run has no panel. The option stays wrong for the stated reason, so the key is unaffected. Logged for the next revision of aurora-q002."
+  },
+  {
+   "id": "exam-11",
+   "file": "27-aurora/5-quiz.md",
+   "section": "Worked example Question 1 (aurora-q017), option A",
+   "quote": "- Create a separate Aurora MySQL DB cluster in a European Region, and keep the two clusters in step with a custom synchronization job.",
+   "type": "weak-distractor",
+   "severity": "note",
+   "evidence": "Few candidates pick a custom sync job when a managed feature is offered and the qualifier is LEAST operational overhead. A more plausible distractor carries a named misconception, for example 'Create an Aurora MySQL cross-Region read replica in Europe and send the European writes to it' (read replicas do not accept writes) or 'Put Amazon CloudFront in front of the application' (does not cache personalized SQL reads).",
+   "status": "rejected",
+   "resolution": "Not edited now: an option change resets verification (R5) and would need a new panel run. The question stays valid with its current key. Logged for the next revision of aurora-q017."
+  },
+  {
+   "id": "exam-12",
+   "file": "27-aurora/5-quiz.md",
+   "section": "Extended, Question 16 (aurora-q012), Why",
+   "quote": "It promotes the secondary cluster in us-west-2, and the global writer endpoint follows the new primary cluster, so the applications change nothing.",
+   "type": "unlinked-claim",
+   "severity": "note",
+   "evidence": "The deciding phrase 'does not want to change their connection settings' rests on this sentence, which has no fact link. A verified fact carries it: aurora-faq-global-db-no-code-change-writer-endpoint ('If your primary Region becomes unavailable, you can use the managed cross-Region Aurora Global Database failover operation to promote a secondary Region. You can also use the Aurora Global Database writer endpoint to avoid the need to make application code changes.'). Link it (an explanation edit sends the item back to the panel per TOOLS-rules R5).",
+   "status": "rejected",
+   "resolution": "Not edited now: the explanation edit sends the item back to the panel (R5), and the clause is true (verified facts aurora-faq-global-db-no-code-change-writer-endpoint and aurora-global-writer-endpoint-follows-switchover-failover). Logged for the next revision of aurora-q012 (same as claims-23)."
+  },
+  {
+   "id": "exam-13",
+   "file": "27-aurora/5-quiz.md",
+   "section": "whole quiz; Aurora Serverless v2",
+   "quote": "**Takeaway.** Spiky load on reads and writes: Aurora Serverless v2. Steady load for years: provisioned instances with Reserved Instances.",
+   "type": "coverage-gap",
+   "severity": "note",
+   "evidence": "Serverless v2 is tested only as spiky-versus-steady (Questions 6 and 11). The scale-to-zero change has a Changed recently box, a trap (aurora-trap-serverless-pauses-whenever-idle), a Check, a card and a spoken follow-up, but no question; READER.md lists Aurora Serverless as 'right but not sure' in her diagnostic, and FREQUENCY.md row 8 names Serverless v2. A dev/test question (idle nights, minimum 0 ACUs versus 0.5, RDS Proxy blocks the pause: aurora-serverless-auto-pause-min-capacity-zero, aurora-serverless-rds-proxy-blocks-auto-pause) would test it, while keeping the 'prefer an option right under both values' advice of the Changed recently box.",
+   "status": "rejected",
+   "resolution": "A new question needs the blind panel and cannot ship from the fix stage. Logged with exam-01 and exam-05 for the next questions run of chapter 27."
+  },
+  {
+   "id": "exam-14",
+   "file": "data/27-aurora/tasks.json",
+   "section": "aurora-t02 and aurora-t03",
+   "quote": "\"title\": \"Require TLS in an Aurora MySQL cluster parameter group\"",
+   "type": "task-off-exam",
+   "severity": "note",
+   "evidence": "Both Try tasks drill engine parameter names (rds.global_db_rpo, require_secure_transport versus rds.force_ssl), which SAA-C03 does not test by name, and the chapter's exam tasks (3.3, 4.3, 2.1, 2.2) do not include security. No task lets her see an examinable decision (endpoints of a cluster, promotion tiers, the Serverless v2 capacity range). Within the no-cost constraint, a read-only Look at describe-db-clusters fields (Endpoint, ReaderEndpoint, DBClusterMembers with PromotionTier) or describe-orderable options for a Serverless v2 capacity range would teach more for the exam. Keep t02 if the chapter adds the RPO step asked for in reader-13.",
+   "status": "rejected",
+   "resolution": "Tasks kept: they pass the task rules and the reviewer asks to keep t02 once the RPO step exists, which reader-13 added (2-deep.md step 4 'Cap the loss'). t03 drills the at-rest versus in-transit difference that Question 4 tests. New tasks would need a new check-cli run; logged as a W14 suggestion (a read-only Look at Endpoint, ReaderEndpoint and PromotionTier)."
+  }
+ ]
+}

@@ -1,0 +1,467 @@
+{
+ "v": 1,
+ "chapter": "vpc-connectivity",
+ "items": [
+  {
+   "id": "vpc-connectivity-t01",
+   "type": "look",
+   "title": "List the services you can reach through VPC endpoints",
+   "kills": "\"Only Amazon S3 and DynamoDB can be reached privately from a VPC.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 3,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "ec2:DescribeVpcEndpointServices"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. List the endpoint services of the Gateway type in the Region that CloudShell uses.",
+     "command": "aws ec2 describe-vpc-endpoint-services --filters Name=service-type,Values=Gateway --query \"ServiceNames\"",
+     "expect": "A short list. Each name ends in dynamodb or s3, and in some Regions also s3express, the name for Amazon S3 directory buckets. These are the services that a gateway endpoint can reach.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Count the AWS services of the Interface type in the same Region. Each one takes an interface endpoint, which AWS PrivateLink provides.",
+     "command": "aws ec2 describe-vpc-endpoint-services --filters Name=service-type,Values=Interface Name=owner,Values=amazon --query \"length(ServiceNames)\"",
+     "expect": "One number, far larger than the length of the first list.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Look for Amazon S3 in the list of interface services.",
+     "command": "aws ec2 describe-vpc-endpoint-services --filters Name=service-type,Values=Interface --query \"ServiceNames[?ends_with(@, '.s3')]\"",
+     "expect": "One name, the same s3 name as in the first list. Amazon S3 takes both endpoint types: a gateway endpoint and an interface endpoint.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "vpc-endpoints-aws-services-integrating-list",
+    "vpc-endpoints-faq-gateway-endpoint-s3-ddb-route",
+    "vpc-endpoints-gateway-not-privatelink-concepts",
+    "vpc-endpoints-wa-cost08-gateway-free-interface-hourly",
+    "s3-faq-vpce-two-types"
+   ],
+   "sources": [
+    {
+     "title": "AWS services that integrate with AWS PrivateLink (View available AWS service names)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/aws-services-privatelink-support.html"
+    },
+    {
+     "title": "describe-vpc-endpoint-services (AWS CLI Command Reference, filters service-type and owner, examples 1 and 2)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoint-services.html"
+    },
+    {
+     "title": "Gateway endpoints for Amazon S3 (the service names s3 and s3express)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html"
+    }
+   ],
+   "chapter": "vpc-connectivity",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-23"
+  },
+  {
+   "id": "vpc-connectivity-t02",
+   "type": "try",
+   "title": "Peer two VPCs and watch a route wait for the accept",
+   "kills": "\"A peering connection works as soon as you request it and add a route.\"",
+   "trap": null,
+   "section": "2-deep.md#a-peering-connection-works-only-after-both-owners-add-routes",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0. The VPCs have no additional charge, creating a peering connection has no charge, and no data crosses the connection in this task.",
+   "cost_if_forgotten": "$0 a day while no data crosses the connection. Run the cleanup anyway, so that no unused network stays in the account.",
+   "cost_facts": [
+    "vpc-faq-no-charge-for-vpc-itself",
+    "vpc-peering-faq-no-creation-charge",
+    "vpc-peering-guide-pricing-no-creation-charge-free-in-az"
+   ],
+   "permissions": [
+    "ec2:CreateVpc",
+    "ec2:CreateTags",
+    "ec2:CreateVpcPeeringConnection",
+    "ec2:DescribeRouteTables",
+    "ec2:CreateRoute",
+    "ec2:AcceptVpcPeeringConnection",
+    "ec2:DeleteRoute",
+    "ec2:DeleteVpcPeeringConnection",
+    "ec2:DeleteVpc",
+    "ec2:DescribeVpcs",
+    "ec2:DescribeVpcPeeringConnections"
+   ],
+   "read_only_alternative": "These commands create nothing. First list the peering connections of the Region with their status: aws ec2 describe-vpc-peering-connections --query \"VpcPeeringConnections[].[VpcPeeringConnectionId,Status.Code]\" Then list every route that targets a peering connection, with its state: aws ec2 describe-route-tables --query \"RouteTables[].Routes[?VpcPeeringConnectionId].[DestinationCidrBlock,VpcPeeringConnectionId,State]\" A route with the state blackhole points at a peering connection that is not active, for example one that still waits for the accept. Empty lists mean that this Region has no peering connections.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create VPC A with the IPv4 CIDR block 10.0.0.0/16, tagged for this book and this task.",
+     "command": "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-vpc-connectivity-t02-a},{Key=book,Value=saa},{Key=task,Value=vpc-connectivity-t02}]'",
+     "capture": {
+      "name": "VPC_A_ID",
+      "query": "Vpc.VpcId"
+     },
+     "expect": "No output. VPC_A_ID now holds the ID of VPC A.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create VPC B with the IPv4 CIDR block 10.1.0.0/16. The two blocks do not overlap.",
+     "command": "aws ec2 create-vpc --cidr-block 10.1.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-vpc-connectivity-t02-b},{Key=book,Value=saa},{Key=task,Value=vpc-connectivity-t02}]'",
+     "capture": {
+      "name": "VPC_B_ID",
+      "query": "Vpc.VpcId"
+     },
+     "expect": "No output. VPC_B_ID now holds the ID of VPC B.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Request a peering connection from VPC A, the requester, to VPC B, the accepter. Both VPCs are in your account and in one Region.",
+     "command": "aws ec2 create-vpc-peering-connection --vpc-id $VPC_A_ID --peer-vpc-id $VPC_B_ID --tag-specifications 'ResourceType=vpc-peering-connection,Tags=[{Key=Name,Value=saa-vpc-connectivity-t02},{Key=book,Value=saa},{Key=task,Value=vpc-connectivity-t02}]'",
+     "capture": {
+      "name": "PCX_ID",
+      "query": "VpcPeeringConnection.VpcPeeringConnectionId"
+     },
+     "expect": "No output. PCX_ID now holds an ID that starts with pcx-. Nobody has accepted the request yet.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the ID of the main route table of VPC A.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_A_ID Name=association.main,Values=true",
+     "capture": {
+      "name": "RTB_A_ID",
+      "query": "RouteTables[0].RouteTableId"
+     },
+     "expect": "No output. RTB_A_ID now holds the ID of the main route table of VPC A.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Add a route to the main route table of VPC A: traffic for VPC B, 10.1.0.0/16, goes to the peering connection.",
+     "command": "aws ec2 create-route --route-table-id $RTB_A_ID --destination-cidr-block 10.1.0.0/16 --vpc-peering-connection-id $PCX_ID",
+     "expect": "No error. If the command prints output, it shows \"Return\": true.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the routes of VPC A: the destination, the peering connection and the state of each route.",
+     "command": "aws ec2 describe-route-tables --route-table-ids $RTB_A_ID --query \"RouteTables[0].Routes[].[DestinationCidrBlock,VpcPeeringConnectionId,State]\"",
+     "expect": "Two rows. 10.0.0.0/16, the local route, shows null and active. 10.1.0.0/16 shows the pcx- ID and blackhole.",
+     "break_it": true,
+     "predict": "AWS took the route without an error, but nobody has accepted the peering request. Can traffic for 10.1.0.0/16 use the route now?",
+     "explain": "No. A route to a peering connection that is not active yet [has no effect until](../facts/vpc-peering.md#vpc-peering-route-pending-blackhole) the connection is active, and its state is blackhole. The connection becomes active after the [owner of the accepter VPC accepts](../facts/vpc-peering.md#vpc-peering-step-accept) the request. Then each owner [must manually add a route](../facts/vpc-peering.md#vpc-peering-step-routes-manual), so VPC B also needs a route back to VPC A."
+    },
+    {
+     "text": "Fix it: accept the request. Both VPCs are in your account, so you are also the owner of the accepter VPC.",
+     "command": "aws ec2 accept-vpc-peering-connection --vpc-peering-connection-id $PCX_ID --query \"VpcPeeringConnection.Status.Code\"",
+     "expect": "The status provisioning, or already active.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the routes of VPC A again.",
+     "command": "aws ec2 describe-route-tables --route-table-ids $RTB_A_ID --query \"RouteTables[0].Routes[].[DestinationCidrBlock,VpcPeeringConnectionId,State]\"",
+     "expect": "The route to 10.1.0.0/16 now shows active. If it still shows blackhole, wait one minute and run the command again.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the route to VPC B.",
+     "command": "aws ec2 delete-route --route-table-id $RTB_A_ID --destination-cidr-block 10.1.0.0/16"
+    },
+    {
+     "text": "Delete the peering connection.",
+     "command": "aws ec2 delete-vpc-peering-connection --vpc-peering-connection-id $PCX_ID"
+    },
+    {
+     "text": "Delete VPC B. If the command reports a dependency, wait one minute and run it again.",
+     "command": "aws ec2 delete-vpc --vpc-id $VPC_B_ID"
+    },
+    {
+     "text": "Delete VPC A.",
+     "command": "aws ec2 delete-vpc --vpc-id $VPC_A_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ec2 describe-vpcs --filters Name=tag:task,Values=vpc-connectivity-t02 --query \"Vpcs[].VpcId\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing while no data crosses the connection: the VPCs and the peering connection itself have no charge. Data transfer across a peering connection is charged, so launch nothing in these VPCs, and delete them anyway.",
+    "A deleted peering connection stays visible for a while with the status deleted. Check that none of this task is still pending or active. This command must return an empty list: aws ec2 describe-vpc-peering-connections --filters Name=tag:task,Values=vpc-connectivity-t02 Name=status-code,Values=pending-acceptance,provisioning,active --query \"VpcPeeringConnections[].VpcPeeringConnectionId\"",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the IDs again with describe-vpcs and describe-vpc-peering-connections filtered by the tag task=vpc-connectivity-t02, and the route table with describe-route-tables filtered by the VPC ID."
+   ],
+   "facts": [
+    "vpc-peering-route-pending-blackhole",
+    "vpc-peering-step-accept",
+    "vpc-peering-step-routes-manual",
+    "vpc-peering-accept-not-own-request",
+    "vpc-peering-step-request",
+    "vpc-peering-deleted-connection-visibility",
+    "vpc-faq-no-charge-for-vpc-itself",
+    "vpc-peering-faq-no-creation-charge",
+    "vpc-peering-guide-pricing-no-creation-charge-free-in-az"
+   ],
+   "sources": [
+    {
+     "title": "Create a VPC peering connection (prerequisites; create a peering connection using the command line)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html"
+    },
+    {
+     "title": "Accept or reject a VPC peering connection (in one account, create and accept the request yourself)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/peering/accept-vpc-peering-connection.html"
+    },
+    {
+     "title": "Update your route tables for a VPC peering connection (a route for a pending-acceptance connection is a blackhole)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-routing.html"
+    },
+    {
+     "title": "create-vpc (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc.html"
+    },
+    {
+     "title": "create-vpc-peering-connection (AWS CLI Command Reference, tag specifications and status codes)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-peering-connection.html"
+    },
+    {
+     "title": "describe-route-tables (AWS CLI Command Reference, filter association.main and the route state blackhole)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-route-tables.html"
+    },
+    {
+     "title": "create-route (AWS CLI Command Reference, example: a route to a VPC peering connection)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-route.html"
+    },
+    {
+     "title": "accept-vpc-peering-connection (AWS CLI Command Reference, example output with the status provisioning)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/accept-vpc-peering-connection.html"
+    },
+    {
+     "title": "delete-route (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-route.html"
+    },
+    {
+     "title": "delete-vpc-peering-connection (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc-peering-connection.html"
+    },
+    {
+     "title": "delete-vpc (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc.html"
+    },
+    {
+     "title": "describe-vpcs (AWS CLI Command Reference, tag filter)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpcs.html"
+    },
+    {
+     "title": "describe-vpc-peering-connections (AWS CLI Command Reference, filters status-code and tag)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-peering-connections.html"
+    }
+   ],
+   "chapter": "vpc-connectivity",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-23"
+  },
+  {
+   "id": "vpc-connectivity-t03",
+   "type": "try",
+   "title": "Limit a gateway endpoint to one bucket with an endpoint policy",
+   "kills": "\"A new gateway endpoint lets instances reach only the company's own S3 buckets.\"",
+   "trap": null,
+   "section": "2-deep.md#an-endpoint-policy-can-narrow-access-through-an-endpoint-but-never-grant-it",
+   "pass_route": false,
+   "minutes": 10,
+   "cost": "$0. The VPC has no additional charge, and a gateway endpoint has no hourly or data processing charge.",
+   "cost_if_forgotten": "$0 a day: neither the VPC nor the gateway endpoint has an hourly charge. Run the cleanup anyway, so that no unused endpoint stays in the account.",
+   "cost_facts": [
+    "vpc-faq-no-charge-for-vpc-itself",
+    "vpc-gateway-endpoint-no-hourly-or-processing-charge"
+   ],
+   "permissions": [
+    "sts:GetCallerIdentity",
+    "ec2:DescribeAvailabilityZones",
+    "ec2:CreateVpc",
+    "ec2:CreateTags",
+    "ec2:DescribeRouteTables",
+    "ec2:CreateVpcEndpoint",
+    "ec2:DescribeVpcEndpoints",
+    "ec2:ModifyVpcEndpoint",
+    "ec2:DeleteVpcEndpoints",
+    "ec2:DeleteVpc",
+    "ec2:DescribeVpcs"
+   ],
+   "read_only_alternative": "This command creates nothing. It lists every VPC endpoint of the Region with its type and its policy: aws ec2 describe-vpc-endpoints --query \"VpcEndpoints[].[VpcEndpointId,VpcEndpointType,PolicyDocument]\" A policy with Principal *, Action * and Resource *, and no Condition, is the default full-access policy: requests for any bucket pass that endpoint. An empty list means that this Region has no VPC endpoints.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Print the ID of your AWS account. Step 7 uses it as <ACCOUNT_ID>.",
+     "command": "aws sts get-caller-identity --query Account --output text",
+     "expect": "One number: your account ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the code of the Region that CloudShell uses. The name of the endpoint service contains this code.",
+     "command": "aws ec2 describe-availability-zones",
+     "capture": {
+      "name": "REGION",
+      "query": "AvailabilityZones[0].RegionName"
+     },
+     "expect": "No output. REGION now holds a Region code, for example us-east-1.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a test VPC with the IPv4 CIDR block 10.2.0.0/16, tagged for this book and this task.",
+     "command": "aws ec2 create-vpc --cidr-block 10.2.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-vpc-connectivity-t03},{Key=book,Value=saa},{Key=task,Value=vpc-connectivity-t03}]'",
+     "capture": {
+      "name": "VPC_ID",
+      "query": "Vpc.VpcId"
+     },
+     "expect": "No output. VPC_ID now holds the ID of the new VPC.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the ID of the main route table of the new VPC.",
+     "command": "aws ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_ID Name=association.main,Values=true",
+     "capture": {
+      "name": "RTB_ID",
+      "query": "RouteTables[0].RouteTableId"
+     },
+     "expect": "No output. RTB_ID now holds the ID of the main route table.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a gateway endpoint for Amazon S3 with the main route table. Attach no policy of your own.",
+     "command": "aws ec2 create-vpc-endpoint --vpc-id $VPC_ID --vpc-endpoint-type Gateway --service-name com.amazonaws.$REGION.s3 --route-table-ids $RTB_ID --tag-specifications 'ResourceType=vpc-endpoint,Tags=[{Key=Name,Value=saa-vpc-connectivity-t03},{Key=book,Value=saa},{Key=task,Value=vpc-connectivity-t03}]'",
+     "capture": {
+      "name": "VPCE_ID",
+      "query": "VpcEndpoint.VpcEndpointId"
+     },
+     "expect": "No output. VPCE_ID now holds an ID that starts with vpce-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the policy of the new endpoint.",
+     "command": "aws ec2 describe-vpc-endpoints --vpc-endpoint-ids $VPCE_ID --query \"VpcEndpoints[0].PolicyDocument\" --output text",
+     "expect": "A policy with one statement: Effect Allow, Principal *, Action * and Resource *.",
+     "break_it": true,
+     "predict": "You attached no policy. Does the endpoint now let the instances reach any bucket, or only the buckets of your account?",
+     "explain": "Any bucket. You attached no policy, so AWS attached the default one: the [default VPC endpoint policy allows all actions](../facts/vpc-endpoints.md#vpc-endpoints-policy-default-allows-all-concepts) by all principals on all resources. Requests for any bucket, in any account, pass the endpoint. That full access is not a grant: an endpoint policy [does not override or replace identity-based policies](../facts/vpc-endpoints.md#vpc-endpoints-policy-does-not-override-identity-or-resource-policies), so each role still needs its own allow."
+    },
+    {
+     "text": "Fix it: replace the default policy with one for an example bucket and principals of your account. A gateway endpoint policy keeps Principal * and names principals in a Condition. Replace <ACCOUNT_ID> with the number from step 1.",
+     "command": "aws ec2 modify-vpc-endpoint --vpc-endpoint-id $VPCE_ID --policy-document '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":[\"s3:ListBucket\",\"s3:GetObject\",\"s3:PutObject\"],\"Resource\":[\"arn:aws:s3:::saa-vpc-connectivity-t03-example\",\"arn:aws:s3:::saa-vpc-connectivity-t03-example/*\"],\"Condition\":{\"StringEquals\":{\"aws:PrincipalAccount\":\"<ACCOUNT_ID>\"}}}]}'",
+     "expect": "The output shows \"Return\": true.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the policy of the endpoint again.",
+     "command": "aws ec2 describe-vpc-endpoints --vpc-endpoint-ids $VPCE_ID --query \"VpcEndpoints[0].PolicyDocument\" --output text",
+     "expect": "The new policy: the example bucket as Resource, Principal *, and a Condition with your account ID. Requests for other buckets stop passing the endpoint after a few minutes.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the gateway endpoint. This also removes its route from the main route table.",
+     "command": "aws ec2 delete-vpc-endpoints --vpc-endpoint-ids $VPCE_ID"
+    },
+    {
+     "text": "Delete the VPC. If the command reports a dependency, wait one minute for the endpoint deletion to finish, then run it again.",
+     "command": "aws ec2 delete-vpc --vpc-id $VPC_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ec2 describe-vpcs --filters Name=tag:task,Values=vpc-connectivity-t03 --query \"Vpcs[].VpcId\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing: the VPC and the gateway endpoint have no charge. Delete them anyway, so that no unused endpoint stays in the account.",
+    "Check the endpoint on its own. This command must return an empty list: aws ec2 describe-vpc-endpoints --filters Name=tag:task,Values=vpc-connectivity-t03 Name=vpc-endpoint-state,Values=pending,available --query \"VpcEndpoints[].VpcEndpointId\"",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the IDs again with describe-vpcs and describe-vpc-endpoints filtered by the tag task=vpc-connectivity-t03."
+   ],
+   "facts": [
+    "vpc-endpoints-policy-default-allows-all-concepts",
+    "vpc-endpoints-policy-single-policy-default-if-none",
+    "vpc-endpoints-policy-does-not-override-identity-or-resource-policies",
+    "vpc-endpoints-policy-gateway-principal-star-use-principalarn",
+    "vpc-endpoints-policy-json-iam-language-principal-required",
+    "vpc-endpoints-policy-update-takes-minutes",
+    "vpc-gateway-endpoint-no-hourly-or-processing-charge",
+    "vpc-faq-no-charge-for-vpc-itself"
+   ],
+   "sources": [
+    {
+     "title": "Control access to VPC endpoints using endpoint policies (default endpoint policy; principals for gateway endpoints)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-access.html"
+    },
+    {
+     "title": "Gateway endpoints for Amazon S3 (example endpoint policies for a specific bucket and for users in a specific account)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html"
+    },
+    {
+     "title": "get-caller-identity (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html"
+    },
+    {
+     "title": "describe-availability-zones (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-availability-zones.html"
+    },
+    {
+     "title": "create-vpc (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc.html"
+    },
+    {
+     "title": "describe-route-tables (AWS CLI Command Reference, filter association.main)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-route-tables.html"
+    },
+    {
+     "title": "create-vpc-endpoint (AWS CLI Command Reference, example 1: a gateway endpoint with the default policy in the output)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-endpoint.html"
+    },
+    {
+     "title": "describe-vpc-endpoints (AWS CLI Command Reference, output field PolicyDocument)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoints.html"
+    },
+    {
+     "title": "modify-vpc-endpoint (AWS CLI Command Reference, options --policy-document and --reset-policy)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-endpoint.html"
+    },
+    {
+     "title": "delete-vpc-endpoints (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc-endpoints.html"
+    },
+    {
+     "title": "delete-vpc (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc.html"
+    },
+    {
+     "title": "describe-vpcs (AWS CLI Command Reference, tag filter)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpcs.html"
+    }
+   ],
+   "chapter": "vpc-connectivity",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-23"
+  }
+ ]
+}

@@ -1,0 +1,3293 @@
+{
+ "v": 1,
+ "chapter": "aurora",
+ "items": [
+  {
+   "id": "aurora-q003",
+   "section": "2-deep.md#backups-are-continuous-and-every-restore-creates-a-new-cluster",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "point-in-time-restore-new-cluster",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company runs an order application on an Amazon Aurora PostgreSQL DB cluster with one writer and two Aurora Replicas. The backup retention period is 7 days, and the team takes a manual snapshot every Sunday. On Thursday at 14:05, a faulty release deletes thousands of order rows. The company must get the data back as it was at 14:04, a point in time before the error. What should a solutions architect do?",
+   "keywords": [
+    "as it was at 14:04",
+    "deletes thousands of order rows"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Run a point-in-time restore on the existing DB cluster to roll the production cluster back to 14:04 in place.",
+     "correct": false,
+     "why": "When you restore, [a new DB cluster is created](../facts/aurora.md#aurora-restore-always-creates-new-cluster), so no restore rolls the running cluster back in place.",
+     "concept": "restore-in-place",
+     "trap": "aurora-trap-restore-in-place",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Restore the manual snapshot from last Sunday to a new DB cluster, and point the order application at the new cluster endpoint.",
+     "correct": false,
+     "why": "The Sunday snapshot misses every order that was written from Sunday to Thursday, so this restore loses days of changes.",
+     "concept": "restore-old-snapshot",
+     "trap": null,
+     "misconception": "restores the last manual snapshot when continuous backups reach the exact second",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Restore the DB cluster to 14:04 as a new DB cluster, and copy the deleted rows back into the production cluster.",
+     "correct": true,
+     "why": "Point-in-time recovery reaches [any second during your retention period](../facts/aurora.md#aurora-pitr-any-second-within-retention-period), and the restore ends by [creating a new DB cluster](../facts/aurora.md#aurora-pitr-creates-new-cluster) that holds the rows.",
+     "concept": "point-in-time-restore",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Promote one of the Aurora Replicas to a standalone cluster, because the replica still holds the rows from before the deletion.",
+     "correct": false,
+     "why": "Aurora Replicas [connect to the same storage volume](../facts/aurora.md#aurora-adding-replicas-read-same-volume-offload) as the writer, so the replicas lost the rows at the same moment.",
+     "concept": "promote-replica-for-recovery",
+     "trap": "aurora-trap-replicas-copy-data",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The company needs the data at one exact second. Aurora point-in-time recovery restores to [any second during your retention period](../facts/aurora.md#aurora-pitr-any-second-within-retention-period), and Thursday at 14:04 is inside the 7-day period. The restore works by [creating a new DB cluster](../facts/aurora.md#aurora-pitr-creates-new-cluster), so the team copies the deleted rows from the new cluster back into production.",
+   "takeaway": "A point-in-time restore reaches any second of the retention period, and it creates a new cluster.",
+   "twin": "If the stem said \"an Aurora MySQL cluster that was created with Backtrack turned on\" instead: backtrack the cluster, because Backtrack [rewinds the DB cluster in minutes](../facts/aurora.md#aurora-backtrack-in-minutes-no-new-cluster).",
+   "say": "A point-in-time restore goes to the exact second, but into a new cluster, so I copy the rows back.",
+   "facts": [
+    "aurora-pitr-any-second-within-retention-period",
+    "aurora-pitr-creates-new-cluster",
+    "aurora-restore-always-creates-new-cluster",
+    "aurora-adding-replicas-read-same-volume-offload",
+    "aurora-backtrack-in-minutes-no-new-cluster"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-point-in-time"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Use Aurora point-in-time restore (within the 7-day retention) to 14:04; it always creates a new DB cluster, so restore to a new cluster and copy the deleted rows back (or repoint the app). Replicas share the cluster volume and already lost the rows; Sunday snapshot loses days of data; there is no in-place PITR."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-adding-replicas-read-same-volume-offload",
+       "aurora-all-instances-see-single-logical-volume",
+       "aurora-pitr-any-second-within-retention-period",
+       "aurora-pitr-creates-new-cluster",
+       "aurora-restore-always-creates-new-cluster",
+       "aurora-restore-snapshot-whole-cluster"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q005",
+   "section": "2-deep.md#an-aurora-cluster-runs-db-instances-on-one-shared-cluster-volume",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.S4"
+   ],
+   "topics": [
+    "databases"
+   ],
+   "services": [
+    "aurora",
+    "dynamodb",
+    "elasticache"
+   ],
+   "concept": "relational-joins-aurora-vs-dynamodb",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company is building a new transactional order system for its online store. The data has customers, orders, and products with many relationships between them, and the monthly reports join several tables. The developers already write SQL for PostgreSQL and want to keep their existing tools. The company wants a fully managed database service. Which AWS database service should a solutions architect choose for this workload?",
+   "keywords": [
+    "transactional order system",
+    "the monthly reports join several tables",
+    "write SQL for PostgreSQL"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Amazon DynamoDB, with one separate table for each entity of the order system",
+     "correct": false,
+     "why": "Removing joins is [at the heart of NoSQL data modeling](../facts/dynamodb.md#dynamodb-no-joins-heart-of-nosql-modeling), so the monthly reports and the SQL of the team need a redesign.",
+     "concept": "dynamodb-for-relational-data",
+     "trap": "aurora-trap-dynamodb-for-joins",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Amazon ElastiCache, as the only data store of the order system",
+     "correct": false,
+     "why": "ElastiCache is an [ephemeral cache for frequently accessed data](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer), a layer in front of a database, so it does not replace the order database.",
+     "concept": "cache-as-database",
+     "trap": "aurora-trap-cache-as-database",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Amazon S3 with Amazon Athena, with one folder for each entity",
+     "correct": false,
+     "why": "The word reports points to Athena, but an order system changes rows in transactions all day, and a relational database serves that work.",
+     "concept": "s3-athena-for-transactions",
+     "trap": "how-the-exam-asks-trap-keyword-bait",
+     "misconception": null,
+     "distractor_type": "keyword-bait"
+    },
+    {
+     "id": "d",
+     "text": "Amazon Aurora PostgreSQL, with one DB cluster for the whole order system",
+     "correct": true,
+     "why": "Aurora is a [fully managed relational database engine](../facts/aurora.md#aurora-is-managed-relational-engine), and its PostgreSQL edition keeps the SQL, the joins and the tools of the team.",
+     "concept": "aurora-postgresql",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "The workload is transactional, and the reports join several tables. Relational databases support [complex queries through joins](../facts/rds.md#rds-decision-guide-relational-joins), and Aurora is a [fully managed relational database engine](../facts/aurora.md#aurora-is-managed-relational-engine). The [code, tools, and applications](../facts/aurora.md#aurora-existing-mysql-postgres-code-works) of PostgreSQL work with Aurora, so the team keeps its SQL.",
+   "takeaway": "Relational data with joins and existing PostgreSQL code: Aurora PostgreSQL.",
+   "twin": "If the stem said \"every request reads one shopping cart by its key, with no joins\" instead: Amazon DynamoDB, because it fits [session stores or shopping carts](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store).",
+   "say": "Joins and existing PostgreSQL code point to a relational engine, so I choose Aurora PostgreSQL.",
+   "facts": [
+    "aurora-is-managed-relational-engine",
+    "dynamodb-no-joins-heart-of-nosql-modeling",
+    "dynamodb-decision-guide-elasticache-caching-layer",
+    "rds-decision-guide-relational-joins",
+    "aurora-existing-mysql-postgres-code-works",
+    "dynamodb-decision-guide-key-value-session-store"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-transactional"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "rejected",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r1",
+      "stem_only": "Relational, transactional data with many relationships and multi-table joins, existing PostgreSQL SQL and tools, fully managed: a managed PostgreSQL-compatible relational database, Amazon Aurora PostgreSQL (or RDS for PostgreSQL). Not a key-value store, a cache or an S3 query layer."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r1",
+      "citations": [
+       "aurora-dg-use-when-relational-modernize",
+       "aurora-faq-what-is-aurora",
+       "docs/athena/latest/ug/what-is#Amazon Athena is an interactive query se",
+       "dynamodb-dg-oltp-relational-vs-non-relational",
+       "dynamodb-no-join-operator",
+       "elasticache-decision-guide-use-for-caching-layer-ephemeral"
+      ],
+      "citations_ok": false
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r1",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": "open citations"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q009",
+   "section": "2-deep.md#encryption-at-rest-is-set-at-creation-and-covers-the-whole-cluster",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.S2"
+   ],
+   "topics": [
+    "databases",
+    "security"
+   ],
+   "services": [
+    "aurora",
+    "kms"
+   ],
+   "concept": "encrypt-existing-cluster",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster that was created several years ago. The cluster has one writer and one Aurora Replica. A security audit finds that the cluster is not encrypted at rest. The company must encrypt the database with an AWS KMS key that the company manages. A short maintenance window for the cutover is acceptable. What should a solutions architect do?",
+   "keywords": [
+    "created several years ago",
+    "not encrypted at rest",
+    "A short maintenance window for the cutover is acceptable"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Turn on the rds.force_ssl parameter in the DB cluster parameter group, and reboot the DB instances of the cluster.",
+     "correct": false,
+     "why": "The rds.force_ssl parameter is used to [require SSL/TLS connections](../facts/aurora.md#aurora-postgres-rds-force-ssl-parameter), which protects data in transit, not the data at rest.",
+     "concept": "force-ssl",
+     "trap": null,
+     "misconception": "confuses encryption in transit with encryption at rest",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Take a snapshot of the cluster, restore the snapshot to a new DB cluster with the KMS key, and move the application.",
+     "correct": true,
+     "why": "You can [restore an unencrypted snapshot](../facts/aurora.md#aurora-encryption-cannot-convert-unencrypted-in-place) to an encrypted cluster when you [specify a KMS key when you restore](../facts/aurora.md#aurora-restore-unencrypted-snapshot-specify-kms-key).",
+     "concept": "snapshot-restore-with-key",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Modify the existing DB cluster to turn on encryption at rest with the KMS key, and apply the change during the maintenance window.",
+     "correct": false,
+     "why": "You [can't convert an unencrypted DB cluster](../facts/aurora.md#aurora-encryption-cannot-convert-unencrypted-in-place) to an encrypted one, so no modify setting makes this change.",
+     "concept": "modify-to-encrypt",
+     "trap": "aurora-trap-encrypt-existing-in-place",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "d",
+     "text": "Add a new Aurora Replica that is encrypted with the KMS key, and fail over to the new replica during the maintenance window.",
+     "correct": false,
+     "why": "You [can't create an encrypted Aurora Replica](../facts/aurora.md#aurora-replica-encryption-must-match-cluster) for an unencrypted DB cluster, so this replica is never created.",
+     "concept": "encrypted-replica",
+     "trap": "aurora-trap-encrypted-replica-of-unencrypted-cluster",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "An existing cluster keeps its encryption state: you [can't convert an unencrypted DB cluster](../facts/aurora.md#aurora-encryption-cannot-convert-unencrypted-in-place) to an encrypted one. The path goes through a snapshot. The team restores the snapshot to a new cluster and must [specify a KMS key when you restore](../facts/aurora.md#aurora-restore-unencrypted-snapshot-specify-kms-key). The application then moves to the new cluster in the maintenance window.",
+   "takeaway": "To encrypt an existing Aurora cluster, restore a snapshot to a new cluster with a KMS key.",
+   "twin": "If the stem said \"encrypt the connections between the application and the database\" instead: turn on rds.force_ssl, because the parameter is used to [require SSL/TLS connections](../facts/aurora.md#aurora-postgres-rds-force-ssl-parameter).",
+   "say": "You can't turn on encryption for an existing cluster, so I restore a snapshot into a new cluster with the KMS key.",
+   "facts": [
+    "aurora-encryption-cannot-convert-unencrypted-in-place",
+    "aurora-restore-unencrypted-snapshot-specify-kms-key",
+    "aurora-replica-encryption-must-match-cluster",
+    "aurora-postgres-rds-force-ssl-parameter"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-at-rest"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Encryption at rest cannot be turned on for an existing unencrypted Aurora cluster. Take a cluster snapshot, restore it to a new cluster encrypted with the customer managed KMS key (or copy the snapshot with encryption first), then cut the application over in the window."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-change-default-encryption-clones-replicas-stay-unencrypted",
+       "aurora-encryption-cannot-convert-unencrypted-in-place",
+       "aurora-faq-cannot-encrypt-existing-instance",
+       "aurora-faq-encryption-in-transit-ssl",
+       "aurora-postgres-rds-force-ssl-parameter",
+       "aurora-replica-encryption-must-match-cluster",
+       "aurora-restore-unencrypted-snapshot-specify-kms-key"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q013",
+   "section": "2-deep.md#aurora-auto-scaling-adds-and-removes-aurora-replicas-for-read-load",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.1",
+   "bullets": [
+    "2.1.K15"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "auto-scaling-readers-target-tracking",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a web application on a provisioned Amazon Aurora MySQL DB cluster with one writer and two Aurora Replicas. The application sends its reads to the reader endpoint. Read traffic rises sharply every weekday morning and falls at night. At the morning peak, the Aurora Replicas reach 90 percent CPU utilization, and the writer stays at 30 percent. Which solution will adjust the read capacity automatically with the LEAST operational overhead?",
+   "keywords": [
+    "the Aurora Replicas reach 90 percent CPU utilization",
+    "the writer stays at 30 percent",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Turn on Aurora Auto Scaling for the writer DB instance, so that its DB instance class grows during the morning peak and shrinks at night.",
+     "correct": false,
+     "why": "Aurora Auto Scaling helps with the workload [only on the reader instances](../facts/aurora.md#aurora-autoscaling-writer-not-scaled), and the writer is not the busy instance here.",
+     "concept": "auto-scaling-writer",
+     "trap": "aurora-trap-auto-scaling-scales-writer",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Create an AWS Lambda function that an Amazon EventBridge schedule runs to add Aurora Replicas every morning and to delete them every night.",
+     "correct": false,
+     "why": "It works on normal days, but the team writes and maintains code, and a fixed schedule misses peaks that come early or late.",
+     "concept": "scheduled-lambda-scaling",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create an Aurora global database with a secondary cluster in a second AWS Region, and send part of the read traffic to that cluster.",
+     "correct": false,
+     "why": "A global database lets one database [span multiple AWS Regions](../facts/aurora.md#aurora-faq-global-db-definition), a large change for a daily read peak in one Region.",
+     "concept": "global-database-for-reads",
+     "trap": null,
+     "misconception": "solves a daily read peak in one Region with a second Region",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "d",
+     "text": "Add an Aurora Auto Scaling policy that uses target tracking on the average CPU utilization of the Aurora Replicas in the cluster.",
+     "correct": true,
+     "why": "Aurora Auto Scaling [dynamically adjusts the number of Aurora Replicas](../facts/aurora.md#aurora-cmp-aurora-auto-scaling-adjusts-replicas), and the metric [RDSReaderAverageCPUUtilization](../facts/aurora.md#aurora-autoscaling-predefined-metric-reader-cpu) tracks the average CPU of the replicas.",
+     "concept": "auto-scaling-target-tracking",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "The replicas are busy and the writer is not, so the cluster needs more readers at the peak. Aurora Auto Scaling [dynamically adjusts the number of Aurora Replicas](../facts/aurora.md#aurora-cmp-aurora-auto-scaling-adjusts-replicas) with a target tracking policy. The application already uses the reader endpoint, which lets it [support connections to new Aurora Replicas](../facts/aurora.md#aurora-auto-scaling-use-reader-endpoint) without a change.",
+   "takeaway": "Aurora Auto Scaling adds and removes Aurora Replicas for read load; it does not resize the writer.",
+   "twin": "If the stem said \"the writer reaches 90 percent CPU from write statements\" instead: a larger DB instance class for the writer, because Aurora Auto Scaling helps [only on the reader instances](../facts/aurora.md#aurora-autoscaling-writer-not-scaled).",
+   "say": "The replicas are hot and the writer is not, so I let Aurora Auto Scaling add replicas on their average CPU.",
+   "facts": [
+    "aurora-cmp-aurora-auto-scaling-adjusts-replicas",
+    "aurora-autoscaling-predefined-metric-reader-cpu",
+    "aurora-autoscaling-writer-not-scaled",
+    "aurora-faq-global-db-definition",
+    "aurora-auto-scaling-use-reader-endpoint"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Aurora Auto Scaling for Aurora Replicas with a target tracking policy on average reader CPU utilization; replicas are added at the peak and removed at night, and the reader endpoint picks them up."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-auto-scaling-target-tracking-cloudwatch",
+       "aurora-auto-scaling-use-reader-endpoint",
+       "aurora-autoscaling-global-secondary-unsupported",
+       "aurora-autoscaling-predefined-metric-reader-cpu",
+       "aurora-autoscaling-writer-not-scaled",
+       "aurora-cmp-aurora-auto-scaling-adjusts-replicas",
+       "aurora-cmp-reader-endpoint-and-auto-scaling",
+       "aurora-global-db-secondary-region-readers-only"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q015",
+   "section": "2-deep.md#aurora-standard-charges-for-each-io-and-io-optimized-includes-it",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.3",
+   "bullets": [
+    "4.3.S3"
+   ],
+   "topics": [
+    "databases",
+    "cost"
+   ],
+   "services": [
+    "aurora",
+    "aurora-serverless"
+   ],
+   "concept": "standard-vs-io-optimized-by-io-share",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster with the Aurora Standard storage configuration. The cluster has one writer and two Aurora Replicas, all provisioned, and it runs a steady-state load around the clock that will continue for years. The monthly bill shows that I/O charges are about 10 percent of the total Aurora spend. A team member proposes Aurora I/O-Optimized because it has no I/O charges. Which change is the MOST cost-effective?",
+   "keywords": [
+    "about 10 percent of the total Aurora spend",
+    "steady-state load around the clock that will continue for years",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Switch the cluster to the Aurora I/O-Optimized configuration, because a cluster without I/O charges costs less than an Aurora Standard cluster.",
+     "correct": false,
+     "why": "I/O-Optimized is the best choice at [25% or more](../facts/aurora.md#aurora-io-optimized-best-when-io-25-percent-or-more) of the Aurora spend, and the I/O share of this cluster is 10 percent.",
+     "concept": "io-optimized",
+     "trap": "aurora-trap-io-optimized-always-cheaper",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Replace the provisioned DB instances with Aurora Serverless v2 instances, so that the cluster no longer pays for its I/O operations.",
+     "correct": false,
+     "why": "Serverless instances use the cluster's [Aurora Standard or Aurora I/O-Optimized configuration](../facts/aurora-serverless.md#aurora-serverless-storage-io-follow-cluster-configuration), so the I/O charges stay.",
+     "concept": "serverless-for-io",
+     "trap": "aurora-trap-serverless-no-io-charges",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Keep the Aurora Standard configuration, and buy Reserved Instances for the writer and for the two Aurora Replicas of the cluster.",
+     "correct": true,
+     "why": "Aurora Standard is the best choice when I/O is [less than 25%](../facts/aurora.md#aurora-standard-best-when-io-under-25-percent) of the spend, and Reserved Instances are [appropriate for steady-state database workloads](../facts/aurora.md#aurora-pricing-reserved-instances-steady-state).",
+     "concept": "standard-with-reserved-instances",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Keep the Aurora Standard configuration, and move more of the reads to the Aurora Replicas so that fewer I/O operations are billed.",
+     "correct": false,
+     "why": "I/O operations are [counted the same way](../facts/aurora.md#aurora-io-counted-same-writer-reader) on a writer or a reader, so moving reads between instances does not lower the I/O bill.",
+     "concept": "reads-to-replicas-for-io",
+     "trap": "aurora-trap-replicas-lower-io-bill",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "Two facts decide. Aurora Standard is the best choice when I/O spending is [less than 25%](../facts/aurora.md#aurora-standard-best-when-io-under-25-percent) of the Aurora spend, and here it is 10 percent. The load is steady for years, and Reserved Instances are [appropriate for steady-state database workloads](../facts/aurora.md#aurora-pricing-reserved-instances-steady-state). They work [with both DB cluster configurations](../facts/aurora.md#aurora-reserved-instance-both-storage-configurations), so the discount does not depend on the storage choice.",
+   "takeaway": "Check the I/O share first: below a quarter of the spend, Aurora Standard costs less.",
+   "twin": "If the stem said \"I/O charges are about 60 percent of the total Aurora spend\" instead: switch to I/O-Optimized, because it is the best choice at [25% or more](../facts/aurora.md#aurora-io-optimized-best-when-io-25-percent-or-more) of the spend.",
+   "say": "I/O is a tenth of the bill, so Aurora Standard stays, and Reserved Instances cut the steady instance cost.",
+   "facts": [
+    "aurora-standard-best-when-io-under-25-percent",
+    "aurora-pricing-reserved-instances-steady-state",
+    "aurora-io-optimized-best-when-io-25-percent-or-more",
+    "aurora-io-counted-same-writer-reader",
+    "aurora-serverless-storage-io-follow-cluster-configuration",
+    "aurora-reserved-instance-both-storage-configurations"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-steady-state"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "I/O-Optimized pays off only when I/O is a large share of the spend (around a quarter or more), because instance and storage prices are higher. At 10 percent, stay on Aurora Standard; for a steady multi-year load, buy Reserved Instances for all three DB instances."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-faq-read-io-page-size",
+       "aurora-faq-standard-pay-per-io-vs-io-optimized-included",
+       "aurora-io-optimized-best-when-io-25-percent-or-more",
+       "aurora-pricing-reserved-instances-steady-state",
+       "aurora-reserved-instance-both-storage-configurations",
+       "aurora-reserved-instance-discount-up-to-45-and-66-percent",
+       "aurora-serverless-provisioned-suited-to-steady-workloads",
+       "aurora-serverless-storage-io-follow-cluster-configuration",
+       "aurora-standard-best-when-io-under-25-percent"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q017",
+   "section": "2-deep.md#aurora-global-database-copies-the-cluster-volume-to-read-only-regions",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.K1"
+   ],
+   "topics": [
+    "databases",
+    "performance"
+   ],
+   "services": [
+    "aurora",
+    "dynamodb"
+   ],
+   "concept": "global-reads-write-forwarding",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company's order application has users around the world, mostly in North America and Europe. The application runs SQL queries with joins on an Amazon Aurora MySQL DB cluster in us-east-1. European users report slow page loads, and most of their requests are reads. European users also make a few writes, such as profile changes, and every write must reach the same database. Which solution gives European users low-latency reads with the LEAST operational overhead?",
+   "keywords": [
+    "most of their requests are reads",
+    "every write must reach the same database",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a separate Aurora MySQL DB cluster in a European Region, and keep the two clusters in step with a custom synchronization job.",
+     "correct": false,
+     "why": "It can work, but the team builds and runs its own replication between two databases, which a global database provides as a managed feature.",
+     "concept": "custom-cross-region-sync",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Create an Aurora global database with a secondary cluster in a European Region, and read from it with write forwarding turned on.",
+     "correct": true,
+     "why": "The secondary cluster serves [low-latency read operations for applications](../facts/aurora.md#aurora-cmp-global-db-low-latency-reads-worldwide) in Europe, and it can [forward SQL statements that perform write operations](../facts/aurora.md#aurora-write-forwarding-secondary-forward-sql-writes) to the primary.",
+     "concept": "global-database-write-forwarding",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Move the order data to Amazon DynamoDB global tables with a replica table in a European Region, so that each Region reads and writes locally.",
+     "correct": false,
+     "why": "Removing joins is [at the heart of NoSQL data modeling](../facts/dynamodb.md#dynamodb-no-joins-heart-of-nosql-modeling), so the SQL queries with joins force a rewrite of the application.",
+     "concept": "dynamodb-global-tables",
+     "trap": "aurora-trap-dynamodb-for-joins",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Create an Aurora global database with a secondary cluster in a European Region, and make that cluster a second writer for the European writes.",
+     "correct": false,
+     "why": "In a global database, [only the primary cluster performs write operations](../facts/aurora.md#aurora-global-db-only-primary-writes), so the European cluster cannot become a second writer.",
+     "concept": "global-database-second-writer",
+     "trap": "aurora-trap-global-all-regions-write",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "The reads need a copy of the data in Europe, and the writes need one writer. An Aurora global database gives [low-latency read operations for applications](../facts/aurora.md#aurora-cmp-global-db-low-latency-reads-worldwide) far from the primary Region. For [occasional DML statements](../facts/aurora.md#aurora-global-db-occasional-writes-use-secondary-reader-with-write-forwarding), the application connects to a secondary cluster that [has write forwarding enabled](../facts/aurora.md#aurora-global-db-occasional-writes-use-secondary-reader-with-write-forwarding).",
+   "takeaway": "Distant readers and few writes: an Aurora global database with write forwarding.",
+   "twin": "If the stem said \"European users read but never write\" instead: a global database without write forwarding, because a secondary Region is [made up entirely of Aurora Replicas](../facts/aurora.md#aurora-global-db-secondary-region-readers-only).",
+   "say": "A global database puts a read copy in Europe, and write forwarding sends the few writes to the primary.",
+   "facts": [
+    "aurora-cmp-global-db-low-latency-reads-worldwide",
+    "aurora-write-forwarding-secondary-forward-sql-writes",
+    "aurora-global-db-only-primary-writes",
+    "dynamodb-no-joins-heart-of-nosql-modeling",
+    "aurora-global-db-occasional-writes-use-secondary-reader-with-write-forwarding",
+    "aurora-global-db-secondary-region-readers-only"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-users-around-the-world",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for low-latency reads for European users with the LEAST operational overhead.",
+     "I mark the constraints: Aurora MySQL in us-east-1, SQL queries with joins, mostly reads from Europe, a few European writes, and every write must reach the same database.",
+     "Before I look at the options, I predict an Aurora global database with a secondary cluster in Europe, because it keeps a copy of the data in another Region for local reads.",
+     "I remove the second writer, because only the primary cluster of a global database performs writes. I remove DynamoDB global tables, because the joins would force a rewrite of the application.",
+     "Between the global database with write forwarding and a separate cluster with a sync job, the difference is who runs the replication; the stem says LEAST operational overhead, so I choose the global database, which forwards the few writes to the primary.",
+     "Check: European reads stay in Europe, every write reaches the primary cluster, and the team runs no custom code. Time: 90 seconds."
+    ],
+    "wrong_path": false
+   },
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Aurora global database with a secondary cluster in Europe for local low-latency reads; turn on write forwarding so the few European writes are forwarded to the single primary writer in us-east-1."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-cmp-global-db-low-latency-reads-worldwide",
+       "aurora-cmp-global-db-storage-layer-replication-less-than-1-second",
+       "aurora-global-db-no-binlog-management",
+       "aurora-global-db-only-primary-writes",
+       "aurora-global-db-scale-reads-connect-to-nearby-reader-endpoint",
+       "aurora-global-db-secondary-region-readers-only",
+       "aurora-global-db-write-forwarding-auto-forwards-to-primary",
+       "dynamodb-no-join-operator",
+       "dynamodb-no-joins-heart-of-nosql-modeling"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q019",
+   "section": "2-deep.md#the-reader-endpoint-spreads-connections-not-single-queries-across-replicas",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.S2"
+   ],
+   "topics": [
+    "databases",
+    "performance"
+   ],
+   "services": [
+    "aurora",
+    "rds-proxy",
+    "lambda"
+   ],
+   "concept": "reader-endpoint-and-proxy-for-connection-storms",
+   "difficulty": 3,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an application on AWS Lambda functions that use an Amazon Aurora PostgreSQL DB cluster with one writer and three Aurora Replicas. All functions connect to the cluster endpoint. During traffic peaks, thousands of short-lived invocations open new database connections, and the writer returns \"too many connections\" errors. Most of the queries are reads, and the three replicas are almost idle. Which combination of steps will solve these problems with the LEAST operational overhead? (Select TWO.)",
+   "keywords": [
+    "thousands of short-lived invocations open new database connections",
+    "the three replicas are almost idle",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Put Amazon RDS Proxy between the Lambda functions and the DB cluster, and connect the functions to the endpoint of the proxy.",
+     "correct": true,
+     "why": "RDS Proxy fits applications that [frequently open and close connections](../facts/aurora.md#aurora-frequent-connections-use-rds-proxy), and it lets them [pool and share database connections](../facts/rds-proxy.md#rds-proxy-definition-pool-share).",
+     "concept": "rds-proxy",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Send every query of the Lambda functions, writes included, to the reader endpoint, so that the three replicas share all the work.",
+     "correct": false,
+     "why": "The cluster endpoint is [the only one that can perform write operations](../facts/aurora.md#aurora-cluster-endpoint-only-one-for-writes), so writes sent to the reader endpoint fail.",
+     "concept": "writes-to-reader-endpoint",
+     "trap": "aurora-trap-writes-through-reader-endpoint",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Run a connection-pooling service on Amazon EC2 instances in front of the DB cluster, and point the Lambda functions at that service.",
+     "correct": false,
+     "why": "It works, but the team runs and patches its own pooling servers; RDS Proxy is a [fully managed, highly available database proxy](../facts/rds-proxy.md#rds-proxy-faq-what).",
+     "concept": "self-managed-pooler",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Send the read-only queries of the Lambda functions to the reader endpoint of the DB cluster instead of the cluster endpoint.",
+     "correct": true,
+     "why": "The reader endpoint [reduces the overhead on the primary instance](../facts/aurora.md#aurora-reader-endpoint-reduces-primary-overhead-scales-selects) by running the reads on the idle Aurora Replicas.",
+     "concept": "reader-endpoint",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "e",
+     "text": "Change the writer to a larger DB instance class, so that the writer accepts more database connections during the traffic peaks.",
+     "correct": false,
+     "why": "High Lambda concurrency can still [exhaust database connection limits](../facts/lambda.md#lambda-vpc-db-connections-rds-proxy) on a larger instance, and the reads stay on the writer.",
+     "concept": "larger-writer",
+     "trap": "rds-trap-bigger-instance-for-connection-storms",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "Two problems need two fixes. Short-lived invocations can [exhaust database connection limits](../facts/lambda.md#lambda-vpc-db-connections-rds-proxy), and RDS Proxy keeps a [smaller number of long-lived connections](../facts/rds-proxy.md#rds-proxy-candidate-too-many-connections) to the database. The read load sits on the writer, and the reader endpoint moves the reads to the idle replicas.",
+   "takeaway": "Connection storms: RDS Proxy. Reads that load the writer: the reader endpoint.",
+   "twin": "If the stem said \"the functions open few connections, but reads keep the writer CPU high\" instead: the reader endpoint alone, because RDS Proxy pools connections and the reads still run on the writer.",
+   "say": "The proxy pools the connection storm, and the reader endpoint moves the reads to the idle replicas.",
+   "facts": [
+    "aurora-frequent-connections-use-rds-proxy",
+    "rds-proxy-definition-pool-share",
+    "aurora-reader-endpoint-reduces-primary-overhead-scales-selects",
+    "aurora-cluster-endpoint-only-one-for-writes",
+    "lambda-vpc-db-connections-rds-proxy",
+    "rds-proxy-faq-what",
+    "rds-proxy-candidate-too-many-connections"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-which-combination",
+    "ee-select-two",
+    "ee-short-lived",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Put Amazon RDS Proxy in front of the cluster to pool and reuse the many short-lived Lambda connections, and send read-only queries to the reader endpoint (or a read-only proxy endpoint) so the idle replicas carry the reads."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-cluster-endpoint-only-one-for-writes",
+       "aurora-frequent-connections-use-rds-proxy",
+       "aurora-ha-use-cluster-and-reader-endpoints",
+       "aurora-max-connections-set-by-parameter-group",
+       "aurora-reader-endpoint-balances-each-connection-read-only-session",
+       "aurora-reader-endpoint-reduces-primary-overhead-scales-selects",
+       "rds-proxy-faq-what",
+       "rds-proxy-lambda-connection-pooling",
+       "rds-proxy-multiplexing-fewer-db-connections"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q021",
+   "section": "2-deep.md#when-the-writer-fails-aurora-promotes-a-replica-behind-the-same-endpoint",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.S1"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "promotion-tiers-failover-order",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster. The writer is in Availability Zone 1. Two large Aurora Replicas of the same DB instance class run in Availability Zone 2 and Availability Zone 3, and one small Aurora Replica runs reports. If the writer fails, the large replica in Availability Zone 2 must become the new writer. If that replica is also unavailable, the large replica in Availability Zone 3 must be next, and the small replica must be the last choice. Which configuration will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Two large Aurora Replicas of the same DB instance class",
+    "the large replica in Availability Zone 2 must become the new writer",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Keep the same promotion tier on all three replicas, because Aurora promotes the largest replica first and the small replica is the smallest one.",
+     "correct": false,
+     "why": "With equal tiers RDS [promotes the largest one](../facts/aurora.md#aurora-faq-promotion-tie-largest-wins), but the two large replicas are the same size, so RDS picks [an arbitrary replica](../facts/aurora.md#aurora-promotion-tie-break-arbitrary) of the two.",
+     "concept": "same-tier-largest-wins",
+     "trap": null,
+     "misconception": "expects instance size to set an order between two replicas of the same class",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Keep the current promotion tiers, and run an AWS Lambda function on each failover event that fails over again to the large replica in Availability Zone 2.",
+     "correct": false,
+     "why": "It can work, but a second failover adds another interruption and code to maintain, and promotion tiers give the same order without code.",
+     "concept": "lambda-second-failover",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Set promotion tier 0 on the large replica in Availability Zone 2, tier 1 on the other large replica, and tier 15 on the small replica.",
+     "correct": true,
+     "why": "Amazon RDS [promotes the Aurora Replica with the highest priority](../facts/aurora.md#aurora-promotion-priority-highest-promoted-first), and the tiers run from [0 for the highest priority to 15 for the lowest priority](../facts/aurora.md#aurora-promotion-priority-highest-promoted-first).",
+     "concept": "distinct-promotion-tiers",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Set promotion tier 0 on both large replicas, and give the small replica a tier that removes it from failover so that it cannot become the writer.",
+     "correct": false,
+     "why": "If the higher tiers are unhealthy, Amazon RDS [will promote the lower priority replica](../facts/aurora.md#aurora-faq-low-priority-replica-still-promoted-if-needed), and the two large replicas still share one tier.",
+     "concept": "tier-blocks-promotion",
+     "trap": "aurora-trap-tier-blocks-promotion",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "The stem gives a strict order for three replicas. Each instance gets a [promotion priority tier](../facts/aurora.md#aurora-faq-promotion-highest-priority-first), and on a failure Amazon RDS [promotes the Aurora Replica with the highest priority](../facts/aurora.md#aurora-promotion-priority-highest-promoted-first). Three different tiers make the order explicit, so the two large replicas no longer tie.",
+   "takeaway": "Set the failover order with promotion tiers: the lowest tier number is promoted first.",
+   "twin": "If the stem said \"either large replica can become the writer first\" instead: one tier for both large replicas, because among equal tiers RDS [promotes the largest one](../facts/aurora.md#aurora-faq-promotion-tie-largest-wins).",
+   "say": "Promotion tiers set the failover order: tier zero first, so I give each replica its own tier.",
+   "facts": [
+    "aurora-promotion-priority-highest-promoted-first",
+    "aurora-faq-promotion-tie-largest-wins",
+    "aurora-promotion-tie-break-arbitrary",
+    "aurora-faq-low-priority-replica-still-promoted-if-needed",
+    "aurora-faq-promotion-highest-priority-first"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Use failover promotion tiers: tier 0 (highest priority) on the large replica in AZ 2, tier 1 on the large replica in AZ 3, and a low-priority tier such as 15 on the small reporting replica."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-detects-problems-activates-failover-automatically",
+       "aurora-faq-low-priority-replica-still-promoted-if-needed",
+       "aurora-faq-promotion-highest-priority-first",
+       "aurora-promotion-priority-highest-promoted-first",
+       "aurora-promotion-priority-range",
+       "aurora-promotion-tie-break-arbitrary",
+       "aurora-promotion-tie-break-largest"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q001",
+   "section": "2-deep.md#the-reader-endpoint-spreads-connections-not-single-queries-across-replicas",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.S1"
+   ],
+   "topics": [
+    "databases",
+    "performance"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "reader-endpoint-for-read-scaling",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster with one writer and four Aurora Replicas: two large replicas and two small replicas. The team adds and removes replicas often. Each web request opens a new database connection. Read-only queries from the web application must be spread across all the replicas, including replicas that are added later. Which solution will meet this requirement with the LEAST operational overhead?",
+   "keywords": [
+    "spread across all the replicas, including replicas that are added later",
+    "Each web request opens a new database connection",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Connect the read-only queries to the reader endpoint of the cluster, and keep the writes on the cluster endpoint.",
+     "correct": true,
+     "why": "The reader endpoint provides [connection-balancing support for read-only connections](../facts/aurora.md#aurora-reader-endpoint-connection-balancing-read-only), and a new connection for each request reaches every replica, new ones too.",
+     "concept": "reader-endpoint",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Create a custom endpoint that contains the two large replicas, and connect the read-only queries to the custom endpoint.",
+     "correct": false,
+     "why": "A custom endpoint holds [a set of DB instances that you choose](../facts/aurora.md#aurora-custom-endpoint-set-of-chosen-instances), so the two small replicas get no queries.",
+     "concept": "custom-endpoint",
+     "trap": null,
+     "misconception": "uses a fixed group of chosen replicas when every replica must take reads",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Connect all queries of the application, writes included, to the reader endpoint, so that every replica shares the work.",
+     "correct": false,
+     "why": "The cluster endpoint is [the only one that can perform write operations](../facts/aurora.md#aurora-cluster-endpoint-only-one-for-writes), so writes sent to the reader endpoint fail on the replicas.",
+     "concept": "writes-to-reader-endpoint",
+     "trap": "aurora-trap-writes-through-reader-endpoint",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Store the instance endpoint of each replica in the application settings, and choose one endpoint in the code for each query.",
+     "correct": false,
+     "why": "It works, but the team must [hardcode all the hostnames](../facts/aurora.md#aurora-endpoint-abstracts-connections-no-hardcode) and edit them each time a replica is added or removed.",
+     "concept": "instance-endpoints",
+     "trap": "aurora-trap-instance-endpoints-to-spread-reads",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The read-only queries need to reach every replica, also replicas that join later. The reader endpoint gives [connection-balancing among all the Aurora Replicas](../facts/aurora.md#aurora-reader-endpoint-balances-replicas), and each web request opens a new connection, so the queries spread too. Applications that use the reader endpoint [support connections to new Aurora Replicas](../facts/aurora.md#aurora-auto-scaling-use-reader-endpoint), so nothing changes when the team adds a replica.",
+   "takeaway": "Spread reads over all replicas: the reader endpoint. Send some reads to chosen replicas: a custom endpoint.",
+   "twin": "If the stem said \"Monthly analytics queries must run only on the two large replicas\" instead: the custom endpoint, because it represents [a set of DB instances that you choose](../facts/aurora.md#aurora-custom-endpoint-set-of-chosen-instances).",
+   "say": "The reader endpoint balances new connections over every replica, so each new request can land on a different one.",
+   "facts": [
+    "aurora-reader-endpoint-connection-balancing-read-only",
+    "aurora-custom-endpoint-set-of-chosen-instances",
+    "aurora-cluster-endpoint-only-one-for-writes",
+    "aurora-endpoint-abstracts-connections-no-hardcode",
+    "aurora-reader-endpoint-balances-replicas",
+    "aurora-auto-scaling-use-reader-endpoint"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Use the cluster's reader endpoint for read-only connections; it load-balances new connections across all available Aurora Replicas, including ones added later. Writes stay on the cluster (writer) endpoint."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-cluster-endpoint-only-one-for-writes",
+       "aurora-custom-endpoint-set-of-chosen-instances",
+       "aurora-custom-endpoint-static-or-exclusion-list",
+       "aurora-endpoint-abstracts-connections-no-hardcode",
+       "aurora-instance-endpoint-use-diagnose-one-instance",
+       "aurora-reader-endpoint-balances-connections-not-queries",
+       "aurora-reader-endpoint-balances-each-connection-read-only-session",
+       "aurora-reader-endpoint-balances-replicas"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q011",
+   "section": "2-deep.md#data-moves-into-aurora-by-snapshot-by-aurora-read-replica-or-by-aws-dms",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.3",
+   "bullets": [
+    "4.3.K7"
+   ],
+   "topics": [
+    "databases"
+   ],
+   "services": [
+    "aurora",
+    "dms"
+   ],
+   "concept": "heterogeneous-migration-sct-dms",
+   "difficulty": 2,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company plans to migrate a legacy on-premises Oracle database to Amazon Aurora PostgreSQL. The business logic of the database lives in hundreds of stored procedures that are written in PL/SQL. The company has a private network connection to AWS and a short maintenance window for the final cutover. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+   "keywords": [
+    "Oracle database to Amazon Aurora PostgreSQL",
+    "stored procedures that are written in PL/SQL",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an Aurora read replica of the Oracle database, and promote the read replica to a standalone Aurora PostgreSQL DB cluster.",
+     "correct": false,
+     "why": "Aurora makes a read replica of an RDS for PostgreSQL DB instance for [migration to Aurora PostgreSQL](../facts/aurora.md#aurora-rds-postgres-read-replica-for-migration), and an Oracle database is no such source.",
+     "concept": "aurora-replica-of-oracle",
+     "trap": "aurora-trap-aurora-replica-from-any-source",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Use the AWS Schema Conversion Tool to convert the Oracle schema and the PL/SQL stored procedures to the PostgreSQL format.",
+     "correct": true,
+     "why": "For a source with a [different underlying engine than Aurora's](../facts/aurora.md#aurora-migrate-heterogeneous-consider-sct), AWS suggests the [AWS Schema Conversion Tool (AWS SCT)](../facts/aurora.md#aurora-migrate-heterogeneous-consider-sct).",
+     "concept": "sct-schema-conversion",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Turn on Babelfish for Aurora PostgreSQL, so that the PL/SQL stored procedures run on the new cluster without code changes.",
+     "correct": false,
+     "why": "[Babelfish for Aurora PostgreSQL](../facts/aurora.md#aurora-faq-babelfish-sql-server) is for applications written for SQL Server, not for Oracle PL/SQL code.",
+     "concept": "babelfish",
+     "trap": "aurora-trap-babelfish-for-any-engine",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Rewrite each PL/SQL stored procedure by hand in PL/pgSQL, and load the data from exported CSV files with a custom script.",
+     "correct": false,
+     "why": "It can work, but the team converts hundreds of procedures by hand and writes its own load script, which the AWS migration tools do.",
+     "concept": "manual-conversion",
+     "trap": null,
+     "misconception": "does by hand the conversion and the data copy that the AWS migration tools do",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "e",
+     "text": "Use AWS Database Migration Service to copy the data from the Oracle database to the new Aurora PostgreSQL DB cluster.",
+     "correct": true,
+     "why": "[AWS Database Migration Service (AWS DMS)](../facts/aurora.md#aurora-postgres-non-postgres-source-use-dms) moves data into Aurora PostgreSQL from a source that is not PostgreSQL-compatible.",
+     "concept": "dms-data-move",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "A migration between different engines has two halves. The schema and the PL/SQL code need conversion, and AWS suggests the [AWS Schema Conversion Tool (AWS SCT)](../facts/aurora.md#aurora-migrate-heterogeneous-consider-sct) for that work. The data needs a copy, and AWS DMS moves it from a source that is [not PostgreSQL-compatible](../facts/aurora.md#aurora-postgres-non-postgres-source-use-dms).",
+   "takeaway": "Different engine: AWS SCT converts the schema and code, and AWS DMS moves the data.",
+   "twin": "If the stem said \"an Amazon RDS for PostgreSQL DB instance\" instead: an Aurora read replica of the DB instance, because AWS uses that path for [migration to Aurora PostgreSQL](../facts/aurora.md#aurora-rds-postgres-read-replica-for-migration).",
+   "say": "Oracle to Aurora PostgreSQL is a heterogeneous move: SCT converts the code, DMS copies the data.",
+   "facts": [
+    "aurora-migrate-heterogeneous-consider-sct",
+    "aurora-postgres-non-postgres-source-use-dms",
+    "aurora-rds-postgres-read-replica-for-migration",
+    "aurora-faq-babelfish-sql-server"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-which-combination",
+    "ee-select-two",
+    "ee-legacy",
+    "ee-migrate",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "rejected",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r1",
+      "stem_only": "Heterogeneous Oracle to Aurora PostgreSQL migration: use AWS SCT to convert the schema and the PL/SQL code to PL/pgSQL, then AWS DMS for the full load plus ongoing replication (CDC) over the private connection so the final cutover fits the short window. Babelfish is for SQL Server T-SQL, not Oracle PL/SQL, and Aurora read replicas cannot be created from an Oracle source."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r1",
+      "citations": [
+       "aurora-faq-babelfish-sql-server",
+       "aurora-faq-migration-dms-continuous-replication",
+       "aurora-migrate-heterogeneous-consider-sct",
+       "aurora-postgres-non-postgres-source-use-dms",
+       "docs/AmazonRDS/latest/AuroraUserGuide/Aurora.Replication#An RDS for PostgreSQL DB instance as the",
+       "docs/SchemaConversionTool/latest/userguide/CHAP_Source.Oracle#You can use AWS SCT to convert schemas, "
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": "Option E says only 'copy the data', so a careful candidate could read it as a one-time full load that does not fit the short cutover window; the stem never says ongoing replication, and D plus E is still the only workable pair.",
+      "solver": "solve-27-ambiguity-r1",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": "ambiguity flag"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q012",
+   "section": "2-deep.md#a-secondary-region-takes-over-by-failover-after-an-outage-by-switchover-when-healthy",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "global-failover-for-region-outage",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora global database for Aurora PostgreSQL. The primary cluster is in us-east-1, and one secondary cluster is in us-west-2. The applications connect to the database through the global writer endpoint, and the company does not want to change their connection settings. An outage makes the primary cluster in us-east-1 unavailable, and the company must restore write access in us-west-2 as soon as possible. The company accepts the loss of recent writes that were not yet replicated. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "An outage makes the primary cluster in us-east-1 unavailable",
+    "restore write access in us-west-2 as soon as possible",
+    "does not want to change their connection settings",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Run a managed failover of the global database to the secondary cluster in us-west-2, and keep the applications on the global writer endpoint.",
+     "correct": true,
+     "why": "Failover is the way to [recover from an unplanned outage](../facts/aurora.md#aurora-global-db-failover-use-for-unplanned-outage), and the global writer endpoint then points to the [cluster endpoint of the new primary cluster](../facts/aurora.md#aurora-global-writer-endpoint-follows-switchover-failover).",
+     "concept": "global-database-managed-failover",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Run a switchover of the global database to the secondary cluster in us-west-2, and keep the applications on the global writer endpoint.",
+     "correct": false,
+     "why": "Switchovers are meant for a global database whose clusters are all [in a healthy state](../facts/aurora.md#aurora-global-db-switchover-healthy-only-unplanned-use-failover), and the primary cluster here is down.",
+     "concept": "global-database-switchover",
+     "trap": "aurora-trap-switchover-for-region-outage",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Remove the secondary cluster in us-west-2 from the global database, and change the applications to use the cluster endpoint of that cluster.",
+     "correct": false,
+     "why": "Removing the cluster [immediately stops the replication](../facts/aurora.md#aurora-global-db-detach-secondary-standalone-readwrite) and gives a writable cluster, but the team changes every application and rebuilds the global database later.",
+     "concept": "detach-secondary-cluster",
+     "trap": "aurora-trap-detach-is-managed-failover",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Restore the most recent cluster snapshot to a new cluster in us-west-2, and change the applications to use the endpoint of the new cluster.",
+     "correct": false,
+     "why": "Snapshots reach another Region when you [manually copy Aurora snapshots](../facts/aurora.md#aurora-no-cross-region-automated-backup-replication), and a restored cluster misses every write after its snapshot and takes longer to start.",
+     "concept": "snapshot-restore-other-region",
+     "trap": null,
+     "misconception": "a cluster snapshot in the second Region is a fast way back to current data after a Region outage",
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "The primary Region has an outage, so this is an unplanned event. AWS says that the managed failover [method is recommended for disaster recovery](../facts/aurora.md#aurora-global-db-managed-failover-recommended-for-dr). It promotes the secondary cluster in us-west-2, and the global writer endpoint follows the new primary cluster, so the applications change nothing.",
+   "takeaway": "Region outage in an Aurora global database: managed failover. Planned move while both Regions are healthy: switchover.",
+   "twin": "If the stem said \"For a planned maintenance event, the company must move the primary role to us-west-2 while both Regions are healthy, with no data loss\" instead: the switchover, because its [RPO is 0 (no data loss)](../facts/aurora.md#aurora-global-switchover-rpo-zero).",
+   "say": "An outage calls for a managed failover; a switchover is for a global database whose clusters are healthy.",
+   "facts": [
+    "aurora-global-db-failover-use-for-unplanned-outage",
+    "aurora-global-writer-endpoint-follows-switchover-failover",
+    "aurora-global-db-switchover-healthy-only-unplanned-use-failover",
+    "aurora-global-db-detach-secondary-standalone-readwrite",
+    "aurora-no-cross-region-automated-backup-replication",
+    "aurora-global-db-managed-failover-recommended-for-dr",
+    "aurora-global-switchover-rpo-zero"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-as-soon-as-possible"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "edited-pass",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r1",
+      "stem_only": "Unplanned Regional outage of the primary with data loss accepted: run a managed failover (failover with allow-data-loss) of the Aurora global database to the us-west-2 secondary; the global writer endpoint follows the new primary, so applications keep their connection settings. A switchover needs a healthy primary, and detach-and-repoint or snapshot restore needs connection changes and more work."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r1",
+      "citations": [
+       "aurora-global-db-detach-secondary-standalone-readwrite",
+       "aurora-global-db-failover-can-lose-writes-consistent-state",
+       "aurora-global-db-failover-use-for-unplanned-outage",
+       "aurora-global-db-managed-failover-recommended-for-dr",
+       "aurora-global-db-switchover-controlled-scenarios",
+       "aurora-global-db-switchover-healthy-only-unplanned-use-failover",
+       "aurora-global-db-writer-endpoint-no-app-change-after-switchover",
+       "aurora-global-writer-endpoint-follows-switchover-failover",
+       "aurora-restore-always-creates-new-cluster"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r1",
+      "case_option": "c"
+     }
+    ],
+    "note": null,
+    "edits": 1,
+    "checked": "2026-10-14"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-27-r0",
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q004",
+   "section": "2-deep.md#aurora-serverless-v2-changes-capacity-with-load-inside-a-range-you-set",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.K8"
+   ],
+   "topics": [
+    "databases",
+    "cost"
+   ],
+   "services": [
+    "aurora-serverless",
+    "aurora"
+   ],
+   "concept": "serverless-v2-for-spiky-load",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company is moving a new order-processing application to an Amazon Aurora MySQL DB cluster. Both the reads and the writes of the application grow with the number of orders, and the database must keep up with the full load at all times. The load is unpredictable: it stays low for hours, and then sudden spikes raise it to many times the usual level within minutes. Which capacity option is the MOST cost-effective?",
+   "keywords": [
+    "The load is unpredictable",
+    "sudden spikes",
+    "the reads and the writes of the application grow",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Use Aurora Serverless v2 DB instances for the writer and the readers, with a capacity range from a low minimum to a high maximum.",
+     "correct": true,
+     "why": "Aurora Serverless v2 is meant for [variable or \"spiky\" workloads](../facts/aurora-serverless.md#aurora-serverless-choose-variable-spiky-workloads), and Aurora scales the writer and the readers [within that capacity range](../facts/aurora-serverless.md#aurora-serverless-specify-min-max-capacity-range).",
+     "concept": "aurora-serverless-v2",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Use provisioned DB instances sized for the usual load, and buy Reserved Instances for those DB instances for a 3-year term.",
+     "correct": false,
+     "why": "It looks cheapest, but Reserved Instances are [appropriate for steady-state database workloads](../facts/aurora.md#aurora-pricing-reserved-instances-steady-state), and instances sized for the usual load fall behind during the spikes.",
+     "concept": "reserved-instances",
+     "trap": "how-the-exam-asks-trap-cheapest-wins",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Use provisioned DB instances sized for the highest expected load, and pay On-Demand rates for those DB instances.",
+     "correct": false,
+     "why": "It keeps up with the spikes, but it holds peak capacity through hours of low load, and AWS notes [higher costs if you overprovision](../facts/aurora-serverless.md#aurora-serverless-overprovision-raises-cost).",
+     "concept": "provisioned-for-peak",
+     "trap": null,
+     "misconception": "sizing provisioned DB instances for the peak is the cheapest safe choice for a spiky load",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Keep one provisioned writer DB instance, and use Aurora Auto Scaling to add Aurora Replicas that share the read and write load as it grows.",
+     "correct": false,
+     "why": "Aurora Auto Scaling adds readers and helps with the workload [only on the reader instances](../facts/aurora.md#aurora-autoscaling-writer-not-scaled), so the write spikes still land on one fixed writer.",
+     "concept": "aurora-auto-scaling",
+     "trap": "aurora-trap-auto-scaling-scales-writer",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "The load is unpredictable and the writes spike too, so the writer needs more capacity at the peaks, as the readers do. With Aurora Serverless v2 you [specify the minimum and maximum capacity range](../facts/aurora-serverless.md#aurora-serverless-specify-min-max-capacity-range), and Aurora scales each serverless writer or reader inside it. The company does not hold peak capacity through the hours of low load.",
+   "takeaway": "Spiky load on reads and writes: Aurora Serverless v2. Steady load for years: provisioned instances with Reserved Instances.",
+   "twin": "If the stem said \"The load is steady-state and predictable around the clock, and it will stay at this level for at least the next 3 years\" instead: provisioned instances with Reserved Instances, which are [appropriate for steady-state database workloads](../facts/aurora.md#aurora-pricing-reserved-instances-steady-state).",
+   "say": "Unpredictable spikes on the writer too point to Aurora Serverless v2, which scales inside the capacity range you set.",
+   "facts": [
+    "aurora-serverless-choose-variable-spiky-workloads",
+    "aurora-serverless-specify-min-max-capacity-range",
+    "aurora-pricing-reserved-instances-steady-state",
+    "aurora-serverless-overprovision-raises-cost",
+    "aurora-autoscaling-writer-not-scaled"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-unpredictable",
+    "ee-spiky"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Unpredictable, spiky load on both reads and writes: Aurora Serverless v2 for writer and readers with a low minimum and high maximum ACU range, so capacity follows load and you pay for what you use."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-autoscaling-replica-count-range",
+       "aurora-autoscaling-writer-not-scaled",
+       "aurora-serverless-change-instant-scaling-16-acu",
+       "aurora-serverless-choose-variable-spiky-workloads",
+       "aurora-serverless-overprovision-raises-cost",
+       "aurora-serverless-product-save-up-to-90-percent",
+       "aurora-serverless-provisioned-constant-capacity-predict-ahead",
+       "aurora-serverless-provisioned-suited-to-steady-workloads",
+       "aurora-serverless-specify-min-max-capacity-range"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q002",
+   "section": "2-deep.md#aurora-replicas-read-the-shared-volume-so-replica-lag-stays-low",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.K7",
+    "3.3.S4"
+   ],
+   "topics": [
+    "databases",
+    "performance"
+   ],
+   "services": [
+    "aurora",
+    "rds",
+    "elasticache"
+   ],
+   "concept": "aurora-replicas-low-lag-vs-rds-replicas",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon RDS for PostgreSQL DB instance with three read replicas that serve its dashboards. During write peaks, the read replicas fall up to 40 seconds behind the primary DB instance, and the dashboards show stale data. The company needs a scalable read tier with replica lag in milliseconds, behind one read endpoint, without rewriting its SQL queries. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "replica lag in milliseconds",
+    "behind one read endpoint",
+    "without rewriting its SQL queries",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Stay on RDS for PostgreSQL and add two larger read replicas, because Aurora Replicas would also copy every change into their own storage.",
+     "correct": false,
+     "why": "RDS takes each update and [copies them asynchronously to the read replica](../facts/rds.md#rds-read-replica-async-read-only), so larger replicas still lag at write peaks, while Aurora Replicas read the volume of the writer.",
+     "concept": "rds-read-replicas",
+     "trap": "aurora-trap-replicas-copy-data",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Convert the primary DB instance to a Multi-AZ DB instance deployment, and send the dashboard queries to the standby DB instance in the second Availability Zone.",
+     "correct": false,
+     "why": "The standby of a Multi-AZ DB instance [doesn't serve read traffic](../facts/rds.md#rds-multi-az-instance-standby-no-reads), so the dashboards cannot send their queries to it.",
+     "concept": "multi-az-standby-reads",
+     "trap": "rds-trap-standby-serves-reads",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Migrate the database to an Aurora PostgreSQL DB cluster with Aurora Replicas, and send the dashboard queries to the reader endpoint of the cluster.",
+     "correct": true,
+     "why": "Aurora Replicas [connect to the same storage volume](../facts/aurora.md#aurora-adding-replicas-read-same-volume-offload) as the writer, so their lag is usually [much less than 100 milliseconds](../facts/aurora.md#aurora-replica-lag-under-100-ms), and the reader endpoint is the one read endpoint.",
+     "concept": "aurora-replicas-reader-endpoint",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Keep the read replicas, and add an Amazon ElastiCache cluster in front of the dashboard reads, with application code that fills and expires the cache.",
+     "correct": false,
+     "why": "ElastiCache adds a [caching layer to improve read performance](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer), but it is a second store with code to run, and cached results can be older than the replicas.",
+     "concept": "cache-in-front-of-replicas",
+     "trap": null,
+     "misconception": "a cache in front of lagging replicas is the simplest fix for stale reads",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "Aurora Replicas read the cluster volume of the writer instead of keeping their own copy, which keeps the lag low. The dashboards [connect to the reader endpoint](../facts/aurora.md#aurora-reader-endpoint-balances-replicas), one name for all the replicas. The [code, tools, and applications](../facts/aurora.md#aurora-existing-mysql-postgres-code-works) that work with PostgreSQL work with Aurora, so the SQL stays as it is.",
+   "takeaway": "Replica lag in milliseconds behind one read endpoint: Aurora Replicas on the shared cluster volume, through the reader endpoint.",
+   "twin": "If the stem said \"the dashboards can show data that is several minutes old\" instead: the existing RDS read replicas are enough, because they give [read-only access to the replica](../facts/rds.md#rds-read-replica-async-read-only) for the dashboards.",
+   "say": "Aurora Replicas share the writer's storage, so their lag stays far below an RDS read replica's.",
+   "facts": [
+    "aurora-adding-replicas-read-same-volume-offload",
+    "aurora-replica-lag-under-100-ms",
+    "rds-read-replica-async-read-only",
+    "rds-multi-az-instance-standby-no-reads",
+    "dynamodb-decision-guide-elasticache-caching-layer",
+    "aurora-reader-endpoint-balances-replicas",
+    "aurora-existing-mysql-postgres-code-works"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-scalable"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Migrate to Aurora PostgreSQL: Aurora Replicas share the cluster volume, so replica lag is typically milliseconds (under about 100 ms), up to 15 replicas behind one reader endpoint, same PostgreSQL SQL."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-adding-replicas-read-same-volume-offload",
+       "aurora-cmp-replicas-share-storage-no-replica-writes",
+       "aurora-existing-mysql-postgres-code-works",
+       "aurora-reader-endpoint-balances-replicas",
+       "aurora-replica-lag-under-100-ms",
+       "dynamodb-decision-guide-elasticache-caching-layer",
+       "dynamodb-wa-caching-benefits",
+       "rds-compare-maz-read-capacity",
+       "rds-faq-multiaz-standby-no-reads",
+       "rds-faq-read-replica-asynchronous"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q006",
+   "section": "2-deep.md#when-the-writer-fails-aurora-promotes-a-replica-behind-the-same-endpoint",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6",
+    "2.2.S2"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "replica-in-another-az-for-failover",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a production Amazon Aurora MySQL DB cluster with one DB instance. The cluster volume keeps copies of the data across multiple Availability Zones. The database must recover automatically from a failure of the DB instance or of its Availability Zone, and service must return in less than a minute. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "with one DB instance",
+    "recover automatically from a failure of the DB instance or of its Availability Zone",
+    "less than a minute",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Make no change, because the copies of the cluster volume already let the DB instance fail over to another zone within seconds.",
+     "correct": false,
+     "why": "The copies protect the data, not the compute: with one DB instance, Aurora recreates the writer, which typically takes [less than 10 minutes](../facts/aurora.md#aurora-failover-time-without-replica).",
+     "concept": "storage-copies-as-ha",
+     "trap": "aurora-trap-single-instance-is-ha",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Add an Aurora Replica in the same Availability Zone as the writer, and keep the application connected to the cluster endpoint.",
+     "correct": false,
+     "why": "A replica in the same zone fails with the writer, and after a zone outage you must [manually create one or more new DB instances](../facts/aurora.md#aurora-single-az-cluster-create-instances-manually).",
+     "concept": "aurora-replica-same-az",
+     "trap": "aws-map-trap-one-az-is-highly-available",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Create an Aurora global database with a secondary cluster in a second AWS Region, and fail over to that Region when the writer fails.",
+     "correct": false,
+     "why": "A global database lets the database [span multiple AWS Regions](../facts/aurora.md#aurora-faq-global-db-definition), which adds a second Region to run for a failure inside one Region.",
+     "concept": "global-database-for-az-failure",
+     "trap": "aws-map-trap-multi-region-for-high-availability",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Add an Aurora Replica in a different Availability Zone from the writer, and keep the application connected to the cluster endpoint.",
+     "correct": true,
+     "why": "Aurora [automatically fails over to an Aurora Replica](../facts/aurora.md#aurora-auto-failover-to-replica), and with a replica, service typically returns in [less than 60 seconds](../facts/aurora.md#aurora-failover-time-with-replica-guide).",
+     "concept": "aurora-replica-other-az",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "You make the cluster Multi-AZ by [adding a new reader DB instance](../facts/aurora.md#aurora-convert-to-multi-az-by-adding-reader-other-az) in another Availability Zone. If the writer or its zone fails, Aurora promotes that replica. The cluster endpoint [connects to the current primary DB instance](../facts/aurora.md#aurora-cluster-endpoint-connects-to-current-primary), so the application keeps its connection string.",
+   "takeaway": "Storage copies protect the data; an Aurora Replica in another Availability Zone protects the writer.",
+   "twin": "If the stem said \"the database must also recover in a second AWS Region if the whole Region fails\" instead: add a global database too, because it lets the database [span multiple AWS Regions](../facts/aurora.md#aurora-faq-global-db-definition).",
+   "say": "Six storage copies keep the data safe, but fast failover needs an Aurora Replica in another Availability Zone.",
+   "facts": [
+    "aurora-auto-failover-to-replica",
+    "aurora-failover-time-with-replica-guide",
+    "aurora-failover-time-without-replica",
+    "aurora-single-az-cluster-create-instances-manually",
+    "aurora-faq-global-db-definition",
+    "aurora-convert-to-multi-az-by-adding-reader-other-az",
+    "aurora-cluster-endpoint-connects-to-current-primary"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-across-availability-zones"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Add an Aurora Replica in a different AZ; Aurora then promotes it automatically on writer or AZ failure, typically within about 30 seconds, and the cluster endpoint follows. Without a replica Aurora must recreate the instance, which takes minutes."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-az-outage-readers-in-other-azs-promoted",
+       "aurora-cluster-endpoint-stays-same-after-failover",
+       "aurora-convert-to-multi-az-by-adding-reader-other-az",
+       "aurora-failover-time-with-replica-guide",
+       "aurora-failover-time-without-replica",
+       "aurora-faq-cross-region-dr-manual-process",
+       "aurora-resources-not-auto-replicated-across-regions",
+       "aurora-single-az-cluster-create-instances-manually"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q008",
+   "section": "2-deep.md#aurora-global-database-copies-the-cluster-volume-to-read-only-regions",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.S2",
+    "2.2.K6"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "global-database-for-region-dr",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster in one AWS Region. The cluster has a writer and two Aurora Replicas in different Availability Zones. A new contract requires cross-Region disaster recovery: if the Region fails, the database must run in a second Region with a recovery point objective (RPO) of seconds and a recovery time objective (RTO) of minutes. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "cross-Region disaster recovery",
+    "recovery point objective (RPO) of seconds",
+    "Aurora PostgreSQL",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a cross-Region Aurora Replica of the PostgreSQL cluster in the second Region, and promote that replica if the first Region fails.",
+     "correct": false,
+     "why": "Aurora PostgreSQL [doesn't support cross-Region Aurora Replicas](../facts/aurora.md#aurora-postgres-no-cross-region-aurora-replicas), so this replica cannot be created.",
+     "concept": "cross-region-aurora-replica-postgres",
+     "trap": "aurora-trap-postgres-cross-region-replica",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Add the cluster to an Aurora global database, with a secondary cluster in the second Region that can take over the primary role.",
+     "correct": true,
+     "why": "Aurora Global Database lets one database [span multiple AWS Regions](../facts/aurora.md#aurora-faq-global-db-definition), and its RPO is [typically measured in seconds](../facts/aurora.md#aurora-global-rpo-typically-seconds-guide).",
+     "concept": "aurora-global-database",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add two more Aurora Replicas in other Availability Zones, so that the cluster keeps running if the whole Region fails.",
+     "correct": false,
+     "why": "The cluster volume keeps its copies in a [single AWS Region](../facts/aurora.md#aurora-cluster-volume-three-azs-one-region), so replicas in more zones of that Region are lost with it.",
+     "concept": "more-availability-zones-for-region",
+     "trap": "how-the-exam-asks-trap-multi-az-covers-region",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "d",
+     "text": "Copy a cluster snapshot to the second Region every hour with a scheduled script, and restore the latest copy if the first Region fails.",
+     "correct": false,
+     "why": "The team owns a script to [manually copy Aurora snapshots](../facts/aurora.md#aurora-no-cross-region-automated-backup-replication), and its recovery point can be an hour old, not seconds.",
+     "concept": "scheduled-snapshot-copy",
+     "trap": null,
+     "misconception": "a scheduled snapshot copy is a managed way to recover in another Region",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "Global Database replicates to the secondary Region with latency [typically under a second](../facts/aurora.md#aurora-global-replication-latency-under-1-second), so few writes are at risk. If the Region fails, a managed failover promotes the secondary cluster, and AWS says this [method is recommended for disaster recovery](../facts/aurora.md#aurora-global-db-managed-failover-recommended-for-dr). AWS runs the replication, so the team owns no copy jobs.",
+   "takeaway": "Region failure with an RPO of seconds for Aurora PostgreSQL: Aurora Global Database, not a cross-Region replica.",
+   "twin": "If the stem said \"if one Availability Zone fails\" instead: the existing Aurora Replicas in other Availability Zones already meet it, because Aurora [automatically fails over to an Aurora Replica](../facts/aurora.md#aurora-auto-failover-to-replica).",
+   "say": "For a Region failure with an RPO of seconds, I'd add the cluster to an Aurora global database.",
+   "facts": [
+    "aurora-faq-global-db-definition",
+    "aurora-global-rpo-typically-seconds-guide",
+    "aurora-postgres-no-cross-region-aurora-replicas",
+    "aurora-cluster-volume-three-azs-one-region",
+    "aurora-no-cross-region-automated-backup-replication",
+    "aurora-global-replication-latency-under-1-second",
+    "aurora-global-db-managed-failover-recommended-for-dr",
+    "aurora-auto-failover-to-replica"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-cross-region"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Aurora global database: storage-based replication to a secondary Region with lag typically under a second (RPO seconds) and failover to the secondary in minutes (RTO minutes)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-cluster-volume-three-azs-one-region",
+       "aurora-global-promote-secondary-under-1-minute",
+       "aurora-global-rpo-typically-seconds-guide",
+       "aurora-global-rto-order-of-minutes-guide",
+       "aurora-no-cross-region-automated-backup-replication",
+       "aurora-postgres-no-cross-region-aurora-replicas",
+       "aurora-resources-not-auto-replicated-across-regions",
+       "aurora-restore-always-creates-new-cluster"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q016",
+   "section": "2-deep.md#a-secondary-region-takes-over-by-failover-after-an-outage-by-switchover-when-healthy",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "global-switchover-planned-move",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora global database for Aurora PostgreSQL. The primary cluster is in us-east-1, and one secondary cluster is in us-west-2. The applications connect to the database through the global writer endpoint, and the company does not want to change their connection settings. For a planned maintenance event, the company must move the primary role to us-west-2 while both Regions are healthy, with no data loss. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "For a planned maintenance event",
+    "while both Regions are healthy",
+    "with no data loss",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Run a managed failover of the global database to us-west-2 without waiting for the clusters to synchronize, and keep the applications on the global writer endpoint.",
+     "correct": false,
+     "why": "Managed failover [doesn't wait for data to synchronize](../facts/aurora.md#aurora-global-db-managed-failover-no-wait-async) between the Regions, so writes that were not yet replicated can be lost.",
+     "concept": "global-database-managed-failover",
+     "trap": "aurora-trap-global-failover-no-data-loss",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Run a switchover of the global database to the secondary cluster in us-west-2, and keep the applications on the global writer endpoint.",
+     "correct": true,
+     "why": "A switchover lets you [relocate the primary cluster](../facts/aurora.md#aurora-global-db-switchover-planned-no-data-loss) of a healthy global database, and its [RPO is 0 (no data loss)](../facts/aurora.md#aurora-global-switchover-rpo-zero).",
+     "concept": "global-database-switchover",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Remove the secondary cluster in us-west-2 from the global database, and change the applications to use the cluster endpoint of that cluster.",
+     "correct": false,
+     "why": "Removing the cluster [immediately stops the replication](../facts/aurora.md#aurora-global-db-detach-secondary-standalone-readwrite), so the team stops the writes first, changes every application and rebuilds the global database.",
+     "concept": "detach-secondary-cluster",
+     "trap": "aurora-trap-detach-is-managed-failover",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Restore the most recent cluster snapshot to a new cluster in us-west-2, and change the applications to use the endpoint of the new cluster.",
+     "correct": false,
+     "why": "A restored cluster holds the data of its snapshot, so the writes after the snapshot are lost, and you first [manually copy Aurora snapshots](../facts/aurora.md#aurora-no-cross-region-automated-backup-replication) to us-west-2.",
+     "concept": "snapshot-restore-other-region",
+     "trap": null,
+     "misconception": "a snapshot restore in the second Region moves the primary role without losing data",
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "Both Regions are healthy and the move is planned. AWS describes switchover for [controlled scenarios, such as operational maintenance](../facts/aurora.md#aurora-global-db-switchover-controlled-scenarios). The switchover synchronizes the secondary cluster before the roles change, and the global writer endpoint then points to the [cluster endpoint of the new primary cluster](../facts/aurora.md#aurora-global-writer-endpoint-follows-switchover-failover).",
+   "takeaway": "Planned move with healthy Regions and no data loss: switchover. Region outage: managed failover.",
+   "twin": "If the stem said \"An outage makes the primary cluster in us-east-1 unavailable, and the company must restore write access in us-west-2 as soon as possible\" instead: the managed failover, because it is how you [recover from an unplanned outage](../facts/aurora.md#aurora-global-db-failover-use-for-unplanned-outage).",
+   "say": "A planned move with both Regions healthy is a switchover, which loses no data.",
+   "facts": [
+    "aurora-global-db-managed-failover-no-wait-async",
+    "aurora-global-db-switchover-planned-no-data-loss",
+    "aurora-global-switchover-rpo-zero",
+    "aurora-global-db-detach-secondary-standalone-readwrite",
+    "aurora-no-cross-region-automated-backup-replication",
+    "aurora-global-db-switchover-controlled-scenarios",
+    "aurora-global-writer-endpoint-follows-switchover-failover",
+    "aurora-global-db-failover-use-for-unplanned-outage"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": "aurora-q012",
+   "chapter": "aurora",
+   "status": "verified",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "edited-pass",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r1",
+      "stem_only": "Planned move of the primary role with both Regions healthy and no data loss: run a switchover (formerly managed planned failover) of the Aurora global database to us-west-2; it synchronizes the secondary before promoting it, and the global writer endpoint follows the new primary so connection settings stay the same."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r1",
+      "citations": [
+       "aurora-global-db-detach-secondary-standalone-readwrite",
+       "aurora-global-db-failover-can-lose-writes-consistent-state",
+       "aurora-global-db-managed-failover-no-wait-async",
+       "aurora-global-db-switchover-controlled-scenarios",
+       "aurora-global-db-switchover-waits-for-sync",
+       "aurora-global-db-writer-endpoint-no-app-change-after-switchover",
+       "aurora-global-switchover-rpo-zero",
+       "aurora-restore-always-creates-new-cluster"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r1",
+      "case_option": "a"
+     }
+    ],
+    "note": null,
+    "edits": 1,
+    "checked": "2026-10-14"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-27-r0",
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q018",
+   "section": "2-deep.md#data-moves-into-aurora-by-snapshot-by-aurora-read-replica-or-by-aws-dms",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.3",
+   "bullets": [
+    "4.3.K8",
+    "4.3.K7"
+   ],
+   "topics": [
+    "databases"
+   ],
+   "services": [
+    "aurora",
+    "rds",
+    "dms"
+   ],
+   "concept": "aurora-read-replica-migration-short-cutover",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a 3 TB Amazon RDS for PostgreSQL DB instance for its order application. The company wants to migrate the database to Amazon Aurora PostgreSQL in the same AWS account and Region. The migration must have minimal downtime: the application can stop writing for only a few minutes during the cutover. Which approach will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Amazon RDS for PostgreSQL",
+    "in the same AWS account and Region",
+    "minimal downtime",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Stop the application, take a DB snapshot of the RDS DB instance, and restore the snapshot into a new Aurora PostgreSQL DB cluster.",
+     "correct": false,
+     "why": "A cluster restored [from an RDS for PostgreSQL DB snapshot](../facts/aurora.md#aurora-postgres-migrate-snapshot-from-rds) holds only the snapshot data, so the application stays stopped through the whole 3 TB snapshot and restore.",
+     "concept": "snapshot-migration",
+     "trap": null,
+     "misconception": "a snapshot migration keeps the downtime short, whatever the size of the database",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Convert the schema with the AWS Schema Conversion Tool, and then move the data with AWS Database Migration Service (AWS DMS) ongoing replication.",
+     "correct": false,
+     "why": "AWS suggests the [AWS Schema Conversion Tool (AWS SCT)](../facts/aurora.md#aurora-migrate-heterogeneous-consider-sct) for a source with a different engine; this source is already PostgreSQL, so conversion and replication tasks are extra work.",
+     "concept": "sct-and-dms-migration",
+     "trap": "aurora-trap-every-migration-needs-sct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Export the database with pg_dump during a maintenance window, and import the dump into a new Aurora PostgreSQL DB cluster with pg_restore.",
+     "correct": false,
+     "why": "A dump and restore copies the whole 3 TB while writes are stopped, which is a long outage, and the team runs and checks the tools by hand.",
+     "concept": "native-dump-migration",
+     "trap": null,
+     "misconception": "native dump and restore tools give the simplest migration with a short outage",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Create an Aurora read replica of the RDS DB instance, and promote the replica to a standalone cluster when the replica lag reaches zero.",
+     "correct": true,
+     "why": "The replica keeps copying changes while the application runs, so writes stop only for the cutover, and this path is meant for [migration to Aurora PostgreSQL](../facts/aurora.md#aurora-rds-postgres-read-replica-for-migration).",
+     "concept": "aurora-read-replica-migration",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "An Aurora read replica of an RDS for PostgreSQL DB instance works [within the same AWS Region and account](../facts/aurora.md#aurora-postgres-read-replica-migration-same-region-account), as here. The replica stays current while the application runs. When the lag is zero, [you can stop replication](../facts/aurora.md#aurora-postgres-migrate-replica-lag-zero-stop-replication) and use the cluster for reads and writes, so the writes stop for the cutover alone.",
+   "takeaway": "RDS for PostgreSQL to Aurora PostgreSQL with minimal downtime: an Aurora read replica, promoted when the lag is zero.",
+   "twin": "If the stem said \"the source is an on-premises Oracle database\" instead: AWS SCT with [AWS Database Migration Service (AWS DMS)](../facts/aurora.md#aurora-postgres-non-postgres-source-use-dms), because the source engine differs.",
+   "say": "From RDS for PostgreSQL, I'd create an Aurora read replica and promote it when the lag is zero.",
+   "facts": [
+    "aurora-rds-postgres-read-replica-for-migration",
+    "aurora-postgres-migrate-snapshot-from-rds",
+    "aurora-migrate-heterogeneous-consider-sct",
+    "aurora-postgres-read-replica-migration-same-region-account",
+    "aurora-postgres-migrate-replica-lag-zero-stop-replication",
+    "aurora-postgres-non-postgres-source-use-dms"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-minimal-downtime",
+    "ee-migrate",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Create an Aurora read replica of the RDS for PostgreSQL DB instance, wait until replica lag is zero, stop writes, and promote it to a standalone Aurora cluster; downtime is only the cutover minutes. Same engine, so no SCT needed."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-migrate-heterogeneous-consider-sct",
+       "aurora-migrate-options-depend-on-engine-and-source",
+       "aurora-postgres-migrate-replica-lag-zero-stop-replication",
+       "aurora-postgres-migrate-snapshot-from-rds",
+       "aurora-postgres-read-replica-migration-same-region-account",
+       "aurora-rds-postgres-read-replica-for-migration"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q020",
+   "section": "2-deep.md#backups-are-continuous-and-every-restore-creates-a-new-cluster",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "backtrack-rewind-in-place",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "FASTEST",
+   "stem": "A company runs an Amazon Aurora MySQL DB cluster that was created with Backtrack turned on and a target backtrack window of 24 hours. Twenty minutes ago, a faulty batch job changed many rows in several tables. The company must return the whole database to a specific time just before the job started, and the application can pause while the data is repaired. Which solution will return the data the FASTEST?",
+   "keywords": [
+    "created with Backtrack turned on",
+    "return the whole database to a specific time",
+    "FASTEST"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Run a point-in-time restore to a new DB cluster at the time before the job, and then point the application at the new cluster.",
+     "correct": false,
+     "why": "It returns the data, but a point-in-time restore means [creating a new DB cluster](../facts/aurora.md#aurora-pitr-creates-new-cluster), which is slower than a backtrack that [doesn't require a new DB cluster](../facts/aurora.md#aurora-backtrack-in-minutes-no-new-cluster).",
+     "concept": "point-in-time-restore",
+     "trap": null,
+     "misconception": "a point-in-time restore is the quickest way to undo a recent change",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Run a point-in-time restore that rolls the existing DB cluster back to the time before the job, so that the cluster keeps its endpoint.",
+     "correct": false,
+     "why": "Restoring an Aurora DB cluster to a point in time means [creating a new DB cluster](../facts/aurora.md#aurora-pitr-creates-new-cluster), so a restore does not roll back the existing cluster.",
+     "concept": "in-place-point-in-time-restore",
+     "trap": "aurora-trap-restore-in-place",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Backtrack the DB cluster to a time just before the batch job started, and keep the application connected to the same cluster endpoint.",
+     "correct": true,
+     "why": "Backtrack [rewinds the DB cluster in minutes](../facts/aurora.md#aurora-backtrack-in-minutes-no-new-cluster) [without restoring data from a backup](../facts/aurora.md#aurora-backtrack-rewind-without-restore), and this cluster was [created with the Backtrack feature enabled](../facts/aurora.md#aurora-backtrack-only-if-enabled-at-creation).",
+     "concept": "aurora-backtrack",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Create a clone of the DB cluster, and point the application at the clone, because a clone keeps the data pages from before the job.",
+     "correct": false,
+     "why": "A clone [shares the same data pages as the original](../facts/aurora.md#aurora-clone-shares-data-pages-separate-volume) as they are now, so the clone holds the rows that the job already changed.",
+     "concept": "aurora-clone",
+     "trap": null,
+     "misconception": "a clone holds an earlier version of the data",
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "The cluster was created with Backtrack, and the job ran inside the 24-hour window. Backtrack rewinds the same cluster to a specific time, and it [doesn't require a new DB cluster](../facts/aurora.md#aurora-backtrack-in-minutes-no-new-cluster). A point-in-time restore gives the same data, but Aurora builds a new cluster first, which takes longer.",
+   "takeaway": "Rewind an Aurora MySQL cluster in place, fast: Backtrack, if the cluster was created with Backtrack turned on.",
+   "twin": "If the stem said \"a DB cluster that was created without Backtrack\" instead: a point-in-time restore to a new DB cluster, because backtracking needs a cluster [created with the Backtrack feature enabled](../facts/aurora.md#aurora-backtrack-only-if-enabled-at-creation).",
+   "say": "If Backtrack was on from creation, I'd backtrack the cluster; it rewinds in place in minutes.",
+   "facts": [
+    "aurora-backtrack-in-minutes-no-new-cluster",
+    "aurora-backtrack-rewind-without-restore",
+    "aurora-backtrack-only-if-enabled-at-creation",
+    "aurora-pitr-creates-new-cluster",
+    "aurora-clone-shares-data-pages-separate-volume"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-point-in-time",
+    "ee-capitalised-superlative"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Backtrack the Aurora MySQL cluster in place to just before the job; it rewinds the same cluster within the backtrack window in minutes, without restoring a new cluster, and the endpoints stay the same."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-backtrack-in-minutes-no-new-cluster",
+       "aurora-backtrack-rewind-without-restore",
+       "aurora-backtrack-whole-cluster-not-single-table",
+       "aurora-clone-shares-data-pages-separate-volume",
+       "aurora-pitr-creates-new-cluster",
+       "aurora-restore-always-creates-new-cluster"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q022",
+   "section": "1-fast.md#choose-it-or-not",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 4,
+   "task": "4.3",
+   "bullets": [
+    "4.3.K9"
+   ],
+   "topics": [
+    "databases"
+   ],
+   "services": [
+    "aurora-serverless",
+    "dynamodb",
+    "aurora",
+    "elasticache"
+   ],
+   "concept": "dynamodb-for-key-value-sessions",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company stores user session data for a web application. Every request reads or writes one session item by its session ID, and the application does not join the session data with other data. The session store holds the only copy of the session data, so the data must be stored durably. Traffic is spiky, with sudden peaks of millions of requests. Which database will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "one session item by its session ID",
+    "does not join the session data",
+    "stored durably",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Amazon Aurora Serverless v2, with a sessions table and a capacity range that scales the DB instances with the request load.",
+     "correct": false,
+     "why": "Spiky traffic suggests Aurora Serverless v2, but Aurora is a [fully managed relational database engine](../facts/aurora.md#aurora-is-managed-relational-engine), and the team still has to [specify the minimum and maximum capacity range](../facts/aurora-serverless.md#aurora-serverless-specify-min-max-capacity-range).",
+     "concept": "aurora-serverless-v2",
+     "trap": "how-the-exam-asks-trap-keyword-bait",
+     "misconception": null,
+     "distractor_type": "keyword-bait"
+    },
+    {
+     "id": "b",
+     "text": "Amazon DynamoDB, with one table that uses the session ID as the partition key and stores each session as one item.",
+     "correct": true,
+     "why": "The decision guide lists DynamoDB as a key-value database for [session stores or shopping carts](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store), a serverless and fully managed database.",
+     "concept": "dynamodb-key-value",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "A provisioned Amazon Aurora MySQL DB cluster, with a sessions table on the writer and Aurora Replicas behind the reader endpoint.",
+     "correct": false,
+     "why": "It works, but the team sizes and runs a relational cluster for lookups by one key, and provisioned clusters are [suitable for steady workloads](../facts/aurora-serverless.md#aurora-serverless-provisioned-suited-to-steady-workloads), not spiky ones.",
+     "concept": "provisioned-aurora-cluster",
+     "trap": null,
+     "misconception": "a relational cluster with replicas is the default home for any application data",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Amazon ElastiCache as the only session store, with no other database behind the cache for the session items.",
+     "correct": false,
+     "why": "ElastiCache is an [ephemeral cache for frequently accessed data](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer), and using a cache [as if it is durably stored](../facts/dynamodb.md#dynamodb-wa-cache-not-durable-store) is an anti-pattern when it holds the only copy.",
+     "concept": "elasticache-as-store",
+     "trap": "aurora-trap-cache-as-database",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "Each request reads or writes one item by its key, with no joins, so this is a key-value workload. DynamoDB gives [single-digit millisecond performance at any scale](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store), and AWS describes it as serverless and fully managed. Aurora fits relational work, such as [migrating or modernizing an on-premises relational workload](../facts/aurora.md#aurora-dg-use-when-relational-modernize).",
+   "takeaway": "One item by one key, no joins, spiky traffic: DynamoDB. Spiky traffic alone does not point to Aurora Serverless v2.",
+   "twin": "If the stem said \"reports join the sessions with the orders and customers tables\" instead: Amazon Aurora, because it is a [fully managed relational database engine](../facts/aurora.md#aurora-is-managed-relational-engine).",
+   "say": "Lookups by one key with spiky traffic point to DynamoDB, not to a relational database.",
+   "facts": [
+    "dynamodb-decision-guide-key-value-session-store",
+    "aurora-is-managed-relational-engine",
+    "aurora-serverless-specify-min-max-capacity-range",
+    "aurora-serverless-provisioned-suited-to-steady-workloads",
+    "dynamodb-decision-guide-elasticache-caching-layer",
+    "dynamodb-wa-cache-not-durable-store",
+    "aurora-dg-use-when-relational-modernize"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-spiky"
+   ],
+   "twin_of": null,
+   "chapter": "aurora",
+   "status": "rejected",
+   "rev": 2,
+   "keyRev": 2,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r1",
+      "stem_only": "Key-value access by session ID, no joins, durable storage required, spiky traffic up to millions of requests, least operational overhead: Amazon DynamoDB (on-demand capacity) with session ID as partition key. A cache alone is not the durable system of record; a relational Aurora cluster adds overhead and does not fit the access pattern or the scale as well."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": "A second defensible answer exists in option D: the saved ElastiCache User Guide says ElastiCache for Valkey 9.0 and later, node-based, with durability enabled (synchronous writes) can serve as a system-of-record data store with zero data loss, so 'ElastiCache as the only store' is not always non-durable; the stem does not say that durability is off, and the AWS database decision guide only calls ElastiCache an 'ephemeral cache'. Option A (Aurora Serverless v2) is a weaker second candidate: AWS calls Aurora serverless intended for variable or spiky workloads. B still wins on operational overhead, but the stem should state a constraint that excludes D, for example a Valkey version or the serverless deployment option, which does not support durability.",
+      "solver": "solve-27-open-r1",
+      "citations": [
+       "aurora-serverless-change-max-256-acus",
+       "aurora-serverless-choose-variable-spiky-workloads",
+       "aurora-serverless-provisioned-constant-capacity-predict-ahead",
+       "aurora-serverless-scaling-rate-depends-on-current-capacity",
+       "dynamodb-decision-guide-key-value-session-store",
+       "dynamodb-decision-guide-memorydb-durable-in-memory",
+       "dynamodb-faq-on-demand-for-unpredictable",
+       "dynamodb-faq-sync-replication-three-azs",
+       "dynamodb-no-account-quota-on-demand",
+       "dynamodb-on-demand-no-capacity-planning",
+       "elasticache-aws-caching-standalone-in-memory-store-define-rto-rpo",
+       "elasticache-decision-guide-use-for-caching-layer-ephemeral"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": "The stem gives no latency or scaling-speed number, so a careful candidate could defend Aurora Serverless v2 (option C) as fully managed, durable and load-scaling; the key rests on 'one item by key, no joins, sudden peaks of millions of requests' and on option B not naming a capacity mode.",
+      "solver": "solve-27-ambiguity-r1",
+      "case_option": "a"
+     }
+    ],
+    "note": "open flag; ambiguity flag",
+    "edits": 1,
+    "checked": "2026-10-14"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-27-r0",
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q007",
+   "section": "2-deep.md#the-reader-endpoint-spreads-connections-not-single-queries-across-replicas",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.3",
+   "bullets": [
+    "3.3.S1"
+   ],
+   "topics": [
+    "databases",
+    "performance"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "custom-endpoint-for-analytics",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster with one writer and four Aurora Replicas: two large replicas and two small replicas. The team adds and removes replicas often. Each web request opens a new database connection. Monthly analytics queries must run only on the two large replicas, which have the memory that these queries need. Which solution will meet this requirement with the LEAST operational overhead?",
+   "keywords": [
+    "must run only on the two large replicas",
+    "The team adds and removes replicas often",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Connect the read-only queries to the reader endpoint of the cluster, and keep the writes on the cluster endpoint.",
+     "correct": false,
+     "why": "The reader endpoint [balances connections to available Aurora Replicas](../facts/aurora.md#aurora-reader-endpoint-balances-connections-not-queries), the small ones included, so analytics queries also land on the small replicas.",
+     "concept": "reader-endpoint",
+     "trap": null,
+     "misconception": "believes that the reader endpoint can be limited to some of the replicas",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Create a custom endpoint that contains the two large replicas, and connect the read-only queries to the custom endpoint.",
+     "correct": true,
+     "why": "A custom endpoint represents [a set of DB instances that you choose](../facts/aurora.md#aurora-custom-endpoint-set-of-chosen-instances), so the analytics queries reach the two large replicas and no other instance.",
+     "concept": "custom-endpoint",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Connect all queries of the application, writes included, to the reader endpoint, so that every replica shares the work.",
+     "correct": false,
+     "why": "The cluster endpoint is [the only one that can perform write operations](../facts/aurora.md#aurora-cluster-endpoint-only-one-for-writes), so writes sent to the reader endpoint fail on the replicas.",
+     "concept": "writes-to-reader-endpoint",
+     "trap": "aurora-trap-writes-through-reader-endpoint",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Store the instance endpoint of each replica in the application settings, and choose one endpoint in the code for each query.",
+     "correct": false,
+     "why": "It works, but the team must [hardcode all the hostnames](../facts/aurora.md#aurora-endpoint-abstracts-connections-no-hardcode) and keep them current when replicas change.",
+     "concept": "instance-endpoints",
+     "trap": "aurora-trap-instance-endpoints-to-spread-reads",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The analytics queries need a chosen group of replicas. A custom endpoint represents [a set of DB instances that you choose](../facts/aurora.md#aurora-custom-endpoint-set-of-chosen-instances), and you can define one for [instances that use a particular AWS instance class](../facts/aurora.md#aurora-custom-endpoint-use-different-instance-classes-reporting). Aurora balances connections among the members, so the team names the endpoint once and changes no code when other replicas come and go.",
+   "takeaway": "Reads on chosen instances, such as large ones for analytics: a custom endpoint.",
+   "twin": "If the stem said \"Read-only queries from the web application must be spread across all the replicas\" instead: the reader endpoint, because it gives [connection-balancing among all the Aurora Replicas](../facts/aurora.md#aurora-reader-endpoint-balances-replicas).",
+   "say": "A custom endpoint is a named group of instances, so the analytics queries reach only the two large replicas.",
+   "facts": [
+    "aurora-reader-endpoint-balances-connections-not-queries",
+    "aurora-custom-endpoint-set-of-chosen-instances",
+    "aurora-cluster-endpoint-only-one-for-writes",
+    "aurora-endpoint-abstracts-connections-no-hardcode",
+    "aurora-custom-endpoint-use-different-instance-classes-reporting",
+    "aurora-reader-endpoint-balances-replicas"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": "aurora-q001",
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Create an Aurora custom endpoint whose static members are the two large replicas and send the analytics queries to it; the reader endpoint would spread them over all replicas, including the small ones."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-cluster-endpoint-only-one-for-writes",
+       "aurora-custom-endpoint-set-of-chosen-instances",
+       "aurora-custom-endpoint-use-different-instance-classes-reporting",
+       "aurora-custom-endpoints-preferred-over-instance-endpoint-for-special-instances",
+       "aurora-endpoint-abstracts-connections-no-hardcode",
+       "aurora-reader-endpoint-balances-each-connection-read-only-session",
+       "aurora-reader-endpoint-balances-replicas"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-1"
+   ]
+  },
+  {
+   "id": "aurora-q014",
+   "section": "2-deep.md#when-the-writer-fails-aurora-promotes-a-replica-behind-the-same-endpoint",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.S2",
+    "2.2.K6"
+   ],
+   "topics": [
+    "databases",
+    "resilience"
+   ],
+   "services": [
+    "aurora"
+   ],
+   "concept": "az-and-region-resilience-combination",
+   "difficulty": 3,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an Amazon Aurora PostgreSQL DB cluster with one DB instance in us-east-1. The database must be highly available, with automatic failover if an Availability Zone fails. The company must also be able to recover the database in us-west-2, with a recovery point objective (RPO) measured in seconds, if us-east-1 becomes unavailable. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+   "keywords": [
+    "with one DB instance",
+    "automatic failover if an Availability Zone fails",
+    "recovery point objective (RPO) measured in seconds",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Depend on the cluster volume, which keeps six copies across three Availability Zones, to restart the writer in another zone within seconds.",
+     "correct": false,
+     "why": "The copies protect the data; with one DB instance, Aurora recreates the writer, which typically takes [less than 10 minutes](../facts/aurora.md#aurora-failover-time-without-replica).",
+     "concept": "storage-copies-as-ha",
+     "trap": "aurora-trap-single-instance-is-ha",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Create a reader DB instance in another Availability Zone of us-east-1, so that the cluster has an Aurora Replica to promote.",
+     "correct": true,
+     "why": "[Adding a new reader DB instance](../facts/aurora.md#aurora-convert-to-multi-az-by-adding-reader-other-az) in another zone makes the cluster Multi-AZ, and Aurora [automatically fails over to an Aurora Replica](../facts/aurora.md#aurora-auto-failover-to-replica).",
+     "concept": "aurora-replica-other-az",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Add a cross-Region Aurora Replica in us-west-2 to the cluster, and promote that replica if us-east-1 becomes unavailable.",
+     "correct": false,
+     "why": "Aurora PostgreSQL [doesn't support cross-Region Aurora Replicas](../facts/aurora.md#aurora-postgres-no-cross-region-aurora-replicas), so this step cannot be done.",
+     "concept": "cross-region-aurora-replica-postgres",
+     "trap": "aurora-trap-postgres-cross-region-replica",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "d",
+     "text": "Run a scheduled script that copies a cluster snapshot to us-west-2 every 15 minutes, and restore the newest copy after a failure.",
+     "correct": false,
+     "why": "The team owns a script to [manually copy Aurora snapshots](../facts/aurora.md#aurora-no-cross-region-automated-backup-replication), and its recovery point is as old as the last copy, not seconds.",
+     "concept": "scheduled-snapshot-copy",
+     "trap": null,
+     "misconception": "a scheduled snapshot copy is the managed way to protect a database against a Region failure",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "e",
+     "text": "Make the cluster the primary cluster of an Aurora global database, and add a secondary cluster in us-west-2.",
+     "correct": true,
+     "why": "Aurora Global Database lets the database [span multiple AWS Regions](../facts/aurora.md#aurora-faq-global-db-definition), with an RPO [typically measured in seconds](../facts/aurora.md#aurora-global-rpo-typically-seconds-guide).",
+     "concept": "aurora-global-database",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "The two needs have two different tools. Inside us-east-1, a reader in another Availability Zone gives Aurora a replica to promote. Across Regions, Global Database replicates with latency [typically under a second](../facts/aurora.md#aurora-global-replication-latency-under-1-second), so the RPO stays in seconds. Both are managed features, so the team runs no scripts.",
+   "takeaway": "Zone failure: an Aurora Replica in another Availability Zone. Region failure: Aurora Global Database. One tool does not cover both.",
+   "twin": "If the stem said \"the database must recover only from the failure of an Availability Zone\" instead: the reader in another Availability Zone alone, because Aurora [automatically fails over to an Aurora Replica](../facts/aurora.md#aurora-auto-failover-to-replica).",
+   "say": "A replica in another zone covers a zone failure, and a global database covers a Region failure.",
+   "facts": [
+    "aurora-convert-to-multi-az-by-adding-reader-other-az",
+    "aurora-auto-failover-to-replica",
+    "aurora-faq-global-db-definition",
+    "aurora-global-rpo-typically-seconds-guide",
+    "aurora-failover-time-without-replica",
+    "aurora-postgres-no-cross-region-aurora-replicas",
+    "aurora-no-cross-region-automated-backup-replication",
+    "aurora-global-replication-latency-under-1-second",
+    "aurora-storage-six-copies-three-azs"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-which-combination",
+    "ee-select-two",
+    "ee-highly-available",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for two steps that together give automatic failover across Availability Zones and recovery in us-west-2, with the LEAST operational overhead.",
+     "I mark the constraints: Aurora PostgreSQL, one DB instance, automatic failover if a zone fails, and recovery in us-west-2 with an RPO in seconds.",
+     "Before I look at the options, I predict that the storage already keeps six copies across three Availability Zones, so only the Region needs work.",
+     "I remove the cross-Region Aurora Replica, because Aurora PostgreSQL does not support cross-Region Aurora Replicas. I remove the snapshot script, because the team runs it and its recovery point is minutes old.",
+     "Between the cluster volume and the reader in another zone the difference is the compute. My first idea breaks because the storage survives, but with one DB instance Aurora must recreate the writer, which typically takes less than 10 minutes. A reader in another zone gives Aurora a replica to promote automatically.",
+     "Check: the reader in another Availability Zone and the global database secondary in us-west-2 meet every constraint, and no script runs. Time: 90 seconds."
+    ],
+    "wrong_path": true
+   },
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 2,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Add an Aurora Replica in another AZ of us-east-1 for automatic in-Region failover, and make the cluster the primary of an Aurora global database with a secondary cluster in us-west-2 for cross-Region recovery with an RPO of seconds."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-az-outage-readers-in-other-azs-promoted",
+       "aurora-convert-to-multi-az-by-adding-reader-other-az",
+       "aurora-failover-time-with-replica-guide",
+       "aurora-failover-time-without-replica",
+       "aurora-faq-cross-region-recommend-global-db",
+       "aurora-global-promote-secondary-under-1-minute",
+       "aurora-global-rpo-typically-seconds-guide",
+       "aurora-no-cross-region-automated-backup-replication",
+       "aurora-postgres-no-cross-region-aurora-replicas",
+       "aurora-single-az-cluster-create-instances-manually",
+       "aurora-storage-six-copies-three-azs"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  },
+  {
+   "id": "aurora-q010",
+   "section": "2-deep.md#aurora-serverless-v2-changes-capacity-with-load-inside-a-range-you-set",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.3",
+   "bullets": [
+    "4.3.S3"
+   ],
+   "topics": [
+    "cost",
+    "databases"
+   ],
+   "services": [
+    "aurora",
+    "aurora-serverless"
+   ],
+   "concept": "reserved-instances-for-steady-load",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company is moving a new order-processing application to an Amazon Aurora MySQL DB cluster. Both the reads and the writes of the application grow with the number of orders, and the database must keep up with the full load at all times. The load is steady-state and predictable around the clock, and it will stay at this level for at least the next 3 years. Which capacity option is the MOST cost-effective?",
+   "keywords": [
+    "The load is steady-state and predictable around the clock",
+    "for at least the next 3 years",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Use Aurora Serverless v2 DB instances for the writer and the readers, with a capacity range from a low minimum to a high maximum.",
+     "correct": false,
+     "why": "Aurora Serverless v2 is meant for [variable or \"spiky\" workloads](../facts/aurora-serverless.md#aurora-serverless-choose-variable-spiky-workloads), and AWS calls provisioned clusters [suitable for steady workloads](../facts/aurora-serverless.md#aurora-serverless-provisioned-suited-to-steady-workloads).",
+     "concept": "aurora-serverless-v2",
+     "trap": "aurora-trap-serverless-for-steady-load",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Use provisioned DB instances sized for the usual load, and buy Reserved Instances for those DB instances for a 3-year term.",
+     "correct": true,
+     "why": "Reserved Instances are [appropriate for steady-state database workloads](../facts/aurora.md#aurora-pricing-reserved-instances-steady-state), and you can reserve an Aurora DB instance for a [one- or three-year term](../facts/aurora.md#aurora-reserved-instance-one-or-three-year-term).",
+     "concept": "reserved-instances",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Use provisioned DB instances sized for the highest expected load, and pay On-Demand rates for those DB instances.",
+     "correct": false,
+     "why": "It works, but it pays On-Demand rates for years for a load that Reserved Instances suit, because they are [appropriate for steady-state database workloads](../facts/aurora.md#aurora-pricing-reserved-instances-steady-state).",
+     "concept": "provisioned-for-peak",
+     "trap": null,
+     "misconception": "On-Demand rates are the safe choice for a load that does not change for years",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Keep one provisioned writer DB instance, and use Aurora Auto Scaling to add Aurora Replicas that share the read and write load as it grows.",
+     "correct": false,
+     "why": "Aurora Auto Scaling helps with the workload [only on the reader instances](../facts/aurora.md#aurora-autoscaling-writer-not-scaled), and this load does not grow, so there is nothing for it to add.",
+     "concept": "aurora-auto-scaling",
+     "trap": "aurora-trap-auto-scaling-scales-writer",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "A load that stays steady for years fits a commitment. Provisioned clusters are [suitable for steady workloads](../facts/aurora-serverless.md#aurora-serverless-provisioned-suited-to-steady-workloads), so the company sizes the DB instances for the usual load. Reserved Instances for those DB instances then lower the cost of capacity that runs around the clock.",
+   "takeaway": "Steady load for years: provisioned DB instances with Reserved Instances. Spiky load on reads and writes: Aurora Serverless v2.",
+   "twin": "If the stem said \"The load is unpredictable: it stays low for hours, and then sudden spikes raise it to many times the usual level within minutes\" instead: Aurora Serverless v2, because it is meant for [variable or \"spiky\" workloads](../facts/aurora-serverless.md#aurora-serverless-choose-variable-spiky-workloads).",
+   "say": "A steady load for years points to provisioned instances with Reserved Instances, not Aurora Serverless v2.",
+   "facts": [
+    "aurora-serverless-choose-variable-spiky-workloads",
+    "aurora-serverless-provisioned-suited-to-steady-workloads",
+    "aurora-pricing-reserved-instances-steady-state",
+    "aurora-reserved-instance-one-or-three-year-term",
+    "aurora-autoscaling-writer-not-scaled"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-cost-effective",
+    "ee-steady-state",
+    "ee-predictable"
+   ],
+   "twin_of": "aurora-q004",
+   "chapter": "aurora",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-closed-r0",
+      "stem_only": "Steady, predictable load for 3 or more years: provisioned DB instances sized for that load, covered by 3-year Reserved Instances."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-open-r0",
+      "citations": [
+       "aurora-autoscaling-writer-not-scaled",
+       "aurora-pricing-reserved-instances-steady-state",
+       "aurora-reserved-instance-discount-up-to-45-and-66-percent",
+       "aurora-reserved-instance-one-or-three-year-term",
+       "aurora-serverless-choose-variable-spiky-workloads",
+       "aurora-serverless-overprovision-raises-cost",
+       "aurora-serverless-provisioned-suited-to-steady-workloads"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-27-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-27-2"
+   ]
+  }
+ ]
+}

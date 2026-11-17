@@ -1,0 +1,152 @@
+{
+ "lens": "technical",
+ "chapter": "09",
+ "reviewer": "review-09-technical",
+ "reviewed": "2026-10-12",
+ "scope_note": "Ran 'saa.py sync 09' first (written=0, unchanged=12). 3-do.md and 4-say.md still print 'Nothing here yet.' (tasks and spoken items are status candidate), so the tasks, spoken answers and cards were reviewed in data/09-detection/{tasks,speak,cards}.json. 5-quiz.md shows 10 questions; q005 and q007 (status verified, not yet in 5-quiz.md) were reviewed in questions.json. Read 1-fast.md, 2-deep.md, 2-services.md and 5-quiz.md in full. About 45 statements were tested against saved AWS pages (search, show) and verified facts. Checked and found correct include: GuardDuty regional with one detector per Region, foundational sources with nothing else to enable, logs discarded and not retained, DNS logs only with the AWS resolvers, 90-day finding retention (not adjustable), suspend vs disable, Malware Protection for S3 on new uploads, S3 Protection on CloudTrail S3 data events; Inspector SSM agent or agentless EBS-snapshot scanning, Inspector Classic end of support May 20, 2026; Macie no audio/video, unsupported storage classes, 90-day results without a repository, policy finding for a public bucket; Config rules do not prevent changes, proactive rules do not remediate or prevent deployment (so 1-fast Check 2 and q007 option b hold), 7-year default retention, history only while recording, aggregator read-only; Security Hub CSPM needs Config in each Region and account, aggregation does not enable linked Regions, CSPM checks do not imply an audit pass, the CSPM rename and the 2025-12-02 GA; Detective core sources and the 2024-02-02 removal of the GuardDuty requirement; Artifact free of charge, BAA, sharing per terms; q001-q004, q006, q008, q009, q011, q012 keys; task t01 commands and expectations; t02 step order, its guard in step 1 against deleting an existing detector, and its cleanup command.",
+ "findings": [
+  {
+   "id": "technical-01",
+   "file": "09-detection/1-fast.md",
+   "section": "check",
+   "quote": "**Check 1.** A company enables the new AWS Security Hub. Will it show card numbers that Macie finds? ... No. Amazon Macie [is not automatically enabled](../facts/security-hub.md#security-hub-enables-cspm-not-macie).",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "The question assumes Macie already finds the card numbers (so Macie is on); the answer then gives a reason about enablement, not about whether findings reach Security Hub. The reader learns 'Security Hub does not show Macie findings', which contradicts card detection-c010, q005 and fact security-hub-cspm-receives-service-findings ('also receives findings from other AWS services—such as Amazon GuardDuty, Amazon Inspector, and Amazon Macie'). The real rule is different and examinable: source_id docs/securityhub/latest/userguide/securityhub-internal-providers: 'After you enable Security Hub CSPM, Macie automatically starts sending policy findings to Security Hub CSPM. You can configure the integration to also send sensitive data findings to Security Hub CSPM.' Card numbers are a sensitive data finding, so the correct answer is: policy findings arrive automatically; sensitive data findings (card numbers) only after you configure the integration. Rewrite the check around that condition, or ask 'Does enabling Security Hub turn Macie on?' and keep the current answer.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Same fix as claims-01."
+  },
+  {
+   "id": "technical-02",
+   "file": "09-detection/2-deep.md",
+   "section": "artifact-gives-the-aws-side-of-an-audit-and-you-keep-your-own-evidence",
+   "quote": "Only [90 days](../facts/guardduty.md#guardduty-finding-retention-90-days). Next, an EventBridge rule can [push findings to an Amazon S3 bucket](../facts/guardduty.md#guardduty-longer-retention-via-eventbridge-s3).",
+   "type": "contradicts-chapter",
+   "severity": "should",
+   "evidence": "The chapter's own answer to the same need (q010, 'LEAST operational overhead') is GuardDuty's built-in export to S3 from the administrator account, and it rejects home-built per-account code. The deep file teaches the EventBridge route instead, and 'an EventBridge rule can push findings to an Amazon S3 bucket' suggests S3 is a direct rule target, a classic exam distractor (the rule needs a delivery service such as Amazon Data Firehose in between). The GuardDuty guide names the built-in route: source_id docs/guardduty/latest/ug/guardduty_findings_eventbridge: 'To retain findings for a longer duration, GuardDuty supports [Exporting generated findings to Amazon S3](guardduty_exportfindings.md).' Fact guardduty-export-findings-to-s3: 'You can optionally export the generated findings to an Amazon Simple Storage Service (Amazon S3) bucket.' Name the built-in export as the answer; keep EventBridge as the route to other stores.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): The Keep step now names the built-in route: GuardDuty can [optionally export the generated findings] to S3 (guardduty-export-findings-to-s3). The EventBridge-to-S3 sentence is gone. The Stop and answer now asks about Security Hub CSPM findings (reader-12)."
+  },
+  {
+   "id": "technical-03",
+   "file": "data/09-detection/questions.json",
+   "section": "detection-q010",
+   "quote": "The delegated administrator exports for the organization, so one setting covers every member account.",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "Two conditions of the export are dropped, and the stem says 'retain every GuardDuty finding'. Source_id docs/guardduty/latest/ug/guardduty_exportfindings (Considerations): 'Export settings are regional – You need to configure export options in each Region where you use GuardDuty.' and 'GuardDuty administrator account can export findings generated in associated member accounts – When you configure export findings in an administrator account, all the findings from the associated member accounts that are generated in the same Region are also exported'. The same list says 'Archived findings are not exported – The default behavior is that the archived findings, including new instances of suppressed findings, are not exported.' The key stays correct, but the explanation should say 'one setting per Region covers the member accounts in that Region', and should not imply that suppressed (archived) findings are kept.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Same fix as claims-07. The archived-findings condition is not added: no verified fact holds it, and the key does not depend on it."
+  },
+  {
+   "id": "technical-04",
+   "file": "09-detection/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "| [6 hours](../facts/guardduty.md#guardduty-eventbridge-subsequent-occurrences-default-6-hours) | Default event interval for repeated GuardDuty findings | Faster needs [15 minutes](../facts/guardduty.md#guardduty-eventbridge-subsequent-occurrences-default-6-hours) |",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "Fact guardduty-eventbridge-subsequent-occurrences-default-6-hours lists three values and a condition: 'Possible values are 15 minutes, 1 hour, or the default 6 hours.' (docs/guardduty/latest/ug/guardduty_findings_eventbridge). 'Faster needs 15 minutes' drops the 1-hour option, so a question whose right answer is '1 hour' would be marked wrong by this row. The row also omits that new findings are not delayed by this interval: source_id docs/guardduty/latest/ug/guardduty_exportfindings: 'Any new active findings that GuardDuty generates are automatically exported within about 5 minutes after the finding is generated.' and the frequency 'applies to the exporting of new occurrences of existing findings'. Write: 'Faster: 1 hour or 15 minutes; applies to repeat occurrences only'.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Same fix as claims-06: both faster values, and new findings reach EventBridge [near real-time]."
+  },
+  {
+   "id": "technical-05",
+   "file": "09-detection/2-deep.md",
+   "section": "inspector-rescans-a-workload-when-a-new-vulnerability-is-published",
+   "quote": "| EC2 instance | A changed package or a new CVE |\n| ECR container image | A push or a new CVE |",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The table drops the conditions that the FAQ gives for each workload. Source_id www/inspector/faqs ('How often are the automated rescans performed?'): 'For SSM agent-based scans, rescans are started when a new software package is installed or uninstalled on an instance, when a new CVE is published ... For agentless scans, scans are performed every 24 hours.' and for ECR: 'If the push date of an image is less than the configured \"Push date rescan duration\" and image last in use date is within the configured \"last in use rescan duration\", the container image will continue to be monitored ... Available re-scan duration configurations for image last in use date are 14 days (by default)'. So an agentless instance is rescanned on a 24-hour cycle, and an image outside its rescan duration is not rescanned on a new CVE. Add 'agent-based' to the EC2 row and a Go-deeper line for agentless and ECR rescan durations.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Same fixes as claims-03 and claims-04."
+  },
+  {
+   "id": "technical-06",
+   "file": "09-detection/2-deep.md",
+   "section": "config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+   "quote": "Why does AWS work this way? AWS Config reads configurations by [invoking the Describe or the List API call](../facts/config.md#config-guide-tracks-non-api-changes), so it judges a configuration that already exists.",
+   "type": "contradicts-chapter",
+   "severity": "should",
+   "evidence": "The heading and this reason state that Config judges only configurations that already exist, but 1-fast.md Check 2 and q007 option b teach proactive rules, which evaluate before deployment. Fact config-guide-proactive-vs-detective (docs/config/latest/developerguide/config-concepts): 'There are two evaluation modes for AWS Config rules.' with detective mode used 'to evaluate resources that have already been deployed'. Say that detective rules judge recorded configurations, and add one line: proactive rules evaluate before deployment but 'do not remediate resources that are flagged as NON_COMPLIANT or prevent them from being deployed'. Otherwise the reader meets proactive rules in the quiz without having learned them in the deep file.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Same fix as claims-05."
+  },
+  {
+   "id": "technical-07",
+   "file": "data/09-detection/tasks.json",
+   "section": "detection-t02",
+   "quote": "\"verify\": {\"command\": \"aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=detection-t02 --query \\\"ResourceTagMappingList[].ResourceARN\\\"\", \"expect\": \"An empty list.\"}",
+   "type": "weak-verify",
+   "severity": "should",
+   "evidence": "The verify rests on fact guardduty-tagging-api-getresources-all-types (fact request fr-0032), whose status is 'disputed', not verified (entail vote 'partial'). If GetResources does not return the detector, or returns it late, the verify prints an empty list while the detector still exists, so it cannot fail, and a detector left on starts to charge when the trial ends (fact guardduty-pricing-based-on-volume-analyzed). The task already uses a direct check that can fail: step 1 'aws guardduty list-detectors' with expect '\"DetectorIds\": [], an empty list'. Use that as the verify (or add it before the tagging check). Note also that fr-0032 still open blocks finalize (B09).",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Partial: T108 needs a tag filter or a by-name verify, and list-detectors names nothing, so the verify command stays. Its expect now also asks for aws guardduty list-detectors with an empty list, and to run the cleanup again if an ID shows. fr-0032 closed as unfillable (the only candidate fact is disputed)."
+  },
+  {
+   "id": "technical-08",
+   "file": "data/09-detection/questions.json",
+   "section": "detection-q005",
+   "quote": "It can work, but the team builds and runs rules, code and a database in every account and Region; Security Hub integrations [are activated automatically](../facts/security-hub.md#security-hub-cspm-integrations-auto-activated).",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "Fact security-hub-cspm-integrations-auto-activated starts with a condition that is dropped: 'Unless indicated otherwise below, AWS service integrations that send findings to Security Hub CSPM are activated automatically'. Macie is one of the exceptions: source_id docs/securityhub/latest/userguide/securityhub-internal-providers: 'After you enable Security Hub CSPM, Macie automatically starts sending policy findings to Security Hub CSPM. You can configure the integration to also send sensitive data findings to Security Hub CSPM.' The stem asks for 'the findings of all three services', so the explanation should add that Macie sensitive data findings need the integration setting. The key (b) stays correct.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): q005 explanation (explanation only) now says most integrations [are activated automatically], and Macie is the exception to check: you configure it to [also send sensitive data findings] (fact added to q005)."
+  },
+  {
+   "id": "technical-09",
+   "file": "09-detection/2-deep.md",
+   "section": "in-the-real-world",
+   "quote": "**Sony Music Entertainment Japan, 2018.** Its SMEJ Guardrail framework rests on AWS Security Hub.",
+   "type": "wrong-claim",
+   "severity": "should",
+   "evidence": "The case study does not date the framework to 2018; 2018 is when the parent company issued guidelines. Source_id www/solutions/case-studies/sony-music-entertainment-japan-case-study: 'After its parent company issued new cloud governance guidelines in 2018, SMEJ built a scalable, cost-effective solution on AWS.' The same page describes the best-practice checks ('As a cloud security posture management solution, AWS Security Hub performs these best practice checks automatically'), which is the service now called Security Hub CSPM (fact security-hub-renamed-cspm). Drop the year or write 'guidelines from 2018', and name the service as Security Hub CSPM (formerly Security Hub), to match the chapter's own Changed recently note.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Same fix as claims-08."
+  },
+  {
+   "id": "technical-10",
+   "file": "data/09-detection/tasks.json",
+   "section": "detection-t02",
+   "quote": "\"expect\": \"Pairs of a feature name and a status. FLOW_LOGS, CLOUD_TRAIL and DNS_LOGS show ENABLED. Other features can show either status.\"",
+   "type": "incomplete",
+   "severity": "note",
+   "evidence": "create-detector without --features turns on every optional protection plan except Runtime Monitoring. Source_id docs/cli/latest/reference/guardduty/create-detector: 'When you don't specify any features , with an exception to RUNTIME_MONITORING , all the optional features are enabled by default.' The setup guide adds that this includes 'Malware Protection for EC2' (docs/guardduty/latest/ug/guardduty_settingup). So the reader turns on S3 Protection, Malware Protection for EC2 and other paid plans, not only the foundational sources. 'Other features can show either status' is vague; say that the optional plans show ENABLED, and mention in the cost line that after the trial these plans also charge.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Step 5 expect: some optional protection plans can also show ENABLED, because GuardDuty turns some on automatically (guardduty-first-enable-all-plans-except-runtime added to the task facts). The first still-costs line now names the protection plans that are on."
+  },
+  {
+   "id": "technical-11",
+   "file": "data/09-detection/speak.json",
+   "section": "detection-s02",
+   "quote": "Config records a configuration item each time the security group changes.",
+   "type": "condition-dropped",
+   "severity": "note",
+   "evidence": "This is true only with continuous recording. Source_id full:config-developerguide: 'Continuous recording – AWS Config will record configuration changes continuously whenever a change occurs.' and 'Daily recording – You will receive a configuration item (CI) representing the most recent state of your resources over the last 24-hour period, only if it's different from the previous CI recorded.' In speech, 'with continuous recording, Config records ...' keeps it correct.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): s02 line now: \"With continuous recording, Config records a configuration item each time the group changes.\" (config-guide-continuous-or-daily-recording added to s02 facts)."
+  },
+  {
+   "id": "technical-12",
+   "file": "09-detection/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Agent or log setup first? | No: it [pulls independent data streams directly](../facts/guardduty.md#guardduty-faq-no-need-to-enable-source-logs) | ... |",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "True for the foundational sources only (fact guardduty-faq-no-need-to-enable-source-logs, scope 'foundational data sources'). GuardDuty Runtime Monitoring uses an agent: fact guardduty-faq-independent-of-resources: 'If you configure GuardDuty Runtime Monitoring to automatically deploy the GuardDuty security agent, this could result in additional resource utilization'. Add 'for its foundational sources' so a runtime-monitoring stem is not answered with 'no agent'.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): GuardDuty cell now: \"No, for its foundational sources: it [pulls independent data streams directly]\"."
+  },
+  {
+   "id": "technical-13",
+   "file": "09-detection/2-deep.md",
+   "section": "four-services-detect-problems-and-each-reads-a-different-kind-of-evidence",
+   "quote": "**Activity.** Amazon GuardDuty reads API calls and network traffic [for malicious activity](../facts/guardduty.md#guardduty-dg-continuous-malicious-activity).",
+   "type": "imprecise",
+   "severity": "note",
+   "evidence": "GuardDuty reads logs about traffic, not the traffic itself. Fact guardduty-foundational-sources-list: 'These data sources include AWS CloudTrail management events, VPC flow logs (from Amazon EC2 instances), and DNS logs.' Fact guardduty-discards-source-logs: 'GuardDuty extracts various fields from these logs sources'. 'network traffic' can lead the reader to treat GuardDuty as a packet-inspection tool (a Network Firewall or Traffic Mirroring stem). Write 'API calls, VPC flow logs and DNS logs'.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Step 1 now: \"Amazon GuardDuty watches API calls, VPC flow logs and DNS logs [for malicious activity]\"."
+  }
+ ]
+}

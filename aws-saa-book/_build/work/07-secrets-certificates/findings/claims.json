@@ -1,0 +1,229 @@
+{
+ "lens": "claims",
+ "chapter": "07",
+ "reviewer": "review-07-claims",
+ "reviewed": "2026-10-12",
+ "scope_note": "Ran 'saa.py sync 07' first (written=0 unchanged=8). Read 1-fast.md, 2-deep.md, 3-do.md, 4-say.md, 5-quiz.md (10 shipped questions), sources.md, data/07-secrets-certificates/{questions,cards,speak,tasks}.json and the three secrets-certificates-* diagram specs. 3-do.md and 4-say.md print 'Nothing here yet.' because the task and both spoken items are still status candidate, so the task steps and spoken answers were reviewed in tasks.json and speak.json. Every fact link was checked against its quote in facts/*.md. Refutation attempts that held (no finding): CloudFront us-east-1 rule, API Gateway edge-optimized vs Regional certificate Region, 198-day validity and 395-day old value, email-to-DNS switch dated 2026-08-13 and marked not examinable, exportable public certificates 2025-06-17, 45-day renewal start, daily expiration events, CNAME removal stops renewal, reimport keeps the ARN, HTTP validation only through CloudFront Distribution Tenants, 4 KB / 8 KB, 10,000 / 100,000 parameters, 40 TPS shared by the three Get APIs, policies and RAM sharing advanced-only, tier upgrade one-way, aws/ssm default key and 'alias/aws/ssm' in describe-parameters output (docs/cli/latest/reference/ssm/describe-parameters), recovery window 7 to 30 days, four-hour rotation minimum, one-hour window, 65,536-byte secret size, AWS managed key aws/secretsmanager unusable cross-account and its key policy fixed, rotation step labels AWSPENDING/AWSCURRENT (camelCase step names also appear in the guide), NAT gateway risk sentence, interface endpoint traffic stays on the AWS network, KMS $1/month per key and 20,000 free requests, diagrams (Callvale's primary Region is us-east-1, so one 'ACM certificates' node feeding CloudFront and the load balancer is correct for the story).",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1",
+   "quote": "2. **CloudFront to the load balancer.** You can [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region) for the origin.",
+   "type": "link-says-less-than-sentence",
+   "severity": "blocking",
+   "evidence": "The CloudFront sentence only means that the origin certificate is not bound to us-east-1; it does not let a load balancer use a certificate from another Region. Fact acm-faq-certificate-same-region-as-resource: \"ACM certificates must be in the same Region as the resource where they are being used.\" Fact acm-certificates-regional: \"To use a certificate with Elastic Load Balancing for the same fully qualified domain name (FQDN) or set of FQDNs in more than one AWS region, you must request or import a certificate for each region.\" Read literally, 'in any AWS Region' contradicts the table four lines below ('Load balancer, also as an origin | Its own: it must be in the same Region'), and a reader who skims gets 'the ALB certificate can live anywhere'. Suggested: 'The load balancer's certificate does not have to be in US East (N. Virginia): it sits in the load balancer's own Region.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): 2-deep step 2 now reads 'The origin certificate [must be in the same Region](acm-faq-certificate-same-region-as-resource) as the load balancer.' The 'any AWS Region' link is gone from the prose and from every shipped item."
+  },
+  {
+   "id": "claims-02",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "cross-account-access-to-a-secret-needs-a-customer-managed-kms-key",
+   "quote": "The rotation function calls [from an AWS-internal address space](../facts/secrets-manager.md#secrets-manager-ip-condition-breaks-rotation), so the Deny matches it. Use [aws:SourceVpce](../facts/secrets-manager.md#secrets-manager-source-vpce-condition) with an endpoint in a **virtual private cloud** (vee-pee-SEE), or VPC, instead.",
+   "type": "wrong-fix",
+   "severity": "blocking",
+   "evidence": "Swapping the NotIpAddress Deny for a SourceVpce Deny can break rotation in the same way, unless the rotation function runs in that VPC and calls through that endpoint, which the answer does not say. Fact secrets-manager-vpc-condition-can-block-services, source docs/secretsmanager/latest/userguide/best-practices: \"If you use these condition keys in a resource policy statement that allows or denies access to Secrets Manager secrets, you can inadvertently deny access to services that use Secrets Manager to access secrets on your behalf. Only some AWS services can run with an endpoint within your VPC. If you restrict requests for a secret to a VPC or VPC endpoint, then calls to Secrets Manager from a service not configured for the service can fail.\" The swap also changes the intent (office network to one VPC endpoint). Suggested answer: 'Run the rotation function in the VPC and call Secrets Manager through an interface endpoint; then a Deny on aws:SourceVpce for that endpoint lets it through. Any service that reads the secret from outside that endpoint still fails.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Spot the bug answer no longer recommends aws:SourceVpce. It now says 'A Deny on [aws:SourceVpce] has the same risk: [you can inadvertently deny access to services](secrets-manager-vpc-condition-can-block-services).'"
+  },
+  {
+   "id": "claims-03",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+   "quote": "Access is denied: the role needs an IAM policy to [access specific secrets](../facts/secrets-manager.md#secrets-manager-faq-iam-policy-before-retrieval).",
+   "type": "overgeneralized-claim",
+   "severity": "should",
+   "evidence": "In the same account, a resource-based policy on the secret can grant the read without an identity-based policy; 'both policies' is the cross-account rule. Source docs/secretsmanager/latest/userguide/auth-and-access_examples_cross: \"To allow users in one account to access secrets in another account (*cross-account access*), you must allow access both in a resource policy and in an identity policy. This is different than granting access to identities in the same account as the secret.\" Source full:secretsmanager-userguide (line 12030): \"When authorizing access to a secret, Secrets Manager evaluates the resource-based policy attached to the secret and all identity-based policies attached to the IAM user or role sending the request.\" The chapter's own table ('Same account | Allows | Not needed') is consistent, but this answer and step 2 ('You must write an IAM policy') teach 'no IAM policy = always denied'. Suggested: add 'and the secret has no resource-based policy that names the role' to the stem, or answer 'Denied, unless the secret's resource-based policy allows the role'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Stop and answer stem now says 'An IAM role has no policy for Secrets Manager, and the secret has no resource-based policy.' The cross-account table keeps the same-account row ('Resource-based policy: Not needed')."
+  },
+  {
+   "id": "claims-04",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+   "quote": "Why a call? The credentials are [no longer stored with the application](../facts/secrets-manager.md#secrets-manager-rotation-without-redeploy), so the next read gets the new password.",
+   "type": "oversimplified-claim",
+   "severity": "should",
+   "evidence": "Three lines earlier the chapter recommends a cache, and a cached read does not get the new password at once. Fact secrets-manager-cache-refresh-hourly-default: \"By default, the cache refreshes secrets every hour.\" During single-user rotation the old password stops working: fact secrets-manager-single-user-short-deny-risk: \"there is a low risk of the database denying calls that use the rotated credentials.\" The same claim recurs in 5-quiz.md question secrets-certificates-q003 (think-aloud step 6: 'the application gets the new value on its next call'). Suggested: 'so the next uncached read gets the new password; with a cache, refresh the secret when a connection fails to authenticate.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): 2-deep 'Why a call?' now says 'the next read from Secrets Manager gets the new password', and the rotation Exam trap gives the cause ([Authentication happens when a connection is established]). q003 (explanation, option d why and worked step 6; stem, options and key unchanged, so no new verification): 'A cached value changes at the next refresh: for the Python caching client, [By default, the cache refreshes secrets every hour](secrets-manager-cache-refresh-hourly-default). After a failed login, the application reads the secret again.' Fact added to q003 facts."
+  },
+  {
+   "id": "claims-05",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment",
+   "quote": "The exception is a secret that Amazon ECS injects at task start: [you must force a new deployment](../facts/secrets-manager.md#secrets-manager-ecs-redeploy-for-new-value) or launch a new task.",
+   "type": "overgeneralized-claim",
+   "severity": "should",
+   "evidence": "'The exception' says ECS is the only case. Any consumer that reads the value once and keeps it has the same problem; the chapter's own question secrets-certificates-q003 rejects the option that passes the value 'as user data at launch' because 'a value read once at launch is old after the first rotation'. Fact secrets-manager-rotation-without-redeploy has the scope 'the application reads the secret at run time'. Parameter Store has the same ECS behavior (fact parameter-store-ecs-env-resolved-at-start: 'resolved when a task starts'). Suggested: 'One exception: a value that is copied in once, for example an environment variable that Amazon ECS injects at task start ...'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Exam trap now reads 'A value read at start is the exception: for Amazon ECS, [you must force a new deployment] or launch a new task.'"
+  },
+  {
+   "id": "claims-06",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1",
+   "quote": "> **Exam trap:** An ACM public certificate does not go onto an EC2 web **server**: that [requires a Nitro Enclave](../facts/acm.md#acm-ec2-needs-nitro-enclave).",
+   "type": "absolute-claim-refuted",
+   "severity": "should",
+   "evidence": "The first clause is an absolute that the cited page itself qualifies: ACM certificates can be used on EC2 instances through Nitro Enclaves. Source full:acm-userguide, section 'Managed automation with integrated services' (line 2937): \"EC2 instances connected to Nitro Enclaves support ACM certificates.\" Exportable public certificates (fact acm-change-exportable-public-certificates-2025: \"terminate TLS traffic on any compute workload. This includes EC2 instances\") also go onto a server. The trap card secrets-certificates-c011 words it correctly ('On an instance, an ACM certificate requires a Nitro Enclave'). Suggested: 'A non-exportable ACM certificate does not go into a plain web server on EC2: on an instance it requires a Nitro Enclave.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Exam trap now reads 'On an EC2 web server, an ACM certificate [requires a Nitro Enclave]. End TLS on a load balancer, or pay for an exportable certificate: [you are subject to an additional charge].' The absolute 'does not go onto' is gone."
+  },
+  {
+   "id": "claims-07",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "check",
+   "quote": "Secrets Manager: it manages [third-party API keys](../facts/secrets-manager.md#secrets-manager-faq-kinds-of-secrets).",
+   "type": "link-says-less-than-sentence",
+   "severity": "should",
+   "evidence": "The question asks which service can rotate the key; the linked fact only says Secrets Manager can store and manage it. Rotation of a third-party key needs a Lambda rotation function that the team writes or adapts. Source docs/secretsmanager/latest/userguide/rotating-secrets: \"For other types of secrets, Secrets Manager rotation uses a Lambda function to update the secret and the database or service.\" Fact secrets-manager-faq-custom-rotation-lambda: \"by modifying sample AWS Lambda functions available in the Secrets Manager documentation.\" Suggested: 'Secrets Manager, with a Lambda rotation function that calls the provider (link secrets-manager-faq-custom-rotation-lambda).'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): 1-fast Check 2 answer now reads 'Secrets Manager: you write the rotation function [by modifying sample AWS Lambda functions](secrets-manager-faq-custom-rotation-lambda).'"
+  },
+  {
+   "id": "claims-08",
+   "file": "data/07-secrets-certificates/speak.json",
+   "section": "secrets-certificates-s01 sixty_second",
+   "quote": "Secrets Manager rotates the password with a Lambda function.",
+   "type": "oversimplified-claim",
+   "severity": "should",
+   "evidence": "Callvale's database is Amazon RDS for PostgreSQL (STARTUP.md, diagram secrets-certificates-before), and for its master password the chapter teaches managed rotation with no Lambda function. Fact secrets-manager-managed-rotation-no-lambda: \"With managed rotation, you don't use an AWS Lambda function to update the secret and the credentials in the database.\" Fact secrets-manager-managed-rotation-rds-master-user: \"Amazon RDS offers managed rotation for master user credentials.\" Said to a CTO, the sentence promises a Lambda function to maintain. Suggested: 'Secrets Manager rotates the password on a schedule; for an RDS master password, RDS manages the rotation for you.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): s01 sixty_second line 5 now reads 'Secrets Manager rotates the password. For Amazon RDS, RDS can manage that for you.' Facts secrets-manager-managed-rotation-rds-master-user and secrets-manager-managed-rotation-no-lambda added to s01."
+  },
+  {
+   "id": "claims-09",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "**FAQ 3.** Do you pay for an ACM certificate on a load balancer? ... No. They [are free](../facts/acm.md#acm-faq-free-with-integrated-services).",
+   "type": "oversimplified-claim",
+   "severity": "should",
+   "evidence": "True for an ACM public certificate. A private certificate is free as a certificate but needs a private CA that has a monthly fee, and the chapter's own Go deeper block says so. Fact acm-faq-private-ca-monthly-fee: \"You pay a monthly fee for the operation of each private CA until you delete it\". Fact acm-exportable-charged: \"You are subject to an additional charge for exportable public SSL/TLS certificates\". A bare 'No.' under a question about any ACM certificate on a load balancer (an internal one may carry a private certificate, see FAQ 4) teaches 'ACM is always free'. Suggested: 'No for a public certificate. A private certificate needs a private CA, which has a monthly fee.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): FAQ 3 answer now adds 'For each private certificate authority (CA), [you pay a monthly fee](acm-faq-private-ca-monthly-fee).'"
+  },
+  {
+   "id": "claims-10",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "secrets-manager-or-parameter-store",
+   "quote": "| Can another account read it? | Yes, with a resource-based policy and [a KMS key that you create](../facts/secrets-manager.md#secrets-manager-cross-account-no-aws-managed-key) | Advanced tier only: [it must be in the advanced parameter tier](../facts/parameter-store.md#parameter-store-sharing-advanced-ram) |",
+   "type": "missing-condition",
+   "severity": "should",
+   "evidence": "The row is about secrets. A shared SecureString parameter has the same key rule as Secrets Manager, so the table makes Parameter Store look easier than it is. Fact parameter-store-share-securestring-cmk, source docs/systems-manager/latest/userguide/parameter-store-shared-parameters: \"To share a `SecureString` parameter, it must be encrypted with a customer managed key, and you must share the key separately through AWS Key Management Service. AWS managed keys cannot be shared.\" The same gap is in speak.json secrets-certificates-s01 follow-up 2 ('A parameter, yes, if it is in the advanced tier: you share it through AWS RAM.'). Suggested cell: 'Advanced tier, shared through AWS RAM; a SecureString also needs a customer managed key'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): 1-fast cell now reads 'Advanced tier; a SecureString [must be encrypted with a customer managed key](parameter-store-share-securestring-cmk)' (15-word cell limit). s01 follow-up 2 adds 'An encrypted one also needs a customer managed key.' with the fact."
+  },
+  {
+   "id": "claims-11",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q002 (5-quiz.md Question 3) explanation",
+   "quote": "The load balancer keeps its eu-west-1 certificate, because you can [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region) for the origin.",
+   "type": "wrong-reason",
+   "severity": "should",
+   "evidence": "Same problem as claims-01: the load balancer keeps its eu-west-1 certificate because a load balancer uses a certificate from its own Region, not because the origin certificate may be in 'any' Region. Fact acm-faq-certificate-same-region-as-resource: \"ACM certificates must be in the same Region as the resource where they are being used.\" Suggested: 'The load balancer keeps its eu-west-1 certificate: an ACM certificate [must be in the same Region] as the resource that uses it, and only CloudFront's viewer certificate goes to US East (N. Virginia).'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q002 explanation (explanation only; stem, options and key unchanged, so no new verification) now ends 'because a load balancer's certificate [must be in the same Region](acm-faq-certificate-same-region-as-resource) as the load balancer.' q002 facts swap acm-cloudfront-origin-certificate-any-region for acm-faq-certificate-same-region-as-resource."
+  },
+  {
+   "id": "claims-12",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q006 (5-quiz.md Question 5) why-not",
+   "quote": "\"Store the value as a secret in AWS ...\": It works, but it adds the charge for each secret and a customer managed key at [$1/month](../facts/kms.md#kms-price-key-storage-per-month) for a value that needs no rotation.",
+   "type": "wrong-claim",
+   "severity": "should",
+   "evidence": "Both Secrets Manager options say 'turn on automatic rotation' for an application endpoint URL. That does not work: there is no managed rotation for a URL, and a rotation function would replace the URL value with a new one. Source docs/secretsmanager/latest/userguide/rotating-secrets: \"For other types of secrets, Secrets Manager rotation uses a Lambda function to update the secret and the database or service.\" The second why-not ('It works, but Secrets Manager is billed per secret per month') has the same flaw. Saying 'It works' teaches that the cost is the only reason to reject these options. Suggested: 'It cannot meet the need: automatic rotation would change a URL that people set by hand, and it adds a charge for each secret ...'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q006 option whys (wording only; option texts unchanged). Option 1: 'It costs more and does not fit: each secret is billed, a customer managed key costs [$1/month], and rotation would replace a URL that people set by hand.' Option 3: 'It costs more and does not fit: Secrets Manager is [billed per secret per month], and rotation would replace a URL that people set by hand.' 'It works' is gone from both."
+  },
+  {
+   "id": "claims-13",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+   "quote": "**Stop and answer.** PutParameter fails for a 6 KB JSON document of feature flags as a standard parameter. What is the cheapest fix? ... An advanced parameter",
+   "type": "wrong-answer-to-superlative",
+   "severity": "should",
+   "evidence": "'Cheapest' is not the advanced tier: two standard parameters of 3 KB each cost nothing. Fact parameter-store-price-advanced-parameter: \"Standard | No additional charge\" and \"Advanced | $0.05 per advanced parameter per month\". Fact parameter-store-tier-max-value-size: \"Maximum value size | 4 KB | 8 KB\". The answer is right for 'the fix with the fewest changes'. Suggested stem: 'What is the simplest fix that keeps one parameter?'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Stop and answer now asks about 'a 6 KB JSON settings document' and 'the simplest fix that keeps one parameter'."
+  },
+  {
+   "id": "claims-14",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "b-list",
+   "quote": "| [every seven days](../facts/secrets-manager.md#secrets-manager-rds-managed-rotation-default) | Rotation of an RDS-managed master password |",
+   "type": "missing-qualifier",
+   "severity": "note",
+   "evidence": "The value is a default, not a fixed rate. Fact secrets-manager-rds-managed-rotation-default: \"RDS manages the settings for the secret and rotates the secret every seven days by default. You can modify some of the settings, such as the rotation schedule.\" Callvale needs 30 days, so the reader may think RDS-managed rotation cannot meet it. Suggested: 'Default rotation of an RDS-managed master password (you can change it)'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): B-list row now reads 'Default rotation of an RDS-managed master password (changeable)'."
+  },
+  {
+   "id": "claims-15",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+   "quote": "4. **Delete.** A deleted secret waits [from 7 to 30](../facts/secrets-manager.md#secrets-manager-recovery-window-range) days, and [until the recovery window ends](../facts/secrets-manager.md#secrets-manager-recover-during-window) you can restore it.",
+   "type": "missing-qualifier",
+   "severity": "note",
+   "evidence": "Not every deleted secret waits. Fact secrets-manager-force-delete-without-recovery: \"If you delete a secret with the `ForceDeleteWithoutRecovery` parameter, then you have no opportunity to recover the secret. You lose the secret permanently.\" The fact's own scope says 'ForceDeleteWithoutRecovery skips the window'. A Go deeper line would cover it.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Step 4 now reads 'You can restore a deleted secret in a window of [from 7 to 30] days. A forced delete leaves [no opportunity to recover the secret](secrets-manager-force-delete-without-recovery).'"
+  },
+  {
+   "id": "claims-16",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q007 (5-quiz.md Question 8) why-not",
+   "quote": "With the new key it works, but it opens the secret to every principal in account B instead of the one role.",
+   "type": "overstated-claim",
+   "severity": "note",
+   "evidence": "A resource policy that names account B does not by itself open the secret to every principal there: each principal still needs an identity-based allow. Fact secrets-manager-cross-account-needs-both-policies: \"you must allow access both in a resource policy and in an identity policy.\" The option is still less secure (account B's administrators decide who reads). Suggested: 'it lets account B's administrators give any principal in account B access, instead of naming the one role.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q007 option c why (wording only) now reads 'With the new key it works, but then any principal in account B with an identity-based allow can read the secret.'"
+  },
+  {
+   "id": "claims-17",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q010 (5-quiz.md Question 10) why-not",
+   "quote": "Gateway endpoints are [available only for AWS services including S3 and DynamoDB](../facts/vpc.md#vpc-faq-endpoint-types-gateway-interface); Secrets Manager uses an interface endpoint.",
+   "type": "link-says-less-than-sentence",
+   "severity": "note",
+   "evidence": "The quoted FAQ phrase ('including') does not list Secrets Manager out, so it does not prove the second clause. The second clause is grounded elsewhere: fact secrets-manager-interface-endpoint-privatelink: \"You can establish a private connection between your VPC and Secrets Manager by creating an *interface VPC endpoint*.\" Link that fact on 'Secrets Manager uses an interface endpoint'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q010 option b why (wording only) now ends 'for Secrets Manager, AWS recommends [Secrets Manager service private endpoints within your VPC](secrets-manager-rotation-private-vpc-use-endpoint).' The unsupported clause is gone; the explanation still links secrets-manager-interface-endpoint-privatelink."
+  },
+  {
+   "id": "claims-18",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q006 (5-quiz.md Question 5) why-not",
+   "quote": "It works, but an advanced parameter costs [$0.05 per advanced parameter per month](../facts/parameter-store.md#parameter-store-price-advanced-parameter), and the stem asks for no notification.",
+   "type": "claim-not-in-stem",
+   "severity": "note",
+   "evidence": "Rule: an explanation may only cite constraints that stand in the stem. The stem of secrets-certificates-q006 says nothing about notifications; it asks for the MOST cost-effective way. Suggested: 'and nothing in the stem needs a notification.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q006 option d why now ends 'and nothing in the stem needs a notification.'"
+  },
+  {
+   "id": "claims-19",
+   "file": "data/07-secrets-certificates/speak.json",
+   "section": "secrets-certificates-s02 ten_second",
+   "quote": "ACM renews its own certificates automatically. You need DNS validation, the CNAME record in place, and the certificate in use.",
+   "type": "oversimplified-claim",
+   "severity": "note",
+   "evidence": "The conditions are those of public DNS-validated certificates. ACM private certificates need no validation: fact acm-no-validation-private-or-imported: \"Unlike publicly trusted ACM certificates, a certificate for a private PKI requires no validation.\" and fact acm-faq-private-renewal-ca-active: \"ACM can renew and deploy private certificates that are issued through ACM as long as the private CA that issued the certificate remains in the Active state.\" For the CTO's public site the answer is right; say 'ACM renews its public certificates automatically when ...'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): s02 ten_second and sixty_second line 1 now say 'ACM renews its public certificates automatically'."
+  },
+  {
+   "id": "claims-20",
+   "file": "07-secrets-certificates/3-do.md",
+   "section": "whole file (and 4-say.md)",
+   "quote": "Nothing here yet.",
+   "type": "generated-file-empty",
+   "severity": "note",
+   "evidence": "Rule: RULINGS 'Structured items are JSON, and their Markdown is generated'. The tasks and speak stages passed, but tasks.json item secrets-certificates-t01 and speak.json items s01 and s02 are status 'candidate', so sync renders nothing. 2-deep.md promises the task: '> **Try it:** Store a SecureString parameter and read it with and without decryption. See [3-do.md](3-do.md).' The reader opens a page that says 'Nothing here yet.' This must be resolved before finalize (set the item status after verification, then sync).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): After the fixes, the item lints were clean; task t01, speak items s01 and s02 and the 12 cards were set to ready, and sync filled 3-do.md and 4-say.md."
+  }
+ ]
+}

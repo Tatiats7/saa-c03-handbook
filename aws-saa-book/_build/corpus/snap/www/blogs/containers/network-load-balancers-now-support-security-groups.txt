@@ -1,0 +1,89 @@
+Skip to Main Content
+## Containers
+# Network Load Balancers now support Security groups
+## Introduction
+At AWS, we offer security from the get-go by providing you the ability to use Security Groups and Security Group rules to configure the fine-grained control over the traffic that flows to and from AWS resources such as Amazon Elastic Compute Cloud (Amazon EC2) instances, AWS Databases, Application Load Balancers, and Containers. On August 10th, we announced support of security groups for Network Load Balancers (NLB), one of our top requested features. With this new capability you can attach security groups to a Network Load Balancer, allowing you to filter the traffic that the load balancer accepts and forwards to your backend applications. By using security groups, you can configure rules that ensure that Network Load Balancers only accept traffic from trusted IPs and centrally enforce access control policies, thereby enhancing the security posture of your environment.
+With this launch, you can assign multiple security groups to a Network Load Balancer. You can use the default Amazon Virtual Private Cloud (Amazon VPC) security group, or attach an existing one, or create new security groups for an NLB. Prior to this release, cloud administrators managed access to applications by adding security group rules at the instance level. Since these rules counted towards the security group rules per instance quota, they could limit the number of NLBs a customer could deploy in their AWS account. By using security groups and inbound rules with Network Load Balancers, application owners can restrict access to resources, ensuring clients access them only through the load balancer. For further information, please refer to the getting started guide. The guide includes all the steps for creating a new NLB with security groups.
+Amazon Elastic Kubernetes Service (Amazon EKS) is a managed service that you can use to run containerized applications on AWS. Amazon EKS natively integrates with many AWS services including Amazon Elastic Load Balancers (ELB), which are used to expose applications outside the Kubernetes cluster. Customers often use AWS Load Balancer Controller to manage AWS Elastic Load Balancers for an Amazon EKS cluster. The controller provisions an NLB when you create a Kubernetes service of type LoadBalancer. In version 2.6.0 and above, the controller automatically creates and/or applies security groups to Network Load Balancers, EC2 instances, and pods that are configured to use the Security Groups for Pods feature. Using the controller to provision/apply Network Load Balancers security groups enhances a node’s security a couple of ways. First, ingress rules can be simplified by referencing the load balancer’s security groups. Second, the controller keeps a constant number of security group rules per cluster which prevents scaling issues.
+In this post, we’ll demonstrate how Amazon EKS handles security groups when Kubernetes applications are exposed by an NLB, thereby enhancing the end-to-end security posture.
+## Solution overview
+In Kubernetes, pods are the smallest unit of deployment. These pods can be exposed as a Kubernetes Service which make the pods accessible to other applications inside and outside the cluster. A Kubernetes Service of type LoadBalancer is a common way to expose applications running in a Kubernetes cluster.
+Amazon EKS supports the AWS Load Balancer Controller, which manages AWS Elastic Load Balancers for a Kubernetes cluster. The controller is responsible for creating Network Load Balancers when you create a Kubernetes service of type LoadBalancer. The controller watches for any changes to the pod and will reconcile those changes by updating the configuration of the load balancers.
+Before this release, the network access rules for applications had to be configured on the instance on which Kubernetes pods were deployed. As the number of Network Load Balancers increased, so would the number of rules you had to manage until the maximum number of security group rules allowed per account was reached. This effected the number of NLBs that could be created in an AWS account.
+In version 2.6.0 of the AWS Load Balancer controller, security groups are attached your frontend and backend automatically when a service of type LoadBalancer is created. Frontend security groups allows you to control the traffic that can be routed to the load balancer. The controller allows you to specify existing security groups through a Kubernetes annotation called service.beta.kubernetes.io/aws-load-balancer-security-groups. When this annotation is added to the Service, the controller attaches the security groups referenced by the annotation. This effectively allows your security team to manage the security groups assigned to the load balancer. On the other hand, when the annotation is omitted, the controller automatically creates a security group and attaches it to the load balancer. Additionally, the controller adds the rules for inbound-cidrs and listen-ports to the frontend security group.
+The AWS Load Balancer Controller also creates a shared backend security group to control the traffic between the Network Load Balancers and its backend targets, e.g. instances or pods belonging to a security group.
+Note: the Load Balancer Controller will not create security groups for pods. In order for the controller to attach a security group to a group of pods, the pods need to be created with the Security Groups for Pods feature.
+When the security group annotation is omitted from the Service, the controller automatically adds instance group rules that allow egress traffic from the backend security group of a load balancer. Automatic rule management is disabled when a security group is referenced by the security group annotation service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules.
+## Walkthrough
+You must ensure that the Amazon EKS cluster is up and running before moving to the next section. If not, you can create a cluster using one of the methods mentioned in the Amazon EKS cluster creation guide. To install AWS Load Balancer Controller on your cluster, please follow the instructions in the Amazon EKS user guide. If the controller is already installed, then you must update it to the latest version (v2.6.0 or above). AWS IAM Roles for Service Accounts (IRSA) are used by AWS Load Balancer Controllers to access Amazon Elastic Load Balancer APIs. Always create an AWS IAM OIDC identity provider for the cluster before using IRSA. After associating an OIDC provider with your cluster, follow the steps here to create a policy and a service account.
+helm update aws-load-balancer-controller eks/aws-load-balancer-controller \
+-n kube-system \
+--set clusterName=<cluster-name> \
+--set serviceAccount.create=false \
+--set serviceAccount.name=aws-load-balancer-controller
+Before deploying a Kubernetes application, make sure that the controller Pods are active.
+kubectl get deploy -n kube-system aws-load-balancer-controller
+Now let’s deploy a sample web application.
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+  labels:
+    role: webserver
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      role: webserver
+  template:
+    metadata:
+      labels:
+        role: webserver
+    spec:
+      containers:
+      - name: frontend
+        image: httpd
+        ports:
+        - containerPort: 80
+        command: [ "/bin/sh" ]
+        args: ["-c",  "echo '<html> <head> <title>Amazon EKS Sample App</title> <style>body {margin-top: 40px; background-color: #333;} </style> </head><body> <div style=color:white;text-align:center> <h1>Amazon EKS Sample App</h1> <h2>Congratulations!</h2> <p>Your application is now running on Amazon EKS.</p> </div></body></html>' >  /usr/local/apache2/htdocs/index.html && httpd-foreground"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver
+  namespace: default
+  labels:
+    role: webserver
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    role: webserver
+  type: LoadBalancer
+EOF
+Now, find the load balancer name <external-ip> from newly created Kubernetes service.
+Note: you may need to wait a couple of minutes before the load balancer is successfully provisioned.
+kubectl get service sample-app
+Next, login to AWS EC2 console and find the Load balancer. You can find the security groups created under Security tab.
+The latest version of AWS Load Balancer Controller is backward compatible with prior versions and continues to support existing Network Load Balancers. The controller only provisions NLBs with security groups for new Services of type LoadBalancer. You can apply security groups to NLB with both instance and ip target types, as well as internal and external schemes. The controller provides a feature flag that allows you to deactivate the automatic creation of NLB security groups. While installing or updating the controller, you may provide NLBSecurityGroup=false using the --feature-gates option. Amazon EKS strongly advises you to use security groups for NLB to improve the security posture of your applications.
+## Conclusion
+In this post, we showed you how to create a service of type LoadBalancer and observed how the AWS Load Balancer Controller automatically creates and assigns security groups to the frontend, i.e. the Network Load Balancer and its backend targets.
+With the support of security groups for Network Load Balancers, you can control access to your applications and improve their security posture. This feature is accessible in all AWS commercial Regions for no added cost. Please refer to the Network Load Balancer user guide for instructions on using security groups and recommended security group rules. Amazon Elastic Load Balancers and Amazon EKS have supported security groups for Application Load Balancers (ALB) for a long time now. With the launch of this feature, you can have a consistent user experience when using the ALB and the NLB.
+As part of this update, we’ve also released a new version of the AWS Load Balancer Controller (v2.6.0) which allows you to apply security groups to NLBs when you create Kubernetes services of type LoadBalancer. The automatic creation of security groups enhances the end-to-end security of containerized workloads running in a Kubernetes cluster by directly controlling access at the load balancer level as opposed to at the instance level. Please refer to the AWS Load Balancer Controller guide for a complete list of annotations and examples.
+If you’re running Kubernetes on AWS and want to begin using security groups with Network Load Balancers, upgrade to v2.6.0 of the AWS Load Balancer Controller today. See the installation guide for further details. As always, we welcome your feedback. If you run into issues or have a suggestion, please consider opening an issue in GitHub, post a question on Re:Post, or create or upvote an issue in the Containers Roadmap.
+## Resources
+AWS Guided Amazon EKS Workshop
+Amazon Container Services
+AWS Fargate
+Amazon Elastic Container Service (ECS)
+Amazon Elastic Kubernetes Service (EKS)
+Amazon Elastic Container Registry (ECR)

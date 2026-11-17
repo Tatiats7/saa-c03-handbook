@@ -1,0 +1,155 @@
+[docs/vpc/latest/userguide/nat-gateway-scenarios] lines 1-154 of 302 | https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-scenarios.html | fetched 2026-10-11T21:25:44Z
+
+
+# NAT gateway use cases
+<a name="nat-gateway-scenarios"></a>
+
+The following are example use cases for public and private NAT gateways.
+
+**Topics**
++ [Access the internet from a private subnet](#public-nat-internet-access)
++ [Access your network using allow-listed IP addresses](#private-nat-allowed-range)
++ [Enable communication between overlapping networks](#private-nat-overlapping-networks)
+
+## Access the internet from a private subnet
+<a name="public-nat-internet-access"></a>
+
+You can use a public NAT gateway to enable instances in a private subnet to send outbound traffic to the internet, while preventing the internet from establishing connections to the instances.
+
+**Topics**
++ [Overview](#public-nat-gateway-overview)
++ [Routing](#public-nat-gateway-routing)
++ [Test the public NAT gateway](#public-nat-gateway-testing)
+
+### Overview
+<a name="public-nat-gateway-overview"></a>
+
+The following diagram illustrates this use case. There are two Availability Zones, with two subnets in each Availability Zone. The route table for each subnet determines how traffic is routed. In Availability Zone A, the instances in the public subnet can reach the internet through a route to the internet gateway, while the instances in the private subnet have no route to the internet. In Availability Zone B, the public subnet contains a NAT gateway, and the instances in the private subnet can reach the internet through a route to the NAT gateway in the public subnet.
+
+Both private and public NAT gateways map the source private IPv4 address of the instances to the private IPv4 address of the private NAT gateway, but in the case of a public NAT gateway, the internet gateway then maps the private IPv4 address of the public NAT gateway to the Elastic IP address associated with the NAT gateway. When sending response traffic to the instances, whether it's a public or private NAT gateway, the NAT gateway translates the address back to the original source IP address.
+
+![A VPC with public and private subnets, a NAT gateway, and an internet gateway.](https://docs.aws.amazon.com/vpc/latest/userguide/images/public-nat-gateway-diagram.png)
+
+
+Note that if the instances in the private subnet in Availability Zone A also need to reach the internet, you can create a route from this subnet to the NAT gateway in Availability Zone B. Alternatively, you can improve resiliency by creating a NAT gateway in each Availability Zone that contains resources that require internet access. For an example diagram, see [Example: VPC with servers in private subnets and NAT](vpc-example-private-subnets-nat.md).
+
+### Routing
+<a name="public-nat-gateway-routing"></a>
+
+The following is the route table associated with the public subnet in Availability Zone A. The first entry is the local route; it enables the instances in the subnet to communicate with other instances in the VPC using private IP addresses. The second entry sends all other subnet traffic to the internet gateway, which enables the instances in the subnet to access the internet.
+
+
+| Destination | Target | 
+| --- | --- | 
+| {{VPC CIDR}} | local | 
+| 0.0.0.0/0 | {{internet-gateway-id}} | 
+
+The following is the route table associated with the private subnet in Availability Zone A. The entry is the local route, which enables the instances in the subnet to communicate with other instances in the VPC using private IP addresses. The instances in this subnet have no access to the internet.
+
+
+| Destination | Target | 
+| --- | --- | 
+| {{VPC CIDR}} | local | 
+
+The following is the route table associated with the public subnet in Availability Zone B. The first entry is the local route, which enables the instances in the subnet to communicate with other instances in the VPC using private IP addresses. The second entry sends all other subnet traffic to the internet gateway, which enables the NAT gateway in the subnet to access the internet.
+
+
+| Destination | Target | 
+| --- | --- | 
+| {{VPC CIDR}} | local | 
+| 0.0.0.0/0 | {{internet-gateway-id}} | 
+
+The following is the route table associated with the private subnet in Availability Zone B. The first entry is the local route; it enables the instances in the subnet to communicate with other instances in the VPC using private IP addresses. The second entry sends all other subnet traffic to the NAT gateway.
+
+
+| Destination | Target | 
+| --- | --- | 
+| {{VPC CIDR}} | local | 
+| 0.0.0.0/0 | {{nat-gateway-id}} | 
+
+For more information, see [Manage subnet route tables](WorkWithRouteTables.md).
+
+### Test the public NAT gateway
+<a name="public-nat-gateway-testing"></a>
+
+After you've created your NAT gateway and updated your route tables, you can ping remote addresses on the internet from an instance in your private subnet to test whether it can connect to the internet. For an example of how to do this, see [Test the internet connection](#nat-gateway-testing-example).
+
+If you can connect to the internet, you can also test whether internet traffic is routed through the NAT gateway:
++ Trace the route of traffic from an instance in your private subnet. To do this, run the `traceroute` command from a Linux instance in your private subnet. In the output, you should see the private IP address of the NAT gateway in one of the hops (usually the first hop).
++ Use a third-party website or tool that displays the source IP address when you connect to it from an instance in your private subnet. The source IP address should be the Elastic IP address of the NAT gateway. 
+
+If these tests fail, see [Troubleshoot NAT gateways](nat-gateway-troubleshooting.md).
+
+#### Test the internet connection
+<a name="nat-gateway-testing-example"></a>
+
+The following example demonstrates how to test whether an instance in a private subnet can connect to the internet.
+
+1. Launch an instance in your public subnet (use this as a bastion host). In the launch wizard, ensure that you select an Amazon Linux AMI, and assign a public IP address to your instance.
+
+   Ensure that your security group rules allow inbound SSH traffic from the range of IP addresses for your local network, and outbound SSH traffic to the IP address range of your private subnet. You can also use `0.0.0.0/0` for both inbound and outbound SSH traffic for this test.
+
+1. Launch an instance in your private subnet. In the launch wizard, ensure that you select an Amazon Linux AMI. Do not assign a public IP address to your instance. Ensure that your security group rules allow inbound SSH traffic from the private IP address of your instance that you launched in the public subnet, and all outbound ICMP traffic. You must choose the same key pair that you used to launch your instance in the public subnet.
+
+1. Configure SSH agent forwarding on your local computer, and connect to your bastion host in the public subnet. For more information, see [To configure SSH agent forwarding for Linux or macOS](#ssh-forwarding-linux) or [To configure SSH agent forwarding for Windows](#ssh-forwarding-windows).
+
+1. From your bastion host, connect to your instance in the private subnet, and then test the internet connection from your instance in the private subnet. For more information, see [To test the internet connection](#test-internet-connection).<a name="ssh-forwarding-linux"></a>
+
+**To configure SSH agent forwarding for Linux or macOS**
+
+1. From your local machine, add your private key to the authentication agent. 
+
+   For Linux, use the following command.
+
+   ```
+   ssh-add -c mykeypair.pem
+   ```
+
+   For macOS, use the following command.
+
+   ```
+   ssh-add -K mykeypair.pem
+   ```
+
+1. Connect to your instance in the public subnet using the `-A` option to enable SSH agent forwarding, and use the instance's public address, as shown in the following example.
+
+   ```
+   ssh -A ec2-user@{{54.0.0.123}}
+   ```<a name="ssh-forwarding-windows"></a>
+
+**To configure SSH agent forwarding for Windows**  
+You can use the OpenSSH client available in Windows, or install your preferred SSH client (for example, PuTTY).
+
+------
+#### [ OpenSSH ]
+
+Install OpenSSH for Windows as described in this article: [Getting started with OpenSSH for Windows](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse). Then add your key to the authentication agent. For more information, see [Key-based authentication in OpenSSH for Windows](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_keymanagement).
+
+------
+#### [ PuTTY ]
+
+1. Download and install Pageant from the [PuTTY download page](https://www.chiark.greenend.org.uk/~sgtatham/putty/), if not already installed.
+
+1. Convert your private key to .ppk format. For more information, see [Convert your private key using PuTTYgen](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-linux-inst-from-windows.html#putty-private-key) in the *Amazon EC2 User Guide*.
+
+1. Start Pageant, open the context menu for the Pageant icon on the taskbar (it may be hidden), and choose **Add Key**. Select the .ppk file that you created, enter the passphrase if necessary, and choose **Open**.
+
+1. Start a PuTTY session and connect to your instance in the public subnet using its public IP address. For more information, see [Connect to your Linux instance using PuTTY](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-linux-inst-from-windows.html). In the **Auth** category, ensure that you select the **Allow agent forwarding** option, and leave the **Private key file for authentication** box blank.
+
+------<a name="test-internet-connection"></a>
+
+**To test the internet connection**
+
+1. From your instance in the public subnet, connect to your instance in your private subnet by using its private IP address as shown in the following example.
+
+   ```
+   ssh ec2-user@{{10.0.1.123}}
+   ```
+
+1. From your private instance, test that you can connect to the internet by running the `ping` command for a website that has ICMP enabled.
+
+   ```
+   ping ietf.org
+   ```
+
+   ```

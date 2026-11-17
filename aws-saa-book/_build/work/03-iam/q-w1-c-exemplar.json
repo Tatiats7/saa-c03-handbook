@@ -1,0 +1,149 @@
+[
+  {
+   "id": "iam-q005",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.S3"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "sts"],
+   "concept": "role-for-ec2-vs-roles-anywhere",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an order-processing application on servers in the company's data center. The application reads and writes objects in an Amazon S3 bucket. Company policy requires that no long-term credentials are stored where the application runs. The company also runs a private certificate authority that issues certificates to its servers. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["servers in the company's data center", "no long-term credentials are stored", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Attach an IAM role through an instance profile, and let the AWS SDK load the temporary credentials from the instance metadata.",
+     "correct": false,
+     "why": "Instance profiles and instance metadata belong to Amazon EC2 instances. Servers in a data center are not EC2 instances, so no credentials arrive.",
+     "concept": "instance-profile",
+     "trap": null,
+     "misconception": "believes that an instance profile works for servers outside Amazon EC2",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Use IAM Roles Anywhere with certificates from the private certificate authority, and exchange each certificate for temporary role credentials.",
+     "correct": true,
+     "why": "IAM Roles Anywhere [extends the capabilities of IAM to on-premises and hybrid cloud workloads](../facts/iam.md#iam-roles-anywhere-for-on-premises-and-hybrid-workloads), and the company already has the certificate authority.",
+     "concept": "roles-anywhere",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create an IAM user for the application, store its access key in an encrypted file where the application runs, and rotate it monthly.",
+     "correct": false,
+     "why": "Access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), so a stored key breaks the company policy, even when it is encrypted.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Move the application to new Amazon EC2 instances, and attach an IAM role to the new instances through an instance profile.",
+     "correct": false,
+     "why": "It works, but a migration to Amazon EC2 is far more work than using the certificate authority that the company already runs.",
+     "concept": "migrate-to-ec2",
+     "trap": null,
+     "misconception": "moves a workload to solve a credentials problem",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The servers are outside AWS, so the instance profile path does not exist for them. Workloads outside AWS [can still use temporary credentials](../facts/iam.md#iam-best-practice-workloads-outside-aws-temporary-credentials), and IAM Roles Anywhere delivers them in exchange for a certificate. No key is stored, and the company already runs the certificate authority.",
+   "takeaway": "Servers outside AWS get role credentials through IAM Roles Anywhere and a certificate.",
+   "twin": "If the stem said \"Amazon EC2 instances in one AWS Region\" instead: an IAM role through an instance profile, because [AWS delivers the temporary credentials of an IAM role to that compute resource](../facts/iam.md#iam-compute-services-receive-role-credentials-no-keys-needed).",
+   "say": null,
+   "facts": [
+    "iam-roles-anywhere-for-on-premises-and-hybrid-workloads",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-best-practice-workloads-outside-aws-temporary-credentials",
+    "iam-compute-services-receive-role-credentials-no-keys-needed"
+   ],
+   "sources": [],
+   "exam_english": ["ee-least-operational-overhead", "ee-mandates", "ee-on-premises"],
+   "twin_of": "iam-q001"
+  },
+  {
+   "id": "iam-q007",
+   "section": "2-deep.md#same-account-access-needs-one-allow-but-cross-account-access-needs-two",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.S2"],
+   "topics": ["identity", "security", "storage"],
+   "services": ["iam", "s3"],
+   "concept": "group-not-principal",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company stores reports in an Amazon S3 bucket. Analysts sign in to the same AWS account and belong to an IAM group named analysts. A developer adds a statement to the bucket policy that names the ARN of the analysts group as the principal and allows s3:GetObject on the report objects. The statement does not give the analysts access to the reports. What should the developer name as the principal instead?",
+   "keywords": ["names the ARN of the analysts group as the principal", "the same AWS account"],
+   "options": [
+    {
+     "id": "a",
+     "text": "An IAM role that the analysts assume",
+     "correct": true,
+     "why": "A bucket policy can name a role: [you must indicate the account, user, role, or AWS STS federated user principal](../facts/iam.md#iam-principal-element-resource-policy-not-identity-policy).",
+     "concept": "role-as-principal",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "The name of the analysts group instead of its ARN",
+     "correct": false,
+     "why": "The form of the name changes nothing, because you [cannot identify a user group as a principal](../facts/iam.md#iam-principal-group-cannot-be-principal).",
+     "concept": "group-name-as-principal",
+     "trap": "iam-trap-group-as-principal",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "A permissions boundary that is set on the analysts group",
+     "correct": false,
+     "why": "A boundary is not a principal, and it [does not provide permissions on its own](../facts/iam.md#iam-boundary-limits-but-never-grants).",
+     "concept": "boundary-as-principal",
+     "trap": "iam-trap-scp-grants",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "The access key ID of each analyst's IAM user",
+     "correct": false,
+     "why": "An access key ID is a credential, not a principal: [you must indicate the account, user, role, or AWS STS federated user principal](../facts/iam.md#iam-principal-element-resource-policy-not-identity-policy).",
+     "concept": "access-key-as-principal",
+     "trap": null,
+     "misconception": "confuses a credential with the principal that holds it",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "In a bucket policy, [you must indicate the account, user, role, or AWS STS federated user principal](../facts/iam.md#iam-principal-element-resource-policy-not-identity-policy), and you [cannot identify a user group as a principal](../facts/iam.md#iam-principal-group-cannot-be-principal). A role that the analysts assume is a valid principal. In one account, [the permissions of identity-based and resource-based policies are a union](../facts/iam.md#iam-eval-same-account-identity-or-resource-allow), so the bucket policy can give the role the read.",
+   "takeaway": "A bucket policy names a role or a user as the principal, not an IAM group.",
+   "twin": "If the stem said \"the analysts sign in to another AWS account\" instead: the role also needs its own allow, because the [identity-based policy in the trusted account must allow the access](../facts/iam.md#iam-eval-cross-account-needs-both-policies).",
+   "say": null,
+   "facts": [
+    "iam-principal-element-resource-policy-not-identity-policy",
+    "iam-principal-group-cannot-be-principal",
+    "iam-eval-same-account-identity-or-resource-allow",
+    "iam-boundary-limits-but-never-grants",
+    "iam-eval-cross-account-needs-both-policies"
+   ],
+   "sources": [],
+   "exam_english": [],
+   "twin_of": null
+  }
+]

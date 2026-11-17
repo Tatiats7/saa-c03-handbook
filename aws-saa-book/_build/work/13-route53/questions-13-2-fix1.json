@@ -1,0 +1,272 @@
+[
+ {
+  "id": "route53-q002",
+  "section": "2-deep.md#an-alias-record-follows-the-changing-addresses-of-the-aws-resource-it-names",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.K7"
+  ],
+  "topics": [
+   "networking",
+   "cost"
+  ],
+  "services": [
+   "route53",
+   "elb",
+   "lambda"
+  ],
+  "concept": "alias-follows-load-balancer-addresses",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a web application on Amazon EC2 instances behind an Application Load Balancer. In the Route 53 public hosted zone, app.example.com is an A record that holds the IP addresses of the load balancer. An engineer copied the addresses when the load balancer was created. Users now report intermittent connection errors, mostly after traffic peaks. The company wants to stop the errors. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "holds the IP addresses of the load balancer",
+   "intermittent connection errors, mostly after traffic peaks",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Replace the A record with a CNAME record for app.example.com whose value is the DNS name that AWS assigned to the Application Load Balancer.",
+    "correct": false,
+    "why": "It works, because the name follows the load balancer, but Route 53 [charges for CNAME queries](../facts/route53.md#route53-alias-queries-free-cname-charged), so it costs more than an alias record.",
+    "concept": "cname-to-load-balancer-subdomain",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Create a scheduled AWS Lambda function that reads the current load balancer addresses every minute and writes them into the A record for app.example.com.",
+    "correct": false,
+    "why": "The function adds cost, and resolvers keep the old addresses [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control) after each rewrite.",
+    "concept": "script-rewrites-a-record",
+    "trap": null,
+    "misconception": "believes that rewriting the record every minute keeps every user on the current addresses",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Associate Elastic IP addresses with the Application Load Balancer, and replace the values of the A record for app.example.com with those Elastic IP addresses.",
+    "correct": false,
+    "why": "Elastic IP addresses do not attach to an Application Load Balancer: in the feature table, [IP address - Static, Elastic](../facts/elb.md#elb-compare-static-elastic-ip-nlb-only) belongs to the [Network Load Balancer](../facts/elb.md#elb-compare-static-elastic-ip-nlb-only).",
+    "concept": "elastic-ip-on-alb",
+    "trap": "elb-trap-alb-static-ip",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Replace the A record with an alias record of type A for app.example.com that points to the Application Load Balancer.",
+    "correct": true,
+    "why": "Route 53 follows the address changes of the load balancer for an alias record, and Amazon Route 53 [doesn't charge for alias queries to ELB](../facts/route53.md#route53-alias-elb-no-query-charge) load balancers.",
+    "concept": "alias-record-for-load-balancer",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Elastic Load Balancing scales the load balancer and updates its DNS entry with a [time-to-live (TTL) of 60 seconds](../facts/route53.md#route53-elb-dns-entry-updated-ttl-60), so copied addresses go stale after peaks. With an alias record, [Route 53 detects changes in the resource on its own](../facts/route53.md#route53-alias-follows-resource-ip-changes) and answers with the current addresses.",
+  "takeaway": "Point a name at a load balancer with an alias record: Route 53 follows its changing addresses at no query charge.",
+  "twin": "If the stem said \"app.example.com must point to a host name of a partner outside AWS\" instead: a CNAME record, because an alias record [can only redirect queries to selected AWS resources](../facts/route53.md#route53-alias-targets-only-selected-aws-resources).",
+  "say": null,
+  "facts": [
+   "route53-elb-dns-entry-updated-ttl-60",
+   "route53-alias-follows-resource-ip-changes",
+   "route53-alias-queries-free-cname-charged",
+   "route53-faq-resolver-caches-by-ttl-outside-control",
+   "elb-compare-static-elastic-ip-nlb-only",
+   "route53-alias-elb-no-query-charge",
+   "route53-alias-targets-only-selected-aws-resources"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-intermittent",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "route53-q010",
+  "section": "2-deep.md#weighted-records-give-each-resource-its-share-of-the-total-weight",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.S1"
+  ],
+  "topics": [
+   "networking",
+   "resilience"
+  ],
+  "services": [
+   "route53",
+   "elb",
+   "ec2"
+  ],
+  "concept": "multivalue-vs-load-balancer",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a TCP service on six Amazon EC2 instances across two Availability Zones in one Region. Clients connect to service.example.com, which is in a Route 53 public hosted zone. New connections must be spread evenly across the healthy instances. When an instance fails, it must stop receiving new connections at once, also from clients that cached a DNS answer earlier. Which solution will provide a highly available design with the LEAST operational overhead?",
+  "keywords": [
+   "spread evenly across the healthy instances",
+   "also from clients that cached a DNS answer earlier",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a multivalue answer record for each instance under service.example.com, and associate a Route 53 health check with each of the six records.",
+    "correct": false,
+    "why": "Multivalue answer routing [returns only values for healthy resources](../facts/route53.md#route53-multivalue-purpose-not-lb-substitute), but AWS says [this isn't a substitute for a load balancer](../facts/route53.md#route53-multivalue-purpose-not-lb-substitute): cached answers keep a failed address.",
+    "concept": "multivalue-answer-records",
+    "trap": "route53-trap-multivalue-is-load-balancer",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Run open-source proxy software on two EC2 instances in different Availability Zones to spread connections and check the six instances, with a record for each proxy.",
+    "correct": false,
+    "why": "It works, but the proxy instances are software that the team patches, scales and monitors, which a managed load balancer avoids.",
+    "concept": "self-managed-proxy",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Create a Network Load Balancer with the six instances as targets in both Availability Zones, and an alias record for service.example.com that points to it.",
+    "correct": true,
+    "why": "Clients reach the instances through the load balancer: when an instance fails, [it stops routing traffic to that target](../facts/elb.md#elb-unhealthy-target-stop-resume), whatever the clients cached.",
+    "concept": "nlb-with-alias-record",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create one simple A record for service.example.com that lists the IP addresses of all six instances, so that each client picks one address at random.",
+    "correct": false,
+    "why": "Route 53 returns the values [to the recursive resolver in random order](../facts/route53.md#route53-simple-routing-multiple-values-random-order-no-health-check), and [they are not health checked](../facts/route53.md#route53-simple-routing-multiple-values-random-order-no-health-check), so clients keep picking failed instances.",
+    "concept": "simple-record-many-values",
+    "trap": null,
+    "misconception": "believes that Route 53 leaves failed addresses out of a simple record with several values",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "A Network Load Balancer spreads TCP connections across healthy targets, and when a target fails, [it stops routing traffic to that target](../facts/elb.md#elb-unhealthy-target-stop-resume). Clients connect to the load balancer, so an answer that a resolver cached [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control) still leads to healthy instances.",
+  "takeaway": "Multivalue answer routing is not a load balancer; to take failed instances out at once, use Elastic Load Balancing.",
+  "twin": "If the stem said \"clients need several healthy addresses and the company wants no load balancer\" instead: multivalue answer records, because they return [up to eight healthy records](../facts/route53.md#route53-multivalue-up-to-eight-healthy).",
+  "say": null,
+  "facts": [
+   "elb-unhealthy-target-stop-resume",
+   "route53-faq-resolver-caches-by-ttl-outside-control",
+   "route53-multivalue-purpose-not-lb-substitute",
+   "route53-simple-routing-multiple-values-random-order-no-health-check",
+   "route53-multivalue-up-to-eight-healthy"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-highly-available",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "route53-q022",
+  "section": "2-deep.md#a-private-hosted-zone-answers-only-through-the-vpc-resolver-of-its-associated-vpcs",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.S1"
+  ],
+  "topics": [
+   "networking"
+  ],
+  "services": [
+   "route53",
+   "vpc"
+  ],
+  "concept": "private-zone-cross-account-association",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company uses a shared-services account to centrally manage a private hosted zone named internal.example.com. One VPC in a separate workload account must resolve the records of that zone, and the records must stay private. In the Route 53 console of the shared-services account, an engineer tries to associate the zone with the workload VPC but cannot find the VPC. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "One VPC in a separate workload account",
+   "the records must stay private",
+   "cannot find the VPC",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a VPC peering connection between a VPC in the shared-services account and the workload VPC, so that the workload VPC can query the private hosted zone.",
+    "correct": false,
+    "why": "A private hosted zone will [only return these records when queried from within](../facts/route53.md#route53-faq-private-zone-answers-only-from-associated-vpcs) associated VPCs, and peering associates nothing.",
+    "concept": "peering-for-private-zone",
+    "trap": null,
+    "misconception": "believes that a network path to a VPC of the zone's account lets another VPC use the private hosted zone",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Authorize the association from the shared-services account with the AWS CLI, associate the VPC with the zone from the workload account, and then delete the authorization.",
+    "correct": true,
+    "why": "The two steps connect the VPC directly to the zone, and deleting the authorization later [does not affect the association](../facts/route53.md#route53-cross-account-delete-authorization-recommended).",
+    "concept": "cross-account-authorize-and-associate",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Create a copy of the private hosted zone in the workload account, associate the copy with the workload VPC, and sync the records with a scheduled script.",
+    "correct": false,
+    "why": "It works, but a second zone and a sync script are more to run than one association, and the two copies can drift apart.",
+    "concept": "copy-zone-per-account",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Replace the private hosted zone with a public hosted zone that has the same records, so that the workload VPC can resolve the names without an association.",
+    "correct": false,
+    "why": "A public hosted zone answers queries from anyone on the internet, which breaks the requirement that the records stay private.",
+    "concept": "public-zone-instead",
+    "trap": null,
+    "misconception": "believes that a public hosted zone is a good way to share internal names between accounts",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "For a VPC of another account, [you first must authorize the association](../facts/route53.md#route53-cross-account-association-needs-authorization-no-console), and [you can't use the AWS console](../facts/route53.md#route53-cross-account-association-needs-authorization-no-console) for it, which is why the VPC is missing. [Using the account that created the hosted zone](../facts/route53.md#route53-cross-account-auth-by-hosted-zone-account), you authorize. [Using the account that created the VPC, associate](../facts/route53.md#route53-cross-account-auth-by-hosted-zone-account) the VPC with the zone.",
+  "takeaway": "A private hosted zone and a VPC in different accounts need an authorization, then an association, through the CLI or API.",
+  "twin": "If the stem said \"the workload VPC is in the shared-services account\" instead: associate the VPC in the console, because [you first must authorize the association](../facts/route53.md#route53-cross-account-association-needs-authorization-no-console) only for a VPC of another account.",
+  "say": null,
+  "facts": [
+   "route53-cross-account-association-needs-authorization-no-console",
+   "route53-cross-account-auth-by-hosted-zone-account",
+   "route53-faq-private-zone-answers-only-from-associated-vpcs",
+   "route53-cross-account-delete-authorization-recommended"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-centrally-manage"
+  ],
+  "twin_of": null
+ }
+]

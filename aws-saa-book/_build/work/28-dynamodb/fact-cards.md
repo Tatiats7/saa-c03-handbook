@@ -1,0 +1,3494 @@
+facts card: 707 facts
+dax-api-compatible-minimal-changes
+  claim: DAX is a managed service that is API-compatible with DynamoDB, so it requires only minimal functional changes to use with an existing application. It supports applications written in Go, Java, Node.js, Python and .NET using AWS-provided clients.
+  scope: DAX integration; clients are AWS-provided for each language.
+  link: [API-compatible with DynamoDB](../facts/dax.md#dax-api-compatible-minimal-changes)
+  link: [only minimal functional changes](../facts/dax.md#dax-api-compatible-minimal-changes)
+  link: [Go, Java, Node.js, Python, and .NET](../facts/dax.md#dax-api-compatible-minimal-changes)
+  say: API-compatible with DynamoDB | only minimal functional changes | Go, Java, Node.js, Python and .NET
+dax-bulk-writes-reduce-read-cache-effectiveness
+  claim: When you write large amounts of data through DAX, it must invoke its LRU algorithm to make room in the cache for the new items, which diminishes the effectiveness of DAX as a read cache.
+  scope: per cluster.
+  link: [diminishes the effectiveness of DAX](../facts/dax.md#dax-bulk-writes-reduce-read-cache-effectiveness)
+  link: [write large amounts of data through DAX](../facts/dax.md#dax-bulk-writes-reduce-read-cache-effectiveness)
+dax-bypass-causes-inconsistent-values
+  claim: If an item is still in the DAX item cache and someone else updates it directly in DynamoDB, bypassing DAX, DAX and DynamoDB hold inconsistent values for the same key until the TTL for the DAX item expires. An application that modifies data in the table and bypasses DAX needs to anticipate and tolerate these inconsistencies.
+  scope: per cached item; the item is in the DAX item cache when it is updated directly in DynamoDB.
+  link: [hold inconsistent values for the same key](../facts/dax.md#dax-bypass-causes-inconsistent-values)
+  link: [until the TTL for the DAX item expires](../facts/dax.md#dax-bypass-causes-inconsistent-values)
+dax-cache-miss-reads-dynamodb-and-fills-cache
+  claim: On a cache miss for an eventually consistent GetItem, DAX sends the request to DynamoDB, stores the returned item in the item cache and returns it to the application.
+  scope: per request.
+  link: [DAX sends the request to DynamoDB](../facts/dax.md#dax-cache-miss-reads-dynamodb-and-fills-cache)
+  link: [DAX stores them in the item cache](../facts/dax.md#dax-cache-miss-reads-dynamodb-and-fills-cache)
+dax-can-subvert-dynamodb-iam-policies
+  claim: If you use IAM roles and policies to restrict access to DynamoDB table data, the use of DAX can subvert those policies.
+  scope: per cluster.
+  link: [use of DAX can **subvert** those policies](../facts/dax.md#dax-can-subvert-dynamodb-iam-policies)
+  link: [restrict access to DynamoDB tables data](../facts/dax.md#dax-can-subvert-dynamodb-iam-policies)
+dax-change-privatelink-2025-10
+  claim: On October 30, 2025 the guide added AWS PrivateLink support for DynamoDB Accelerator (DAX) in commercial and China Regions, for private connectivity to the DAX control plane endpoints within the same Region.
+  scope: DAX management API endpoints; commercial and China Regions.
+  link: [October 30, 2025](../facts/dax.md#dax-change-privatelink-2025-10)
+  link: [DAX control plane endpoints](../facts/dax.md#dax-change-privatelink-2025-10)
+  say: October thirtieth, twenty twenty-five | DAX control plane endpoints
+dax-change-r7i-instances-2025-04
+  claim: On April 29, 2025 AWS added support for r7i instance types in DAX, expanding the instance type options.
+  scope: DAX node types.
+  link: [April 29, 2025](../facts/dax.md#dax-change-r7i-instances-2025-04)
+  say: April twenty-ninth, twenty twenty-five
+dax-client-routes-requests-to-cluster
+  claim: At runtime, the DAX client directs all of your application's DynamoDB API requests to the DAX cluster; DAX answers the ones it can process directly and passes the rest through to DynamoDB.
+  scope: per request.
+  link: [directs all of your application's DynamoDB API requests](../facts/dax.md#dax-client-routes-requests-to-cluster)
+  link: [passes the request through to DynamoDB](../facts/dax.md#dax-client-routes-requests-to-cluster)
+dax-clients-may-read-different-values-by-node
+  claim: Two clients can read the same key from the same DAX cluster but receive different values, depending on the node each client accessed.
+  scope: per cluster.
+  link: [receive different values, depending on the node](../facts/dax.md#dax-clients-may-read-different-values-by-node)
+  link: [two clients to read the same key](../facts/dax.md#dax-clients-may-read-different-values-by-node)
+dax-cluster-needs-iam-service-role
+  claim: When you create a DAX cluster, you must associate the cluster with an IAM role, which is known as the service role for the cluster.
+  scope: per cluster.
+  link: [must associate the cluster with an IAM role](../facts/dax.md#dax-cluster-needs-iam-service-role)
+  link: [service role](../facts/dax.md#dax-cluster-needs-iam-service-role)
+dax-cluster-node-count
+  claim: A DAX cluster consists of exactly one primary node and between zero and ten read replica nodes.
+  scope: per DAX cluster; maximum; not adjustable; one primary plus zero to ten read replicas, so 11 nodes at most.
+  link: [exactly one primary node](../facts/dax.md#dax-cluster-node-count)
+  link: [between zero and ten read replica nodes](../facts/dax.md#dax-cluster-node-count)
+dax-cluster-up-to-11-nodes
+  claim: A DAX cluster can support up to 11 nodes per cluster: the primary node plus a maximum of 10 read replicas.
+  scope: per DAX cluster; maximum; not adjustable; one primary plus a maximum of 10 read replicas.
+  link: [up to 11 nodes per cluster](../facts/dax.md#dax-cluster-up-to-11-nodes)
+dax-compliance-no-soc-yet
+  claim: DAX does not currently offer the same compliance accreditations as DynamoDB; for example DAX has not obtained the SOC accreditation yet.
+  scope: DAX compliance; this is current text and may change.
+  link: [DAX hasn't obtained the SOC accreditation yet](../facts/dax.md#dax-compliance-no-soc-yet)
+  say: DAX has no SOC accreditation yet
+dax-cost-reduction-high-hit-rate
+  claim: With a high cache hit rate, the reduced table read cost can exceed the cost of a DAX cluster, which results in a net cost reduction.
+  scope: DAX cost; needs a high cache hit rate.
+  link: [a net cost reduction](../facts/dax.md#dax-cost-reduction-high-hit-rate)
+  say: a net cost reduction
+dax-default-ttl-5-minutes-both-caches
+  claim: The default TTL for each of the DAX caches (item cache and query cache) is 5 minutes. You can use a custom parameter group to set different TTL settings.
+  scope: per DAX cluster, item cache and query cache; default; adjustable; change it by launching the cluster with a custom parameter group.
+  link: [5 minutes](../facts/dax.md#dax-default-ttl-5-minutes-both-caches)
+dax-encryption-at-rest-aes-256
+  claim: With DAX encryption at rest, the data persisted by DAX on disk is encrypted using 256-bit Advanced Encryption Standard (AES-256).
+  scope: per cluster.
+  link: [256-bit Advanced Encryption Standard](../facts/dax.md#dax-encryption-at-rest-aes-256)
+  link: [AES-256](../facts/dax.md#dax-encryption-at-rest-aes-256)
+dax-encryption-at-rest-aws-managed-key
+  claim: When creating a new DAX cluster with encryption at rest enabled, an AWS managed key is used to encrypt data at rest in the cluster.
+  scope: per cluster.
+  link: [AWS managed key will be used to encrypt](../facts/dax.md#dax-encryption-at-rest-aws-managed-key)
+  link: [new DAX cluster with encryption at rest enabled](../facts/dax.md#dax-encryption-at-rest-aws-managed-key)
+dax-encryption-at-rest-no-customer-keys
+  claim: DAX encryption at rest does not support customer-specified AWS KMS keys.
+  scope: per cluster.
+  link: [Customer-specified AWS KMS keys are not supported](../facts/dax.md#dax-encryption-at-rest-no-customer-keys)
+  link: [Customer-specified AWS KMS keys](../facts/dax.md#dax-encryption-at-rest-no-customer-keys)
+dax-encryption-in-transit-not-on-existing-cluster
+  claim: Encryption in transit cannot be enabled on an existing DAX cluster.
+  scope: per cluster.
+  link: [cannot be enabled on an existing DAX cluster](../facts/dax.md#dax-encryption-in-transit-not-on-existing-cluster)
+  link: [existing DAX cluster](../facts/dax.md#dax-encryption-in-transit-not-on-existing-cluster)
+dax-encryption-in-transit-rejects-unencrypted
+  claim: Clusters that use encryption in transit do not support unencrypted traffic, so there is no chance to misconfigure your application and bypass encryption.
+  scope: per cluster.
+  link: [do not support unencrypted traffic](../facts/dax.md#dax-encryption-in-transit-rejects-unencrypted)
+  link: [no chance to misconfigure your application](../facts/dax.md#dax-encryption-in-transit-rejects-unencrypted)
+dax-eventually-consistent-microsecond-latency
+  claim: DAX provides access to eventually consistent data from DynamoDB tables with microsecond latency, and a Multi-AZ DAX cluster can serve millions of requests per second.
+  scope: DAX item cache reads.
+  link: [with microsecond latency](../facts/dax.md#dax-eventually-consistent-microsecond-latency)
+  link: [eventually consistent data](../facts/dax.md#dax-eventually-consistent-microsecond-latency)
+  say: microsecond latency | eventually consistent data
+dax-faq-extra-cost-option-in-memory-cache
+  claim: DynamoDB Accelerator (DAX) is an Amazon DynamoDB-compatible caching service that reduces latency through an in-memory cache. The FAQ lists it among the options that can be added to the service.
+  scope: DAX; listed among the extra cost options in the FAQ.
+  link: [reduces latency through in-memory cache](../facts/dax.md#dax-faq-extra-cost-option-in-memory-cache)
+dax-faq-fully-managed-caching-microseconds
+  claim: For use cases that need response times in microseconds, DynamoDB integrates with DAX, a fully managed, highly available caching service built for DynamoDB.
+  scope: DynamoDB in-memory acceleration.
+  link: [fully managed, highly available caching service](../facts/dax.md#dax-faq-fully-managed-caching-microseconds)
+dax-faq-microsecond-cache-10x
+  claim: DAX is a fully managed, highly available caching service built for DynamoDB. It delivers up to a 10 times performance improvement, from milliseconds to microseconds, even at millions of requests per second.
+  scope: DAX in front of DynamoDB; maximum; stated as 'up to'; from milliseconds to microseconds.
+  link: [up to a 10 times performance improvement](../facts/dax.md#dax-faq-microsecond-cache-10x)
+  say: up to ten times faster
+dax-fewer-than-three-nodes-not-fault-tolerant
+  claim: One-node and two-node DAX clusters are not fault-tolerant, and AWS does not recommend using fewer than three nodes for production use.
+  scope: per cluster.
+  link: [One-node and two-node clusters are not fault-tolerant](../facts/dax.md#dax-fewer-than-three-nodes-not-fault-tolerant)
+  link: [fewer than three nodes for production use](../facts/dax.md#dax-fewer-than-three-nodes-not-fault-tolerant)
+dax-iam-policy-needs-dax-actions
+  claim: To allow access to a DAX cluster, you must include DAX-specific actions in an IAM policy.
+  scope: per IAM policy.
+  link: [include DAX-specific actions in an IAM policy](../facts/dax.md#dax-iam-policy-needs-dax-actions)
+  link: [access to a DAX cluster](../facts/dax.md#dax-iam-policy-needs-dax-actions)
+dax-ideal-fastest-reads-hot-keys
+  claim: DAX is described as ideal for applications that need the fastest possible read response time and for applications that read a small number of items more frequently than others, such as a hot key during a one-day sale.
+  scope: DAX use cases.
+  link: [require the fastest possible response time for reads](../facts/dax.md#dax-ideal-fastest-reads-hot-keys)
+  link: [read a small number of items more frequently](../facts/dax.md#dax-ideal-fastest-reads-hot-keys)
+  say: the fastest possible read response time | a few items read much more often than others
+dax-is-write-through-cache
+  claim: DAX is a write-through caching service designed to simplify adding a cache to DynamoDB tables.
+  scope: DAX.
+  link: [write-through caching service](../facts/dax.md#dax-is-write-through-cache)
+  say: a write-through caching service
+dax-item-cache-getitem-batchgetitem
+  claim: DAX maintains an item cache to store the results from GetItem and BatchGetItem operations, and the items in the cache represent eventually consistent data from DynamoDB.
+  scope: per cluster.
+  link: [item cache](../facts/dax.md#dax-item-cache-getitem-batchgetitem)
+  link: [eventually consistent data from DynamoDB](../facts/dax.md#dax-item-cache-getitem-batchgetitem)
+dax-larger-node-type-needs-new-cluster
+  claim: To use a larger DAX node type you must create a new cluster with the new node type.
+  scope: per cluster.
+  link: [a new cluster with the new node type](../facts/dax.md#dax-larger-node-type-needs-new-cluster)
+  link: [Larger node types provide more capacity](../facts/dax.md#dax-larger-node-type-needs-new-cluster)
+dax-low-cache-hit-cold-data-not-worth-it
+  claim: If an application accesses data infrequently or reads a wide range of rarely reused (cold) data, it will likely see a low DAX cache hit ratio, and the overhead of maintaining the cache might not justify the performance gains.
+  scope: DAX suitability.
+  link: [might not justify the performance gains](../facts/dax.md#dax-low-cache-hit-cold-data-not-worth-it)
+  say: cache overhead may not be worth the gain
+dax-lru-evicts-before-expiry
+  claim: If the DAX item cache becomes full, DAX evicts older items, even if they have not expired yet, to make room for new items.
+  scope: per cluster.
+  link: [evicts older items](../facts/dax.md#dax-lru-evicts-before-expiry)
+  link: [If the item cache becomes full](../facts/dax.md#dax-lru-evicts-before-expiry)
+dax-modest-needs-use-dynamodb-alone
+  claim: For applications with modest performance requirements, adding DAX might not be necessary, because DynamoDB on its own handles high throughput and provides single-digit millisecond performance.
+  scope: DAX suitability.
+  link: [single-digit millisecond performance](../facts/dax.md#dax-modest-needs-use-dynamodb-alone)
+  say: single-digit millisecond performance
+dax-negative-caching
+  claim: DAX supports negative cache entries in both the item cache and the query cache: when it can't find requested items in the DynamoDB table, it caches an empty result instead of generating an error.
+  scope: per cluster.
+  link: [negative cache entries](../facts/dax.md#dax-negative-caching)
+  link: [DAX caches an empty result](../facts/dax.md#dax-negative-caching)
+dax-no-auto-refresh-after-direct-write
+  claim: DAX does not automatically refresh its item cache in response to updates made through DynamoDB.
+  scope: per item.
+  link: [does not automatically refresh its item cache](../facts/dax.md#dax-no-auto-refresh-after-direct-write)
+  link: [updates through DynamoDB](../facts/dax.md#dax-no-auto-refresh-after-direct-write)
+dax-no-cache-invalidation-or-population-needed
+  claim: DAX does the heavy lifting of in-memory acceleration without requiring developers to manage cache invalidation, data population or cluster management. Because DAX is compatible with existing DynamoDB API calls, AWS says no application logic modification is required.
+  scope: DAX product description.
+  link: [without requiring developers to manage cache invalidation](../facts/dax.md#dax-no-cache-invalidation-or-population-needed)
+  link: [no application logic modification is required](../facts/dax.md#dax-no-cache-invalidation-or-population-needed)
+  say: no cache invalidation, data population or cluster management | no application logic change
+dax-no-table-management-operations
+  claim: DAX does not recognize any DynamoDB operations for managing tables, such as CreateTable and UpdateTable, so an application must access DynamoDB directly for them.
+  scope: per request.
+  link: [does not recognize any DynamoDB operations](../facts/dax.md#dax-no-table-management-operations)
+  link: [DAX does not recognize](../facts/dax.md#dax-no-table-management-operations)
+dax-node-replication-eventually-consistent
+  claim: Replication of a DAX update among the nodes of a cluster is eventually consistent and usually takes less than one second to complete.
+  scope: per cluster.
+  link: [usually takes less than one second](../facts/dax.md#dax-node-replication-eventually-consistent)
+  link: [This replication is eventually consistent](../facts/dax.md#dax-node-replication-eventually-consistent)
+dax-nodes-per-account-region
+  claim: The total number of DAX nodes per AWS account cannot exceed 50 in a single AWS Region.
+  scope: per AWS account, per Region; maximum; not adjustable.
+  link: [50](../facts/dax.md#dax-nodes-per-account-region)
+dax-not-ideal-no-microsecond-need-or-repeated-reads
+  claim: DAX is not ideal for applications that do not require microsecond response times for reads or that do not need to offload repeated read activity from the underlying tables.
+  scope: DAX use cases.
+  link: [do not require microsecond response times for reads](../facts/dax.md#dax-not-ideal-no-microsecond-need-or-repeated-reads)
+  say: no microsecond latency requirement
+dax-not-ideal-strong-reads-write-heavy-few-repeats
+  claim: DAX is not ideal for applications that require strongly consistent reads, for write-intensive applications, or for applications without many repeated reads. DAX performs best when cache hit rates exceed 90%.
+  scope: DAX use cases.
+  link: [require strongly consistent reads](../facts/dax.md#dax-not-ideal-strong-reads-write-heavy-few-repeats)
+  link: [Applications that are write-intensive](../facts/dax.md#dax-not-ideal-strong-reads-write-heavy-few-repeats)
+  link: [cache hit rates exceed 90%](../facts/dax.md#dax-not-ideal-strong-reads-write-heavy-few-repeats)
+  say: needs strongly consistent reads | write-intensive applications | a cache hit rate above ninety percent
+dax-parameter-groups-per-region
+  claim: You can create up to 20 DAX parameter groups per Region.
+  scope: per Region; maximum; not adjustable.
+  link: [20 DAX parameter groups](../facts/dax.md#dax-parameter-groups-per-region)
+dax-passes-through-strong-reads-and-transactions
+  claim: DAX passes strongly consistent read requests to DynamoDB and returns the results to the client without caching them, because DAX cannot serve strongly consistent reads by itself.
+  scope: DAX reads.
+  link: [DAX passes strongly consistent read requests to DynamoDB](../facts/dax.md#dax-passes-through-strong-reads-and-transactions)
+  link: [it does not cache the results](../facts/dax.md#dax-passes-through-strong-reads-and-transactions)
+  say: passes strongly consistent reads through to the table | does not cache the result
+dax-pricing-example-t2small-004-node-hour
+  claim: In the pricing example, a three-node DAX cluster of the t2.small instance type is charged $0.12 per hour ($0.04 x 3 nodes).
+  scope: per hour for a three-node t2.small cluster, example Region; price from a pricing example; DAX is billed per node by instance type.
+  link: [$0.12 per hour](../facts/dax.md#dax-pricing-example-t2small-004-node-hour)
+dax-pricing-pay-for-provisioned-capacity
+  claim: Similar to DynamoDB, with DAX you only pay for the capacity you provision.
+  scope: per DAX cluster; node capacity, charged per node-hour by instance type.
+  link: [only pay for the capacity you provision](../facts/dax.md#dax-pricing-pay-for-provisioned-capacity)
+dax-primary-node-and-read-replicas
+  claim: A DAX cluster consists of one or more nodes; one node serves as the primary node and additional nodes serve as read replicas.
+  scope: per cluster.
+  link: [serves as the primary node for the cluster](../facts/dax.md#dax-primary-node-and-read-replicas)
+  link: [serve as read replicas](../facts/dax.md#dax-primary-node-and-read-replicas)
+dax-privatelink-management-apis-same-region
+  claim: AWS PrivateLink for DAX gives private access to the DAX management APIs only (such as CreateCluster, DescribeClusters and DeleteCluster), and a DAX interface endpoint supports access to the management APIs within the same Region only. You are charged for creating and using an interface endpoint to DAX.
+  scope: DAX interface endpoints; management APIs only; the data path to the cluster uses the cluster endpoint inside the VPC.
+  link: [DAX management APIs](../facts/dax.md#dax-privatelink-management-apis-same-region)
+  link: [within the same AWS Region](../facts/dax.md#dax-privatelink-management-apis-same-region)
+  say: DAX management APIs | same-Region only
+dax-production-three-nodes-three-azs
+  claim: Three nodes are required for a DAX cluster to be fault-tolerant.
+  scope: per DAX cluster; minimum; one-node and two-node clusters are not fault-tolerant; use them for development or test only.
+  link: [Three nodes are required](../facts/dax.md#dax-production-three-nodes-three-azs)
+dax-query-cache-query-scan
+  claim: DAX maintains a query cache to store the results from Query and Scan operations, as result sets stored by their parameter values.
+  scope: per cluster.
+  link: [query cache](../facts/dax.md#dax-query-cache-query-scan)
+  link: [stored by their parameter values](../facts/dax.md#dax-query-cache-query-scan)
+dax-query-cache-ttl-zero-not-cached
+  claim: If you specify zero as the query cache TTL setting, the query response will not be cached.
+  scope: per DAX cluster, query cache; TTL set to zero.
+  link: [will not be cached](../facts/dax.md#dax-query-cache-ttl-zero-not-cached)
+dax-replica-failover-to-new-primary
+  claim: In the event of a primary node failure, DAX automatically fails over to a read replica and designates it as the new primary.
+  scope: per cluster.
+  link: [automatically fails over to a read replica](../facts/dax.md#dax-replica-failover-to-new-primary)
+  link: [designates it as the new primary](../facts/dax.md#dax-replica-failover-to-new-primary)
+dax-runs-inside-vpc
+  claim: Amazon DynamoDB Accelerator (DAX) is designed to run within an Amazon Virtual Private Cloud (Amazon VPC) environment.
+  scope: per cluster.
+  link: [run within an Amazon Virtual Private Cloud](../facts/dax.md#dax-runs-inside-vpc)
+  link: [Amazon DynamoDB Accelerator (DAX) is designed to run](../facts/dax.md#dax-runs-inside-vpc)
+dax-same-region-as-tables
+  claim: A DAX cluster in an AWS Region can only interact with DynamoDB tables that are in the same Region.
+  scope: per DAX cluster.
+  link: [tables that are in the same Region](../facts/dax.md#dax-same-region-as-tables)
+dax-scale-by-adding-nodes
+  claim: You can scale a DAX cluster by adding more nodes, which increases the overall read throughput of the cluster.
+  scope: per cluster.
+  link: [increases the overall read throughput of the cluster](../facts/dax.md#dax-scale-by-adding-nodes)
+  link: [adding more nodes to the cluster](../facts/dax.md#dax-scale-by-adding-nodes)
+dax-security-group-port-8111
+  claim: A DAX cluster security group needs an ingress rule for the protocol (TCP) and port number (8111) of the cluster so that applications in the VPC can reach it.
+  scope: per DAX cluster security group; default; not adjustable; ingress rule for TCP.
+  link: [port number (8111)](../facts/dax.md#dax-security-group-port-8111)
+dax-separate-clusters-for-isolation
+  claim: If you require isolation, AWS recommends creating additional DAX clusters and scoping the IAM policy of each cluster accordingly.
+  scope: per cluster.
+  link: [create additional DAX clusters](../facts/dax.md#dax-separate-clusters-for-isolation)
+  link: [If you require isolation](../facts/dax.md#dax-separate-clusters-for-isolation)
+dax-service-role-policy-defines-dynamodb-actions
+  claim: The policy of the DAX service role defines the DynamoDB actions that the DAX cluster can perform on behalf of the users who interact with it.
+  scope: per cluster.
+  link: [define the DynamoDB actions](../facts/dax.md#dax-service-role-policy-defines-dynamodb-actions)
+  link: [on behalf of the users who interact with](../facts/dax.md#dax-service-role-policy-defines-dynamodb-actions)
+dax-single-az-nodes-unavailable-on-az-failure
+  claim: AWS advises against placing all of a DAX cluster's nodes in a single Availability Zone, because the cluster becomes unavailable if that Availability Zone fails.
+  scope: per cluster.
+  link: [becomes unavailable](../facts/dax.md#dax-single-az-nodes-unavailable-on-az-failure)
+  link: [Availability Zone failure](../facts/dax.md#dax-single-az-nodes-unavailable-on-az-failure)
+dax-single-item-reads-beyond-3000-rcu
+  claim: A partition starts throttling reads of one item when it reaches 3,000 RCU, and DAX lets you scale reads of a single item beyond that.
+  scope: per item partition read throttling; maximum.
+  link: [3,000 RCU](../facts/dax.md#dax-single-item-reads-beyond-3000-rcu)
+  say: three thousand read capacity units
+dax-sizing-consumed-rcu-only-cache-misses
+  claim: With a DAX cluster in front of a table, the DynamoDB ConsumedReadCapacityUnits metric only accounts for cache misses.
+  scope: DynamoDB table behind a DAX cluster.
+  link: [only accounts for cache misses](../facts/dax.md#dax-sizing-consumed-rcu-only-cache-misses)
+dax-sizing-typical-hit-rate-85-95
+  claim: Typical cache hit rates for applications using DAX are 85 to 95 percent.
+  scope: typical DAX workload; varies by application and TTL setting.
+  link: [85–95 percent](../facts/dax.md#dax-sizing-typical-hit-rate-85-95)
+dax-subnet-groups-per-region
+  claim: You can create up to 50 DAX subnet groups per Region.
+  scope: per Region; maximum; not adjustable.
+  link: [50 DAX subnet groups](../facts/dax.md#dax-subnet-groups-per-region)
+dax-subnets-per-subnet-group
+  claim: Within a DAX subnet group, you can define up to 20 subnets.
+  scope: per DAX subnet group; maximum; not adjustable.
+  link: [up to 20 subnets](../facts/dax.md#dax-subnets-per-subnet-group)
+dax-supports-transactions-same-isolation
+  claim: TransactWriteItems and TransactGetItems are both supported in DAX with the same isolation levels as in DynamoDB.
+  scope: per request.
+  link: [both supported in DynamoDB Accelerator (DAX)](../facts/dax.md#dax-supports-transactions-same-isolation)
+  link: [same isolation levels as in DynamoDB](../facts/dax.md#dax-supports-transactions-same-isolation)
+dax-tables-per-cluster
+  claim: A DAX cluster supports a maximum of 500 DynamoDB tables. Beyond 500 tables, the cluster might experience degradation in availability and performance.
+  scope: per DAX cluster; maximum; not adjustable; beyond 500 tables availability and performance may degrade.
+  link: [500 DynamoDB tables](../facts/dax.md#dax-tables-per-cluster)
+dax-traffic-stays-in-vpc
+  claim: Regardless of whether you choose encryption in transit, traffic between your application and your DAX cluster remains in your Amazon VPC.
+  scope: per cluster.
+  link: [remains in your Amazon VPC](../facts/dax.md#dax-traffic-stays-in-vpc)
+  link: [between your application and your DAX cluster](../facts/dax.md#dax-traffic-stays-in-vpc)
+dax-transactgetitems-not-cached
+  claim: TransactGetItems calls are passed through DAX without the items being cached locally, which is the same behavior as for strongly consistent read APIs in DAX.
+  scope: per request.
+  link: [without the items being cached locally](../facts/dax.md#dax-transactgetitems-not-cached)
+  link: [strongly consistent read APIs in DAX](../facts/dax.md#dax-transactgetitems-not-cached)
+dax-transactwriteitems-extra-read-capacity
+  claim: To populate the cache after a TransactWriteItems write, DAX calls TransactGetItems in the background for each item, which consumes additional read capacity units.
+  scope: per transaction.
+  link: [consumes additional read capacity units](../facts/dax.md#dax-transactwriteitems-extra-read-capacity)
+  link: [populate the cache after the write](../facts/dax.md#dax-transactwriteitems-extra-read-capacity)
+dax-users-inherit-cluster-policy
+  claim: Users who access a DAX cluster inherit the permissions of the DAX cluster's IAM policy.
+  scope: per cluster.
+  link: [inherit the permissions](../facts/dax.md#dax-users-inherit-cluster-policy)
+  link: [when they access that cluster](../facts/dax.md#dax-users-inherit-cluster-policy)
+dax-vs-elasticache-complex-queries
+  claim: For applications that need complex querying beyond key-value access, AWS names Amazon ElastiCache (Redis OSS) as the alternative to DAX; it supports advanced data structures such as lists, sets and hashes.
+  scope: DAX versus ElastiCache.
+  link: [ElastiCache (Redis OSS) supports advanced data structures](../facts/dax.md#dax-vs-elasticache-complex-queries)
+  say: ElastiCache supports advanced data structures
+dax-write-around-reduces-write-latency
+  claim: If your application is sensitive to write latency, you can reduce the latency by writing directly to DynamoDB instead of through DAX (write-around).
+  scope: per write.
+  link: [writing directly to DynamoDB instead](../facts/dax.md#dax-write-around-reduces-write-latency)
+  link: [sensitive to write latency](../facts/dax.md#dax-write-around-reduces-write-latency)
+dax-write-heavy-limited-benefit
+  claim: If an application is predominantly write-heavy, DAX benefits might be limited, because DAX mainly speeds up reads.
+  scope: DAX suitability.
+  link: [DAX benefits might be limited](../facts/dax.md#dax-write-heavy-limited-benefit)
+  say: DAX benefits might be limited
+dax-write-through-both-table-and-dax
+  claim: For PutItem, UpdateItem, DeleteItem and BatchWriteItem, data is first written to the DynamoDB table and then to the DAX cluster, and the operation is successful only if the data is written to both.
+  scope: per write.
+  link: [first written to the DynamoDB table](../facts/dax.md#dax-write-through-both-table-and-dax)
+  link: [the table and to DAX](../facts/dax.md#dax-write-through-both-table-and-dax)
+dax-write-through-extra-network-hop
+  claim: For applications that are sensitive to latency, writing through DAX incurs an extra network hop.
+  scope: per write.
+  link: [incurs an extra network hop](../facts/dax.md#dax-write-through-extra-network-hop)
+  link: [writing through DAX](../facts/dax.md#dax-write-through-extra-network-hop)
+dynamodb-account-throughput-quota-provisioned
+  claim: The default account-level throughput quota for provisioned tables is 80,000 read capacity units and 80,000 write capacity units. It is not applicable to on-demand mode, and it can be adjusted.
+  scope: per account, per Region; default; adjustable; provisioned capacity mode only.
+  link: [80,000 read capacity units](../facts/dynamodb.md#dynamodb-account-throughput-quota-provisioned)
+  link: [80,000 write capacity units](../facts/dynamodb.md#dynamodb-account-throughput-quota-provisioned)
+dynamodb-adaptive-capacity-automatic-no-cost
+  claim: Adaptive capacity is enabled automatically for every DynamoDB table at no additional cost, and you do not need to explicitly enable or disable it.
+  scope: per table; default; not adjustable.
+  link: [enabled automatically for every DynamoDB table](../facts/dynamodb.md#dynamodb-adaptive-capacity-automatic-no-cost)
+  link: [at no additional cost](../facts/dynamodb.md#dynamodb-adaptive-capacity-automatic-no-cost)
+dynamodb-adaptive-capacity-both-modes
+  claim: Adaptive capacity applies to on-demand mode and to provisioned capacity.
+  scope: per table.
+  link: [on-demand mode and provisioned capacity](../facts/dynamodb.md#dynamodb-adaptive-capacity-both-modes)
+  link: [Adaptive capacity applies to on-demand mode](../facts/dynamodb.md#dynamodb-adaptive-capacity-both-modes)
+dynamodb-adaptive-capacity-hot-partitions-unthrottled
+  claim: Adaptive capacity lets an application keep reading and writing to hot partitions without being throttled, provided that traffic does not exceed the table's total provisioned capacity or the partition maximum capacity.
+  scope: per table; traffic does not exceed the table's total provisioned capacity or the partition maximum.
+  link: [continue reading and writing to hot partitions](../facts/dynamodb.md#dynamodb-adaptive-capacity-hot-partitions-unthrottled)
+  link: [total provisioned capacity or the partition maximum capacity](../facts/dynamodb.md#dynamodb-adaptive-capacity-hot-partitions-unthrottled)
+dynamodb-adaptive-capacity-instant
+  claim: Adaptive capacity works by automatically and instantly increasing throughput capacity for partitions that receive more traffic.
+  scope: per partition.
+  link: [automatically and instantly increasing throughput capacity](../facts/dynamodb.md#dynamodb-adaptive-capacity-instant)
+  link: [partitions that receive more traffic](../facts/dynamodb.md#dynamodb-adaptive-capacity-instant)
+dynamodb-adaptive-capacity-isolates-hot-items
+  claim: If your application drives disproportionately high traffic to one or more items, adaptive capacity rebalances partitions so that frequently accessed items do not reside on the same partition.
+  scope: per table.
+  link: [don't reside on the same partition](../facts/dynamodb.md#dynamodb-adaptive-capacity-isolates-hot-items)
+  link: [rebalances your partitions](../facts/dynamodb.md#dynamodb-adaptive-capacity-isolates-hot-items)
+dynamodb-atomic-counter-not-for-exact-counts
+  claim: An atomic counter is not appropriate where overcounting or undercounting can't be tolerated, such as in a banking application; in that case it is safer to use a conditional update.
+  scope: per item.
+  link: [safer to use a conditional update](../facts/dynamodb.md#dynamodb-atomic-counter-not-for-exact-counts)
+  link: [overcounting or undercounting can't be tolerated](../facts/dynamodb.md#dynamodb-atomic-counter-not-for-exact-counts)
+dynamodb-atomic-counter-not-idempotent
+  claim: With an atomic counter, updates are not idempotent: the numeric value increments or decrements each time you call UpdateItem.
+  scope: per item.
+  link: [the updates are not idempotent](../facts/dynamodb.md#dynamodb-atomic-counter-not-idempotent)
+  link: [increments or decrements each time you call `UpdateItem`](../facts/dynamodb.md#dynamodb-atomic-counter-not-idempotent)
+dynamodb-attributes-condition-key-top-level
+  claim: The IAM condition key dynamodb:Attributes represents a list of the top-level attributes accessed by a request.
+  scope: per IAM condition.
+  link: [`dynamodb:Attributes`](../facts/dynamodb.md#dynamodb-attributes-condition-key-top-level)
+  link: [top-level](../facts/dynamodb.md#dynamodb-attributes-condition-key-top-level)
+dynamodb-autoscaling-console-enabled-by-default
+  claim: If you use the AWS Management Console to create a table or a global secondary index, DynamoDB auto scaling is enabled by default, and you can modify the settings at any time.
+  scope: per table or global secondary index; default; not adjustable; created in the AWS Management Console.
+  link: [DynamoDB auto scaling is enabled by default](../facts/dynamodb.md#dynamodb-autoscaling-console-enabled-by-default)
+  link: [AWS Management Console](../facts/dynamodb.md#dynamodb-autoscaling-console-enabled-by-default)
+dynamodb-autoscaling-new-gsi-not-enabled
+  claim: When you create a GSI for an existing table, auto scaling is not enabled for the GSI, so you manage capacity manually while the GSI is being built.
+  scope: per new GSI on an existing table; until the backfill completes and the GSI is active.
+  link: [auto scaling is not enabled for the GSI](../facts/dynamodb.md#dynamodb-autoscaling-new-gsi-not-enabled)
+dynamodb-autoscaling-not-deleted-with-table
+  claim: When you delete a table or global table replica, any associated scalable targets, scaling policies or CloudWatch alarms are not automatically deleted with it.
+  scope: per table.
+  link: [not automatically deleted with it](../facts/dynamodb.md#dynamodb-autoscaling-not-deleted-with-table)
+  link: [scalable targets, scaling polices, or CloudWatch alarms](../facts/dynamodb.md#dynamodb-autoscaling-not-deleted-with-table)
+dynamodb-autoscaling-policy-min-max
+  claim: A scaling policy specifies whether to scale read capacity or write capacity (or both) and the minimum and maximum provisioned capacity unit settings for the table or index.
+  scope: per scaling policy.
+  link: [minimum and maximum provisioned capacity unit settings](../facts/dynamodb.md#dynamodb-autoscaling-policy-min-max)
+  link: [scale read capacity or write capacity (or both)](../facts/dynamodb.md#dynamodb-autoscaling-policy-min-max)
+dynamodb-autoscaling-scale-down-15-points
+  claim: A scale down event can occur when 15 consecutive data points are lower than the target utilization.
+  scope: per auto scaling policy; fixed; data points are lower than the target utilization.
+  link: [15 consecutive data points](../facts/dynamodb.md#dynamodb-autoscaling-scale-down-15-points)
+dynamodb-autoscaling-supports-gsi-own-capacity
+  claim: DynamoDB auto scaling also supports global secondary indexes, and every global secondary index has its own provisioned throughput capacity, separate from that of its base table.
+  scope: per global secondary index; provisioned capacity mode.
+  link: [supports global secondary indexes](../facts/dynamodb.md#dynamodb-autoscaling-supports-gsi-own-capacity)
+  link: [its own provisioned throughput capacity](../facts/dynamodb.md#dynamodb-autoscaling-supports-gsi-own-capacity)
+dynamodb-autoscaling-target-range
+  claim: You can set the auto scaling target utilization values between 20 and 90 percent for your read and write capacity.
+  scope: per auto scaling policy, for read and for write capacity; maximum; not adjustable; range 20 to 90 percent.
+  link: [between 20 and 90 percent](../facts/dynamodb.md#dynamodb-autoscaling-target-range)
+dynamodb-autoscaling-target-recommended
+  claim: AWS recommends setting the auto scaling target utilization to 70%.
+  scope: per auto scaling policy; default; adjustable; recommendation, not a fixed value.
+  link: [70%](../facts/dynamodb.md#dynamodb-autoscaling-target-recommended)
+dynamodb-autoscaling-target-utilization
+  claim: The scaling policy also contains a target utilization, which is the percentage of consumed provisioned throughput at a point in time.
+  scope: per scaling policy.
+  link: [consumed provisioned throughput at a point in time](../facts/dynamodb.md#dynamodb-autoscaling-target-utilization)
+  link: [target utilization](../facts/dynamodb.md#dynamodb-autoscaling-target-utilization)
+dynamodb-autoscaling-two-consecutive-minutes
+  claim: Auto scaling triggers when consumed capacity breaches the configured target utilization for two consecutive minutes.
+  scope: per table or index.
+  link: [two consecutive minutes](../facts/dynamodb.md#dynamodb-autoscaling-two-consecutive-minutes)
+  link: [breaches the configured target utilization](../facts/dynamodb.md#dynamodb-autoscaling-two-consecutive-minutes)
+dynamodb-autoscaling-update-takes-minutes-throttle
+  claim: After auto scaling triggers, it takes several minutes to update the provisioned capacity, and during this period requests that exceed the previous provisioned capacity are throttled.
+  scope: per table or index; provisioned capacity mode.
+  link: [takes several minutes to update the provisioned capacity](../facts/dynamodb.md#dynamodb-autoscaling-update-takes-minutes-throttle)
+  link: [previous provisioned capacity of the tables are throttled](../facts/dynamodb.md#dynamodb-autoscaling-update-takes-minutes-throttle)
+dynamodb-autoscaling-uses-application-auto-scaling
+  claim: DynamoDB auto scaling uses the AWS Application Auto Scaling service to dynamically adjust provisioned throughput capacity on your behalf in response to actual traffic patterns.
+  scope: per table or global secondary index; provisioned capacity mode.
+  link: [AWS Application Auto Scaling service](../facts/dynamodb.md#dynamodb-autoscaling-uses-application-auto-scaling)
+  link: [adjust provisioned throughput capacity](../facts/dynamodb.md#dynamodb-autoscaling-uses-application-auto-scaling)
+dynamodb-aws-backup-copy-cross-region-account
+  claim: With AWS Backup you can copy DynamoDB on-demand backups across accounts and Regions, and move older backups to cold storage.
+  scope: per backup.
+  link: [copy on-demand backups across accounts and Regions](../facts/dynamodb.md#dynamodb-aws-backup-copy-cross-region-account)
+  link: [transition older backups to cold storage](../facts/dynamodb.md#dynamodb-aws-backup-copy-cross-region-account)
+dynamodb-aws-backup-copy-multiple-accounts-regions
+  claim: With AWS Backup you can copy DynamoDB backups to multiple AWS accounts or AWS Regions on demand or automatically as part of a scheduled backup plan.
+  scope: per backup.
+  link: [copy backups to multiple AWS accounts](../facts/dynamodb.md#dynamodb-aws-backup-copy-multiple-accounts-regions)
+  link: [as part of a scheduled backup plan](../facts/dynamodb.md#dynamodb-aws-backup-copy-multiple-accounts-regions)
+dynamodb-aws-backup-files-not-deletable-in-dynamodb-console
+  claim: You will not be able to delete AWS Backup files from the DynamoDB console.
+  scope: per backup.
+  link: [not be able to delete AWS Backup files](../facts/dynamodb.md#dynamodb-aws-backup-files-not-deletable-in-dynamodb-console)
+  link: [from the DynamoDB console](../facts/dynamodb.md#dynamodb-aws-backup-files-not-deletable-in-dynamodb-console)
+dynamodb-aws-backup-native-integration
+  claim: Amazon DynamoDB is natively integrated with AWS Backup, and you can use AWS Backup to schedule, copy, tag and life cycle your DynamoDB on-demand backups automatically.
+  scope: per backup.
+  link: [natively integrated with AWS Backup](../facts/dynamodb.md#dynamodb-aws-backup-native-integration)
+  link: [schedule, copy, tag and life cycle](../facts/dynamodb.md#dynamodb-aws-backup-native-integration)
+dynamodb-aws-backup-restore-needs-copy-first
+  claim: To restore a backup to another Region or account, you must first copy the backup to that Region or account.
+  scope: per backup.
+  link: [first copy the backup to that Region](../facts/dynamodb.md#dynamodb-aws-backup-restore-needs-copy-first)
+  link: [restore a backup to another Region or account](../facts/dynamodb.md#dynamodb-aws-backup-restore-needs-copy-first)
+dynamodb-aws-backup-vault-lock-worm
+  claim: With AWS Backup Vault Lock you can enable a write-once-read-many (WORM) setting for DynamoDB backups, which protects them from inadvertent or malicious delete operations, changes to backup recovery periods and updates to lifecycle settings.
+  scope: DynamoDB backups in an AWS Backup vault.
+  link: [write-once-read-many (WORM)](../facts/dynamodb.md#dynamodb-aws-backup-vault-lock-worm)
+  link: [protects backups from inadvertent or malicious delete operations](../facts/dynamodb.md#dynamodb-aws-backup-vault-lock-worm)
+  say: write-once-read-many | protects against accidental or malicious deletes
+dynamodb-aws-managed-key-audit-cloudtrail
+  claim: You can view the AWS managed keys in your account, view their key policies, and audit their use in AWS CloudTrail logs, but you cannot manage these KMS keys or change their permissions.
+  scope: per key.
+  link: [audit their use in AWS CloudTrail logs](../facts/dynamodb.md#dynamodb-aws-managed-key-audit-cloudtrail)
+  link: [cannot manage these KMS keys](../facts/dynamodb.md#dynamodb-aws-managed-key-audit-cloudtrail)
+dynamodb-aws-owned-key-no-additional-charge
+  claim: Encryption at rest using the AWS owned key is offered at no additional charge, but AWS KMS charges apply for an AWS managed key and for a customer managed key.
+  scope: per table.
+  link: [offered at no additional charge](../facts/dynamodb.md#dynamodb-aws-owned-key-no-additional-charge)
+  link: [AWS KMS charges apply](../facts/dynamodb.md#dynamodb-aws-owned-key-no-additional-charge)
+dynamodb-aws-owned-key-no-fee
+  claim: You are not charged a monthly fee or a usage fee for AWS owned keys, and they do not count against AWS KMS quotas for your account.
+  scope: DynamoDB encryption at rest.
+  link: [not charged a monthly fee](../facts/dynamodb.md#dynamodb-aws-owned-key-no-fee)
+  say: no monthly or usage fee
+dynamodb-aws-owned-key-not-viewable
+  claim: You cannot view, manage, or use AWS owned keys, or audit their use.
+  scope: per key.
+  link: [cannot view, manage, or use AWS owned keys](../facts/dynamodb.md#dynamodb-aws-owned-key-not-viewable)
+  link: [audit their use](../facts/dynamodb.md#dynamodb-aws-owned-key-not-viewable)
+dynamodb-backup-asynchronous-available-within-minutes
+  claim: When you create an on-demand backup, the backup is created asynchronously by applying all changes until the time of the request to the last full table snapshot, and backup requests are processed instantaneously and become available for restore within minutes.
+  scope: per backup.
+  link: [become available for restore within minutes](../facts/dynamodb.md#dynamodb-backup-asynchronous-available-within-minutes)
+  link: [created asynchronously](../facts/dynamodb.md#dynamodb-backup-asynchronous-available-within-minutes)
+dynamodb-backup-cross-region-restore-native
+  claim: You can restore DynamoDB table data across AWS Regions so that the restored table is created in a different Region from where the backup resides.
+  scope: per restore.
+  link: [created in a different Region](../facts/dynamodb.md#dynamodb-backup-cross-region-restore-native)
+  link: [restore your DynamoDB table data across AWS Regions](../facts/dynamodb.md#dynamodb-backup-cross-region-restore-native)
+dynamodb-backup-full-table-every-time
+  claim: Each time you create an on-demand backup, the entire table data is backed up, and there is no limit to the number of on-demand backups that can be taken.
+  scope: per table.
+  link: [entire table data is backed up](../facts/dynamodb.md#dynamodb-backup-full-table-every-time)
+  link: [no limit to the number of on-demand backups](../facts/dynamodb.md#dynamodb-backup-full-table-every-time)
+dynamodb-backup-no-provisioned-throughput
+  claim: All backups in DynamoDB work without consuming any provisioned throughput on the table.
+  scope: per table.
+  link: [without consuming any provisioned throughput on the table](../facts/dynamodb.md#dynamodb-backup-no-provisioned-throughput)
+  link: [All backups in DynamoDB](../facts/dynamodb.md#dynamodb-backup-no-provisioned-throughput)
+dynamodb-backup-restore-only-to-new-table
+  claim: You can only restore the entire table data to a new table from a backup, and you can write to the restored table only after it becomes active.
+  scope: per restore.
+  link: [entire table data to a new table](../facts/dynamodb.md#dynamodb-backup-restore-only-to-new-table)
+  link: [only after it becomes active](../facts/dynamodb.md#dynamodb-backup-restore-only-to-new-table)
+dynamodb-backup-restore-zero-performance-impact
+  claim: On-demand backup and restore actions run with zero impact on table performance or availability.
+  scope: per table.
+  link: [zero impact on table performance or availability](../facts/dynamodb.md#dynamodb-backup-restore-zero-performance-impact)
+  link: [Backup and restore actions](../facts/dynamodb.md#dynamodb-backup-restore-zero-performance-impact)
+dynamodb-batchget-limits
+  claim: A single BatchGetItem operation can retrieve a maximum of 100 items, and the total size of all the items retrieved cannot exceed 16 MB.
+  scope: per BatchGetItem operation; maximum; not adjustable.
+  link: [100 items](../facts/dynamodb.md#dynamodb-batchget-limits)
+  link: [16 MB](../facts/dynamodb.md#dynamodb-batchget-limits)
+dynamodb-batchwrite-limits
+  claim: A single BatchWriteItem operation can contain up to 25 PutItem or DeleteItem requests, and the total size of all the items written cannot exceed 16 MB.
+  scope: per BatchWriteItem operation; maximum; not adjustable.
+  link: [25 PutItem or DeleteItem requests](../facts/dynamodb.md#dynamodb-batchwrite-limits)
+  link: [16 MB](../facts/dynamodb.md#dynamodb-batchwrite-limits)
+dynamodb-batchwriteitem-no-updateitem
+  claim: BatchWriteItem does not support UpdateItem requests.
+  scope: per request.
+  link: [`BatchWriteItem` does not support `UpdateItem` requests](../facts/dynamodb.md#dynamodb-batchwriteitem-no-updateitem)
+  link: [does not support](../facts/dynamodb.md#dynamodb-batchwriteitem-no-updateitem)
+dynamodb-burst-capacity-handles-spikes
+  claim: With burst capacity, unexpected read or write requests can succeed where they otherwise would be throttled.
+  scope: per table.
+  link: [unexpected read or write requests can succeed](../facts/dynamodb.md#dynamodb-burst-capacity-handles-spikes)
+  link: [burst capacity](../facts/dynamodb.md#dynamodb-burst-capacity-handles-spikes)
+dynamodb-burst-capacity-may-change-not-guaranteed
+  claim: AWS notes that the burst capacity details might change in the future.
+  scope: per table.
+  link: [might change in the future](../facts/dynamodb.md#dynamodb-burst-capacity-may-change-not-guaranteed)
+  link: [these burst capacity details](../facts/dynamodb.md#dynamodb-burst-capacity-may-change-not-guaranteed)
+dynamodb-burst-capacity-retention
+  claim: DynamoDB currently retains up to five minutes (300 seconds) of unused read and write capacity.
+  scope: per table; maximum; not adjustable; the amount DynamoDB currently retains; AWS notes burst details might change.
+  link: [up to five minutes (300 seconds)](../facts/dynamodb.md#dynamodb-burst-capacity-retention)
+  link: [300 seconds](../facts/dynamodb.md#dynamodb-burst-capacity-retention)
+dynamodb-burst-capacity-used-for-maintenance
+  claim: DynamoDB can also consume burst capacity for background maintenance and other tasks without prior notice.
+  scope: per table.
+  link: [background maintenance and other tasks](../facts/dynamodb.md#dynamodb-burst-capacity-used-for-maintenance)
+  link: [without prior notice](../facts/dynamodb.md#dynamodb-burst-capacity-used-for-maintenance)
+dynamodb-capacity-decreases-per-day
+  claim: You start each day with 4 available capacity decreases per table, 1 more becomes available each hour (up to 4 available at any time), and over a full 24-hour day you can decrease up to 27 times.
+  scope: per table, and separately per global secondary index, per UTC day; default; not adjustable; provisioned capacity mode.
+  link: [4 available decreases](../facts/dynamodb.md#dynamodb-capacity-decreases-per-day)
+  link: [27 times](../facts/dynamodb.md#dynamodb-capacity-decreases-per-day)
+dynamodb-capacity-increase-unlimited-frequency
+  claim: You can increase ReadCapacityUnits or WriteCapacityUnits as often as necessary, using the console or the UpdateTable operation.
+  scope: per table; provisioned capacity mode.
+  link: [as often as necessary](../facts/dynamodb.md#dynamodb-capacity-increase-unlimited-frequency)
+dynamodb-capacity-mode-switch-four-per-24h
+  claim: You can switch a table from provisioned to on-demand mode up to four times in a 24-hour rolling window, and from on-demand back to provisioned at any time.
+  scope: per table, provisioned to on-demand switches; maximum; not adjustable; the limit applies to provisioned to on-demand; on-demand to provisioned has no stated limit.
+  link: [up to four times in a 24-hour rolling window](../facts/dynamodb.md#dynamodb-capacity-mode-switch-four-per-24h)
+  link: [at any time](../facts/dynamodb.md#dynamodb-capacity-mode-switch-four-per-24h)
+  say: up to four times in a rolling twenty-four hours | at any time
+dynamodb-case-genesys-99-999-availability-global-tables
+  claim: Genesys says its Genesys Cloud platform achieved 99.999 percent availability for the 12 months ending July 31, 2024, and that it uses DynamoDB global tables to replicate data across AWS Regions and DynamoDB Streams to capture data changes.
+  scope: Genesys case study; customer-reported result for the Genesys Cloud platform, not a DynamoDB SLA.
+  link: [99.999 percent availability for the 12 months ending July 31, 2024](../facts/dynamodb.md#dynamodb-case-genesys-99-999-availability-global-tables)
+  link: [DynamoDB global tables to automatically replicate data](../facts/dynamodb.md#dynamodb-case-genesys-99-999-availability-global-tables)
+  link: [DynamoDB Streams to capture and process data changes](../facts/dynamodb.md#dynamodb-case-genesys-99-999-availability-global-tables)
+  say: five nines availability | global tables | DynamoDB Streams
+dynamodb-case-genesys-dynamodb-standard-no-maintenance-windows
+  claim: Genesys says DynamoDB can grow from zero to virtually any scale with no cold starts, version upgrades, maintenance windows, patching or downtime for maintenance, so its architecture team chose it as the standard for any new microservice that needs single-digit millisecond latency at the data tier.
+  scope: Genesys case study; customer statement of a general DynamoDB property.
+  link: [no cold starts, version upgrades, maintenance windows](../facts/dynamodb.md#dynamodb-case-genesys-dynamodb-standard-no-maintenance-windows)
+  say: no maintenance windows, patching or upgrades
+dynamodb-case-genesys-on-demand-unpredictable-workloads
+  claim: Genesys says Genesys Cloud handles unpredictable workloads efficiently using on-demand capacity mode, a pay-per-request model that accommodates traffic fluctuations without manual intervention.
+  scope: Genesys case study; customer statement.
+  link: [using the on-demand capacity mode in Amazon DynamoDB](../facts/dynamodb.md#dynamodb-case-genesys-on-demand-unpredictable-workloads)
+  say: on-demand capacity mode
+dynamodb-case-ubisoft-90-percent-database-cost
+  claim: Ubisoft's Online Services team says it cut costs for its Online Challenges database by 90 percent after migrating to DynamoDB from a legacy managed database service that could no longer scale without error and was costly to maintain.
+  scope: Ubisoft case study; customer-reported result, not a guarantee.
+  link: [cut costs for its Online Challenges database by 90 percent](../facts/dynamodb.md#dynamodb-case-ubisoft-90-percent-database-cost)
+  link: [legacy managed database service](../facts/dynamodb.md#dynamodb-case-ubisoft-90-percent-database-cost)
+  say: a ninety percent database cost reduction | a legacy managed database service
+dynamodb-case-ubisoft-auto-scaling-provisioned-gsi
+  claim: Ubisoft uses DynamoDB automatic scaling policies so that throughput adjusts when a workload stays elevated or depressed for a sustained period, and uses global secondary indexes to optimize data consumption patterns and costs.
+  scope: Ubisoft case study; customer statement.
+  link: [Using the automatic scaling feature in Amazon DynamoDB](../facts/dynamodb.md#dynamodb-case-ubisoft-auto-scaling-provisioned-gsi)
+  link: [global secondary indexes to optimize data consumption patterns](../facts/dynamodb.md#dynamodb-case-ubisoft-auto-scaling-provisioned-gsi)
+  say: auto scaling policies | global secondary indexes
+dynamodb-case-venmo-90-percent-infrastructure-cost
+  claim: Venmo, a peer-to-peer payments provider, migrated its feed database to Amazon DynamoDB and says it reduced infrastructure costs by 90 percent. The legacy solution had heavy licensing and maintenance costs and a shared cluster in which poor performance in one data stream could affect the others.
+  scope: Venmo case study; customer-reported result, not a guarantee.
+  link: [reduced infrastructure costs by 90 percent](../facts/dynamodb.md#dynamodb-case-venmo-90-percent-infrastructure-cost)
+  link: [migrate its feed database to Amazon DynamoDB](../facts/dynamodb.md#dynamodb-case-venmo-90-percent-infrastructure-cost)
+  say: a ninety percent infrastructure cost reduction | the feed database
+dynamodb-case-venmo-managed-service-no-maintenance
+  claim: Venmo's director of engineering says that because DynamoDB is a managed service the maintenance overhead is taken away; before, Venmo manually tuned infrastructure and patched instances.
+  scope: Venmo case study; customer statement.
+  link: [manually tuning up infrastructure and patching instances](../facts/dynamodb.md#dynamodb-case-venmo-managed-service-no-maintenance)
+  say: no manual tuning or patching
+dynamodb-case-wakelet-small-team-scale
+  claim: Wakelet, a UK-based EdTech startup, says it grew its database operations and volume by more than 1,000 times since 2015 without expanding the small team that managed its infrastructure, and that it reorganized its architecture and data tables to optimize its use of DynamoDB.
+  scope: Wakelet case study; customer-reported result.
+  link: [more than 1,000 times since 2015](../facts/dynamodb.md#dynamodb-case-wakelet-small-team-scale)
+  say: more than a thousand times since 2015
+dynamodb-change-abac-streams-2026-08
+  claim: DynamoDB Streams gained support for attribute-based access control (ABAC), an authorization strategy that simplifies access management by letting you enforce different access levels for multiple teams and applications using fewer IAM policies.
+  scope: DynamoDB Streams; announced after the book's cutoff.
+  link: [an authorization strategy that simplifies access management](../facts/dynamodb.md#dynamodb-change-abac-streams-2026-08)
+  say: ABAC simplifies access management with fewer IAM policies
+dynamodb-change-abac-tables-2024-11
+  claim: On November 18, 2024 DynamoDB introduced attribute-based access control (ABAC), which uses tag-based conditions in IAM policies to allow or deny actions on tables or indexes when the principal's tags match the table's tags.
+  scope: DynamoDB tables and indexes; streams ABAC was announced later, on 2026-08-19, after the book's cutoff.
+  link: [November 18, 2024](../facts/dynamodb.md#dynamodb-change-abac-tables-2024-11)
+  link: [tag-based conditions](../facts/dynamodb.md#dynamodb-change-abac-tables-2024-11)
+  say: November eighteenth, twenty twenty-four | tag-based conditions in IAM policies
+dynamodb-change-capacity-mode-switch-limit-2025-08
+  claim: On August 12, 2025 the limit for switching a table from provisioned to on-demand mode rose from once every 24 hours to four times every 24 hours. Older material and older exam questions may still say once per 24 hours.
+  scope: per table, provisioned to on-demand switches; maximum.
+  link: [August 12, 2025](../facts/dynamodb.md#dynamodb-change-capacity-mode-switch-limit-2025-08)
+  link: [four times every 24 hours](../facts/dynamodb.md#dynamodb-change-capacity-mode-switch-limit-2025-08)
+  link: [once every 24 hours](../facts/dynamodb.md#dynamodb-change-capacity-mode-switch-limit-2025-08)
+  say: August twelfth, twenty twenty-five | four times every twenty-four hours | once every twenty-four hours
+  changed: 2025-08-12: was from once every 24 hours
+dynamodb-change-filtered-export-to-s3-2026-10
+  claim: DynamoDB export to Amazon S3 can run a filtered export, with both full and incremental exports, to get only a subset of the table data instead of the whole table. A filtered export is charged at the same rate, with no additional charge for filtering. The history row is dated October 1, 2026.
+  scope: DynamoDB export to Amazon S3; the table needs point-in-time recovery enabled; announced after the book's cutoff.
+  link: [both full exports and incremental exports](../facts/dynamodb.md#dynamodb-change-filtered-export-to-s3-2026-10)
+  link: [October 1, 2026](../facts/dynamodb.md#dynamodb-change-filtered-export-to-s3-2026-10)
+  link: [no additional charge for filtering](../facts/dynamodb.md#dynamodb-change-filtered-export-to-s3-2026-10)
+  say: filtered export works with full and incremental exports | October first, twenty twenty-six | no extra charge for filtering
+dynamodb-change-fis-pause-global-table-replication
+  claim: AWS Fault Injection Service can test global table resilience by simulating Region isolation, which pauses replication to and from a selected replica. It works with MREC global tables and, since the later MRSC support, with MRSC global tables.
+  scope: DynamoDB global tables with AWS FIS.
+  link: [pausing replication to and from a selected replica](../facts/dynamodb.md#dynamodb-change-fis-pause-global-table-replication)
+  link: [During AWS FIS experiments in MRSC](../facts/dynamodb.md#dynamodb-change-fis-pause-global-table-replication)
+  say: pause replication to and from a replica | FIS experiments on MRSC tables
+dynamodb-change-fullaccess-v2-managed-policy-2025-04
+  claim: Effective April 25, 2025, DynamoDB deprecated the AmazonDynamoDBFullAccess managed policy and replaced it with a scoped-down policy named AmazonDynamoDBFullAccess_v2.
+  scope: AWS managed IAM policies for DynamoDB; document history row dated April 28, 2025.
+  link: [April 25, 2025](../facts/dynamodb.md#dynamodb-change-fullaccess-v2-managed-policy-2025-04)
+  link: [`AmazonDynamoDBFullAccess_v2`](../facts/dynamodb.md#dynamodb-change-fullaccess-v2-managed-policy-2025-04)
+  link: [deprecated the `AmazonDynamoDBFullAccess` policy](../facts/dynamodb.md#dynamodb-change-fullaccess-v2-managed-policy-2025-04)
+  say: April twenty-fifth, twenty twenty-five
+  changed: 2025-04-25: was AmazonDynamoDBFullAccess
+dynamodb-change-gsi-multi-attribute-keys-2025-11
+  claim: On November 19, 2025 DynamoDB added multi-attribute composite keys to global secondary indexes: a GSI partition key and sort key can each be made of up to four attributes, for up to eight attributes per key schema. Before, partition and sort keys were limited to one attribute each.
+  scope: global secondary indexes; maximum; applies to GSIs only; the base table key is unchanged.
+  link: [November 19, 2025](../facts/dynamodb.md#dynamodb-change-gsi-multi-attribute-keys-2025-11)
+  link: [up to four attributes each](../facts/dynamodb.md#dynamodb-change-gsi-multi-attribute-keys-2025-11)
+  link: [up to eight attributes per key schema](../facts/dynamodb.md#dynamodb-change-gsi-multi-attribute-keys-2025-11)
+  link: [limited to one attribute each](../facts/dynamodb.md#dynamodb-change-gsi-multi-attribute-keys-2025-11)
+  say: November nineteenth, twenty twenty-five | up to four attributes each for the partition key and sort key | up to eight attributes in total | one attribute each
+  changed: 2025-11-19: was partition and sort keys were limited to one attribute each
+dynamodb-change-ipv6-support-2025-10
+  claim: On October 3, 2025 the guide recorded DynamoDB support for IPv6 addresses in your VPC when you connect to DynamoDB tables, streams and DAX, including with AWS PrivateLink gateway and interface endpoints.
+  scope: DynamoDB tables, streams and DAX in a VPC.
+  link: [October 3, 2025](../facts/dynamodb.md#dynamodb-change-ipv6-support-2025-10)
+  link: [IPv6](../facts/dynamodb.md#dynamodb-change-ipv6-support-2025-10)
+  say: October third, twenty twenty-five | IPv6
+dynamodb-change-mrsc-global-tables-ga-2025-06
+  claim: On June 30, 2025 multi-Region strong consistency (MRSC) for global tables became generally available, with an optional witness Region and a recovery point objective of zero. Before MRSC, global tables were eventually consistent; MRSC was announced in preview on December 3, 2024.
+  scope: DynamoDB global tables version 2019.11.21; exactly three Regions; three replicas or two replicas and one witness.
+  link: [June 30, 2025](../facts/dynamodb.md#dynamodb-change-mrsc-global-tables-ga-2025-06)
+  link: [Recovery Point Objective (RPO) of zero](../facts/dynamodb.md#dynamodb-change-mrsc-global-tables-ga-2025-06)
+  link: [December 3, 2024](../facts/dynamodb.md#dynamodb-change-mrsc-global-tables-ga-2025-06)
+  say: June thirtieth, twenty twenty-five | recovery point objective of zero | December third, twenty twenty-four
+dynamodb-change-mrsc-more-regions-2026-09
+  claim: MRSC global tables can be created in any combination of three of the 15 supported Regions, including Regions on different continents.
+  scope: DynamoDB global tables MRSC Regions; the full Region list is on the global tables guide page.
+  link: [any combination of three of these Regions](../facts/dynamodb.md#dynamodb-change-mrsc-more-regions-2026-09)
+  link: [including Regions on different continents](../facts/dynamodb.md#dynamodb-change-mrsc-more-regions-2026-09)
+  link: [15 supported AWS Regions](../facts/dynamodb.md#dynamodb-change-mrsc-more-regions-2026-09)
+  say: any three of the supported Regions | across continents | fifteen supported Regions
+dynamodb-change-multi-account-global-tables
+  claim: DynamoDB global tables can replicate across multiple AWS accounts and Regions, with each replica in a distinct account for account-level fault isolation and separate security and governance controls.
+  scope: DynamoDB global tables; multi-Region eventual consistency (MREC) only.
+  link: [across multiple AWS Regions and multiple AWS accounts](../facts/dynamodb.md#dynamodb-change-multi-account-global-tables)
+  link: [resides in a distinct AWS account](../facts/dynamodb.md#dynamodb-change-multi-account-global-tables)
+  say: across Regions and accounts | one replica per account
+dynamodb-change-ondemand-max-throughput-2024-05
+  claim: On May 1, 2024 the guide added the ability to specify a maximum number of on-demand requests for an individual table, index, or both, to keep table-level usage and cost bounded. Before this, the guide describes no such cap for on-demand tables.
+  scope: on-demand tables and indexes.
+  link: [May 1, 2024](../facts/dynamodb.md#dynamodb-change-ondemand-max-throughput-2024-05)
+  link: [keep your table-level usage and costs bounded](../facts/dynamodb.md#dynamodb-change-ondemand-max-throughput-2024-05)
+  say: May first, twenty twenty-four | keep table usage and cost bounded
+dynamodb-change-ondemand-price-cut-2024-11
+  claim: From November 1, 2024 AWS lowered DynamoDB on-demand and global tables prices: replicated writes for global tables now cost the same as single-Region writes, and most provisioned capacity workloads now get a lower price with on-demand mode. Before, on-demand was described as cost effective for spiky workloads.
+  scope: on-demand throughput and global tables replicated writes, all AWS Regions; the announcement is dated November 14, 2024 and says the prices were in effect from November 1, 2024.
+  link: [match the pricing of single-Region writes](../facts/dynamodb.md#dynamodb-change-ondemand-price-cut-2024-11)
+  link: [achieve a lower price with on-demand mode](../facts/dynamodb.md#dynamodb-change-ondemand-price-cut-2024-11)
+  link: [cost effective for spiky workloads](../facts/dynamodb.md#dynamodb-change-ondemand-price-cut-2024-11)
+  say: replicated writes cost the same as single-Region writes | most provisioned workloads get a lower price on on-demand | cost effective for spiky workloads
+  changed: 2024-11-01: was on-demand was previously cost effective for spiky workloads
+dynamodb-change-pitr-configurable-period-2025-01
+  claim: On January 7, 2025 DynamoDB added configurable point-in-time recovery periods: you can set the PITR period for each table to between 1 and 35 days.
+  scope: per table with PITR enabled.
+  link: [January 7, 2025](../facts/dynamodb.md#dynamodb-change-pitr-configurable-period-2025-01)
+  link: [between 1 and 35 days](../facts/dynamodb.md#dynamodb-change-pitr-configurable-period-2025-01)
+  say: January seventh, twenty twenty-five | between one and thirty-five days
+dynamodb-change-privatelink-interface-endpoints-2024-03
+  claim: On March 19, 2024 DynamoDB added AWS PrivateLink support, so you can reach DynamoDB through interface VPC endpoints and private IP addresses, including from your on-premises data centers, in addition to the earlier gateway endpoints.
+  scope: DynamoDB VPC endpoints.
+  link: [March 19, 2024](../facts/dynamodb.md#dynamodb-change-privatelink-interface-endpoints-2024-03)
+  say: March nineteenth, twenty twenty-four
+dynamodb-change-quota-adjustments-auto-approved
+  claim: DynamoDB account-level and table-level throughput quota adjustments requested through AWS Service Quotas are now automatically approved and adjusted with just a few clicks.
+  scope: DynamoDB account-level and table-level throughput quotas.
+  link: [automatically approved and adjusted](../facts/dynamodb.md#dynamodb-change-quota-adjustments-auto-approved)
+  say: automatically approved
+dynamodb-change-resource-based-policies-2024-03
+  claim: On March 20, 2024 DynamoDB added resource-based policies for tables, indexes and streams, which let you define who has access to each resource and which actions they can perform on it.
+  scope: DynamoDB tables, indexes and streams.
+  link: [March 20, 2024](../facts/dynamodb.md#dynamodb-change-resource-based-policies-2024-03)
+  say: March twentieth, twenty twenty-four
+dynamodb-change-resource-control-policies-2026-02
+  claim: AWS Resource Control Policies (RCPs), a type of organization policy that sets the maximum available permissions for resources in an organization, now support Amazon DynamoDB.
+  scope: AWS Organizations RCPs and DynamoDB.
+  link: [RCPs are a type of organization policy](../facts/dynamodb.md#dynamodb-change-resource-control-policies-2026-02)
+  say: RCPs are organization policies that cap permissions on resources
+dynamodb-change-tables-per-account-256-to-2500
+  claim: On March 9, 2022 DynamoDB increased the default quota for the number of tables per account and Region from 256 to 2,500 tables. Older material may still say 256 tables.
+  scope: per account, per Region; default; default quota increased on March 9, 2022.
+  link: [2,500 tables](../facts/dynamodb.md#dynamodb-change-tables-per-account-256-to-2500)
+  link: [256](../facts/dynamodb.md#dynamodb-change-tables-per-account-256-to-2500)
+  changed: 2022-03-09: was 256
+dynamodb-change-throttling-diagnostics-2025-08
+  claim: On August 14, 2025 DynamoDB added a Throttled keys only mode in CloudWatch Contributor Insights, throttling exceptions with structured ThrottlingReason fields, and 16 new targeted CloudWatch metrics for throttling.
+  scope: DynamoDB throttling diagnostics.
+  link: [August 14, 2025](../facts/dynamodb.md#dynamodb-change-throttling-diagnostics-2025-08)
+  link: [16 new targeted CloudWatch metrics](../facts/dynamodb.md#dynamodb-change-throttling-diagnostics-2025-08)
+  say: August fourteenth, twenty twenty-five | sixteen new targeted CloudWatch metrics
+dynamodb-change-warm-throughput-2024-11
+  claim: On November 13, 2024 DynamoDB introduced warm throughput for on-demand and provisioned tables, which gives visibility into the number of read and write operations a table can instantaneously support and lets you pre-warm tables.
+  scope: DynamoDB tables and indexes.
+  link: [November 13, 2024](../facts/dynamodb.md#dynamodb-change-warm-throughput-2024-11)
+  link: [ability to pre-warm your DynamoDB tables](../facts/dynamodb.md#dynamodb-change-warm-throughput-2024-11)
+  say: November thirteenth, twenty twenty-four | the ability to pre-warm tables
+dynamodb-cloudtrail-control-and-data-plane-events
+  claim: CloudTrail can monitor both control plane events and data plane events for DynamoDB.
+  scope: per account.
+  link: [both control plane events and data plane events](../facts/dynamodb.md#dynamodb-cloudtrail-control-and-data-plane-events)
+  link: [CloudTrail can monitor](../facts/dynamodb.md#dynamodb-cloudtrail-control-and-data-plane-events)
+dynamodb-cloudwatch-consumed-capacity-metrics
+  claim: You can monitor ConsumedReadCapacityUnits or ConsumedWriteCapacityUnits over a time period to track how much of your provisioned throughput is being used.
+  scope: per table.
+  link: [ConsumedReadCapacityUnits](../facts/dynamodb.md#dynamodb-cloudwatch-consumed-capacity-metrics)
+  link: [ConsumedWriteCapacityUnits](../facts/dynamodb.md#dynamodb-cloudwatch-consumed-capacity-metrics)
+dynamodb-cloudwatch-throttled-requests-metrics
+  claim: ThrottledRequests is incremented by one if any event within a request exceeds a provisioned throughput quota, and you compare it with the ReadThrottleEvents and WriteThrottleEvents metrics to see which event is throttling a request.
+  scope: per table.
+  link: [ThrottledRequests](../facts/dynamodb.md#dynamodb-cloudwatch-throttled-requests-metrics)
+  link: [ReadThrottleEvents](../facts/dynamodb.md#dynamodb-cloudwatch-throttled-requests-metrics)
+  link: [WriteThrottleEvents](../facts/dynamodb.md#dynamodb-cloudwatch-throttled-requests-metrics)
+dynamodb-composite-key-distinct-sort-keys
+  claim: In a table with a partition key and a sort key, several items can share a partition key value, but those items must have different sort key values.
+  scope: per table.
+  link: [must have different sort key values](../facts/dynamodb.md#dynamodb-composite-key-distinct-sort-keys)
+  link: [the same partition key value](../facts/dynamodb.md#dynamodb-composite-key-distinct-sort-keys)
+dynamodb-composite-key-same-pk-sorted-together
+  claim: With a partition key and a sort key, all items with the same partition key value are stored together, in sorted order by sort key value.
+  scope: per partition key value.
+  link: [in sorted order by sort key value](../facts/dynamodb.md#dynamodb-composite-key-same-pk-sorted-together)
+  link: [same partition key value](../facts/dynamodb.md#dynamodb-composite-key-same-pk-sorted-together)
+dynamodb-compress-large-attributes
+  claim: Compressing large attribute values can let them fit within item limits in DynamoDB and reduce storage costs.
+  scope: per attribute.
+  link: [fit within item limits in DynamoDB](../facts/dynamodb.md#dynamodb-compress-large-attributes)
+  link: [reduce your storage costs](../facts/dynamodb.md#dynamodb-compress-large-attributes)
+dynamodb-conditional-write-succeeds-only-if-condition
+  claim: A conditional write succeeds only if the item attributes meet one or more expected conditions; otherwise it returns an error.
+  scope: per write.
+  link: [meet one or more expected conditions](../facts/dynamodb.md#dynamodb-conditional-write-succeeds-only-if-condition)
+  link: [A conditional write succeeds](../facts/dynamodb.md#dynamodb-conditional-write-succeeds-only-if-condition)
+dynamodb-conditional-write-use-cases
+  claim: Conditional writes are helpful in many situations; for example, you might want a PutItem operation to succeed only if there is not already an item with the same primary key.
+  scope: per write.
+  link: [if there is not already an item](../facts/dynamodb.md#dynamodb-conditional-write-use-cases)
+  link: [Conditional writes are helpful in many situations](../facts/dynamodb.md#dynamodb-conditional-write-use-cases)
+dynamodb-consistentread-parameter
+  claim: GetItem, Query and Scan have an optional ConsistentRead parameter, and setting it to true returns the most up-to-date data, reflecting all prior successful writes.
+  scope: per read.
+  link: [optional `ConsistentRead` parameter](../facts/dynamodb.md#dynamodb-consistentread-parameter)
+  link: [most up-to-date data](../facts/dynamodb.md#dynamodb-consistentread-parameter)
+dynamodb-customer-managed-key-disabled-blocks-access
+  claim: Setting the state of the customer managed key to disabled or scheduling it for deletion prevents all users and the DynamoDB service from encrypting or decrypting data and from performing read and write operations on the table.
+  scope: per table.
+  link: [prevents all users and the DynamoDB service](../facts/dynamodb.md#dynamodb-customer-managed-key-disabled-blocks-access)
+  link: [scheduling it for deletion](../facts/dynamodb.md#dynamodb-customer-managed-key-disabled-blocks-access)
+dynamodb-customer-managed-key-inaccessible-archived
+  claim: If your customer managed key remains inaccessible to the DynamoDB service for longer than seven days, the table is archived and can no longer be accessed.
+  scope: per table.
+  link: [longer than seven days](../facts/dynamodb.md#dynamodb-customer-managed-key-inaccessible-archived)
+  link: [the table is archived](../facts/dynamodb.md#dynamodb-customer-managed-key-inaccessible-archived)
+dynamodb-customer-managed-key-same-key-for-table-indexes-streams
+  claim: When you specify a customer managed key as the table-level encryption key, the table, local and global secondary indexes, and streams are encrypted with the same customer managed key.
+  scope: per table.
+  link: [encrypted with the same customer managed key](../facts/dynamodb.md#dynamodb-customer-managed-key-same-key-for-table-indexes-streams)
+  link: [table-level encryption key](../facts/dynamodb.md#dynamodb-customer-managed-key-same-key-for-table-indexes-streams)
+dynamodb-data-on-ssd-multi-az
+  claim: All of your data is stored on solid-state disks (SSDs) and is automatically replicated across multiple Availability Zones in an AWS Region, providing built-in high availability and data durability.
+  scope: per Region.
+  link: [solid-state disks (SSDs)](../facts/dynamodb.md#dynamodb-data-on-ssd-multi-az)
+  link: [automatically replicated across multiple Availability Zones](../facts/dynamodb.md#dynamodb-data-on-ssd-multi-az)
+dynamodb-data-type-categories
+  claim: The scalar attribute types in DynamoDB are number, string, binary, Boolean and null.
+  scope: per attribute.
+  link: [number, string, binary, Boolean, and null](../facts/dynamodb.md#dynamodb-data-type-categories)
+  link: [The scalar types](../facts/dynamodb.md#dynamodb-data-type-categories)
+dynamodb-database-savings-plans-cover-dynamodb
+  claim: Database Savings Plans reduce costs by up to 35% on a list of AWS database services that includes Aurora, RDS, DynamoDB, ElastiCache and DocumentDB.
+  scope: Database Savings Plans, plan-wide maximum across all eligible database services; maximum; not DynamoDB-specific; the DynamoDB FAQ gives a smaller maximum for DynamoDB usage (fact dynamodb-faq-database-savings-plans-18-percent).
+  link: [up to 35%](../facts/dynamodb.md#dynamodb-database-savings-plans-cover-dynamodb)
+  link: [Aurora, RDS, DynamoDB, ElastiCache, DocumentDB](../facts/dynamodb.md#dynamodb-database-savings-plans-cover-dynamodb)
+  say: up to thirty-five percent | Aurora, RDS, DynamoDB, ElastiCache and other databases
+dynamodb-decision-guide-aurora-relational-joins
+  claim: The AWS database decision guide describes Amazon Aurora as a relational database for migrating or modernizing an on-premises relational workload, or when query patterns are less predictable, and says relational databases support complex queries through joins.
+  scope: AWS database decision guide, Choose section.
+  link: [less predictable query patterns](../facts/dynamodb.md#dynamodb-decision-guide-aurora-relational-joins)
+  link: [complex queries through joins](../facts/dynamodb.md#dynamodb-decision-guide-aurora-relational-joins)
+  say: less predictable query patterns | complex queries through joins
+dynamodb-decision-guide-elasticache-caching-layer
+  claim: The AWS database decision guide describes Amazon ElastiCache as an in-memory service for a caching layer that improves read performance, optimized for microsecond reads and sub-millisecond writes as an ephemeral cache for frequently accessed data.
+  scope: AWS database decision guide, Choose section.
+  link: [caching layer to improve read performance](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer)
+  link: [ephemeral cache for frequently accessed data](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer)
+  say: a caching layer to improve read performance | an ephemeral cache for frequently accessed data
+dynamodb-decision-guide-key-value-session-store
+  claim: The AWS database decision guide lists DynamoDB as a key-value database for workloads such as session stores or shopping carts, optimized to be a serverless, NoSQL, fully managed database with single-digit millisecond performance at any scale.
+  scope: AWS database decision guide, Choose section.
+  link: [session stores or shopping carts](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store)
+  link: [single-digit millisecond performance at any scale](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store)
+  link: [Key-value](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store)
+  say: session stores and shopping carts | single-digit millisecond performance at any scale | key-value
+dynamodb-decision-guide-memorydb-durable-in-memory
+  claim: The AWS database decision guide describes Amazon MemoryDB as an in-memory database with full data persistence and sub-millisecond read latencies, suitable as a high-performance primary database, with Multi-AZ durability.
+  scope: AWS database decision guide, Choose section.
+  link: [full data persistence with sub-millisecond read latencies](../facts/dynamodb.md#dynamodb-decision-guide-memorydb-durable-in-memory)
+  link: [durable in-memory database](../facts/dynamodb.md#dynamodb-decision-guide-memorydb-durable-in-memory)
+  say: full persistence with sub-millisecond reads | a durable in-memory database
+dynamodb-decision-guide-rds-full-sql
+  claim: The AWS database decision guide describes Amazon RDS as a fully managed relational database with a choice of six engines, optimized for structured data with full SQL support, automated backups, software patching and Multi-AZ deployments.
+  scope: AWS database decision guide, Choose section.
+  link: [full SQL support](../facts/dynamodb.md#dynamodb-decision-guide-rds-full-sql)
+  link: [PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, and Db2](../facts/dynamodb.md#dynamodb-decision-guide-rds-full-sql)
+  say: full SQL support | PostgreSQL, MySQL, MariaDB, SQL Server, Oracle and Db2
+dynamodb-denormalize-recommended
+  claim: AWS recommends that you denormalize your DynamoDB data model to reduce database round trips and the processing power needed to answer queries.
+  scope: per data model.
+  link: [denormalize your data model](../facts/dynamodb.md#dynamodb-denormalize-recommended)
+  link: [reduce database round trips](../facts/dynamodb.md#dynamodb-denormalize-recommended)
+dynamodb-design-schema-for-access-patterns
+  claim: In DynamoDB you design your schema specifically to make the most common and important queries as fast and as inexpensive as possible, and your data structures are tailored to the specific requirements of your business use cases.
+  scope: per data model.
+  link: [as fast and as inexpensive as possible](../facts/dynamodb.md#dynamodb-design-schema-for-access-patterns)
+  link: [design your schema specifically](../facts/dynamodb.md#dynamodb-design-schema-for-access-patterns)
+dynamodb-design-uniform-activity-all-keys
+  claim: AWS advises designing the application for uniform activity across all partition keys in the table and its secondary indexes.
+  scope: per table.
+  link: [uniform activity across all partition keys](../facts/dynamodb.md#dynamodb-design-uniform-activity-all-keys)
+  link: [the table and its secondary indexes](../facts/dynamodb.md#dynamodb-design-uniform-activity-all-keys)
+dynamodb-dg-oltp-relational-vs-non-relational
+  claim: The decision guide focuses on databases for online transaction processing (OLTP) and says there are two high-level categories: relational and non-relational. Non-relational options cover key-value, document, caching, in-memory, graph, time series and wide-column data models.
+  scope: AWS database decision guide.
+  link: [relational and non-relational](../facts/dynamodb.md#dynamodb-dg-oltp-relational-vs-non-relational)
+  link: [key-value, document, caching, in-memory, graph](../facts/dynamodb.md#dynamodb-dg-oltp-relational-vs-non-relational)
+  say: relational and non-relational | key-value, document, in-memory, graph, time series and wide-column
+dynamodb-dg-serverless-databases-pay-for-use
+  claim: The AWS database decision guide says serverless databases scale to an application's demands with a pay-for-use pricing model and built-in high availability, and lists Amazon DynamoDB among the serverless offerings.
+  scope: AWS database decision guide.
+  link: [pay-for-use pricing model and built-in high availability](../facts/dynamodb.md#dynamodb-dg-serverless-databases-pay-for-use)
+  say: pay-for-use pricing and built-in high availability
+dynamodb-dg-vector-search-native-vector-indexes
+  claim: The AWS database decision guide lists DynamoDB as having native vector search through vector indexes, plus zero-ETL to OpenSearch, and positions it as an operational store where vector search is a complementary workload.
+  scope: AWS database decision guide, vector considerations.
+  link: [Native vector search (vector indexes)](../facts/dynamodb.md#dynamodb-dg-vector-search-native-vector-indexes)
+  link: [vector search is a complementary workload](../facts/dynamodb.md#dynamodb-dg-vector-search-native-vector-indexes)
+  say: native vector search with vector indexes | an operational store where vector search is complementary
+dynamodb-document-types-list-map-nesting
+  claim: The document types are list and map, and they can be nested within each other to represent complex data structures up to 32 levels deep.
+  scope: per item attribute nesting; maximum.
+  link: [The document types are list and map](../facts/dynamodb.md#dynamodb-document-types-list-map-nesting)
+  link: [up to 32 levels deep](../facts/dynamodb.md#dynamodb-document-types-list-map-nesting)
+dynamodb-dr-aws-backup-rpo-1-hour
+  claim: AWS Backup plans copy DynamoDB backups across Regions every hour, every 12 hours, daily, weekly or monthly, and with this approach you can achieve an RPO of 1 hour and an RTO from a few minutes to hours depending on table size.
+  scope: AWS Backup plans for DynamoDB; RTO depends on table size.
+  link: [RPO of 1 hour](../facts/dynamodb.md#dynamodb-dr-aws-backup-rpo-1-hour)
+  link: [every hour, every 12 hours, daily, weekly, or monthly](../facts/dynamodb.md#dynamodb-dr-aws-backup-rpo-1-hour)
+  say: an RPO of one hour | hourly to monthly
+dynamodb-dr-daily-on-demand-backup-rpo-24h
+  claim: A daily on-demand backup strategy gives a reliable RPO of 24 hours with predictable RTOs of minutes to hours.
+  scope: DynamoDB on-demand backups.
+  link: [RPO of 24 hours](../facts/dynamodb.md#dynamodb-dr-daily-on-demand-backup-rpo-24h)
+  say: a twenty-four hour RPO
+dynamodb-dr-global-tables-mrec-rto-zero
+  claim: With multi-Region eventual consistency (MREC) global tables you can achieve an RPO of a few seconds and an RTO of zero.
+  scope: DynamoDB global tables, MREC.
+  link: [RPO of a few seconds](../facts/dynamodb.md#dynamodb-dr-global-tables-mrec-rto-zero)
+  link: [RTO of zero](../facts/dynamodb.md#dynamodb-dr-global-tables-mrec-rto-zero)
+  say: an RPO of a few seconds | an RTO of zero
+dynamodb-dr-global-tables-mrsc-rpo-zero
+  claim: With multi-Region strongly consistent global tables you can build applications with zero RPO, so applications read the most up-to-date version of the data even after shifting traffic to another Region. For DR you can use two replicas and one witness Region.
+  scope: DynamoDB global tables, MRSC.
+  link: [zero RPO](../facts/dynamodb.md#dynamodb-dr-global-tables-mrsc-rpo-zero)
+  link: [two replicas and one witness Region](../facts/dynamodb.md#dynamodb-dr-global-tables-mrsc-rpo-zero)
+  say: zero RPO | two replicas and a witness
+dynamodb-dr-pitr-rpo-seconds
+  claim: The DynamoDB disaster recovery guide says point-in-time recovery provides granular recovery with a minimal RPO of seconds and a reasonable RTO of minutes to hours.
+  scope: DynamoDB point-in-time recovery.
+  link: [minimal RPO (seconds)](../facts/dynamodb.md#dynamodb-dr-pitr-rpo-seconds)
+  link: [reasonable RTO (minutes to hours)](../facts/dynamodb.md#dynamodb-dr-pitr-rpo-seconds)
+  say: an RPO of seconds | an RTO of minutes to hours
+dynamodb-dr-s3-export-rpo-minutes
+  claim: With DynamoDB export to Amazon S3 at a point within the PITR window, you can achieve an RPO of a few minutes and an RTO from a few minutes to hours depending on table size.
+  scope: DynamoDB export to Amazon S3; the table needs point-in-time recovery enabled.
+  link: [RPO of a few minutes](../facts/dynamodb.md#dynamodb-dr-s3-export-rpo-minutes)
+  say: an RPO of a few minutes
+dynamodb-empty-set-not-allowed
+  claim: An attribute value cannot be an empty set (string set, number set or binary set), but empty lists and maps are allowed.
+  scope: per attribute.
+  link: [cannot be an empty set](../facts/dynamodb.md#dynamodb-empty-set-not-allowed)
+  link: [empty lists and maps are allowed](../facts/dynamodb.md#dynamodb-empty-set-not-allowed)
+dynamodb-encrypt-at-rest-default
+  claim: By default, DynamoDB encrypts all customer data at rest.
+  scope: per table; default; not adjustable.
+  link: [encrypts all customer data at rest](../facts/dynamodb.md#dynamodb-encrypt-at-rest-default)
+  link: [By default, DynamoDB encrypts](../facts/dynamodb.md#dynamodb-encrypt-at-rest-default)
+dynamodb-encryption-aes-256-kms
+  claim: Amazon DynamoDB encryption at rest encrypts your data using 256-bit Advanced Encryption Standard (AES-256).
+  scope: per table.
+  link: [256-bit Advanced Encryption Standard (AES-256)](../facts/dynamodb.md#dynamodb-encryption-aes-256-kms)
+  link: [encrypts your data using 256-bit](../facts/dynamodb.md#dynamodb-encryption-aes-256-kms)
+dynamodb-encryption-covers-indexes-streams-backups
+  claim: DynamoDB encryption at rest always secures your data in an encrypted table, including its primary key, local and global secondary indexes, streams, global tables, backups, and DynamoDB Accelerator (DAX) clusters whenever the data is stored in durable media.
+  scope: per table.
+  link: [local and global secondary indexes, streams](../facts/dynamodb.md#dynamodb-encryption-covers-indexes-streams-backups)
+  link: [always securing your data in an encrypted table](../facts/dynamodb.md#dynamodb-encryption-covers-indexes-streams-backups)
+dynamodb-encryption-key-switch-limit
+  claim: You can switch between an AWS owned key, an AWS managed key and a customer managed key up to four times per 24-hour window per table. If there was no change in the past six hours, an additional change is allowed.
+  scope: per table, per 24-hour window; maximum; not adjustable; an additional change is allowed if there was no change in the past six hours.
+  link: [up to four times](../facts/dynamodb.md#dynamodb-encryption-key-switch-limit)
+dynamodb-encryption-key-type-switch-any-time
+  claim: You can switch between the KMS key types for a DynamoDB table at any time.
+  scope: per table.
+  link: [switch between these key types at any time](../facts/dynamodb.md#dynamodb-encryption-key-type-switch-any-time)
+  link: [You can switch between these key types](../facts/dynamodb.md#dynamodb-encryption-key-type-switch-any-time)
+dynamodb-encryption-key-types
+  claim: You can choose an AWS owned key (the default encryption type), an AWS managed key or a customer managed key to encrypt user data in DynamoDB.
+  scope: per table; default.
+  link: [AWS owned key (default encryption type)](../facts/dynamodb.md#dynamodb-encryption-key-types)
+  link: [AWS managed key](../facts/dynamodb.md#dynamodb-encryption-key-types)
+  link: [Customer managed key](../facts/dynamodb.md#dynamodb-encryption-key-types)
+dynamodb-encryption-transparent
+  claim: When you access an encrypted table, DynamoDB decrypts the table data transparently, and you do not have to change any code or applications.
+  scope: per table.
+  link: [decrypts the table data transparently](../facts/dynamodb.md#dynamodb-encryption-transparent)
+  link: [don't have to change any code or applications](../facts/dynamodb.md#dynamodb-encryption-transparent)
+dynamodb-eventual-read-default-half
+  claim: For an eventually consistent GetItem read, which is the default, DynamoDB divides the strongly consistent read-unit number by two.
+  scope: per GetItem read; default; not adjustable; eventually consistent read is the default.
+  link: [divide this number by two](../facts/dynamodb.md#dynamodb-eventual-read-default-half)
+dynamodb-eventually-consistent-default
+  claim: Eventually consistent is the default read consistency model for all read operations.
+  scope: per read operation; default; not adjustable.
+  link: [Eventually consistent is the default](../facts/dynamodb.md#dynamodb-eventually-consistent-default)
+  link: [default read consistent model for all read operations](../facts/dynamodb.md#dynamodb-eventually-consistent-default)
+dynamodb-eventually-consistent-half-cost
+  claim: Eventually consistent reads cost half as much as strongly consistent reads.
+  scope: per read.
+  link: [half the cost of strongly consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost)
+  link: [Eventually consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost)
+dynamodb-eventually-consistent-may-lag
+  claim: An eventually consistent read might not reflect a recently completed write, but if you repeat the read after a short time the response should eventually return the more recent item.
+  scope: per read.
+  link: [might not reflect the results](../facts/dynamodb.md#dynamodb-eventually-consistent-may-lag)
+  link: [after a short time](../facts/dynamodb.md#dynamodb-eventually-consistent-may-lag)
+dynamodb-exponential-backoff-concept
+  claim: Exponential backoff uses progressively longer waits between retries for consecutive error responses.
+  scope: per client.
+  link: [progressively longer waits between retries](../facts/dynamodb.md#dynamodb-exponential-backoff-concept)
+  link: [concept behind exponential backoff](../facts/dynamodb.md#dynamodb-exponential-backoff-concept)
+dynamodb-export-always-encrypted
+  claim: Exported data is always encrypted end-to-end.
+  scope: per export.
+  link: [always encrypted end-to-end](../facts/dynamodb.md#dynamodb-export-always-encrypted)
+  link: [Your data is always encrypted](../facts/dynamodb.md#dynamodb-export-always-encrypted)
+dynamodb-export-concurrency-limits
+  claim: A full export to Amazon S3 supports up to 300 concurrent export tasks, or a total of 100 TB from all in-flight table exports. Both limits are checked before an export is queued.
+  scope: full export to Amazon S3; maximum; not adjustable; both limits are checked before an export is queued.
+  link: [300 concurrent export tasks](../facts/dynamodb.md#dynamodb-export-concurrency-limits)
+  link: [100TB](../facts/dynamodb.md#dynamodb-export-concurrency-limits)
+dynamodb-export-cross-account-cross-region
+  claim: You can export data to an S3 bucket owned by another AWS account and to a different AWS Region.
+  scope: per export.
+  link: [owned by another AWS account](../facts/dynamodb.md#dynamodb-export-cross-account-cross-region)
+  link: [different AWS region](../facts/dynamodb.md#dynamodb-export-cross-account-cross-region)
+dynamodb-export-formats
+  claim: The export file formats supported are DynamoDB JSON and Amazon Ion formats.
+  scope: per export.
+  link: [DynamoDB JSON and Amazon Ion formats](../facts/dynamodb.md#dynamodb-export-formats)
+  link: [export file formats supported](../facts/dynamodb.md#dynamodb-export-formats)
+dynamodb-export-full-and-incremental
+  claim: DynamoDB export to S3 allows you to export both full and incremental data from your DynamoDB table.
+  scope: per table.
+  link: [both full and incremental data](../facts/dynamodb.md#dynamodb-export-full-and-incremental)
+  link: [export to S3 allows you to export](../facts/dynamodb.md#dynamodb-export-full-and-incremental)
+dynamodb-export-no-completion-sla
+  claim: No service-level agreement (SLA) guarantees export completion times, and these times can vary.
+  scope: per export.
+  link: [No service-level agreement (SLA) guarantees export completion times](../facts/dynamodb.md#dynamodb-export-no-completion-sla)
+  link: [these times can vary](../facts/dynamodb.md#dynamodb-export-no-completion-sla)
+dynamodb-export-requires-pitr
+  claim: You need to enable point-in-time recovery (PITR) on your table to use the export to Amazon S3 functionality.
+  scope: per table.
+  link: [enable PITR on your table](../facts/dynamodb.md#dynamodb-export-requires-pitr)
+  link: [You need to enable PITR](../facts/dynamodb.md#dynamodb-export-requires-pitr)
+dynamodb-expression-max-length
+  claim: The maximum length of any expression string is 4 KB.
+  scope: per expression string; maximum; not adjustable; applies to projection, condition, update and filter expressions.
+  link: [4 KB](../facts/dynamodb.md#dynamodb-expression-max-length)
+dynamodb-expression-max-operators
+  claim: The maximum number of operators or functions allowed in a single expression is 300.
+  scope: per expression; maximum; not adjustable; applies to condition, filter and update expressions.
+  link: [300](../facts/dynamodb.md#dynamodb-expression-max-operators)
+dynamodb-faq-abac-tags-ga
+  claim: DynamoDB supports attribute-based access control, which is generally available for DynamoDB tables and indexes.
+  scope: DynamoDB tables and indexes.
+  link: [supports attribute-based access control](../facts/dynamodb.md#dynamodb-faq-abac-tags-ga)
+dynamodb-faq-all-data-encrypted-transit-rest
+  claim: All user data in DynamoDB is fully encrypted in transit and at rest.
+  scope: all user data in DynamoDB.
+  link: [fully encrypted in transit and at rest](../facts/dynamodb.md#dynamodb-faq-all-data-encrypted-transit-rest)
+dynamodb-faq-audit-cloudtrail-item-level
+  claim: DynamoDB is integrated with AWS CloudTrail, which records actions taken in DynamoDB at the item level.
+  scope: item-level actions on DynamoDB tables; FAQ wording; check the user guide for the data-event setting.
+  link: [integrated with AWS CloudTrail](../facts/dynamodb.md#dynamodb-faq-audit-cloudtrail-item-level)
+dynamodb-faq-auto-scale-and-partition
+  claim: DynamoDB automatically scales throughput capacity to meet workload demands, and it partitions and repartitions data as the table grows.
+  scope: DynamoDB tables.
+  link: [automatically scales throughput capacity](../facts/dynamodb.md#dynamodb-faq-auto-scale-and-partition)
+dynamodb-faq-blob-use-s3-pointers
+  claim: DynamoDB can store a BLOB, but it is not generally suited to documents or images. A better pattern is to store pointers to Amazon S3 objects in a DynamoDB table.
+  scope: large binary data; item size is limited.
+  link: [store pointers to Amazon S3 objects](../facts/dynamodb.md#dynamodb-faq-blob-use-s3-pointers)
+dynamodb-faq-block-public-access-always-on
+  claim: Block Public Access (BPA) helps prevent public access to DynamoDB tables, indexes and streams, and it is always enabled with DynamoDB.
+  scope: DynamoDB tables, indexes and streams.
+  link: [always enabled with DynamoDB](../facts/dynamodb.md#dynamodb-faq-block-public-access-always-on)
+dynamodb-faq-cdc-two-streaming-models
+  claim: DynamoDB offers two streaming models for change data capture: DynamoDB Streams and Kinesis Data Streams for DynamoDB.
+  scope: DynamoDB change data capture.
+  link: [DynamoDB Streams and Kinesis Data Streams for DynamoDB](../facts/dynamodb.md#dynamodb-faq-cdc-two-streaming-models)
+dynamodb-faq-data-retention-indefinite
+  claim: By default DynamoDB has no set expiration or deletion time for table data. Data stays in the table indefinitely unless the customer deletes it or TTL deletes it.
+  scope: data in a DynamoDB table; default; adjustable; unless deleted by the customer or by TTL, if TTL is enabled.
+  link: [remain in the table indefinitely](../facts/dynamodb.md#dynamodb-faq-data-retention-indefinite)
+dynamodb-faq-database-savings-plans-18-percent
+  claim: A Database Savings Plan can reduce DynamoDB costs by up to 18% when you commit to a consistent amount of usage over a 1-year term.
+  scope: DynamoDB usage covered by a Database Savings Plan; maximum; commit to a consistent amount of usage over a 1-year term; see the Database Savings Plans pricing page for eligible usage.
+  link: [up to 18%](../facts/dynamodb.md#dynamodb-faq-database-savings-plans-18-percent)
+  link: [1-year term](../facts/dynamodb.md#dynamodb-faq-database-savings-plans-18-percent)
+  say: up to eighteen percent | one-year term
+dynamodb-faq-extra-cost-option-on-demand-backup
+  claim: The FAQ lists on-demand backup, which takes snapshot backups at specified points in time, among the options that can be added to DynamoDB.
+  scope: DynamoDB on-demand backup; listed among the extra cost options in the FAQ.
+  link: [snapshot backups at specified points in time](../facts/dynamodb.md#dynamodb-faq-extra-cost-option-on-demand-backup)
+dynamodb-faq-fgac-items-attributes
+  claim: Fine-grained access control lets the table owner give permissions for access to items or attributes of the table, and the associated actions, through IAM policies and conditions.
+  scope: DynamoDB table; uses IAM policies and conditions.
+  link: [access to items or attributes of the table](../facts/dynamodb.md#dynamodb-faq-fgac-items-attributes)
+dynamodb-faq-free-tier-200m-requests
+  claim: The DynamoDB free tier is enough for about 200M requests per month, depending on item size. It uses provisioned capacity and the DynamoDB Standard table class.
+  scope: DynamoDB free tier, per month; depends on item size; uses provisioned capacity and the DynamoDB Standard table class.
+  link: [200M requests/month](../facts/dynamodb.md#dynamodb-faq-free-tier-200m-requests)
+dynamodb-faq-gateway-endpoint-limits-use-privatelink
+  claim: Gateway endpoints do not allow access from on-premises networks, from peered VPCs in other AWS Regions, or through a transit gateway. For those cases AWS PrivateLink must be used, at an additional cost.
+  scope: gateway endpoints for DynamoDB; on-premises, peered VPC in another Region, or transit gateway access.
+  link: [you must use AWS PrivateLink](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-limits-use-privatelink)
+dynamodb-faq-gateway-endpoint-no-igw-nat
+  claim: With a gateway endpoint, a VPC can access DynamoDB without needing an internet gateway or a NAT device.
+  scope: gateway endpoint for DynamoDB.
+  link: [without requiring an internet gateway or NAT device](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-no-igw-nat)
+dynamodb-faq-gateway-vs-privatelink-cost-note
+  claim: For the cases that gateway endpoints cannot serve, AWS PrivateLink is available for an additional cost.
+  scope: AWS PrivateLink for DynamoDB.
+  link: [available for an additional cost](../facts/dynamodb.md#dynamodb-faq-gateway-vs-privatelink-cost-note)
+dynamodb-faq-global-table-one-replica-per-region
+  claim: A single DynamoDB global table can have only one replica table per AWS Region.
+  scope: per global table, per AWS Region; maximum; not adjustable.
+  link: [one replica table per AWS Region](../facts/dynamodb.md#dynamodb-faq-global-table-one-replica-per-region)
+  say: one replica table per AWS Region
+dynamodb-faq-global-table-owned-by-one-or-more-accounts
+  claim: A global table is a collection of one or more replica tables, which can be owned by a single AWS account or multiple AWS accounts.
+  scope: DynamoDB global tables.
+  link: [single AWS account or multiple AWS accounts](../facts/dynamodb.md#dynamodb-faq-global-table-owned-by-one-or-more-accounts)
+dynamodb-faq-global-tables-99999
+  claim: The FAQ states that DynamoDB global tables provides 99.999% availability.
+  scope: DynamoDB global tables; stated in the FAQ; the service level agreement is a separate document.
+  link: [99.999% availability](../facts/dynamodb.md#dynamodb-faq-global-tables-99999)
+dynamodb-faq-global-tables-all-replicas-read-write
+  claim: Global tables use multi-active replication across Regions, and all replica tables in all Regions support read and write traffic.
+  scope: DynamoDB global tables.
+  link: [multi-active replication across Regions](../facts/dynamodb.md#dynamodb-faq-global-tables-all-replicas-read-write)
+dynamodb-faq-global-tables-multi-active
+  claim: DynamoDB global tables is a fully managed, serverless, multi-Region, and multi-active database.
+  scope: DynamoDB global tables.
+  link: [multi-Region, and multi-active database](../facts/dynamodb.md#dynamodb-faq-global-tables-multi-active)
+dynamodb-faq-global-tables-no-failover-needed
+  claim: A global table has no primary Region, so no database failover is required to direct read and write traffic to a different Region.
+  scope: DynamoDB global tables; the application reads and writes from a replica in an unaffected Region.
+  link: [no primary Region](../facts/dynamodb.md#dynamodb-faq-global-tables-no-failover-needed)
+dynamodb-faq-global-tables-pitr-per-replica
+  claim: Point-in-time recovery can be enabled on each replica of a DynamoDB global table.
+  scope: per replica of a global table.
+  link: [enable point-in-time recovery on each replica](../facts/dynamodb.md#dynamodb-faq-global-tables-pitr-per-replica)
+dynamodb-faq-global-tables-prerequisites
+  claim: The FAQ lists these prerequisites before adding a replica in another Region: DynamoDB Streams enabled, the same table name, the same partition key, and the same write capacity settings as the other replicas.
+  scope: adding a replica to a global table; FAQ wording; multi-account global tables may use different table names.
+  link: [must have DynamoDB Streams enabled](../facts/dynamodb.md#dynamodb-faq-global-tables-prerequisites)
+dynamodb-faq-global-tables-same-apis
+  claim: Global tables use the same APIs as single-Region DynamoDB tables, so tables can be made global without application changes.
+  scope: DynamoDB global tables.
+  link: [same APIs as single Region DynamoDB tables](../facts/dynamodb.md#dynamodb-faq-global-tables-same-apis)
+dynamodb-faq-global-tables-zero-rpo-mrsc
+  claim: With multi-Region strong consistency, applications can be built with zero RPO and the highest levels of resiliency.
+  scope: DynamoDB global tables with multi-Region strong consistency; multi-Region strong consistency is used.
+  link: [zero RPO](../facts/dynamodb.md#dynamodb-faq-global-tables-zero-rpo-mrsc)
+  say: zero RPO
+dynamodb-faq-global-vs-regular-table
+  claim: With global tables you can automatically replicate DynamoDB table data across AWS Regions without building and maintaining your own replication solution.
+  scope: DynamoDB global tables.
+  link: [automatically replicate your DynamoDB table data](../facts/dynamodb.md#dynamodb-faq-global-vs-regular-table)
+dynamodb-faq-gsi-primary-key-attributes
+  claim: DynamoDB supports primary keys composed of up to eight attributes in global secondary indexes, with up to four attributes each for the partition key and the sort key.
+  scope: per global secondary index primary key; maximum; not adjustable; up to four attributes each for the partition key and the sort key.
+  link: [up to eight attributes](../facts/dynamodb.md#dynamodb-faq-gsi-primary-key-attributes)
+  link: [up to four attributes](../facts/dynamodb.md#dynamodb-faq-gsi-primary-key-attributes)
+  say: up to eight attributes | up to four attributes
+dynamodb-faq-hipaa-baa
+  claim: DynamoDB can be used to build HIPAA-compliant applications and to store protected health information under an executed Business Associate Agreement (BAA) with AWS.
+  scope: DynamoDB; requires an executed BAA with AWS.
+  link: [executed Business Associate Agreement (BAA) with AWS](../facts/dynamodb.md#dynamodb-faq-hipaa-baa)
+dynamodb-faq-iam-attach-targets
+  claim: IAM policies can be attached to IAM users, groups, roles, and DynamoDB tables and streams.
+  scope: DynamoDB access control.
+  link: [DynamoDB tables and streams](../facts/dynamodb.md#dynamodb-faq-iam-attach-targets)
+dynamodb-faq-key-aws-managed-audit
+  claim: AWS managed keys are KMS keys that AWS creates, manages and uses on the customer's behalf, and they give more control and auditing than AWS owned keys.
+  scope: DynamoDB encryption at rest.
+  link: [AWS managed keys](../facts/dynamodb.md#dynamodb-faq-key-aws-managed-audit)
+dynamodb-faq-key-aws-owned-default-free
+  claim: AWS owned keys are managed entirely by AWS and are used by default if no other option is specified. They are free to use and need no additional setup.
+  scope: DynamoDB encryption at rest; default; adjustable; used when no other option is specified.
+  link: [AWS owned keys](../facts/dynamodb.md#dynamodb-faq-key-aws-owned-default-free)
+dynamodb-faq-key-customer-managed-most-control
+  claim: Customer managed keys offer the highest level of control over the encryption keys, including the ability to create, rotate, disable, and define access controls.
+  scope: DynamoDB encryption at rest.
+  link: [Customer managed keys](../facts/dynamodb.md#dynamodb-faq-key-customer-managed-most-control)
+dynamodb-faq-kinesis-365-day-retention
+  claim: Kinesis Data Streams for DynamoDB is useful for Kinesis integration, longer data retention and replayability (up to 365 days), and customized shard management for downstream consumption.
+  scope: Kinesis Data Streams for DynamoDB; maximum.
+  link: [up to 365 days](../facts/dynamodb.md#dynamodb-faq-kinesis-365-day-retention)
+  say: up to three hundred sixty-five days
+dynamodb-faq-kinesis-no-ordering-dedup
+  claim: Unlike DynamoDB Streams, Kinesis Data Streams for DynamoDB does not provide record ordering nor deduplication guarantees.
+  scope: Kinesis Data Streams for DynamoDB; client applications must implement ordering and deduplication.
+  link: [does not provide record ordering nor deduplication guarantees](../facts/dynamodb.md#dynamodb-faq-kinesis-no-ordering-dedup)
+dynamodb-faq-managed-offload
+  claim: DynamoDB offloads hardware provisioning, setup and configuration, throughput capacity planning, replication, software patching and cluster scaling to AWS.
+  scope: DynamoDB service.
+  link: [throughput capacity planning, replication, software patching](../facts/dynamodb.md#dynamodb-faq-managed-offload)
+dynamodb-faq-max-item-size-400-kb
+  claim: The maximum size of an item in a DynamoDB table is 400 KB.
+  scope: per item; maximum; not adjustable.
+  link: [400 KB](../facts/dynamodb.md#dynamodb-faq-max-item-size-400-kb)
+  say: four hundred kilobytes
+dynamodb-faq-multi-account-table-names
+  claim: For single account global tables, all replica tables must share the same name. For multi-account global tables, replicas can use different names if they use the same primary key schema and meet the other prerequisites.
+  scope: replica tables in one global table; single-account versus multi-account global tables.
+  link: [all replica tables must share the same name](../facts/dynamodb.md#dynamodb-faq-multi-account-table-names)
+dynamodb-faq-no-limit-on-item-count
+  claim: There is no predefined limit to the number of items that can be stored in a DynamoDB table.
+  scope: per table.
+  link: [no predefined limit to the number of items](../facts/dynamodb.md#dynamodb-faq-no-limit-on-item-count)
+dynamodb-faq-on-demand-billing-units
+  claim: With on-demand pricing, DynamoDB lets you pay only for the resources you consume and scales to zero when not in use; while the database is in use, write request units and read request units are used to calculate charges.
+  scope: DynamoDB on-demand capacity mode; charges apply while the database is in use.
+  link: [write request units and read request units](../facts/dynamodb.md#dynamodb-faq-on-demand-billing-units)
+dynamodb-faq-on-demand-for-unpredictable
+  claim: On-demand capacity mode suits customers who prefer to pay only for what they use or who have unpredictable workloads.
+  scope: DynamoDB capacity mode choice.
+  link: [on-demand is better suited to customers](../facts/dynamodb.md#dynamodb-faq-on-demand-for-unpredictable)
+dynamodb-faq-on-demand-scale-to-zero-pay
+  claim: DynamoDB can scale to zero. In on-demand mode customers pay only for the active resources consumed.
+  scope: DynamoDB on-demand capacity mode.
+  link: [only pay for active resources consumed](../facts/dynamodb.md#dynamodb-faq-on-demand-scale-to-zero-pay)
+dynamodb-faq-partition-storage-ssd-multi-az
+  claim: A DynamoDB partition is an allocation of storage for a table, backed by SSDs and automatically replicated across multiple Availability Zones in a Region. DynamoDB manages partitions entirely.
+  scope: per table.
+  link: [backed by solid state drives (SSDs)](../facts/dynamodb.md#dynamodb-faq-partition-storage-ssd-multi-az)
+dynamodb-faq-primary-key-only-required-attribute
+  claim: The primary key is the only required attribute for items in a DynamoDB table.
+  scope: items in a DynamoDB table; the primary key is specified when the table is created.
+  link: [only required attribute for items in a table](../facts/dynamodb.md#dynamodb-faq-primary-key-only-required-attribute)
+dynamodb-faq-primary-key-two-forms
+  claim: A primary key can be either a single-attribute partition key or a composite partition-sort key.
+  scope: DynamoDB primary key.
+  link: [single-attribute partition key or a composite partition-sort key](../facts/dynamodb.md#dynamodb-faq-primary-key-two-forms)
+dynamodb-faq-privatelink-interface-endpoints
+  claim: With AWS PrivateLink, private connectivity between VPCs, DynamoDB and on-premises data centers uses interface VPC endpoints and private IP addresses.
+  scope: DynamoDB private connectivity.
+  link: [interface VPC endpoints and private IP addresses](../facts/dynamodb.md#dynamodb-faq-privatelink-interface-endpoints)
+dynamodb-faq-privatelink-stays-on-amazon-network
+  claim: With PrivateLink, DynamoDB tables are reached over a private connection and the requests do not leave the Amazon network.
+  scope: DynamoDB over PrivateLink.
+  link: [requests do not leave the Amazon network](../facts/dynamodb.md#dynamodb-faq-privatelink-stays-on-amazon-network)
+dynamodb-faq-provisioned-for-predictable
+  claim: Provisioned capacity mode suits applications with consistent or predictable traffic, where customers prefer to forecast capacity requirements to control costs.
+  scope: DynamoDB capacity mode choice.
+  link: [consistent or predictable traffic](../facts/dynamodb.md#dynamodb-faq-provisioned-for-predictable)
+dynamodb-faq-query-nonkey-via-gsi-lsi
+  claim: DynamoDB lets you query on nonprimary key attributes by using global secondary indexes and local secondary indexes.
+  scope: DynamoDB queries.
+  link: [global secondary indexes and local secondary indexes](../facts/dynamodb.md#dynamodb-faq-query-nonkey-via-gsi-lsi)
+dynamodb-faq-reasons-for-global-tables
+  claim: Global tables improve an application's resiliency across multiple Regions and optionally across multiple AWS accounts, and they let applications maintain high availability in the unlikely event that an entire Region is isolated or degraded.
+  scope: DynamoDB global tables.
+  link: [resiliency across multiple Regions](../facts/dynamodb.md#dynamodb-faq-reasons-for-global-tables)
+dynamodb-faq-replica-table-same-items-and-key
+  claim: Each replica table stores the same set of data items and uses the same primary key schema.
+  scope: replica tables in one global table.
+  link: [same primary key schema](../facts/dynamodb.md#dynamodb-faq-replica-table-same-items-and-key)
+dynamodb-faq-resource-policies-tables-streams
+  claim: DynamoDB supports resource-based policies for tables and streams.
+  scope: DynamoDB tables and streams.
+  link: [supports resource-based policies for tables and streams](../facts/dynamodb.md#dynamodb-faq-resource-policies-tables-streams)
+dynamodb-faq-resource-policy-covers-indexes
+  claim: The resource-based policy of a table also covers the access permissions for the table's global and local secondary indexes.
+  scope: per table resource-based policy.
+  link: [cover the access permissions for the table's indexes](../facts/dynamodb.md#dynamodb-faq-resource-policy-covers-indexes)
+dynamodb-faq-rest-kms-aes-256
+  claim: DynamoDB encryption at rest uses encryption keys stored in AWS KMS, and data at rest is encrypted with AES-256.
+  scope: data at rest.
+  link: [AES-256](../facts/dynamodb.md#dynamodb-faq-rest-kms-aes-256)
+dynamodb-faq-single-digit-ms-availability
+  claim: DynamoDB is a fully managed, scale-to-zero serverless database with single-digit millisecond performance and up to 99.999% availability.
+  scope: DynamoDB service; maximum; the 99.999% figure is stated as 'up to'.
+  link: [up to 99.999% availability](../facts/dynamodb.md#dynamodb-faq-single-digit-ms-availability)
+  link: [single-digit millisecond performance](../facts/dynamodb.md#dynamodb-faq-single-digit-ms-availability)
+dynamodb-faq-standard-ia-dax-compatible
+  claim: Standard-IA tables are compatible with DynamoDB Accelerator (DAX).
+  scope: Standard-IA tables.
+  link: [compatible with DynamoDB Accelerator](../facts/dynamodb.md#dynamodb-faq-standard-ia-dax-compatible)
+dynamodb-faq-standard-ia-features
+  claim: Standard-IA tables support global tables, point-in-time recovery, on-demand backups, encryption at rest with AWS KMS, DynamoDB Streams, TTL, and transactional read and write operations.
+  scope: Standard-IA tables.
+  link: [They support Global Tables for multi-Region replication](../facts/dynamodb.md#dynamodb-faq-standard-ia-features)
+dynamodb-faq-stream-record-contents
+  claim: A stream data record includes the time an item was created, updated or deleted, the item's primary key, and images of the item before and after the modification.
+  scope: DynamoDB Streams and Kinesis data streams for DynamoDB.
+  link: [an image of the item before the modification](../facts/dynamodb.md#dynamodb-faq-stream-record-contents)
+dynamodb-faq-streams-24-hour-log
+  claim: DynamoDB Streams captures a de-duplicated, time-ordered sequence of item-level modifications in a table and stores it in a log for up to 24 hours.
+  scope: DynamoDB Streams log; maximum; not adjustable.
+  link: [up to 24 hours](../facts/dynamodb.md#dynamodb-faq-streams-24-hour-log)
+  say: up to twenty-four hours
+dynamodb-faq-streams-auto-scale-capacity
+  claim: DynamoDB Streams scales capacity automatically, so there is no capacity to provision or manage.
+  scope: DynamoDB Streams.
+  link: [scales capacity automatically](../facts/dynamodb.md#dynamodb-faq-streams-auto-scale-capacity)
+dynamodb-faq-streams-lambda-triggers
+  claim: DynamoDB Streams is useful to respond to data changes with triggers, using the native integration with AWS Lambda.
+  scope: DynamoDB Streams.
+  link: [native integration with AWS Lambda](../facts/dynamodb.md#dynamodb-faq-streams-lambda-triggers)
+dynamodb-faq-streams-vs-kinesis-choice
+  claim: Choose DynamoDB Streams to track DynamoDB table changes. Choose Kinesis Data Streams for broader streaming needs, higher throughput, or longer data retention.
+  scope: change data capture for DynamoDB.
+  link: [Choose DynamoDB Streams when you specifically need](../facts/dynamodb.md#dynamodb-faq-streams-vs-kinesis-choice)
+dynamodb-faq-sync-replication-three-azs
+  claim: DynamoDB synchronously replicates data across three Availability Zones in an AWS Region, which gives high availability and data durability.
+  scope: per AWS Region; fixed; single-Region table.
+  link: [three Availability Zones](../facts/dynamodb.md#dynamodb-faq-sync-replication-three-azs)
+  say: three Availability Zones
+dynamodb-faq-table-class-cost-tradeoff
+  claim: Standard tables have lower read and write costs but higher storage costs. Standard-IA tables have lower storage costs but higher read and write costs.
+  scope: per DynamoDB table class.
+  link: [Standard-IA tables have lower storage costs](../facts/dynamodb.md#dynamodb-faq-table-class-cost-tradeoff)
+  link: [lower costs for reads and writes](../facts/dynamodb.md#dynamodb-faq-table-class-cost-tradeoff)
+dynamodb-faq-table-class-switch-twice-30-days
+  claim: A table can switch between the DynamoDB Standard and Standard-IA table classes twice in a 30-day period, without downtime.
+  scope: per table, per 30-day period; maximum; not adjustable; switching causes no downtime.
+  link: [twice in a 30-day period](../facts/dynamodb.md#dynamodb-faq-table-class-switch-twice-30-days)
+  say: twice in a thirty-day period
+dynamodb-faq-table-classes-two
+  claim: There are two table classes. DynamoDB Standard is the default class for maximum performance, and DynamoDB Standard-Infrequent Access is optimized for tables where storage is the dominant cost.
+  scope: per DynamoDB table; default; Standard is the default class.
+  link: [DynamoDB Standard-Infrequent Access](../facts/dynamodb.md#dynamodb-faq-table-classes-two)
+  link: [default table class designed for workloads](../facts/dynamodb.md#dynamodb-faq-table-classes-two)
+dynamodb-faq-transit-https
+  claim: DynamoDB protects network traffic in transit with the HTTPS protocol, using Secure Sockets Layer encryption.
+  scope: data in transit.
+  link: [HTTPS protocol is used to protect network traffic](../facts/dynamodb.md#dynamodb-faq-transit-https)
+dynamodb-faq-ttl-defines-per-item-timestamp
+  claim: Each time an item is created or updated, you can compute the expiration time and save it in the TTL attribute.
+  scope: per item, TTL.
+  link: [save it in the TTL attribute](../facts/dynamodb.md#dynamodb-faq-ttl-defines-per-item-timestamp)
+dynamodb-faq-ttl-deletes-expired-items
+  claim: The TTL feature automatically deletes expired items, which reduces storage usage and lowers costs.
+  scope: per table where TTL is enabled.
+  link: [automatically deletes expired items](../facts/dynamodb.md#dynamodb-faq-ttl-deletes-expired-items)
+dynamodb-faq-ttl-no-write-throughput
+  claim: With TTL you define a per-item timestamp, and DynamoDB deletes the item from the table without consuming any write throughput.
+  scope: per item deleted by TTL; TTL is enabled and the item has a TTL timestamp.
+  link: [without consuming any write throughput](../facts/dynamodb.md#dynamodb-faq-ttl-no-write-throughput)
+dynamodb-faq-ttl-use-case
+  claim: TTL is useful for items that lose relevance after a specific time.
+  scope: TTL.
+  link: [lose relevance after a specific time](../facts/dynamodb.md#dynamodb-faq-ttl-use-case)
+dynamodb-faq-two-vpc-endpoint-types
+  claim: DynamoDB supports two types of VPC endpoints: gateway endpoints and AWS PrivateLink.
+  scope: DynamoDB VPC access.
+  link: [gateway endpoints and using AWS PrivateLink](../facts/dynamodb.md#dynamodb-faq-two-vpc-endpoint-types)
+dynamodb-faq-vector-4096-dimensions
+  claim: DynamoDB vector search supports vectors with up to 4,096 dimensions.
+  scope: per vector embedding; maximum; not adjustable.
+  link: [up to 4,096 dimensions](../facts/dynamodb.md#dynamodb-faq-vector-4096-dimensions)
+dynamodb-faq-vector-five-indexes-per-table
+  claim: You can create up to five vector indexes per DynamoDB table, and you can request an increase to this service quota through AWS Support.
+  scope: per table; default; adjustable; an increase is requested by reaching out to AWS Support.
+  link: [up to five vector indexes per table](../facts/dynamodb.md#dynamodb-faq-vector-five-indexes-per-table)
+  say: up to five vector indexes per table
+dynamodb-faq-vector-on-demand-tables-only
+  claim: Vector indexes in DynamoDB are supported with on-demand tables only.
+  scope: DynamoDB vector indexes.
+  link: [on-demand tables only](../facts/dynamodb.md#dynamodb-faq-vector-on-demand-tables-only)
+dynamodb-faq-vector-top-k-100
+  claim: DynamoDB vector search supports up to 100 top k results per search.
+  scope: per vector search; maximum; not adjustable.
+  link: [up to 100 top k results](../facts/dynamodb.md#dynamodb-faq-vector-top-k-100)
+dynamodb-faq-zero-etl-opensearch-full-text
+  claim: The zero-ETL integration replicates data from DynamoDB tables to OpenSearch Service within seconds of being written, using OpenSearch Ingestion pipelines. This supports full text search.
+  scope: DynamoDB to OpenSearch Service; uses OpenSearch Ingestion pipelines.
+  link: [zero-ETL integration to replicate data](../facts/dynamodb.md#dynamodb-faq-zero-etl-opensearch-full-text)
+dynamodb-few-partition-keys-spread-writes
+  claim: If a table has only a small number of partition key values, AWS suggests spreading write operations across more distinct partition key values to avoid one hot partition key value.
+  scope: per table.
+  link: [across more distinct partition key values](../facts/dynamodb.md#dynamodb-few-partition-keys-spread-writes)
+  link: [small number of partition key values](../facts/dynamodb.md#dynamodb-few-partition-keys-spread-writes)
+dynamodb-fgac-restrict-items-and-attributes
+  claim: An IAM policy for DynamoDB can restrict access to individual items in a table, to the attributes in those items, or to both at the same time.
+  scope: per IAM policy.
+  link: [restrict access to individual items in a table](../facts/dynamodb.md#dynamodb-fgac-restrict-items-and-attributes)
+  link: [access to the attributes in those items](../facts/dynamodb.md#dynamodb-fgac-restrict-items-and-attributes)
+dynamodb-gateway-vs-interface-endpoint-onprem
+  claim: A gateway endpoint is a gateway that you specify in your route table to access DynamoDB from your VPC over the AWS network. Interface endpoints use private IP addresses to route requests to DynamoDB from within your Amazon VPC, on premises, or from a VPC in another AWS Region by using VPC peering or AWS Transit Gateway. Interface endpoints are compatible with gateway endpoints, so you can use both types of endpoints in the same VPC.
+  scope: DynamoDB VPC endpoints; access from another Region needs VPC peering or AWS Transit Gateway.
+  link: [specify in your route table](../facts/dynamodb.md#dynamodb-gateway-vs-interface-endpoint-onprem)
+  link: [from within your Amazon VPC, on premises](../facts/dynamodb.md#dynamodb-gateway-vs-interface-endpoint-onprem)
+  link: [use both types of endpoints](../facts/dynamodb.md#dynamodb-gateway-vs-interface-endpoint-onprem)
+  say: a route table target | from the VPC, on premises or another Region | use both in one VPC
+dynamodb-getitem-round-10kb-example
+  claim: GetItem rounds a 3.5 KB item up to 4 KB and a 10 KB item up to 12 KB when it calculates read units.
+  scope: per GetItem read; fixed; worked example.
+  link: [12 KB](../facts/dynamodb.md#dynamodb-getitem-round-10kb-example)
+  link: [4 KB](../facts/dynamodb.md#dynamodb-getitem-round-10kb-example)
+dynamodb-global-table-any-replica-serves-reads-writes
+  claim: Any global table replica can serve reads and writes.
+  scope: per global table.
+  link: [Any global table replica](../facts/dynamodb.md#dynamodb-global-table-any-replica-serves-reads-writes)
+  link: [serve reads and writes](../facts/dynamodb.md#dynamodb-global-table-any-replica-serves-reads-writes)
+dynamodb-global-table-one-replica-per-region
+  claim: A global table consists of two or more replica tables across different AWS Regions, and each global table can have only one replica per AWS Region.
+  scope: per global table; maximum.
+  link: [only one replica per AWS Region](../facts/dynamodb.md#dynamodb-global-table-one-replica-per-region)
+  link: [two or more replica tables](../facts/dynamodb.md#dynamodb-global-table-one-replica-per-region)
+dynamodb-global-table-replicas-share-name-key-data
+  claim: All replicas in a global table share the same primary key schema and item data.
+  scope: per global table.
+  link: [primary key schema, and item data](../facts/dynamodb.md#dynamodb-global-table-replicas-share-name-key-data)
+dynamodb-global-table-write-replicated-automatically
+  claim: When an application writes data to a replica in one Region, DynamoDB automatically replicates the write to all other replicas in the global table.
+  scope: per global table.
+  link: [automatically replicates the write to all other replicas](../facts/dynamodb.md#dynamodb-global-table-write-replicated-automatically)
+  link: [writes data to a replica in one Region](../facts/dynamodb.md#dynamodb-global-table-write-replicated-automatically)
+dynamodb-global-tables-apply-custom-logic-to-redirect
+  claim: With global tables you can apply custom business logic to determine when to redirect requests to other Regions.
+  scope: per global table.
+  link: [custom business logic](../facts/dynamodb.md#dynamodb-global-tables-apply-custom-logic-to-redirect)
+  link: [redirect requests to other Regions](../facts/dynamodb.md#dynamodb-global-tables-apply-custom-logic-to-redirect)
+dynamodb-global-tables-available-wherever-dynamodb
+  claim: Global tables are available in all Regions where DynamoDB is available.
+  scope: per Region.
+  link: [available in all Regions where DynamoDB is available](../facts/dynamodb.md#dynamodb-global-tables-available-wherever-dynamodb)
+  link: [Global tables are available](../facts/dynamodb.md#dynamodb-global-tables-available-wherever-dynamodb)
+dynamodb-global-tables-both-models-same-features
+  claim: Both same-account and multi-account global tables support multi-Region writes, asynchronous replication, last-writer-wins conflict resolution, and the same billing model.
+  scope: per global table.
+  link: [multi-Region writes, asynchronous replication, last-writer-wins conflict resolution](../facts/dynamodb.md#dynamodb-global-tables-both-models-same-features)
+  link: [the same billing model](../facts/dynamodb.md#dynamodb-global-tables-both-models-same-features)
+dynamodb-global-tables-consistency-mode-fixed
+  claim: A global table cannot contain replicas configured with different consistency modes, and you cannot change a global table's consistency mode after creation.
+  scope: per global table.
+  link: [cannot change a global table's consistency mode](../facts/dynamodb.md#dynamodb-global-tables-consistency-mode-fixed)
+  link: [different consistency modes](../facts/dynamodb.md#dynamodb-global-tables-consistency-mode-fixed)
+dynamodb-global-tables-default-mrec
+  claim: If you do not specify a consistency mode when creating a global table, it defaults to multi-Region eventual consistency (MREC).
+  scope: per global table; default; not adjustable.
+  link: [defaults to multi-Region eventual consistency (MREC)](../facts/dynamodb.md#dynamodb-global-tables-default-mrec)
+  link: [If you do not specify a consistency mode](../facts/dynamodb.md#dynamodb-global-tables-default-mrec)
+dynamodb-global-tables-definition
+  claim: DynamoDB global tables is a fully managed, multi-Region, multi-active database feature that provides easy data replication and fast local read and write performance for globally scaled applications.
+  scope: per global table.
+  link: [fully managed, multi-Region, and multi-active database feature](../facts/dynamodb.md#dynamodb-global-tables-definition)
+  link: [fast local read and write performance](../facts/dynamodb.md#dynamodb-global-tables-definition)
+dynamodb-global-tables-encrypt-at-rest-kms
+  claim: Like all DynamoDB tables, global table replicas always encrypt data at rest using encryption keys stored in AWS Key Management Service (AWS KMS).
+  scope: per replica.
+  link: [always encrypt data at rest](../facts/dynamodb.md#dynamodb-global-tables-encrypt-at-rest-kms)
+  link: [AWS Key Management Service (AWS KMS)](../facts/dynamodb.md#dynamodb-global-tables-encrypt-at-rest-kms)
+dynamodb-global-tables-inaccessible-key-20-hours
+  claim: If a replica in an MREC global table remains in the INACCESSIBLE_ENCRYPTION_CREDENTIALS state for more than 20 hours, the replica is irreversibly converted to a single-Region DynamoDB table.
+  scope: per replica; MREC mode; DynamoDB access to the customer managed key is disabled or revoked.
+  link: [more than 20 hours](../facts/dynamodb.md#dynamodb-global-tables-inaccessible-key-20-hours)
+  link: [irreversibly converted to a single-Region DynamoDB table](../facts/dynamodb.md#dynamodb-global-tables-inaccessible-key-20-hours)
+dynamodb-global-tables-legacy-replica-requires-streams-both-images
+  claim: In the legacy version of global tables, a new replica table must have DynamoDB Streams enabled, with the stream containing both the new and the old images of the item.
+  scope: per replica table; global tables version 2017.11.29 (Legacy).
+  link: [DynamoDB Streams enabled](../facts/dynamodb.md#dynamodb-global-tables-legacy-replica-requires-streams-both-images)
+  link: [both the new and the old images](../facts/dynamodb.md#dynamodb-global-tables-legacy-replica-requires-streams-both-images)
+dynamodb-global-tables-legacy-replicas-must-be-empty
+  claim: In the legacy version of global tables, none of the new or existing replica tables in the global table can contain any data when you add a replica.
+  scope: per global table; global tables version 2017.11.29 (Legacy).
+  link: [can contain any data](../facts/dynamodb.md#dynamodb-global-tables-legacy-replicas-must-be-empty)
+  link: [None of the new or existing replica tables](../facts/dynamodb.md#dynamodb-global-tables-legacy-replicas-must-be-empty)
+dynamodb-global-tables-legacy-same-table-name
+  claim: In the legacy version of global tables, a new replica table must have the same name as all of the other replicas.
+  scope: per replica table; global tables version 2017.11.29 (Legacy).
+  link: [same name as all of the other replicas](../facts/dynamodb.md#dynamodb-global-tables-legacy-same-table-name)
+  link: [The table must have the same name](../facts/dynamodb.md#dynamodb-global-tables-legacy-same-table-name)
+dynamodb-global-tables-mrsc-same-account-only
+  claim: Global tables configured for MRSC only support same-account configurations.
+  scope: per global table; MRSC mode.
+  link: [only support same-account configurations](../facts/dynamodb.md#dynamodb-global-tables-mrsc-same-account-only)
+  link: [Global tables configured for MRSC](../facts/dynamodb.md#dynamodb-global-tables-mrsc-same-account-only)
+dynamodb-global-tables-no-primary-table
+  claim: Global tables are multi-active, so you do not need a primary table, and there are no complicated or delayed fail-overs or database downtime when an application fails over between Regions.
+  scope: per global table.
+  link: [you don't need a primary table](../facts/dynamodb.md#dynamodb-global-tables-no-primary-table)
+  link: [no complicated or delayed fail-overs](../facts/dynamodb.md#dynamodb-global-tables-no-primary-table)
+dynamodb-global-tables-on-demand-write-capacity-synced
+  claim: For global tables in on-demand mode, write capacity is automatically synchronized across all replicas.
+  scope: per global table; on-demand capacity mode.
+  link: [write capacity is automatically synchronized across all replicas](../facts/dynamodb.md#dynamodb-global-tables-on-demand-write-capacity-synced)
+  link: [configured for on-demand mode](../facts/dynamodb.md#dynamodb-global-tables-on-demand-write-capacity-synced)
+dynamodb-global-tables-product-page-one-to-two-seconds
+  claim: The global tables product page says that in multi-Region eventual consistency mode, DynamoDB replicates a write to all other replicas, usually within one to two seconds.
+  scope: per global table; MREC mode; product page wording.
+  link: [usually within one to two seconds](../facts/dynamodb.md#dynamodb-global-tables-product-page-one-to-two-seconds)
+  link: [replicates a write to any replica](../facts/dynamodb.md#dynamodb-global-tables-product-page-one-to-two-seconds)
+dynamodb-global-tables-replicationlatency-increase-redirect
+  claim: An increasing value for the ReplicationLatency metric could indicate that updates from one replica are not propagating to other replica tables in a timely manner.
+  scope: per replica pair; MREC mode.
+  link: [`ReplicationLatency`](../facts/dynamodb.md#dynamodb-global-tables-replicationlatency-increase-redirect)
+  link: [not propagating to other replica tables](../facts/dynamodb.md#dynamodb-global-tables-replicationlatency-increase-redirect)
+dynamodb-global-tables-same-apis-no-app-changes
+  claim: Global tables use existing DynamoDB APIs to read and write data to your tables, so no application changes are required.
+  scope: per global table.
+  link: [no application changes are required](../facts/dynamodb.md#dynamodb-global-tables-same-apis-no-app-changes)
+  link: [existing DynamoDB APIs](../facts/dynamodb.md#dynamodb-global-tables-same-apis-no-app-changes)
+dynamodb-global-tables-same-durability-as-single-region
+  claim: Each replica table in a global table provides the same durability and availability as a single-Region DynamoDB table.
+  scope: per replica.
+  link: [same durability and availability](../facts/dynamodb.md#dynamodb-global-tables-same-durability-as-single-region)
+  link: [Each replica table in a global table](../facts/dynamodb.md#dynamodb-global-tables-same-durability-as-single-region)
+dynamodb-global-tables-same-kms-key-type
+  claim: All replicas in a global table must be configured with the same type of KMS key: AWS owned key, AWS managed key, or customer managed key.
+  scope: per global table.
+  link: [the same type of KMS key](../facts/dynamodb.md#dynamodb-global-tables-same-kms-key-type)
+  link: [All replicas in a global table](../facts/dynamodb.md#dynamodb-global-tables-same-kms-key-type)
+dynamodb-global-tables-shift-traffic-on-regional-impairment
+  claim: If a workload in a single AWS Region becomes impaired, you can shift application traffic to a different Region and perform reads and writes to a different replica table in the same global table.
+  scope: per global table.
+  link: [shift application traffic to a different Region](../facts/dynamodb.md#dynamodb-global-tables-shift-traffic-on-regional-impairment)
+  link: [reads and writes to a different replica table](../facts/dynamodb.md#dynamodb-global-tables-shift-traffic-on-regional-impairment)
+dynamodb-global-tables-upgrade-keeps-serving
+  claim: While a global table is upgraded to the current version, all replicas continue to process read and write traffic.
+  scope: per global table.
+  link: [continue to process read and write traffic](../facts/dynamodb.md#dynamodb-global-tables-upgrade-keeps-serving)
+  link: [All global table replicas will continue](../facts/dynamodb.md#dynamodb-global-tables-upgrade-keeps-serving)
+dynamodb-global-tables-v2019-recommended
+  claim: AWS recommends global tables version 2019.11.21 (Current) because it is easier to use, supported in more Regions, and lower cost for most workloads than version 2017.11.29 (Legacy).
+  scope: per global table.
+  link: [Global Tables version 2019.11.21 (Current)](../facts/dynamodb.md#dynamodb-global-tables-v2019-recommended)
+  link: [version 2017.11.29 (Legacy)](../facts/dynamodb.md#dynamodb-global-tables-v2019-recommended)
+dynamodb-gsi-add-to-existing-table
+  claim: When you add a global secondary index to an existing table, the table continues to be available while the index is being built, but the new index is not available for Query operations until its status changes from CREATING to ACTIVE.
+  scope: per global secondary index.
+  link: [the table continues to be available](../facts/dynamodb.md#dynamodb-gsi-add-to-existing-table)
+  link: [not available for Query operations](../facts/dynamodb.md#dynamodb-gsi-add-to-existing-table)
+dynamodb-gsi-and-streams-reads-eventual
+  claim: All reads from global secondary indexes and streams are eventually consistent.
+  scope: per read.
+  link: [reads from GSIs and streams are eventually consistent](../facts/dynamodb.md#dynamodb-gsi-and-streams-reads-eventual)
+  link: [GSIs and streams](../facts/dynamodb.md#dynamodb-gsi-and-streams-reads-eventual)
+dynamodb-gsi-back-pressure-definition
+  claim: If a global secondary index does not have enough capacity to handle updates, DynamoDB throttles writes to the base table to maintain data consistency; this is called GSI back-pressure.
+  scope: per table.
+  link: [throttles writes to the base table](../facts/dynamodb.md#dynamodb-gsi-back-pressure-definition)
+  link: [doesn't have sufficient capacity](../facts/dynamodb.md#dynamodb-gsi-back-pressure-definition)
+dynamodb-gsi-creation-can-throttle-base-table
+  claim: When creating a global secondary index, writes to the base table can be throttled if the index activity from base table writes exceeds the index's provisioned write capacity.
+  scope: per table; provisioned capacity mode.
+  link: [base table can be throttled](../facts/dynamodb.md#dynamodb-gsi-creation-can-throttle-base-table)
+  link: [exceeds the GSI's provisioned write capacity](../facts/dynamodb.md#dynamodb-gsi-creation-can-throttle-base-table)
+dynamodb-gsi-data-stored-separately
+  claim: The data in a global secondary index is stored separately from the data in its base table, and index partitions behave in much the same way as table partitions.
+  scope: per global secondary index.
+  link: [stored separately from the data](../facts/dynamodb.md#dynamodb-gsi-data-stored-separately)
+  link: [index partitions behave in much the same way](../facts/dynamodb.md#dynamodb-gsi-data-stored-separately)
+dynamodb-gsi-delete-with-updatetable
+  claim: If you no longer need a global secondary index, you can delete it using the UpdateTable operation.
+  scope: per global secondary index.
+  link: [delete it using the `UpdateTable` operation](../facts/dynamodb.md#dynamodb-gsi-delete-with-updatetable)
+  link: [no longer need a global secondary index](../facts/dynamodb.md#dynamodb-gsi-delete-with-updatetable)
+dynamodb-gsi-eventual-read-half-unit
+  claim: Global secondary indexes support eventually consistent reads, each of which consumes one half of a read capacity unit, so one GSI query can retrieve up to 8 KB per read capacity unit.
+  scope: per global secondary index query; fixed; eventually consistent reads only.
+  link: [one half of a read capacity unit](../facts/dynamodb.md#dynamodb-gsi-eventual-read-half-unit)
+  link: [8 KB per read capacity unit](../facts/dynamodb.md#dynamodb-gsi-eventual-read-half-unit)
+dynamodb-gsi-inherits-capacity-mode
+  claim: Global secondary indexes inherit the read/write capacity mode from the base table.
+  scope: per global secondary index.
+  link: [inherit the read/write capacity mode](../facts/dynamodb.md#dynamodb-gsi-inherits-capacity-mode)
+  link: [read/write capacity mode](../facts/dynamodb.md#dynamodb-gsi-inherits-capacity-mode)
+dynamodb-gsi-insufficient-write-throttles-table
+  claim: If a global secondary index has insufficient write capacity while you do heavy write activity on the table, the write activity on the table is throttled.
+  scope: per table; provisioned capacity mode.
+  link: [insufficient write capacity](../facts/dynamodb.md#dynamodb-gsi-insufficient-write-throttles-table)
+  link: [write activity on the table will be throttled](../facts/dynamodb.md#dynamodb-gsi-insufficient-write-throttles-table)
+dynamodb-gsi-key-attribute-types
+  claim: Each global secondary index key attribute must be a scalar of type String, Number or Binary; it cannot be a document or a set.
+  scope: per index key attribute.
+  link: [scalar of type `String`, `Number`, or `Binary`](../facts/dynamodb.md#dynamodb-gsi-key-attribute-types)
+  link: [cannot be a document or a set](../facts/dynamodb.md#dynamodb-gsi-key-attribute-types)
+dynamodb-gsi-key-schema-can-differ
+  claim: Every global secondary index must have a partition key and can have an optional sort key, and its key schema can be different from the base table schema.
+  scope: per global secondary index.
+  link: [index key schema can be different](../facts/dynamodb.md#dynamodb-gsi-key-schema-can-differ)
+  link: [optional sort key](../facts/dynamodb.md#dynamodb-gsi-key-schema-can-differ)
+dynamodb-gsi-key-values-not-unique
+  claim: The primary key values in a global secondary index do not need to be unique.
+  scope: per index.
+  link: [don't need to be unique](../facts/dynamodb.md#dynamodb-gsi-key-values-not-unique)
+  link: [primary key values in global secondary indexes](../facts/dynamodb.md#dynamodb-gsi-key-values-not-unique)
+dynamodb-gsi-one-per-updatetable
+  claim: You can only create one global secondary index per UpdateTable operation.
+  scope: per UpdateTable call; maximum.
+  link: [one global secondary index per `UpdateTable` operation](../facts/dynamodb.md#dynamodb-gsi-one-per-updatetable)
+  link: [You can only create one global secondary index](../facts/dynamodb.md#dynamodb-gsi-one-per-updatetable)
+dynamodb-gsi-only-items-with-key-attributes
+  claim: A global secondary index only tracks data items where its key attributes actually exist.
+  scope: per global secondary index.
+  link: [only tracks data items](../facts/dynamodb.md#dynamodb-gsi-only-items-with-key-attributes)
+  link: [key attributes actually exist](../facts/dynamodb.md#dynamodb-gsi-only-items-with-key-attributes)
+dynamodb-gsi-own-provisioned-throughput
+  claim: When you create a global secondary index on a provisioned mode table, you must specify read and write capacity units for it, and its provisioned throughput settings are separate from those of its base table.
+  scope: per global secondary index; provisioned capacity mode.
+  link: [separate from those of its base table](../facts/dynamodb.md#dynamodb-gsi-own-provisioned-throughput)
+  link: [must specify read and write capacity units](../facts/dynamodb.md#dynamodb-gsi-own-provisioned-throughput)
+dynamodb-gsi-propagation-fraction-of-second
+  claim: Changes to the table data are propagated to the global secondary indexes within a fraction of a second under normal conditions, but longer delays might occur in some unlikely failure scenarios.
+  scope: per global secondary index.
+  link: [within a fraction of a second](../facts/dynamodb.md#dynamodb-gsi-propagation-fraction-of-second)
+  link: [longer propagation delays might occur](../facts/dynamodb.md#dynamodb-gsi-propagation-fraction-of-second)
+dynamodb-gsi-queried-like-a-table
+  claim: You can retrieve data from a secondary index with a Query in much the same way as with a table, and a table can have multiple secondary indexes that give your applications many different query patterns.
+  scope: DynamoDB secondary indexes.
+  link: [retrieve data from the index using a `Query`](../facts/dynamodb.md#dynamodb-gsi-queried-like-a-table)
+  link: [many different query patterns](../facts/dynamodb.md#dynamodb-gsi-queried-like-a-table)
+  say: query the index like a table | many different query patterns
+dynamodb-gsi-query-cannot-fetch-from-table
+  claim: Global secondary index queries cannot fetch attributes from the base table, so they can only return projected attributes.
+  scope: per query.
+  link: [global secondary index queries cannot fetch attributes](../facts/dynamodb.md#dynamodb-gsi-query-cannot-fetch-from-table)
+  link: [cannot fetch attributes from the base table](../facts/dynamodb.md#dynamodb-gsi-query-cannot-fetch-from-table)
+dynamodb-gsi-read-with-query-scan-only
+  claim: You can retrieve items from a global secondary index with Query and Scan, but GetItem and BatchGetItem can't be used on a global secondary index.
+  scope: per global secondary index.
+  link: [can't be used on a global secondary index](../facts/dynamodb.md#dynamodb-gsi-read-with-query-scan-only)
+  link: [`Query` and `Scan` operations](../facts/dynamodb.md#dynamodb-gsi-read-with-query-scan-only)
+dynamodb-gsi-replica-for-read-isolation
+  claim: You can use a global secondary index to create an eventually consistent replica of a table.
+  scope: per table.
+  link: [eventually consistent replica of a table](../facts/dynamodb.md#dynamodb-gsi-replica-for-read-isolation)
+  link: [use a global secondary index to create](../facts/dynamodb.md#dynamodb-gsi-replica-for-read-isolation)
+dynamodb-gsi-replica-propagation-delay
+  claim: There is always a short propagation delay between a write to the parent table and the time the data appears in a global secondary index replica.
+  scope: per global secondary index.
+  link: [always a short propagation delay](../facts/dynamodb.md#dynamodb-gsi-replica-propagation-delay)
+  link: [short propagation delay](../facts/dynamodb.md#dynamodb-gsi-replica-propagation-delay)
+dynamodb-gsi-replica-same-key-schema
+  claim: To create a replica, set up a global secondary index that has the same key schema as the parent table, with some or all of the non-key attributes projected into it.
+  scope: per global secondary index.
+  link: [same key schema as the parent table](../facts/dynamodb.md#dynamodb-gsi-replica-same-key-schema)
+  link: [set up a global secondary index](../facts/dynamodb.md#dynamodb-gsi-replica-same-key-schema)
+dynamodb-gsi-same-table-class-as-base
+  claim: A global secondary index always uses the same table class as its base table.
+  scope: per global secondary index.
+  link: [always use the same table class](../facts/dynamodb.md#dynamodb-gsi-same-table-class-as-base)
+  link: [A global secondary index will always use](../facts/dynamodb.md#dynamodb-gsi-same-table-class-as-base)
+dynamodb-gsi-spans-whole-table
+  claim: Global secondary indexes (GSIs) are indexes that span the entire table, allowing you to query across all partition keys.
+  scope: per index.
+  link: [span the entire table](../facts/dynamodb.md#dynamodb-gsi-spans-whole-table)
+  link: [query across all partition keys](../facts/dynamodb.md#dynamodb-gsi-spans-whole-table)
+dynamodb-gsi-sparse-by-default
+  claim: Global secondary indexes are sparse by default.
+  scope: per global secondary index; default.
+  link: [Global secondary indexes are sparse by default](../facts/dynamodb.md#dynamodb-gsi-sparse-by-default)
+  link: [sparse by default](../facts/dynamodb.md#dynamodb-gsi-sparse-by-default)
+dynamodb-gsi-throttle-base-table-write-reason
+  claim: Even though a throttling exception caused by GSI back-pressure points to the global secondary index through ResourceArn, the operation being throttled is the write to the base table.
+  scope: per table.
+  link: [the write to the base table](../facts/dynamodb.md#dynamodb-gsi-throttle-base-table-write-reason)
+  link: [throttling exception points to the GSI](../facts/dynamodb.md#dynamodb-gsi-throttle-base-table-write-reason)
+dynamodb-gsi-updated-asynchronously
+  claim: When an application writes or deletes items in a table, any global secondary indexes on that table are updated asynchronously, using an eventually consistent model.
+  scope: per global secondary index.
+  link: [updated asynchronously, using an eventually consistent model](../facts/dynamodb.md#dynamodb-gsi-updated-asynchronously)
+  link: [any global secondary indexes on that table](../facts/dynamodb.md#dynamodb-gsi-updated-asynchronously)
+dynamodb-gsi-write-capacity-equal-or-greater
+  claim: To avoid potential throttling, the provisioned write capacity for a global secondary index should be equal to or greater than the write capacity of the base table, because new updates write to both.
+  scope: per global secondary index; provisioned capacity mode.
+  link: [equal or greater than the write capacity](../facts/dynamodb.md#dynamodb-gsi-write-capacity-equal-or-greater)
+  link: [provisioned write capacity for a global secondary index](../facts/dynamodb.md#dynamodb-gsi-write-capacity-equal-or-greater)
+dynamodb-gt-autoscaling-recommended-legacy-page
+  claim: The global tables best-practices page, which is documentation for version 2017.11.29 (Legacy) of global tables, says DynamoDB auto scaling is the recommended way to manage throughput capacity settings for replica tables that use provisioned mode, and that you can use on-demand mode if auto scaling does not satisfy your capacity changes (unpredictable workload) or you do not want to configure its settings.
+  scope: DynamoDB global tables, provisioned replicas; the page is for version 2017.11.29 (Legacy) of global tables.
+  link: [recommended way to manage throughput capacity settings](../facts/dynamodb.md#dynamodb-gt-autoscaling-recommended-legacy-page)
+  link: [use on-demand mode to manage capacity](../facts/dynamodb.md#dynamodb-gt-autoscaling-recommended-legacy-page)
+  say: auto scaling is the recommended way | on-demand mode is the alternative
+dynamodb-gt-backfill-increase
+  claim: If you add replicas to one destination Region within a 24-hour period with a combined total greater than 10 TB, you must request a service quota increase for the add replica data backfill quota.
+  scope: per destination Region, per 24-hour period; combined total of added replicas greater than 10TB.
+  link: [greater than 10TB](../facts/dynamodb.md#dynamodb-gt-backfill-increase)
+dynamodb-gt-backfill-quota
+  claim: The default quota for backfilled data for new replicas is 10 TB per account, per Region, per day, in both on-demand and provisioned modes.
+  scope: per account, per Region, per day; default; adjustable; applies to adding replicas.
+  link: [10 TB](../facts/dynamodb.md#dynamodb-gt-backfill-quota)
+dynamodb-gt-capacity-mode-synchronized-across-replicas
+  claim: In a global table, the capacity mode (provisioned or on-demand) is one of the settings that are always synchronized between replicas, so replicas cannot use different capacity modes.
+  scope: DynamoDB global tables version 2019.11.21; listed under the settings that are always synchronized between replicas.
+  link: [Capacity mode (provisioned capacity or on-demand)](../facts/dynamodb.md#dynamodb-gt-capacity-mode-synchronized-across-replicas)
+  say: capacity mode is synchronized between replicas
+dynamodb-gt-delete-source-table-24-hours
+  claim: You can't delete a table used to add a new global table replica until 24 hours have elapsed since the new replica was created.
+  scope: per table used to add a replica; fixed.
+  link: [24 hours](../facts/dynamodb.md#dynamodb-gt-delete-source-table-24-hours)
+dynamodb-gt-disabled-region-replica-20-hours
+  claim: If you disable an AWS Region that contains global table replicas, those replicas are permanently converted to single-Region tables 20 hours after the Region is disabled.
+  scope: per replica in a disabled Region; fixed.
+  link: [20 hours after the Region is disabled](../facts/dynamodb.md#dynamodb-gt-disabled-region-replica-20-hours)
+dynamodb-gt-mrec-default-last-writer-wins
+  claim: Multi-Region eventual consistency (MREC) is the default mode for a new global table. Writes are replicated asynchronously, typically within a second or less, and conflicts on the same item are resolved by last writer wins.
+  scope: per global table; default; not adjustable; a global table cannot mix modes and the mode cannot be changed after creation.
+  link: [MREC](../facts/dynamodb.md#dynamodb-gt-mrec-default-last-writer-wins)
+  link: [typically within a second or less](../facts/dynamodb.md#dynamodb-gt-mrec-default-last-writer-wins)
+  link: [last writer wins](../facts/dynamodb.md#dynamodb-gt-mrec-default-last-writer-wins)
+  say: multi-Region eventual consistency | typically within a second or less | last writer wins
+dynamodb-gt-mrsc-exactly-three-regions
+  claim: A multi-Region strong consistency (MRSC) global table must be deployed in exactly three Regions: either three replicas, or two replicas and one witness.
+  scope: per MRSC global table; fixed; a witness holds data but cannot be read or written.
+  link: [exactly three Regions](../facts/dynamodb.md#dynamodb-gt-mrsc-exactly-three-regions)
+  link: [two replicas and one witness](../facts/dynamodb.md#dynamodb-gt-mrsc-exactly-three-regions)
+  say: exactly three Regions | two replicas plus one witness
+dynamodb-gt-mrsc-no-ttl-lsi-transactions
+  claim: MRSC global tables do not support Time to Live (TTL), local secondary indexes (LSIs) or transaction operations; a transaction on an MRSC replica returns an error.
+  scope: per MRSC global table.
+  link: [Time to Live (TTL) is not supported](../facts/dynamodb.md#dynamodb-gt-mrsc-no-ttl-lsi-transactions)
+  link: [Local secondary indexes (LSIs) are not supported](../facts/dynamodb.md#dynamodb-gt-mrsc-no-ttl-lsi-transactions)
+  link: [do not support transaction operations](../facts/dynamodb.md#dynamodb-gt-mrsc-no-ttl-lsi-transactions)
+  say: TTL is not supported | LSIs are not supported | no transactions
+dynamodb-gt-mrsc-rpo-zero-mrec-rpo-seconds
+  claim: MRSC global tables support a recovery point objective (RPO) of zero but have higher write and strongly consistent read latencies than MREC. MREC global tables have an RPO equal to the replication delay between replicas, usually a few seconds.
+  scope: per global table consistency mode; the consistency mode is chosen at creation and cannot be changed.
+  link: [RPO) of zero](../facts/dynamodb.md#dynamodb-gt-mrsc-rpo-zero-mrec-rpo-seconds)
+  link: [usually a few seconds](../facts/dynamodb.md#dynamodb-gt-mrsc-rpo-zero-mrec-rpo-seconds)
+  say: RPO of zero | usually a few seconds
+dynamodb-gt-mrsc-synchronous-latest-reads
+  claim: In an MRSC global table, item changes are synchronously replicated to at least one other Region before the write returns success, and a strongly consistent read on any MRSC replica returns the latest version of an item.
+  scope: per MRSC global table.
+  link: [synchronously replicated to at least one other Region](../facts/dynamodb.md#dynamodb-gt-mrsc-synchronous-latest-reads)
+  link: [always return the latest version of an item](../facts/dynamodb.md#dynamodb-gt-mrsc-synchronous-latest-reads)
+  say: synchronously replicated to at least one other Region | always return the latest version
+dynamodb-gt-multi-account-mrec-only
+  claim: Multi-account global tables are supported for multi-Region eventual consistency (MREC) global tables only; MRSC global tables do not support the multi-account model. Each replica must be in a separate AWS account.
+  scope: per multi-account global table; a table with N replicas needs N accounts.
+  link: [supported for multi-Region eventual consistency (MREC) global tables](../facts/dynamodb.md#dynamodb-gt-multi-account-mrec-only)
+  link: [reside in a separate AWS account](../facts/dynamodb.md#dynamodb-gt-multi-account-mrec-only)
+  say: MREC only | one account per replica
+dynamodb-gt-multi-account-resource-policy-and-settings
+  claim: For multi-account global tables, customers must provide replication permissions to the DynamoDB global tables service principal in their resource policies, and table settings such as throughput mode and TTL are shared by all replicas and cannot be overridden per replica.
+  scope: per multi-account global table.
+  link: [the DynamoDB global tables service principal](../facts/dynamodb.md#dynamodb-gt-multi-account-resource-policy-and-settings)
+  link: [cannot be overridden per replica](../facts/dynamodb.md#dynamodb-gt-multi-account-resource-policy-and-settings)
+  say: grant the global tables service principal in resource policies | cannot be overridden per replica
+dynamodb-gt-multi-active-no-failover-needed
+  claim: DynamoDB global tables are a fully managed, serverless, multi-Region and multi-active database: if processing is interrupted in one Region, there is no need for a database failover because applications can read and write to any replica table.
+  scope: DynamoDB global tables.
+  link: [multi-Region, and multi-active](../facts/dynamodb.md#dynamodb-gt-multi-active-no-failover-needed)
+  link: [there is no need for a database failover](../facts/dynamodb.md#dynamodb-gt-multi-active-no-failover-needed)
+  say: multi-Region and multi-active | no database failover is needed
+dynamodb-gt-no-cross-region-transfer-fee
+  claim: DynamoDB does not charge cross-Region data transfer fees for replicating data between the Regions of a global table.
+  scope: global table replication.
+  link: [does not charge cross-Region data transfer fees](../facts/dynamodb.md#dynamodb-gt-no-cross-region-transfer-fee)
+dynamodb-gt-provisioned-replication-uses-write-capacity
+  claim: Replication consumes write capacity, so a provisioned replica can throttle when application writes plus replication writes exceed its provisioned write capacity. For global tables in provisioned mode, auto scaling settings for read and write capacity are synchronized between replicas.
+  scope: DynamoDB global tables, provisioned mode.
+  link: [Replication consumes write capacity](../facts/dynamodb.md#dynamodb-gt-provisioned-replication-uses-write-capacity)
+  link: [synchronized between replicas](../facts/dynamodb.md#dynamodb-gt-provisioned-replication-uses-write-capacity)
+  say: replication consumes write capacity | auto scaling settings are synchronized
+dynamodb-gt-replica-latency-notify-3-hours
+  claim: For multi-account global tables, DynamoDB sends an initial notification within 3 hours of elevated replication latency, followed by a second notification after 20 hours if the issue remains unresolved.
+  scope: per replica table with elevated replication latency; fixed; multi-account global tables; unresolved issues can lead to the replica being disassociated.
+  link: [within 3 hours](../facts/dynamodb.md#dynamodb-gt-replica-latency-notify-3-hours)
+  link: [after 20 hours](../facts/dynamodb.md#dynamodb-gt-replica-latency-notify-3-hours)
+dynamodb-gt-replicated-write-price-same
+  claim: Replicated write units (rWCUs and rWRUs) are priced the same as single-Region write units (WCUs and WRUs). Replicated write charges are incurred in every Region containing a replica table.
+  scope: per replica table, in every Region with a replica.
+  link: [priced the same as single-Region write units](../facts/dynamodb.md#dynamodb-gt-replicated-write-price-same)
+dynamodb-gt-rwru-per-replica
+  claim: Write operations to replica tables in on-demand mode are billed in replicated write request units (rWRUs), where one rWRU per replica table is charged for each write up to 1KB.
+  scope: per replica table, per write up to 1KB; fixed; on-demand capacity mode; provisioned mode uses replicated write capacity units (rWCUs).
+  link: [one rWRU per replica table](../facts/dynamodb.md#dynamodb-gt-rwru-per-replica)
+dynamodb-gt-sla-99999-vs-single-region-9999
+  claim: Global tables offer a 99.999% availability Service Level Agreement (SLA), compared to 99.99% for single-Region tables.
+  scope: global tables versus single-Region tables; minimum.
+  link: [99.999%](../facts/dynamodb.md#dynamodb-gt-sla-99999-vs-single-region-9999)
+  link: [99.99%](../facts/dynamodb.md#dynamodb-gt-sla-99999-vs-single-region-9999)
+dynamodb-gt-throughput-quota-mrec
+  claim: The default throughput per table configured for multi-Region eventual consistency (MREC) is 40,000 read request units and 40,000 write request units on demand, or 40,000 read capacity units and 40,000 write capacity units provisioned.
+  scope: per global table configured for MREC; default; adjustable; separate quotas exist for MREC and MRSC tables.
+  link: [40,000 read request units](../facts/dynamodb.md#dynamodb-gt-throughput-quota-mrec)
+  link: [40,000 write request units](../facts/dynamodb.md#dynamodb-gt-throughput-quota-mrec)
+dynamodb-gt-throughput-quota-mrsc
+  claim: The default throughput per table configured for multi-Region strong consistency (MRSC) is 40,000 read request units and 40,000 write request units on demand, or 40,000 read capacity units and 40,000 write capacity units provisioned.
+  scope: per global table configured for MRSC; default; adjustable; separate quotas exist for MREC and MRSC tables.
+  link: [40,000 read request units](../facts/dynamodb.md#dynamodb-gt-throughput-quota-mrsc)
+  link: [40,000 write request units](../facts/dynamodb.md#dynamodb-gt-throughput-quota-mrsc)
+dynamodb-gt-write-mixed-home-region
+  claim: In the write to your Region mode, which works with MREC tables, every Region is primary for its own non-overlapping dataset, and write operations must be guarded to ensure proper locality.
+  scope: DynamoDB global tables write modes; MREC tables only.
+  link: [primary for its own non-overlapping dataset](../facts/dynamodb.md#dynamodb-gt-write-mixed-home-region)
+  say: each Region is primary for its own data
+dynamodb-gt-write-modes-three-active-active
+  claim: Global tables are always active-active at the table level, but you can treat them as active-passive by controlling how you route writes. The prescriptive guidance lists three managed write patterns: write to any Region, write to one Region and write to your Region.
+  scope: DynamoDB global tables design.
+  link: [always active-active at the table level](../facts/dynamodb.md#dynamodb-gt-write-modes-three-active-active)
+  link: [three main managed write patterns](../facts/dynamodb.md#dynamodb-gt-write-modes-three-active-active)
+  say: always active-active at the table level | three main write patterns
+dynamodb-gt-write-quota-match-regions
+  claim: The table-level write throughput limit must be the same in every Region that has a replica of a global table.
+  scope: per replica Region of a global table; request matching increases in every replica Region before you add a replica.
+  link: [must be the same in every Region](../facts/dynamodb.md#dynamodb-gt-write-quota-match-regions)
+dynamodb-gt-write-to-one-region-for-transactions
+  claim: The write to one Region mode, an active-passive routing choice, suits MREC tables when you want conditional expressions and cannot use MRSC, or when you need transactions. Strongly consistent reads must then go to the single primary Region. The write to any Region mode is suitable for all MRSC tables.
+  scope: DynamoDB global tables write modes.
+  link: [when you need to perform transactions](../facts/dynamodb.md#dynamodb-gt-write-to-one-region-for-transactions)
+  link: [must go to the single primary Region](../facts/dynamodb.md#dynamodb-gt-write-to-one-region-for-transactions)
+  link: [This mode is suitable for all MRSC tables](../facts/dynamodb.md#dynamodb-gt-write-to-one-region-for-transactions)
+  say: needs transactions | strongly consistent reads go to the primary Region | write to any Region fits MRSC
+dynamodb-hot-partitions-cause-throttling
+  claim: A partition key design that does not distribute I/O requests effectively can create hot partitions that result in throttling and use provisioned I/O capacity inefficiently.
+  scope: per table.
+  link: ["hot" partitions that result in throttling](../facts/dynamodb.md#dynamodb-hot-partitions-cause-throttling)
+  link: [use your provisioned I/O capacity inefficiently](../facts/dynamodb.md#dynamodb-hot-partitions-cause-throttling)
+dynamodb-hot-partitions-throttle-while-others-underutilized
+  claim: When partitions receive concentrated traffic that exceeds the partition-level throughput limits, they are throttled while other operations may remain underutilized, creating hot partitions.
+  scope: per partition.
+  link: [throttling while other operations may remain underutilized](../facts/dynamodb.md#dynamodb-hot-partitions-throttle-while-others-underutilized)
+  link: [concentrated traffic that exceeds these limits](../facts/dynamodb.md#dynamodb-hot-partitions-throttle-while-others-underutilized)
+dynamodb-https-default-ssl-tls
+  claim: By default, communications to and from DynamoDB use the HTTPS protocol, which protects network traffic by using SSL/TLS encryption.
+  scope: per request; default; not adjustable.
+  link: [use the HTTPS protocol](../facts/dynamodb.md#dynamodb-https-default-ssl-tls)
+  link: [SSL/TLS encryption](../facts/dynamodb.md#dynamodb-https-default-ssl-tls)
+dynamodb-import-concurrency-limits
+  claim: Import from Amazon S3 supports up to 50 concurrent import jobs with a total source size of 15TB in us-east-1, us-west-2 and eu-west-1; in all other Regions the total size is 1TB.
+  scope: per Region; 15TB in us-east-1, us-west-2 and eu-west-1, 1TB elsewhere; maximum; not adjustable; total import source object size at a time.
+  link: [50 concurrent import jobs](../facts/dynamodb.md#dynamodb-import-concurrency-limits)
+  link: [15TB](../facts/dynamodb.md#dynamodb-import-concurrency-limits)
+  link: [1TB](../facts/dynamodb.md#dynamodb-import-concurrency-limits)
+dynamodb-import-cross-account-region
+  claim: You can import data from an Amazon S3 bucket owned by a different account if you have the correct permissions, and the new table might be in a different Region from the source bucket.
+  scope: per import.
+  link: [owned by a different account](../facts/dynamodb.md#dynamodb-import-cross-account-region)
+  link: [in a different Region from the source Amazon S3 bucket](../facts/dynamodb.md#dynamodb-import-cross-account-region)
+dynamodb-import-gsi-supported-lsi-not
+  claim: You can create the import target table with global secondary indexes, but local secondary indexes are not supported.
+  scope: per import.
+  link: [global secondary indexes](../facts/dynamodb.md#dynamodb-import-gsi-supported-lsi-not)
+  link: [local secondary indexes are not supported](../facts/dynamodb.md#dynamodb-import-gsi-supported-lsi-not)
+dynamodb-import-max-s3-objects
+  claim: Each import job can take up to 50,000 Amazon S3 objects in all Regions.
+  scope: per import job, all Regions; maximum; not adjustable.
+  link: [50,000 Amazon S3 objects](../facts/dynamodb.md#dynamodb-import-max-s3-objects)
+dynamodb-import-new-table-only
+  claim: DynamoDB creates a new target table when you import from Amazon S3, and import into existing tables is not currently supported by this feature.
+  scope: per import.
+  link: [creates a new target table](../facts/dynamodb.md#dynamodb-import-new-table-only)
+  link: [Import into existing tables is not currently supported](../facts/dynamodb.md#dynamodb-import-new-table-only)
+dynamodb-import-no-write-capacity
+  claim: Import from Amazon S3 does not consume write capacity on the new table, so you do not need to provision any extra capacity for importing data into DynamoDB.
+  scope: per import.
+  link: [does not consume write capacity](../facts/dynamodb.md#dynamodb-import-no-write-capacity)
+  link: [on the new table](../facts/dynamodb.md#dynamodb-import-no-write-capacity)
+dynamodb-import-source-formats
+  claim: To import data into DynamoDB, your data must be in an Amazon S3 bucket in CSV, DynamoDB JSON or Amazon Ion format.
+  scope: per import.
+  link: [CSV, DynamoDB JSON, or Amazon Ion format](../facts/dynamodb.md#dynamodb-import-source-formats)
+  link: [your data must be in an Amazon S3 bucket](../facts/dynamodb.md#dynamodb-import-source-formats)
+dynamodb-incremental-export-window
+  claim: For incremental export to Amazon S3, the export period window is 15 minutes minimum and 24 hours maximum. It supports up to 300 concurrent export jobs or 100TB from all in-flight table exports.
+  scope: per incremental export; maximum; not adjustable; window is 15 minutes minimum and 24 hours maximum.
+  link: [15 minutes minimum](../facts/dynamodb.md#dynamodb-incremental-export-window)
+  link: [24 hours maximum](../facts/dynamodb.md#dynamodb-incremental-export-window)
+dynamodb-index-comparison-key-schema
+  claim: The primary key of a global secondary index can be simple or composite, while the primary key of a local secondary index must be composite (partition key and sort key).
+  scope: per index.
+  link: [either simple (partition key) or composite](../facts/dynamodb.md#dynamodb-index-comparison-key-schema)
+  link: [must be composite](../facts/dynamodb.md#dynamodb-index-comparison-key-schema)
+dynamodb-index-comparison-projected-attributes
+  claim: A global secondary index query can only request projected attributes and DynamoDB does not fetch others from the table, while a local secondary index query can request unprojected attributes and DynamoDB fetches them from the table.
+  scope: per index query.
+  link: [does not fetch any attributes from the table](../facts/dynamodb.md#dynamodb-index-comparison-projected-attributes)
+  link: [DynamoDB automatically fetches those attributes from the table](../facts/dynamodb.md#dynamodb-index-comparison-projected-attributes)
+dynamodb-index-limits-20-gsi-5-lsi
+  claim: You can create up to 20 global secondary indexes (default quota) and up to 5 local secondary indexes per table.
+  scope: per table; default; adjustable; 20 GSIs is a default quota; 5 LSIs is the limit.
+  link: [up to 20 global secondary indexes](../facts/dynamodb.md#dynamodb-index-limits-20-gsi-5-lsi)
+  link: [up to 5 local secondary indexes](../facts/dynamodb.md#dynamodb-index-limits-20-gsi-5-lsi)
+dynamodb-index-lsi-size-limit-per-partition-key
+  claim: For a local secondary index, the total size of all indexed items for each partition key value must be 10 GB or less, while global secondary indexes have no size restrictions.
+  scope: per partition key value, local secondary index; maximum; not adjustable.
+  link: [10 GB or less](../facts/dynamodb.md#dynamodb-index-lsi-size-limit-per-partition-key)
+  link: [no size restrictions for global secondary indexes](../facts/dynamodb.md#dynamodb-index-lsi-size-limit-per-partition-key)
+  say: ten gigabytes or less | no size limit for a GSI
+dynamodb-index-online-operations-gsi-vs-lsi
+  claim: You can add a global secondary index to an existing table or delete it later, but local secondary indexes are created only when the table is created: you cannot add one to an existing table or delete an existing one.
+  scope: per table, secondary indexes.
+  link: [add a new global secondary index](../facts/dynamodb.md#dynamodb-index-online-operations-gsi-vs-lsi)
+  link: [cannot add a local secondary index](../facts/dynamodb.md#dynamodb-index-online-operations-gsi-vs-lsi)
+  say: a GSI can be added later | an LSI cannot be added later
+dynamodb-index-projects-key-attributes
+  claim: At a minimum, DynamoDB projects the key attributes from the base table into a secondary index.
+  scope: per index; minimum.
+  link: [projects the key attributes](../facts/dynamodb.md#dynamodb-index-projects-key-attributes)
+  link: [At a minimum](../facts/dynamodb.md#dynamodb-index-projects-key-attributes)
+dynamodb-index-queries-span-table-gsi-vs-single-partition-lsi
+  claim: A global secondary index lets you query over the entire table, across all partitions, while a local secondary index lets you query over a single partition, as specified by the partition key value in the query.
+  scope: per secondary index query.
+  link: [query over the entire table, across all partitions](../facts/dynamodb.md#dynamodb-index-queries-span-table-gsi-vs-single-partition-lsi)
+  link: [query over a single partition](../facts/dynamodb.md#dynamodb-index-queries-span-table-gsi-vs-single-partition-lsi)
+  say: a GSI spans all partitions | an LSI stays in one partition
+dynamodb-index-read-consistency-gsi-vs-lsi
+  claim: Queries on global secondary indexes support eventual consistency only, while a query on a local secondary index can use either eventual or strong consistency.
+  scope: per secondary index query.
+  link: [support eventual consistency only](../facts/dynamodb.md#dynamodb-index-read-consistency-gsi-vs-lsi)
+  link: [either eventual consistency or strong consistency](../facts/dynamodb.md#dynamodb-index-read-consistency-gsi-vs-lsi)
+  say: GSI reads are eventually consistent only | LSI reads can be strongly consistent
+dynamodb-indexes-maintained-automatically
+  claim: DynamoDB maintains indexes automatically: when you add, update or delete an item in the base table, it adds, updates or deletes the matching item in every index of that table.
+  scope: per index.
+  link: [DynamoDB maintains indexes automatically](../facts/dynamodb.md#dynamodb-indexes-maintained-automatically)
+  link: [corresponding item in any indexes](../facts/dynamodb.md#dynamodb-indexes-maintained-automatically)
+dynamodb-interface-endpoint-onprem-over-directconnect-vpn
+  claim: You can reach DynamoDB interface endpoints from on-premises applications through AWS Direct Connect or AWS Site-to-Site VPN, and applications in the VPC do not need public IP addresses to use them.
+  scope: DynamoDB interface endpoints.
+  link: [AWS Direct Connect or AWS Virtual Private Network](../facts/dynamodb.md#dynamodb-interface-endpoint-onprem-over-directconnect-vpn)
+  link: [do not need public IP addresses](../facts/dynamodb.md#dynamodb-interface-endpoint-onprem-over-directconnect-vpn)
+  say: Direct Connect or Site-to-Site VPN | no public IP addresses needed
+dynamodb-intro-little-operational-overhead
+  claim: AWS describes DynamoDB as ideal for use cases that require consistent performance at any scale with little to zero operational overhead; it is purpose-built and optimized for operational workloads.
+  scope: DynamoDB use cases.
+  link: [with little to zero operational overhead](../facts/dynamodb.md#dynamodb-intro-little-operational-overhead)
+  say: consistent performance with little to zero operational overhead
+dynamodb-intro-shopping-cart-consistent-latency
+  claim: DynamoDB delivers consistent single-digit millisecond performance for a shopping cart use case, whether you have 10 or 100 million users.
+  scope: DynamoDB performance.
+  link: [a shopping cart use case](../facts/dynamodb.md#dynamodb-intro-shopping-cart-consistent-latency)
+  say: a shopping cart
+dynamodb-intro-single-digit-ms-any-scale
+  claim: DynamoDB delivers consistent single-digit millisecond performance for your application, whether you have 100 or 100 million users.
+  scope: per application.
+  link: [single-digit millisecond performance](../facts/dynamodb.md#dynamodb-intro-single-digit-ms-any-scale)
+dynamodb-item-collection-range-retrieval
+  claim: The set of items with the same partition key value is called an item collection, and item collections are optimized for efficient retrieval of ranges of the items within the collection.
+  scope: per partition key value.
+  link: [called an item collection](../facts/dynamodb.md#dynamodb-item-collection-range-retrieval)
+  link: [efficient retrieval of ranges of the items](../facts/dynamodb.md#dynamodb-item-collection-range-retrieval)
+dynamodb-item-collection-splits-without-lsi
+  claim: If a table has no local secondary indexes, DynamoDB automatically splits an item collection over as many partitions as it needs to store the data and to serve read and write throughput.
+  scope: per item collection; the table has no local secondary index.
+  link: [automatically split your item collection](../facts/dynamodb.md#dynamodb-item-collection-splits-without-lsi)
+  link: [doesn't have local secondary indexes](../facts/dynamodb.md#dynamodb-item-collection-splits-without-lsi)
+dynamodb-item-size-list-map-overhead
+  claim: The total size of an item is the sum of the lengths of its attribute names and values, plus any applicable overhead. A List or Map attribute requires 3 bytes of overhead regardless of its contents.
+  scope: per List or Map attribute; fixed; each List or Map element also needs 1 byte of overhead.
+  link: [3 bytes of overhead](../facts/dynamodb.md#dynamodb-item-size-list-map-overhead)
+dynamodb-item-size-max
+  claim: The maximum item size in DynamoDB is 400 KB. It includes both the attribute name binary length (UTF-8 length) and the attribute value lengths, so the attribute name counts towards the size limit.
+  scope: per item; maximum; not adjustable; attribute names and attribute values both count.
+  link: [400 KB](../facts/dynamodb.md#dynamodb-item-size-max)
+dynamodb-item-storage-overhead
+  claim: For storage billing, all items in DynamoDB require 100 bytes of storage overhead per item. Global tables require an additional 48 bytes.
+  scope: per item; fixed; storage billing; 48 more bytes when global tables are enabled.
+  link: [100 bytes](../facts/dynamodb.md#dynamodb-item-storage-overhead)
+  link: [48 bytes](../facts/dynamodb.md#dynamodb-item-storage-overhead)
+dynamodb-kds-approximate-creation-time-for-order
+  claim: You can check the ApproximateCreationDateTime attribute to identify the order in which item modifications occurred and to identify duplicate records.
+  scope: per Kinesis data stream.
+  link: [`ApproximateCreationDateTime` attribute](../facts/dynamodb.md#dynamodb-kds-approximate-creation-time-for-order)
+  link: [identify duplicate records](../facts/dynamodb.md#dynamodb-kds-approximate-creation-time-for-order)
+dynamodb-kds-change-data-capture-units
+  claim: DynamoDB charges for using Kinesis Data Streams in change data capture units.
+  scope: per table.
+  link: [change data capture units](../facts/dynamodb.md#dynamodb-kds-change-data-capture-units)
+  link: [DynamoDB charges for using Kinesis Data Streams](../facts/dynamodb.md#dynamodb-kds-change-data-capture-units)
+dynamodb-kds-longer-retention-enhanced-fan-out
+  claim: Kinesis Data Streams for DynamoDB gives longer data retention time, and with enhanced fan-out you can simultaneously reach two or more downstream applications.
+  scope: per Kinesis data stream.
+  link: [longer data retention time](../facts/dynamodb.md#dynamodb-kds-longer-retention-enhanced-fan-out)
+  link: [enhanced fan-out capability](../facts/dynamodb.md#dynamodb-kds-longer-retention-enhanced-fan-out)
+dynamodb-kds-no-performance-impact
+  claim: Changes are captured asynchronously, and Kinesis has no performance impact on the table it is streaming from.
+  scope: per table.
+  link: [no performance impact on a table](../facts/dynamodb.md#dynamodb-kds-no-performance-impact)
+  link: [Kinesis has no performance impact](../facts/dynamodb.md#dynamodb-kds-no-performance-impact)
+dynamodb-kds-order-and-duplicates
+  claim: Kinesis data stream records might appear in a different order than when the item changes occurred, and the same item notification might appear more than once.
+  scope: per Kinesis data stream.
+  link: [might appear in a different order](../facts/dynamodb.md#dynamodb-kds-order-and-duplicates)
+  link: [might also appear more than once](../facts/dynamodb.md#dynamodb-kds-order-and-duplicates)
+dynamodb-key-value-and-document
+  claim: DynamoDB supports both the key-value and the document data models.
+  scope: per service.
+  link: [both key-value and document data models](../facts/dynamodb.md#dynamodb-key-value-and-document)
+  link: [key-value and document](../facts/dynamodb.md#dynamodb-key-value-and-document)
+dynamodb-large-items-store-in-s3
+  claim: To store more data than the item size limit permits, you can store the item as an object in Amazon S3 and keep the Amazon S3 object identifier in the DynamoDB item.
+  scope: per item.
+  link: [store the Amazon S3 object identifier](../facts/dynamodb.md#dynamodb-large-items-store-in-s3)
+  link: [store the item as an object](../facts/dynamodb.md#dynamodb-large-items-store-in-s3)
+dynamodb-leadingkeys-condition-key-partition-key
+  claim: The IAM condition key dynamodb:LeadingKeys represents the first key attribute of a table, which is the partition key, and you must use the ForAllValues modifier when using it in a condition.
+  scope: per IAM condition.
+  link: [`LeadingKeys`](../facts/dynamodb.md#dynamodb-leadingkeys-condition-key-partition-key)
+  link: [the partition key](../facts/dynamodb.md#dynamodb-leadingkeys-condition-key-partition-key)
+dynamodb-lsi-collection-limit-exception
+  claim: If an item collection exceeds the 10 GB limit, DynamoDB might return an ItemCollectionSizeLimitExceededException, and you might not be able to add more items to the item collection.
+  scope: per item collection in a table with a local secondary index; maximum; operations that shrink the collection still work.
+  link: [10 GB limit](../facts/dynamodb.md#dynamodb-lsi-collection-limit-exception)
+dynamodb-lsi-collection-one-partition
+  claim: In a table with one or more local secondary indexes, each item collection is stored in one partition, and its total size is limited to the capability of that partition: 10 GB.
+  scope: per item collection in a table with a local secondary index; maximum; use a global secondary index when collections may grow beyond 10 GB.
+  link: [10 GB](../facts/dynamodb.md#dynamodb-lsi-collection-one-partition)
+dynamodb-lsi-created-with-table
+  claim: Local secondary indexes on a table are created when the table is created, and when you delete a table any local secondary indexes on that table are also deleted.
+  scope: per table.
+  link: [created when the table is created](../facts/dynamodb.md#dynamodb-lsi-created-with-table)
+  link: [also deleted](../facts/dynamodb.md#dynamodb-lsi-created-with-table)
+dynamodb-lsi-item-collection-max
+  claim: For a table with one or more local secondary indexes, item collections cannot exceed 10GB in size.
+  scope: per partition key value (item collection); maximum; not adjustable; only tables with one or more LSIs.
+  link: [10GB](../facts/dynamodb.md#dynamodb-lsi-item-collection-max)
+dynamodb-lsi-item-size-400kb-limit
+  claim: For each local secondary index on a table, there is a 400 KB limit on the total of the item's data in the table and the corresponding entries, including key values and projected attributes, in all local secondary indexes.
+  scope: per item in a table with local secondary indexes; maximum; not adjustable; total of the item's table data and its entries in all local secondary indexes.
+  link: [400 KB limit](../facts/dynamodb.md#dynamodb-lsi-item-size-400kb-limit)
+dynamodb-lsi-query-fetches-unprojected-attributes
+  claim: When you query a local secondary index, the query can also retrieve attributes that are not projected into the index; DynamoDB fetches them from the base table at a greater latency and with higher provisioned throughput costs.
+  scope: per local secondary index query.
+  link: [automatically fetches these attributes from the base table](../facts/dynamodb.md#dynamodb-lsi-query-fetches-unprojected-attributes)
+  link: [greater latency and with higher provisioned throughput costs](../facts/dynamodb.md#dynamodb-lsi-query-fetches-unprojected-attributes)
+dynamodb-lsi-read-with-query-scan-only
+  claim: You can retrieve items from a local secondary index with Query and Scan, but GetItem and BatchGetItem can't be used on a local secondary index.
+  scope: per local secondary index.
+  link: [can't be used on a local secondary index](../facts/dynamodb.md#dynamodb-lsi-read-with-query-scan-only)
+  link: [`Query` and `Scan` operations](../facts/dynamodb.md#dynamodb-lsi-read-with-query-scan-only)
+dynamodb-lsi-same-partition-key
+  claim: A local secondary index (LSI) has the same partition key as the base table but a different sort key.
+  scope: per index.
+  link: [same partition key as the base table](../facts/dynamodb.md#dynamodb-lsi-same-partition-key)
+  link: [a different sort key](../facts/dynamodb.md#dynamodb-lsi-same-partition-key)
+dynamodb-lsi-shares-table-provisioned-throughput
+  claim: A table's provisioned read and write capacity covers the read and write activity on the table's local secondary indexes.
+  scope: per table; provisioned capacity mode.
+  link: [activity on the table's local secondary indexes](../facts/dynamodb.md#dynamodb-lsi-shares-table-provisioned-throughput)
+  link: [provision read and write capacity units](../facts/dynamodb.md#dynamodb-lsi-shares-table-provisioned-throughput)
+dynamodb-lsi-sort-key-not-unique
+  claim: In a local secondary index the sort key value does not need to be unique for a given partition key value.
+  scope: per local secondary index.
+  link: [does not need to be unique](../facts/dynamodb.md#dynamodb-lsi-sort-key-not-unique)
+  link: [in a local secondary index](../facts/dynamodb.md#dynamodb-lsi-sort-key-not-unique)
+dynamodb-lsi-sort-key-one-scalar-attribute
+  claim: The sort key of a local secondary index consists of exactly one scalar attribute.
+  scope: per local secondary index.
+  link: [exactly one scalar attribute](../facts/dynamodb.md#dynamodb-lsi-sort-key-one-scalar-attribute)
+  link: [The sort key consists of](../facts/dynamodb.md#dynamodb-lsi-sort-key-one-scalar-attribute)
+dynamodb-lsi-strongly-consistent-allowed
+  claim: You can query a local secondary index using either eventually consistent or strongly consistent reads, chosen with the ConsistentRead parameter of the Query operation.
+  scope: per local secondary index query.
+  link: [either eventually consistent or strongly consistent reads](../facts/dynamodb.md#dynamodb-lsi-strongly-consistent-allowed)
+  link: [`ConsistentRead` parameter](../facts/dynamodb.md#dynamodb-lsi-strongly-consistent-allowed)
+dynamodb-maintain-as-few-tables-as-possible
+  claim: You should maintain as few tables as possible in a DynamoDB application, because fewer tables keep things more scalable, require less permissions management, and reduce overhead.
+  scope: per application.
+  link: [maintain as few tables as possible](../facts/dynamodb.md#dynamodb-maintain-as-few-tables-as-possible)
+  link: [requires less permissions management](../facts/dynamodb.md#dynamodb-maintain-as-few-tables-as-possible)
+dynamodb-min-throughput-provisioned
+  claim: The minimum provisioned throughput for any table or global secondary index is 1 read capacity unit and 1 write capacity unit. The row marks it as adjustable and not applicable to on-demand mode.
+  scope: per table or global secondary index; minimum; adjustable; provisioned capacity mode.
+  link: [1 read capacity unit](../facts/dynamodb.md#dynamodb-min-throughput-provisioned)
+  link: [1 write capacity unit](../facts/dynamodb.md#dynamodb-min-throughput-provisioned)
+dynamodb-mrec-add-replica-no-performance-impact
+  claim: Adding a replica has no performance impact on existing single-Region DynamoDB tables or global table replicas.
+  scope: per global table; MREC mode.
+  link: [no performance impact on existing single-Region DynamoDB tables](../facts/dynamodb.md#dynamodb-mrec-add-replica-no-performance-impact)
+  link: [Adding a replica has no performance impact](../facts/dynamodb.md#dynamodb-mrec-add-replica-no-performance-impact)
+dynamodb-mrec-streams-enabled-cannot-disable
+  claim: Streams are enabled by default on all replicas in an MREC global table and cannot be disabled on those replicas.
+  scope: per replica; MREC mode.
+  link: [enabled by default on all replicas](../facts/dynamodb.md#dynamodb-mrec-streams-enabled-cannot-disable)
+  link: [cannot be disabled on those replicas](../facts/dynamodb.md#dynamodb-mrec-streams-enabled-cannot-disable)
+dynamodb-mrec-strong-reads-may-be-stale
+  claim: When choosing a global tables consistency mode, MREC is the mode to use when your application can tolerate stale data returned from strongly consistent read operations if that data was updated in another Region.
+  scope: choosing a global tables consistency mode; MREC mode.
+  link: [stale data returned from strongly consistent read operations](../facts/dynamodb.md#dynamodb-mrec-strong-reads-may-be-stale)
+  link: [updated in another Region](../facts/dynamodb.md#dynamodb-mrec-strong-reads-may-be-stale)
+dynamodb-mrec-transactions-not-replicated-as-unit
+  claim: On an MREC global table, transactional writes are not replicated as a unit across Regions, so other replicas might return only some of the writes in a transaction at a given point in time.
+  scope: per transaction; MREC mode.
+  link: [not replicated as a unit across Regions](../facts/dynamodb.md#dynamodb-mrec-transactions-not-replicated-as-unit)
+  link: [only some of the writes in a transaction](../facts/dynamodb.md#dynamodb-mrec-transactions-not-replicated-as-unit)
+dynamodb-mrec-ttl-delete-replicated
+  claim: In an MREC global table, TTL settings are synchronized for all replicas, and when TTL deletes an item from a replica the delete is replicated to all other replicas.
+  scope: per global table; MREC mode.
+  link: [the delete is replicated to all other replicas](../facts/dynamodb.md#dynamodb-mrec-ttl-delete-replicated)
+  link: [TTL settings are automatically synchronized](../facts/dynamodb.md#dynamodb-mrec-ttl-delete-replicated)
+dynamodb-mrec-ttl-replicated-delete-charged
+  claim: TTL does not consume write capacity, so you are not charged for the TTL delete in the Region where the delete occurred, but you are charged for the replicated delete in each other Region with a replica.
+  scope: per global table; MREC mode.
+  link: [charged for the replicated delete](../facts/dynamodb.md#dynamodb-mrec-ttl-replicated-delete-charged)
+  link: [you are not charged for the TTL delete](../facts/dynamodb.md#dynamodb-mrec-ttl-replicated-delete-charged)
+dynamodb-mrec-unreplicated-data-resumes-after-recovery
+  claim: If a replica in an MREC global table becomes isolated or impaired, any data not yet replicated to other Regions is replicated when the replica becomes healthy.
+  scope: per replica; MREC mode.
+  link: [will be replicated when the replica becomes healthy](../facts/dynamodb.md#dynamodb-mrec-unreplicated-data-resumes-after-recovery)
+  link: [isolated or impaired](../facts/dynamodb.md#dynamodb-mrec-unreplicated-data-resumes-after-recovery)
+dynamodb-mrsc-existing-items-not-supported
+  claim: Converting a single-Region table to a MRSC global table with existing items is not supported.
+  scope: per table; MRSC mode.
+  link: [with existing items is not supported](../facts/dynamodb.md#dynamodb-mrsc-existing-items-not-supported)
+  link: [Converting a single-Region table](../facts/dynamodb.md#dynamodb-mrsc-existing-items-not-supported)
+dynamodb-mrsc-no-replicationlatency-metric
+  claim: Global tables configured for MRSC do not publish a ReplicationLatency metric.
+  scope: per global table; MRSC mode.
+  link: [do not publish a `ReplicationLatency` metric](../facts/dynamodb.md#dynamodb-mrsc-no-replicationlatency-metric)
+  link: [multi-Region strong consistency (MRSC)](../facts/dynamodb.md#dynamodb-mrsc-no-replicationlatency-metric)
+dynamodb-mrsc-replicated-write-conflict
+  claim: In an MRSC global table, a write fails with a ReplicatedWriteConflictException when it attempts to modify an item that is already being modified in another Region.
+  scope: per item; MRSC mode.
+  link: [`ReplicatedWriteConflictException`](../facts/dynamodb.md#dynamodb-mrsc-replicated-write-conflict)
+  link: [already being modified in another Region](../facts/dynamodb.md#dynamodb-mrsc-replicated-write-conflict)
+dynamodb-mrsc-witness-no-reads-writes
+  claim: You cannot perform read or write operations on a witness.
+  scope: per witness; MRSC mode.
+  link: [cannot perform read or write operations](../facts/dynamodb.md#dynamodb-mrsc-witness-no-reads-writes)
+  link: [read or write operations on a witness](../facts/dynamodb.md#dynamodb-mrsc-witness-no-reads-writes)
+dynamodb-multi-account-global-tables-replica-per-account
+  claim: In multi-account global tables, each replica table resides in a distinct AWS account, which enables fault isolation at both the Region and account level.
+  scope: per global table.
+  link: [distinct AWS account](../facts/dynamodb.md#dynamodb-multi-account-global-tables-replica-per-account)
+  link: [fault isolation](../facts/dynamodb.md#dynamodb-multi-account-global-tables-replica-per-account)
+dynamodb-must-choose-capacity-mode
+  claim: When you create a DynamoDB table, you must select either on-demand or provisioned capacity mode.
+  scope: per table.
+  link: [on-demand or provisioned capacity mode](../facts/dynamodb.md#dynamodb-must-choose-capacity-mode)
+  link: [must select](../facts/dynamodb.md#dynamodb-must-choose-capacity-mode)
+dynamodb-names-case-sensitive-utf8
+  claim: All DynamoDB names must be encoded using UTF-8 and are case-sensitive.
+  scope: per name.
+  link: [encoded using UTF-8, and are case-sensitive](../facts/dynamodb.md#dynamodb-names-case-sensitive-utf8)
+  link: [All names must be encoded](../facts/dynamodb.md#dynamodb-names-case-sensitive-utf8)
+dynamodb-nested-attribute-depth
+  claim: DynamoDB supports nested attributes up to 32 levels deep.
+  scope: per attribute; maximum; not adjustable.
+  link: [32 levels deep](../facts/dynamodb.md#dynamodb-nested-attribute-depth)
+dynamodb-new-ondemand-table-4000-writes-12000-reads
+  claim: New on-demand tables will be able to sustain up to 4,000 writes per second and 12,000 reads per second.
+  scope: per new on-demand table; on-demand capacity mode, initial throughput.
+  link: [4,000 writes per second](../facts/dynamodb.md#dynamodb-new-ondemand-table-4000-writes-12000-reads)
+  link: [12,000 reads per second](../facts/dynamodb.md#dynamodb-new-ondemand-table-4000-writes-12000-reads)
+  say: four thousand writes per second | twelve thousand reads per second
+dynamodb-no-account-quota-on-demand
+  claim: No account-level read and write throughput quotas are applied to tables in on-demand mode.
+  scope: per account; on-demand capacity mode.
+  link: [No account-level read and write throughput quotas](../facts/dynamodb.md#dynamodb-no-account-quota-on-demand)
+dynamodb-no-join-operator
+  claim: DynamoDB does not support a JOIN operator, unlike relational databases.
+  scope: per service.
+  link: [doesn't support a JOIN operator](../facts/dynamodb.md#dynamodb-no-join-operator)
+  link: [Unlike relational databases](../facts/dynamodb.md#dynamodb-no-join-operator)
+dynamodb-no-joins-heart-of-nosql-modeling
+  claim: Eliminating the need for JOINs is at the heart of NoSQL data modeling; AWS says this is why DynamoDB can deliver consistent performance at any scale, while RDBMS performance is not constant at scale because of the runtime complexity of SQL queries and JOINs.
+  scope: DynamoDB versus relational design.
+  link: [at the heart of NoSQL data modeling](../facts/dynamodb.md#dynamodb-no-joins-heart-of-nosql-modeling)
+  say: no joins is at the heart of NoSQL modeling
+dynamodb-no-limit-sort-key-values-per-pk
+  claim: In a DynamoDB table there is no upper limit on the number of distinct sort key values per partition key value.
+  scope: per partition key value; the table has no local secondary index.
+  link: [no upper limit](../facts/dynamodb.md#dynamodb-no-limit-sort-key-values-per-pk)
+  link: [distinct sort key values per partition key value](../facts/dynamodb.md#dynamodb-no-limit-sort-key-values-per-pk)
+dynamodb-no-maintenance-windows
+  claim: DynamoDB has no versions (major, minor or patch) and no maintenance windows.
+  scope: per service.
+  link: [there are no maintenance windows](../facts/dynamodb.md#dynamodb-no-maintenance-windows)
+  link: [no versions (major, minor, or patch)](../facts/dynamodb.md#dynamodb-no-maintenance-windows)
+dynamodb-no-native-date-type
+  claim: Unlike conventional relational databases, DynamoDB does not natively support a date and time data type.
+  scope: per service.
+  link: [does not natively support](../facts/dynamodb.md#dynamodb-no-native-date-type)
+  link: [Unlike conventional relational databases](../facts/dynamodb.md#dynamodb-no-native-date-type)
+dynamodb-no-passwords-iam-access
+  claim: DynamoDB access is controlled with IAM, so there are no user names or passwords for accessing DynamoDB.
+  scope: per service.
+  link: [no user names or passwords](../facts/dynamodb.md#dynamodb-no-passwords-iam-access)
+  link: [DynamoDB utilizes IAM](../facts/dynamodb.md#dynamodb-no-passwords-iam-access)
+dynamodb-nosql-design-access-patterns-first-few-tables
+  claim: For DynamoDB you should not start designing the schema until you know the questions it must answer, you design the schema to make the most common queries fast and cheap, and you should keep as few tables as possible in an application.
+  scope: DynamoDB data modeling.
+  link: [know the questions it will need to answer](../facts/dynamodb.md#dynamodb-nosql-design-access-patterns-first-few-tables)
+  link: [maintain as few tables as possible](../facts/dynamodb.md#dynamodb-nosql-design-access-patterns-first-few-tables)
+  say: know the questions before you design the schema | as few tables as possible
+dynamodb-nosql-queries-efficient-in-limited-ways
+  claim: In a NoSQL database such as DynamoDB, data can be queried efficiently in a limited number of ways, outside of which queries can be expensive and slow.
+  scope: per data model.
+  link: [queried efficiently in a limited number of ways](../facts/dynamodb.md#dynamodb-nosql-queries-efficient-in-limited-ways)
+  link: [queries can be expensive and slow](../facts/dynamodb.md#dynamodb-nosql-queries-efficient-in-limited-ways)
+dynamodb-number-precision
+  claim: A Number can have up to 38 digits of precision, and can be positive, negative, or zero.
+  scope: per Number attribute value; maximum; not adjustable.
+  link: [38 digits of precision](../facts/dynamodb.md#dynamodb-number-precision)
+dynamodb-occasional-throttling-normal
+  claim: Occasional throttling is normal and expected in well-optimized DynamoDB applications, and it simply means you are consuming 100% of what you have provisioned.
+  scope: per table; provisioned capacity mode.
+  link: [Occasional throttling is normal and expected](../facts/dynamodb.md#dynamodb-occasional-throttling-normal)
+  link: [consuming 100% of what you've provisioned](../facts/dynamodb.md#dynamodb-occasional-throttling-normal)
+dynamodb-on-demand-default-recommended
+  claim: On-demand mode is the default and recommended throughput option for most DynamoDB workloads.
+  scope: per table; default; not adjustable.
+  link: [default and recommended throughput option](../facts/dynamodb.md#dynamodb-on-demand-default-recommended)
+  link: [On-demand mode is the default](../facts/dynamodb.md#dynamodb-on-demand-default-recommended)
+dynamodb-on-demand-no-capacity-planning
+  claim: For on-demand mode tables, you do not need to specify how much read and write throughput you expect your application to perform.
+  scope: per table; on-demand capacity mode.
+  link: [don't need to specify](../facts/dynamodb.md#dynamodb-on-demand-no-capacity-planning)
+  link: [For on-demand mode tables](../facts/dynamodb.md#dynamodb-on-demand-no-capacity-planning)
+dynamodb-on-demand-optional-max-throughput
+  claim: You can optionally configure maximum read or write throughput per second for individual on-demand tables and global secondary indexes, and requests above that maximum are throttled.
+  scope: per on-demand table or global secondary index.
+  link: [maximum read or write (or both) throughput](../facts/dynamodb.md#dynamodb-on-demand-optional-max-throughput)
+  link: [keep table-level usage and costs bounded](../facts/dynamodb.md#dynamodb-on-demand-optional-max-throughput)
+dynamodb-on-demand-previous-peak-double
+  claim: On-demand capacity mode instantly accommodates up to double the previous peak traffic on a table.
+  scope: per table; on-demand capacity mode.
+  link: [instantly accommodates up to double the previous peak](../facts/dynamodb.md#dynamodb-on-demand-previous-peak-double)
+  link: [double the previous peak](../facts/dynamodb.md#dynamodb-on-demand-previous-peak-double)
+dynamodb-on-demand-same-latency-sla-security
+  claim: Tables in on-demand mode deliver the same single-digit millisecond latency, service-level agreement (SLA) and security that provisioned mode offers.
+  scope: per table; on-demand capacity mode.
+  link: [same single-digit millisecond latency](../facts/dynamodb.md#dynamodb-on-demand-same-latency-sla-security)
+  link: [service-level agreement (SLA), and security](../facts/dynamodb.md#dynamodb-on-demand-same-latency-sla-security)
+dynamodb-on-demand-scales-to-zero
+  claim: In on-demand mode a table scales down to zero, so you do not pay for throughput when the table has no traffic, and there are no cold starts.
+  scope: per table; on-demand capacity mode.
+  link: [scales down to zero](../facts/dynamodb.md#dynamodb-on-demand-scales-to-zero)
+  link: [there are no cold starts](../facts/dynamodb.md#dynamodb-on-demand-scales-to-zero)
+dynamodb-on-demand-throttle-if-double-within-30-min
+  claim: Throttling can occur on an on-demand table if traffic exceeds double the previous peak within 30 minutes.
+  scope: per table; on-demand capacity mode.
+  link: [exceed double your previous peak within 30 minutes](../facts/dynamodb.md#dynamodb-on-demand-throttle-if-double-within-30-min)
+  link: [throttling can occur](../facts/dynamodb.md#dynamodb-on-demand-throttle-if-double-within-30-min)
+dynamodb-ondemand-backup-no-performance-impact
+  claim: On-demand backups do not impact the performance of the table, and you can back up tables of any size.
+  scope: per table.
+  link: [don't impact the performance of your table](../facts/dynamodb.md#dynamodb-ondemand-backup-no-performance-impact)
+  link: [tables of any size](../facts/dynamodb.md#dynamodb-ondemand-backup-no-performance-impact)
+dynamodb-ondemand-better-for-fluctuating-traffic
+  claim: For unpredictable, variable workloads with spikes, auto scaling on a provisioned table tends to be over- or under-provisioned, so on-demand mode is the better choice because it handles fluctuating traffic without you predicting or adjusting capacity.
+  scope: DynamoDB capacity mode choice.
+  link: [On-demand capacity mode is the better choice](../facts/dynamodb.md#dynamodb-ondemand-better-for-fluctuating-traffic)
+  link: [handle fluctuating traffic](../facts/dynamodb.md#dynamodb-ondemand-better-for-fluctuating-traffic)
+  say: on-demand is the better choice | handles fluctuating traffic with no capacity prediction
+dynamodb-ondemand-billed-per-request-zero-traffic-free
+  claim: On-demand mode bills per read or write request, so cost follows actual usage, and a table that receives zero traffic is not charged for any throughput.
+  scope: per table in on-demand mode; storage and other features are billed separately.
+  link: [billed per read or write request](../facts/dynamodb.md#dynamodb-ondemand-billed-per-request-zero-traffic-free)
+  link: [you are not charged for any throughput](../facts/dynamodb.md#dynamodb-ondemand-billed-per-request-zero-traffic-free)
+  say: billed per read or write request | an idle table pays nothing for throughput
+dynamodb-ondemand-cheaper-below-35-percent-utilization
+  claim: On-demand mode costs less for workloads whose average provisioned capacity utilization is below 35%, and it can also be more cost-effective above 35% when the workload has periods of low activity mixed with occasional peaks.
+  scope: per table, provisioned versus on-demand cost; maximum; a rule of thumb from the cost optimization guide; reserved capacity can change the result.
+  link: [below 35%](../facts/dynamodb.md#dynamodb-ondemand-cheaper-below-35-percent-utilization)
+  say: below thirty-five percent
+dynamodb-ondemand-fits-no-capacity-planning
+  claim: DynamoDB on-demand mode lets you create a table without worrying about capacity planning, monitoring usage, and configuring scaling policies.
+  scope: DynamoDB on-demand mode.
+  link: [without worrying about capacity planning](../facts/dynamodb.md#dynamodb-ondemand-fits-no-capacity-planning)
+  say: no capacity planning, no usage monitoring, no scaling policies
+dynamodb-ondemand-max-throughput-best-effort
+  claim: The maximum throughput of an on-demand table is applied on a best-effort basis. Treat it as a target, not a guaranteed request ceiling.
+  scope: per on-demand table; burst capacity can let requests exceed the setting for a short time.
+  link: [applied on a best-effort basis](../facts/dynamodb.md#dynamodb-ondemand-max-throughput-best-effort)
+  say: applied on a best-effort basis
+dynamodb-ondemand-max-throughput-smallest
+  claim: The smallest maximum read or write throughput that you can specify for an on-demand table is one request unit per second.
+  scope: per on-demand table or global secondary index; minimum; not adjustable; optional maximum throughput setting.
+  link: [one request unit per second](../facts/dynamodb.md#dynamodb-ondemand-max-throughput-smallest)
+dynamodb-ondemand-max-throughput-throttles-above-limit
+  claim: On an on-demand table you can optionally set a maximum read or write throughput per second, on the table and its global secondary indexes, to keep usage and cost bounded. Requests above the maximum are throttled.
+  scope: per on-demand table and its GSIs, optional setting; applied on a best-effort basis; burst capacity can let some requests through.
+  link: [exceed the maximum amount specified will be throttled](../facts/dynamodb.md#dynamodb-ondemand-max-throughput-throttles-above-limit)
+  say: requests above the maximum are throttled
+dynamodb-optimistic-locking-condition-fails-on-concurrent-change
+  claim: With optimistic locking, if another process modified the item in the meantime, the condition fails and DynamoDB returns a ConditionalCheckFailedException.
+  scope: per item.
+  link: [`ConditionalCheckFailedException`](../facts/dynamodb.md#dynamodb-optimistic-locking-condition-fails-on-concurrent-change)
+  link: [another process modified the item in the meantime](../facts/dynamodb.md#dynamodb-optimistic-locking-condition-fails-on-concurrent-change)
+dynamodb-optimistic-locking-detects-conflicts-at-write
+  claim: Optimistic locking is a strategy that detects conflicts at write time rather than preventing them, and each item includes a version attribute that increments with every update.
+  scope: per item.
+  link: [detects conflicts at write time](../facts/dynamodb.md#dynamodb-optimistic-locking-detects-conflicts-at-write)
+  link: [version attribute that increments with every update](../facts/dynamodb.md#dynamodb-optimistic-locking-detects-conflicts-at-write)
+dynamodb-parallel-scan-faster-for-large-tables
+  claim: An application that processes a large table of historical data can perform a parallel scan much faster than a sequential scan.
+  scope: per Scan.
+  link: [much faster than a sequential one](../facts/dynamodb.md#dynamodb-parallel-scan-faster-for-large-tables)
+  link: [large table of historical data](../facts/dynamodb.md#dynamodb-parallel-scan-faster-for-large-tables)
+dynamodb-parallel-scan-heavy-demand
+  claim: A parallel scan runs multiple workers that all run Scan operations at once, and this can quickly consume all of the table's provisioned read capacity.
+  scope: per table; provisioned mode.
+  link: [all running `Scan` operations concurrently](../facts/dynamodb.md#dynamodb-parallel-scan-heavy-demand)
+  link: [consume all of your table's provisioned read capacity](../facts/dynamodb.md#dynamodb-parallel-scan-heavy-demand)
+dynamodb-partiql-same-performance-as-data-plane
+  claim: PartiQL operations provide the same availability, latency, and performance as the other DynamoDB data plane operations.
+  scope: per request.
+  link: [same availability, latency, and performance](../facts/dynamodb.md#dynamodb-partiql-same-performance-as-data-plane)
+  link: [other DynamoDB data plane operations](../facts/dynamodb.md#dynamodb-partiql-same-performance-as-data-plane)
+dynamodb-partiql-structured-semistructured-nested
+  claim: PartiQL provides SQL-compatible query access across multiple data stores containing structured data, semistructured data, and nested data.
+  scope: per service.
+  link: [SQL-compatible query access](../facts/dynamodb.md#dynamodb-partiql-structured-semistructured-nested)
+  link: [structured data, semistructured data, and nested data](../facts/dynamodb.md#dynamodb-partiql-structured-semistructured-nested)
+dynamodb-partition-20kb-example
+  claim: For a 20 KB item, one consistent read consumes 5 read units, so you can drive 600 consistent reads per second on that single item before reaching the partition limit.
+  scope: per partition, single 20 KB item; maximum; worked example against the 3,000 read unit partition limit.
+  link: [5 read units](../facts/dynamodb.md#dynamodb-partition-20kb-example)
+  link: [600 consistent read operations per second](../facts/dynamodb.md#dynamodb-partition-20kb-example)
+dynamodb-partition-changes-transparent
+  claim: Partition management happens automatically in the background and is transparent to applications, and the table stays available and keeps supporting the provisioned throughput.
+  scope: per table.
+  link: [occurs automatically in the background](../facts/dynamodb.md#dynamodb-partition-changes-transparent)
+  link: [Your table remains available throughout](../facts/dynamodb.md#dynamodb-partition-changes-transparent)
+dynamodb-partition-key-hash-decides-partition
+  claim: DynamoDB feeds the partition key value into an internal hash function, and the output of the hash function decides the partition in which the item is stored.
+  scope: per item.
+  link: [internal hash function](../facts/dynamodb.md#dynamodb-partition-key-hash-decides-partition)
+  link: [determines the partition](../facts/dynamodb.md#dynamodb-partition-key-hash-decides-partition)
+dynamodb-partition-key-length
+  claim: The minimum length of a partition key value is 1 byte and the maximum length is 2048 bytes.
+  scope: per partition key value; maximum; not adjustable.
+  link: [1 byte](../facts/dynamodb.md#dynamodb-partition-key-length)
+  link: [2048 bytes](../facts/dynamodb.md#dynamodb-partition-key-length)
+dynamodb-partition-max-throughput
+  claim: Every partition in a DynamoDB table is designed to deliver a maximum capacity of 3,000 read units per second and 1,000 write units per second.
+  scope: per partition; maximum; not adjustable; read unit is one strongly consistent read of up to 4 KB; write unit is one write of up to 1 KB.
+  link: [3,000 read units per second](../facts/dynamodb.md#dynamodb-partition-max-throughput)
+  link: [1,000 write units per second](../facts/dynamodb.md#dynamodb-partition-max-throughput)
+dynamodb-partitions-managed-by-dynamodb
+  claim: Partition management is handled entirely by DynamoDB; you never have to manage partitions yourself.
+  scope: per table.
+  link: [handled entirely by DynamoDB](../facts/dynamodb.md#dynamodb-partitions-managed-by-dynamodb)
+  link: [never have to manage partitions yourself](../facts/dynamodb.md#dynamodb-partitions-managed-by-dynamodb)
+dynamodb-pitr-35-days-default-1-to-35-configurable
+  claim: Point-in-time recovery gives up to 35 days of recovery points at per-second granularity. The recovery period is 35 days by default and can be set to any value between 1 and 35 days per table.
+  scope: per table with PITR enabled; default; adjustable; set with RecoveryPeriodinDays.
+  link: [By default, your `RecoveryPeriodinDays` is 35](../facts/dynamodb.md#dynamodb-pitr-35-days-default-1-to-35-configurable)
+  link: [any value between 1 and 35](../facts/dynamodb.md#dynamodb-pitr-35-days-default-1-to-35-configurable)
+  link: [per second granularity](../facts/dynamodb.md#dynamodb-pitr-35-days-default-1-to-35-configurable)
+  say: 35 days by default | anywhere from one to thirty-five days | per second
+dynamodb-pitr-automatic-continuous-backups
+  claim: Amazon DynamoDB point-in-time recovery (PITR) provides automatic continuous backups of your DynamoDB table data.
+  scope: per table.
+  link: [automatic continuous backups](../facts/dynamodb.md#dynamodb-pitr-automatic-continuous-backups)
+  link: [Amazon DynamoDB point-in-time recovery (PITR)](../facts/dynamodb.md#dynamodb-pitr-automatic-continuous-backups)
+dynamodb-pitr-cross-region-restore
+  claim: You can restore a DynamoDB table with point-in-time recovery into a different Region than the source table, including between commercial, China and GovCloud Regions, and you pay for the data transferred out of the source Region and for restoring the new table.
+  scope: per table restore.
+  link: [restore your DynamoDB table data across AWS Regions](../facts/dynamodb.md#dynamodb-pitr-cross-region-restore)
+  link: [pay only for the data you transfer out](../facts/dynamodb.md#dynamodb-pitr-cross-region-restore)
+  say: restore across Regions | pay for transfer out and the restore
+dynamodb-pitr-deleted-table-system-backup
+  claim: When you delete a table that has point-in-time recovery enabled, DynamoDB automatically creates a system backup and retains it for 35 days at no additional cost.
+  scope: per deleted table.
+  link: [system backup](../facts/dynamodb.md#dynamodb-pitr-deleted-table-system-backup)
+  link: [retains it for 35 days](../facts/dynamodb.md#dynamodb-pitr-deleted-table-system-backup)
+dynamodb-pitr-global-table-replica-restore-independent
+  claim: You can enable point-in-time recovery on each local replica of a global table, and a restore creates an independent table that is not part of the global table.
+  scope: per replica.
+  link: [restores to an independent table](../facts/dynamodb.md#dynamodb-pitr-global-table-replica-restore-independent)
+  link: [each local replica of a global table](../facts/dynamodb.md#dynamodb-pitr-global-table-replica-restore-independent)
+dynamodb-pitr-latest-restorable-five-minutes
+  claim: LatestRestorableDateTime is typically five minutes before the current time.
+  scope: per table with PITR enabled; typical value.
+  link: [five minutes before the current time](../facts/dynamodb.md#dynamodb-pitr-latest-restorable-five-minutes)
+dynamodb-pitr-no-capacity-no-impact
+  claim: Continuous backups and starting a point-in-time restore do not use provisioned capacity, and they have no impact on the performance or availability of your applications.
+  scope: per table.
+  link: [doesn't use provisioned capacity](../facts/dynamodb.md#dynamodb-pitr-no-capacity-no-impact)
+  link: [any impact on the performance or availability](../facts/dynamodb.md#dynamodb-pitr-no-capacity-no-impact)
+dynamodb-pitr-protects-accidental-writes-deletes
+  claim: Point-in-time recovery helps protect your DynamoDB tables from accidental write or delete operations.
+  scope: per table.
+  link: [from accidental write or delete operations](../facts/dynamodb.md#dynamodb-pitr-protects-accidental-writes-deletes)
+  link: [Point-in-time recovery helps protect](../facts/dynamodb.md#dynamodb-pitr-protects-accidental-writes-deletes)
+dynamodb-pitr-reenable-resets-start-time
+  claim: If you disable point-in-time recovery and later re-enable it on a table, you reset the start time for which you can recover that table.
+  scope: per table.
+  link: [reset the start time](../facts/dynamodb.md#dynamodb-pitr-reenable-resets-start-time)
+  link: [disable point-in-time recovery](../facts/dynamodb.md#dynamodb-pitr-reenable-resets-start-time)
+dynamodb-pitr-restore-or-rollback-in-place
+  claim: If you notice mistaken writes to your table, you can either restore the full table from a point in time or roll back specific unwanted writes in-place.
+  scope: per table.
+  link: [restore the full table](../facts/dynamodb.md#dynamodb-pitr-restore-or-rollback-in-place)
+  link: [roll back specific unwanted writes in-place](../facts/dynamodb.md#dynamodb-pitr-restore-or-rollback-in-place)
+dynamodb-pitr-restore-window-five-minutes-to-period
+  claim: After you enable point-in-time recovery, you can restore to any point in time from five minutes before the current time until the configured recovery period.
+  scope: per table with PITR enabled; up to the configured recovery period of 1 to 35 days.
+  link: [five minutes before the current time](../facts/dynamodb.md#dynamodb-pitr-restore-window-five-minutes-to-period)
+dynamodb-pitr-restores-to-new-table
+  claim: The point-in-time recovery process always restores to a new table.
+  scope: per PITR restore; fixed.
+  link: [always restores to a new table](../facts/dynamodb.md#dynamodb-pitr-restores-to-new-table)
+dynamodb-pitr-shorter-period-same-price
+  claim: Shortening the PITR recovery period does not lower the PITR price, because the price is based on the size of the table and its local secondary indexes.
+  scope: per table with PITR enabled.
+  link: [no impact on PITR pricing](../facts/dynamodb.md#dynamodb-pitr-shorter-period-same-price)
+  say: no change in price
+dynamodb-pricing-cdc-unit-per-1kb-write
+  claim: Change data capture for Amazon Kinesis Data Streams is charged in CDC units, one CDC unit for each write of up to 1 KB.
+  scope: per write captured, up to 1 KB; fixed; Kinesis Data Streams charges apply in addition.
+  link: [one CDC unit for each write (up to 1 KB)](../facts/dynamodb.md#dynamodb-pricing-cdc-unit-per-1kb-write)
+dynamodb-pricing-data-transfer-in-free
+  claim: DynamoDB does not charge for inbound data transfer, and does not charge for data transferred between DynamoDB and other AWS services within the same AWS Region ($0.00 per GB).
+  scope: inbound transfer and transfer to other AWS services in the same Region; data transferred across Regions is charged on both sides.
+  link: [$0.00 per GB](../facts/dynamodb.md#dynamodb-pricing-data-transfer-in-free)
+dynamodb-pricing-gt-add-replica-restore-015
+  claim: In the pricing example, adding a replica in US West (Oregon) to a 25 GB table results in $3.75 ($0.15 x 25 GB) of table restore charges.
+  scope: per GB restored when a replica is added, example Region; price from a pricing example; one-time charge.
+  link: [$0.15 x 25 GB](../facts/dynamodb.md#dynamodb-pricing-gt-add-replica-restore-015)
+dynamodb-pricing-gt-rwru-example-0625
+  claim: In the pricing example, 84.35 million replicated write request units are charged at $0.6250 per million, a charge of $52.72.
+  scope: per million replicated write request units, example Region; price from a pricing example; replicated write units (rWCUs and rWRUs) are priced the same as single-Region write units (WCUs and WRUs).
+  link: [$0.6250 per million](../facts/dynamodb.md#dynamodb-pricing-gt-rwru-example-0625)
+dynamodb-pricing-ia-storage-010-per-gb
+  claim: In the pricing example for the Standard-IA table class, 1.2 TB of storage is charged at $0.10 per GB, a storage cost of $120.00 for the month.
+  scope: per GB-month, Standard-IA table class, example Region; price from a pricing example; prices vary by Region and change over time.
+  link: [$0.10 per GB](../facts/dynamodb.md#dynamodb-pricing-ia-storage-010-per-gb)
+dynamodb-pricing-import-uncompressed-size
+  claim: Data import from Amazon S3 pricing is based on the uncompressed file size in S3.
+  scope: per import; S3 storage and GET request charges also apply.
+  link: [uncompressed file size in S3](../facts/dynamodb.md#dynamodb-pricing-import-uncompressed-size)
+dynamodb-pricing-on-demand-10kb-read-example
+  claim: In on-demand mode, an eventually consistent read of a 10 KB item requires 1.5 RRUs, a strongly consistent read requires 3 RRUs and a transactional read requires 6 RRUs.
+  scope: per read of a 10 KB item, on-demand mode; fixed; RRUs are consumed in 4 KB increments.
+  link: [1.5 RRUs](../facts/dynamodb.md#dynamodb-pricing-on-demand-10kb-read-example)
+  link: [3 RRUs](../facts/dynamodb.md#dynamodb-pricing-on-demand-10kb-read-example)
+  link: [6 RRUs](../facts/dynamodb.md#dynamodb-pricing-on-demand-10kb-read-example)
+dynamodb-pricing-on-demand-10kb-write-example
+  claim: In on-demand mode, a write request of a 10 KB item requires 10 WRUs, and a transactional write request of a 10 KB item requires 20 WRUs.
+  scope: per write of a 10 KB item, on-demand mode; fixed; WRUs are consumed in 1 KB increments.
+  link: [10 WRUs](../facts/dynamodb.md#dynamodb-pricing-on-demand-10kb-write-example)
+  link: [20 WRUs](../facts/dynamodb.md#dynamodb-pricing-on-demand-10kb-write-example)
+dynamodb-pricing-on-demand-backup-example-010
+  claim: In the pricing example, 60 GB of on-demand backup storage for a 30-day month costs ($0.10 x 60 GB) = $6.00 per month.
+  scope: per GB-month of backup storage, example Region; price from a pricing example; billed on the summed size of all on-demand backups.
+  link: [$0.10](../facts/dynamodb.md#dynamodb-pricing-on-demand-backup-example-010)
+dynamodb-pricing-ondemand-recommended-when
+  claim: The pricing page says on-demand mode is recommended in most scenarios, including if you have new or existing workloads and you do not want to manage capacity; it says provisioned capacity may be better if you have existing applications with steady and predictable throughput patterns.
+  scope: DynamoDB pricing guidance.
+  link: [On-demand mode is recommended in most scenarios](../facts/dynamodb.md#dynamodb-pricing-ondemand-recommended-when)
+  link: [steady and predictable throughput patterns](../facts/dynamodb.md#dynamodb-pricing-ondemand-recommended-when)
+  say: on-demand is recommended in most scenarios | steady and predictable throughput patterns
+dynamodb-pricing-pitr-delete-system-backup-free
+  claim: When you delete a table that has point-in-time recovery enabled, DynamoDB automatically creates a system backup and keeps it for up to 35 days at no additional cost.
+  scope: deleted tables with PITR enabled; maximum.
+  link: [system backup](../facts/dynamodb.md#dynamodb-pricing-pitr-delete-system-backup-free)
+  link: [at no additional cost](../facts/dynamodb.md#dynamodb-pricing-pitr-delete-system-backup-free)
+  say: a system backup | at no additional cost
+dynamodb-pricing-pitr-example-020
+  claim: In the pricing example, point-in-time recovery for a table averaging 27 GB costs ($0.20 x 27 GB) = $5.40 per month.
+  scope: per GB-month of table size, example Region; price from a pricing example; the charge is based on table data plus local secondary indexes.
+  link: [$0.20](../facts/dynamodb.md#dynamodb-pricing-pitr-example-020)
+dynamodb-pricing-provisioned-10kb-example
+  claim: In provisioned mode, an eventually consistent read of a 10 KB item needs 1.5 RCUs, a strongly consistent read needs 3 RCUs and a transactional read needs 6 RCUs.
+  scope: per read of a 10 KB item, provisioned mode; fixed; RCUs are consumed in 4 KB increments, per second.
+  link: [1.5 RCUs](../facts/dynamodb.md#dynamodb-pricing-provisioned-10kb-example)
+  link: [3 RCUs](../facts/dynamodb.md#dynamodb-pricing-provisioned-10kb-example)
+  link: [6 RCUs](../facts/dynamodb.md#dynamodb-pricing-provisioned-10kb-example)
+dynamodb-pricing-provisioned-10kb-write-example
+  claim: In provisioned mode, standard writes of a 10 KB item every second consume 10 WCUs, while transactional writes consume 20 WCUs.
+  scope: per 10 KB write per second, provisioned mode; fixed; WCUs are consumed in 1 KB increments, per second.
+  link: [10 WCUs](../facts/dynamodb.md#dynamodb-pricing-provisioned-10kb-write-example)
+  link: [20 WCUs](../facts/dynamodb.md#dynamodb-pricing-provisioned-10kb-write-example)
+dynamodb-pricing-restore-example-015
+  claim: In the pricing example, restoring a 29 GB table costs ($0.15 x 29 GB) = $4.35.
+  scope: per GB restored, example Region; price from a pricing example; one-time charge per restore.
+  link: [$0.15](../facts/dynamodb.md#dynamodb-pricing-restore-example-015)
+dynamodb-pricing-savings-no-combine-reserved
+  claim: For the same workload you may not combine discounts from Database Savings Plans and DynamoDB reserved provisioned capacity; reserved capacity is applied first and any remaining provisioned capacity can be covered by Database Savings Plans.
+  scope: DynamoDB commitment discounts.
+  link: [you may not combine discounts](../facts/dynamodb.md#dynamodb-pricing-savings-no-combine-reserved)
+  link: [reserved provisioned capacity is applied first](../facts/dynamodb.md#dynamodb-pricing-savings-no-combine-reserved)
+  say: discounts cannot be combined | reserved capacity is applied first
+dynamodb-pricing-standard-free-25gb-storage
+  claim: For tables in the DynamoDB Standard table class, the first 25 GB of storage are included in the AWS Free Tier.
+  scope: per Region, per month, Standard table class; maximum; AWS Free Tier.
+  link: [first 25 GB of storage](../facts/dynamodb.md#dynamodb-pricing-standard-free-25gb-storage)
+dynamodb-pricing-standard-storage-025-per-gb
+  claim: In the pricing example for the Standard table class in US East (N. Virginia), the storage beyond the free allowance (the remaining 2 GB) is charged at $0.25 per GB.
+  scope: per GB-month, US East (N. Virginia), Standard table class; price from a pricing example; prices vary by Region and change over time.
+  link: [$0.25 per GB](../facts/dynamodb.md#dynamodb-pricing-standard-storage-025-per-gb)
+dynamodb-pricing-streams-getrecords-1mb
+  claim: DynamoDB Streams reads are charged in read request units. Each GetRecords API call is billed as a streams read request unit and returns up to 1 MB of data from DynamoDB Streams; streams read request units are separate from read requests on the table. GetRecords calls invoked through DynamoDB triggers on AWS Lambda are not charged (unless the functions run on Lambda Managed Instances), and GetRecords calls invoked by DynamoDB global tables are not charged.
+  scope: per GetRecords API call; maximum; streams read request units are separate from table read requests; no charge for GetRecords calls invoked through DynamoDB triggers on AWS Lambda (except functions on Lambda Managed Instances) or invoked by DynamoDB global tables.
+  link: [returns up to 1 MB of data](../facts/dynamodb.md#dynamodb-pricing-streams-getrecords-1mb)
+dynamodb-pricing-streams-lambda-getrecords-not-charged
+  claim: You are not charged for GetRecords calls made through DynamoDB triggers on AWS Lambda (unless the functions run on Lambda Managed Instances) or by DynamoDB global tables, while other reads from DynamoDB Streams are billed in read request units.
+  scope: DynamoDB Streams.
+  link: [not charged for GetRecords API calls](../facts/dynamodb.md#dynamodb-pricing-streams-lambda-getrecords-not-charged)
+  link: [invoked by DynamoDB global tables](../facts/dynamodb.md#dynamodb-pricing-streams-lambda-getrecords-not-charged)
+  link: [through DynamoDB triggers on AWS Lambda](../facts/dynamodb.md#dynamodb-pricing-streams-lambda-getrecords-not-charged)
+  say: Lambda trigger reads are free | global table replication reads are free | through Lambda triggers
+dynamodb-pricing-streams-read-002-per-100000
+  claim: In the pricing example, a streams read request unit costs $0.02 per 100,000.
+  scope: per 100,000 streams read request units, example Region; price from a pricing example.
+  link: [$0.02 per 100,000](../facts/dynamodb.md#dynamodb-pricing-streams-read-002-per-100000)
+dynamodb-primary-key-attribute-types
+  claim: Each primary key attribute must be a scalar, and the only data types allowed for primary key attributes are string, number or binary.
+  scope: per primary key attribute.
+  link: [string, number, or binary](../facts/dynamodb.md#dynamodb-primary-key-attribute-types)
+  link: [must be a scalar](../facts/dynamodb.md#dynamodb-primary-key-attribute-types)
+dynamodb-primary-key-required-at-create
+  claim: When you create a table you must specify its primary key, in addition to the table name, and the primary key uniquely identifies each item so that no two items can have the same key.
+  scope: per table.
+  link: [you must specify the primary key](../facts/dynamodb.md#dynamodb-primary-key-required-at-create)
+  link: [no two items can have the same key](../facts/dynamodb.md#dynamodb-primary-key-required-at-create)
+dynamodb-projected-attributes-max
+  claim: You can project up to 100 attributes combined for all of a table's local and global secondary indexes. The quota applies only to user-specified projected attributes.
+  scope: per table, across all local and global secondary indexes; maximum; not adjustable; only user-specified projected attributes; not KEYS_ONLY or ALL projections.
+  link: [up to 100 attributes](../facts/dynamodb.md#dynamodb-projected-attributes-max)
+dynamodb-projection-all-largest
+  claim: Because all of the table data is duplicated in the index, an ALL projection results in the largest possible secondary index.
+  scope: per secondary index.
+  link: [results in the largest possible secondary index](../facts/dynamodb.md#dynamodb-projection-all-largest)
+  link: [table data is duplicated in the index](../facts/dynamodb.md#dynamodb-projection-all-largest)
+dynamodb-projection-keys-always-projected
+  claim: The partition key and sort key of the table are always projected into a secondary index, and you can project other attributes to support your query requirements.
+  scope: per secondary index.
+  link: [always projected into the index](../facts/dynamodb.md#dynamodb-projection-keys-always-projected)
+  link: [partition key and sort key of the table](../facts/dynamodb.md#dynamodb-projection-keys-always-projected)
+dynamodb-projection-keys-only-smallest
+  claim: The KEYS_ONLY projection results in the smallest possible secondary index.
+  scope: per secondary index.
+  link: [`KEYS_ONLY` option](../facts/dynamodb.md#dynamodb-projection-keys-only-smallest)
+  link: [smallest possible secondary index](../facts/dynamodb.md#dynamodb-projection-keys-only-smallest)
+dynamodb-provisioned-billing-basis
+  claim: In provisioned mode you are charged for the hourly read and write capacity you have provisioned, not for how much of it you actually consumed.
+  scope: per provisioned table; provisioned capacity mode.
+  link: [hourly read and write capacity you have provisioned](../facts/dynamodb.md#dynamodb-provisioned-billing-basis)
+dynamodb-provisioned-cost-predictability
+  claim: Provisioned mode helps you govern DynamoDB use to stay at or below a defined request rate in order to obtain cost predictability.
+  scope: per table; provisioned capacity mode.
+  link: [stay at or below a defined request rate](../facts/dynamodb.md#dynamodb-provisioned-cost-predictability)
+  link: [cost predictability](../facts/dynamodb.md#dynamodb-provisioned-cost-predictability)
+dynamodb-provisioned-fits-steady-forecastable
+  claim: Provisioned mode fits steady workloads with predictable growth, when you can reliably forecast the capacity your application needs.
+  scope: DynamoDB capacity mode choice; capacity requirements can be forecast reliably.
+  link: [steady workloads with predictable growth](../facts/dynamodb.md#dynamodb-provisioned-fits-steady-forecastable)
+  say: steady workloads with predictable growth
+dynamodb-provisioned-ideal-steady-predictable-usage
+  claim: An ideal workload for provisioned capacity mode has a steady and predictable usage pattern. If you can predict throughput requirements and prefer the cost predictability of controlling read and write capacity, you might want to keep using provisioned tables.
+  scope: DynamoDB capacity mode choice.
+  link: [more steady and predictable usage pattern](../facts/dynamodb.md#dynamodb-provisioned-ideal-steady-predictable-usage)
+  link: [cost predictability of controlling read and write capacity](../facts/dynamodb.md#dynamodb-provisioned-ideal-steady-predictable-usage)
+  say: a steady and predictable usage pattern | cost predictability
+dynamodb-provisioned-must-specify-reads-writes
+  claim: In provisioned mode you must specify the number of reads and writes per second that you require for your application.
+  scope: per table; provisioned capacity mode.
+  link: [must specify the number of reads and writes](../facts/dynamodb.md#dynamodb-provisioned-must-specify-reads-writes)
+  link: [number of reads and writes per second](../facts/dynamodb.md#dynamodb-provisioned-must-specify-reads-writes)
+dynamodb-provisioned-no-rapid-increase
+  claim: You can't exceed your per-account quotas when you add provisioned capacity, and DynamoDB doesn't allow you to increase provisioned capacity very rapidly.
+  scope: per table, provisioned capacity mode; per-account quotas also apply.
+  link: [doesn't allow you to increase provisioned capacity](../facts/dynamodb.md#dynamodb-provisioned-no-rapid-increase)
+dynamodb-provisioned-target-utilization-cost-lever
+  claim: Target utilization is the primary means of cost optimization for a provisioned table: a lower percent value increases over-provisioning and cost but reduces the risk of throttling, and a higher value does the opposite. Setting a minimum capacity limits throttling but does not reduce cost.
+  scope: per provisioned table with auto scaling.
+  link: [the primary means of cost optimization](../facts/dynamodb.md#dynamodb-provisioned-target-utilization-cost-lever)
+  link: [will not reduce the cost of the table](../facts/dynamodb.md#dynamodb-provisioned-target-utilization-cost-lever)
+  say: the main cost lever | a minimum does not reduce cost
+dynamodb-provisioned-throttling-when-exceeded
+  claim: Provisioned capacity throttling occurs when your application's consumption rate exceeds the read or write capacity units configured for your tables or global secondary indexes.
+  scope: per table or global secondary index; provisioned capacity mode.
+  link: [consumption rate exceeds the read or write capacity](../facts/dynamodb.md#dynamodb-provisioned-throttling-when-exceeded)
+  link: [Provisioned capacity throttling](../facts/dynamodb.md#dynamodb-provisioned-throttling-when-exceeded)
+dynamodb-query-ascending-order-default
+  claim: A Query returns items in the order they are stored, which is ascending order by sort key, and you can request descending order instead.
+  scope: per Query; default; not adjustable.
+  link: [ascending order by sort key](../facts/dynamodb.md#dynamodb-query-ascending-order-default)
+  link: [request descending order](../facts/dynamodb.md#dynamodb-query-ascending-order-default)
+dynamodb-query-descending-scanindexforward
+  claim: Query results are always sorted by the sort key value; the default order is ascending, and setting ScanIndexForward to false reverses the order.
+  scope: per Query.
+  link: [ScanIndexForward](../facts/dynamodb.md#dynamodb-query-descending-scanindexforward)
+  link: [always sorted by the sort key value](../facts/dynamodb.md#dynamodb-query-descending-scanindexforward)
+dynamodb-query-filter-no-key-attributes
+  claim: A Query filter expression cannot contain partition key or sort key attributes; those attributes belong in the key condition expression.
+  scope: per Query.
+  link: [cannot contain partition key or sort key attributes](../facts/dynamodb.md#dynamodb-query-filter-no-key-attributes)
+  link: [key condition expression](../facts/dynamodb.md#dynamodb-query-filter-no-key-attributes)
+dynamodb-query-filter-same-read-capacity
+  claim: A filter expression on a Query is applied after the Query finishes, so a Query consumes the same amount of read capacity whether or not a filter expression is present.
+  scope: per Query.
+  link: [consumes the same amount of read capacity](../facts/dynamodb.md#dynamodb-query-filter-same-read-capacity)
+  link: [applied after a `Query` finishes](../facts/dynamodb.md#dynamodb-query-filter-same-read-capacity)
+dynamodb-query-lastevaluatedkey-end
+  claim: The LastEvaluatedKey from a Query response should be used as the ExclusiveStartKey for the next Query request.
+  scope: per Query; a non-empty LastEvaluatedKey does not guarantee more matching items.
+  link: [ExclusiveStartKey](../facts/dynamodb.md#dynamodb-query-lastevaluatedkey-end)
+dynamodb-query-lastevaluatedkey-not-end
+  claim: A non-empty LastEvaluatedKey does not necessarily mean more data remains; the only way to know you reached the end of the result set is that LastEvaluatedKey is empty.
+  scope: per Query.
+  link: [`LastEvaluatedKey` is empty](../facts/dynamodb.md#dynamodb-query-lastevaluatedkey-not-end)
+  link: [does not necessarily mean](../facts/dynamodb.md#dynamodb-query-lastevaluatedkey-not-end)
+dynamodb-query-optional-sort-key-condition
+  claim: A Query can optionally provide a second condition for the sort key, if the table has one.
+  scope: per Query.
+  link: [optionally provide a second condition](../facts/dynamodb.md#dynamodb-query-optional-sort-key-condition)
+  link: [second condition for the sort key](../facts/dynamodb.md#dynamodb-query-optional-sort-key-condition)
+dynamodb-query-partition-key-equality-only
+  claim: A Query key condition must specify the partition key name and value as an equality condition, and you cannot use a non-key attribute in a key condition expression.
+  scope: per Query.
+  link: [as an equality condition](../facts/dynamodb.md#dynamodb-query-partition-key-equality-only)
+  link: [cannot use a non-key attribute](../facts/dynamodb.md#dynamodb-query-partition-key-equality-only)
+dynamodb-query-partition-key-equality-sort-key-optional
+  claim: A Query must provide the partition key attribute name and a single value for it, and returns all items with that partition key value; you can optionally add a sort key condition with a comparison operator to refine the results.
+  scope: DynamoDB Query on a table or index.
+  link: [a single value for that attribute](../facts/dynamodb.md#dynamodb-query-partition-key-equality-sort-key-optional)
+  link: [Optionally, you can provide a sort key attribute](../facts/dynamodb.md#dynamodb-query-partition-key-equality-sort-key-optional)
+  say: exactly one partition key value | the sort key condition is optional
+dynamodb-query-result-1mb
+  claim: The result set from a Query is limited to 1 MB per call. You can use the LastEvaluatedKey from the query response to retrieve more results.
+  scope: per Query call; maximum; not adjustable; use LastEvaluatedKey to retrieve more results.
+  link: [1 MB per call](../facts/dynamodb.md#dynamodb-query-result-1mb)
+dynamodb-query-sort-key-range-operators
+  claim: Well-designed sort keys let you retrieve groups of related items with range queries that use operators such as begins_with, between, greater than and less than.
+  scope: per Query.
+  link: [`begins_with`, `between`, `>`, `<`](../facts/dynamodb.md#dynamodb-query-sort-key-range-operators)
+  link: [range queries](../facts/dynamodb.md#dynamodb-query-sort-key-range-operators)
+dynamodb-quotas-per-region
+  claim: Each DynamoDB quota applies on a per-Region basis unless otherwise specified.
+  scope: all DynamoDB quotas; unless otherwise specified.
+  link: [per-Region basis](../facts/dynamodb.md#dynamodb-quotas-per-region)
+dynamodb-rcu-definition
+  claim: For an item up to 4 KB, one read capacity unit (RCU) is one strongly consistent read per second, or two eventually consistent reads per second.
+  scope: per read capacity unit, item up to 4 KB; fixed; provisioned capacity mode.
+  link: [one strongly consistent read operation per second](../facts/dynamodb.md#dynamodb-rcu-definition)
+  link: [two eventually consistent read operations per second](../facts/dynamodb.md#dynamodb-rcu-definition)
+dynamodb-read-8kb-example
+  claim: For an 8 KB item, one strongly consistent read needs 2 read units, an eventually consistent read needs 1 read unit and a transactional read needs 4 read units.
+  scope: per read request, 8 KB item; fixed; worked example.
+  link: [2 read units](../facts/dynamodb.md#dynamodb-read-8kb-example)
+  link: [1 read unit](../facts/dynamodb.md#dynamodb-read-8kb-example)
+  link: [4 read units](../facts/dynamodb.md#dynamodb-read-8kb-example)
+dynamodb-read-capacity-by-items-read-not-returned
+  claim: For a Scan, DynamoDB calculates the read capacity units consumed based on the number of items and the size of those items, not on the amount of data that is returned to an application, so the capacity consumed is the same whether you request all attributes or use a projection expression, and whether or not you use a filter expression.
+  scope: per Scan request; Scan operation.
+  link: [the number of items and the size](../facts/dynamodb.md#dynamodb-read-capacity-by-items-read-not-returned)
+  link: [not on the amount of data](../facts/dynamodb.md#dynamodb-read-capacity-by-items-read-not-returned)
+dynamodb-read-capacity-formula
+  claim: Read capacity units are based on strongly consistent reads. To find the read capacity units that one strongly consistent read of an item needs, divide the item size of the operation by 4 KB, then round up to the nearest whole number.
+  scope: per read operation, strongly consistent; fixed; provisioned capacity mode; strongly consistent reads.
+  link: [divide the item size of the operation by 4 KB](../facts/dynamodb.md#dynamodb-read-capacity-formula)
+dynamodb-read-rounding-4kb
+  claim: Item sizes for reads are rounded up to the next 4 KB multiple, so reading a 3,500-byte item consumes the same throughput as reading a 4 KB item.
+  scope: per read of an item; fixed.
+  link: [next 4 KB multiple](../facts/dynamodb.md#dynamodb-read-rounding-4kb)
+dynamodb-read-unit-eventual-4kb
+  claim: An eventually consistent read request of an item up to 4 KB requires one-half read unit.
+  scope: per read request, item up to 4 KB; fixed; eventually consistent read.
+  link: [one-half read unit](../facts/dynamodb.md#dynamodb-read-unit-eventual-4kb)
+dynamodb-read-unit-strong-4kb
+  claim: A strongly consistent read request of an item up to 4 KB requires one read unit.
+  scope: per read request, item up to 4 KB; fixed; strongly consistent read.
+  link: [one read unit](../facts/dynamodb.md#dynamodb-read-unit-strong-4kb)
+dynamodb-read-unit-transactional-4kb
+  claim: A transactional read request of an item up to 4 KB requires two read units.
+  scope: per read request, item up to 4 KB; fixed; transactional read.
+  link: [two read units](../facts/dynamodb.md#dynamodb-read-unit-transactional-4kb)
+dynamodb-reserved-capacity-increment
+  claim: Reserved capacity is purchased in allocations of 100 WCUs or 100 RCUs.
+  scope: per purchase; minimum; not adjustable; provisioned capacity with the Standard table class.
+  link: [100 WCUs or 100 RCUs](../facts/dynamodb.md#dynamodb-reserved-capacity-increment)
+dynamodb-reserved-capacity-no-transfer
+  claim: You can't sell, cancel, or transfer reserved capacity to another Region or account.
+  scope: reserved capacity.
+  link: [can't sell, cancel, or transfer](../facts/dynamodb.md#dynamodb-reserved-capacity-no-transfer)
+dynamodb-reserved-capacity-not-for-ia-on-demand
+  claim: Reserved capacity is not available for tables using the Standard-IA table class or on-demand capacity mode.
+  scope: reserved capacity purchases; only provisioned tables in the Standard table class.
+  link: [not available for tables using the DynamoDB Standard-IA](../facts/dynamodb.md#dynamodb-reserved-capacity-not-for-ia-on-demand)
+  link: [or on-demand capacity mode](../facts/dynamodb.md#dynamodb-reserved-capacity-not-for-ia-on-demand)
+dynamodb-reserved-capacity-quota
+  claim: The default quota for active reserved capacity is 1,000,000 provisioned capacity units (WCUs and RCUs combined) per account, and it can be adjusted.
+  scope: per account; default; adjustable.
+  link: [1,000,000 provisioned capacity units](../facts/dynamodb.md#dynamodb-reserved-capacity-quota)
+dynamodb-reserved-capacity-terms-and-discount
+  claim: Reserved capacity is offered as a one-year commitment, or in select Regions as a three-year commitment, with savings of up to 54% off standard rates for a one-year term and 77% for a three-year term. You pay a one-time partial upfront payment and a discounted hourly rate, and you cannot sell, cancel or transfer it.
+  scope: reserved capacity, per Region; purchased in allocations of 100 WCUs or 100 RCUs.
+  link: [in select Regions as a three-year commitment](../facts/dynamodb.md#dynamodb-reserved-capacity-terms-and-discount)
+  link: [up to 54% off standard rates for a one-year term](../facts/dynamodb.md#dynamodb-reserved-capacity-terms-and-discount)
+  link: [77% off standard rates for a three-year term](../facts/dynamodb.md#dynamodb-reserved-capacity-terms-and-discount)
+  link: [one-time partial upfront payment](../facts/dynamodb.md#dynamodb-reserved-capacity-terms-and-discount)
+  say: one-year, or three-year in select Regions | up to fifty-four percent off for one year | seventy-seven percent off for three years | a one-time partial upfront payment
+dynamodb-resource-based-policies-cross-account-and-bpa
+  claim: DynamoDB supports resource-based policies for tables, indexes and streams, which simplify cross-account access control for IAM principals in other AWS accounts. A policy can be up to 20 KB, and Block Public Access is automatically enabled when you create or modify a resource-based policy.
+  scope: per DynamoDB table, index or stream policy; maximum.
+  link: [resource-based policies for tables, indexes, and streams](../facts/dynamodb.md#dynamodb-resource-based-policies-cross-account-and-bpa)
+  link: [20 KB](../facts/dynamodb.md#dynamodb-resource-based-policies-cross-account-and-bpa)
+  link: [is automatically enabled](../facts/dynamodb.md#dynamodb-resource-based-policies-cross-account-and-bpa)
+  say: resource-based policies for tables, indexes and streams | twenty kilobytes | Block Public Access is on automatically
+dynamodb-resource-policy-max-20kb
+  claim: The maximum size supported for a resource-based policy document is 20 KB, and DynamoDB counts whitespace when it calculates the size.
+  scope: per resource-based policy document; maximum; not adjustable; whitespace counts toward the limit.
+  link: [20 KB](../facts/dynamodb.md#dynamodb-resource-policy-max-20kb)
+dynamodb-restore-cannot-overwrite-existing-table
+  claim: You can't overwrite an existing table during a restore operation.
+  scope: per restore.
+  link: [can't overwrite an existing table](../facts/dynamodb.md#dynamodb-restore-cannot-overwrite-existing-table)
+  link: [during a restore operation](../facts/dynamodb.md#dynamodb-restore-cannot-overwrite-existing-table)
+dynamodb-restore-concurrency-limits
+  claim: DynamoDB supports up to 50 concurrent restores totaling 50 TB through on-demand or continuous backups. AWS Backup supports up to 50 concurrent restores totaling 25 TB.
+  scope: concurrent restores, DynamoDB backups versus AWS Backup; maximum; not adjustable; 50 TB total through DynamoDB backups; 25 TB total through AWS Backup.
+  link: [50 concurrent restores](../facts/dynamodb.md#dynamodb-restore-concurrency-limits)
+  link: [50 TB](../facts/dynamodb.md#dynamodb-restore-concurrency-limits)
+  link: [25 TB](../facts/dynamodb.md#dynamodb-restore-concurrency-limits)
+dynamodb-restore-exclude-indexes-faster
+  claim: Restores can be faster and more cost-efficient if you exclude some or all indexes from being created on the restored table.
+  scope: per restore.
+  link: [exclude some or all indexes](../facts/dynamodb.md#dynamodb-restore-exclude-indexes-faster)
+  link: [faster and more cost-efficient](../facts/dynamodb.md#dynamodb-restore-exclude-indexes-faster)
+dynamodb-restore-no-provisioned-throughput
+  claim: You restore a table without consuming any provisioned throughput on the table.
+  scope: per restore.
+  link: [without consuming any provisioned throughput on the table](../facts/dynamodb.md#dynamodb-restore-no-provisioned-throughput)
+  link: [You restore a table](../facts/dynamodb.md#dynamodb-restore-no-provisioned-throughput)
+dynamodb-restore-tags-not-preserved
+  claim: Tags are not preserved in restored tables, so you need to add tags to restored tables before you can use tag-based conditions in your policies.
+  scope: per restored table.
+  link: [Tags aren't preserved in restored tables](../facts/dynamodb.md#dynamodb-restore-tags-not-preserved)
+  link: [tag-based conditions in your policies](../facts/dynamodb.md#dynamodb-restore-tags-not-preserved)
+dynamodb-rightsize-lsi-uses-base-table-capacity
+  claim: Local secondary indexes consume capacity from the base table, while each global secondary index has its own throughput that is independent from the base table.
+  scope: provisioned capacity sizing.
+  link: [consume capacity from the base table](../facts/dynamodb.md#dynamodb-rightsize-lsi-uses-base-table-capacity)
+  say: LSIs use the base table's capacity
+dynamodb-rightsize-under-20-percent-over-provisioned
+  claim: If CloudWatch consumed-versus-provisioned capacity data shows less than 20% utilization for several intervals, a provisioned table might be over-provisioned; when traffic is close to 80% utilization the risk of throttling is significantly higher.
+  scope: per provisioned table or GSI; compare ConsumedReadCapacityUnits and ConsumedWriteCapacityUnits with the provisioned values over at least a few weeks of data.
+  link: [lower than 20% utilization for several intervals](../facts/dynamodb.md#dynamodb-rightsize-under-20-percent-over-provisioned)
+  link: [close to the 80% utilization rate](../facts/dynamodb.md#dynamodb-rightsize-under-20-percent-over-provisioned)
+  say: under twenty percent for several intervals | near eighty percent utilization
+dynamodb-rightsize-under-provisioned-over-80-percent
+  claim: For most workloads, a table is considered under-provisioned when it constantly consumes more than 80% of its provisioned capacity.
+  scope: per provisioned table, most workloads; rule of thumb that varies with seasonality and traffic growth.
+  link: [more than 80%](../facts/dynamodb.md#dynamodb-rightsize-under-provisioned-over-80-percent)
+dynamodb-rru-definition
+  claim: One read request unit represents one strongly consistent read operation per second, or two eventually consistent read operations per second, for an item up to 4 KB in size.
+  scope: per read request unit, item up to 4 KB; fixed; on-demand capacity mode.
+  link: [one strongly consistent read operation per second](../facts/dynamodb.md#dynamodb-rru-definition)
+  link: [two eventually consistent read operations per second](../facts/dynamodb.md#dynamodb-rru-definition)
+dynamodb-s3-dynamodb-no-cross-transactions
+  claim: DynamoDB does not support transactions that cross Amazon S3 and DynamoDB, so the application must deal with failures, such as cleaning up orphaned Amazon S3 objects.
+  scope: per application.
+  link: [doesn't support transactions that cross Amazon S3 and DynamoDB](../facts/dynamodb.md#dynamodb-s3-dynamodb-no-cross-transactions)
+  link: [cleaning up orphaned Amazon S3 objects](../facts/dynamodb.md#dynamodb-s3-dynamodb-no-cross-transactions)
+dynamodb-scan-eventually-consistent-default
+  claim: A Scan operation performs eventually consistent reads by default.
+  scope: per Scan; default; not adjustable.
+  link: [eventually consistent reads, by default](../facts/dynamodb.md#dynamodb-scan-eventually-consistent-default)
+  link: [performs eventually consistent reads](../facts/dynamodb.md#dynamodb-scan-eventually-consistent-default)
+dynamodb-scan-filter-any-attribute
+  claim: With Scan, you can specify any attributes in a filter expression, including partition key and sort key attributes.
+  scope: per Scan.
+  link: [any attributes in a filter expression](../facts/dynamodb.md#dynamodb-scan-filter-any-attribute)
+  link: [including partition key and sort key attributes](../facts/dynamodb.md#dynamodb-scan-filter-any-attribute)
+dynamodb-scan-filter-same-read-capacity
+  claim: A filter expression on a Scan is applied after the scan finishes, so a Scan consumes the same amount of read capacity whether or not a filter expression is present.
+  scope: per Scan.
+  link: [consumes the same amount of read capacity](../facts/dynamodb.md#dynamodb-scan-filter-same-read-capacity)
+  link: [applied after a `Scan` finishes](../facts/dynamodb.md#dynamodb-scan-filter-same-read-capacity)
+dynamodb-scan-isolate-from-critical-table
+  claim: AWS advises performing scans on a table that is not taking mission-critical traffic,.
+  scope: per application.
+  link: [not taking "mission-critical" traffic](../facts/dynamodb.md#dynamodb-scan-isolate-from-critical-table)
+  link: [perform scans on a table](../facts/dynamodb.md#dynamodb-scan-isolate-from-critical-table)
+dynamodb-scan-less-efficient-than-query
+  claim: Scan operations are less efficient than other DynamoDB operations, and a Scan always scans the entire table or secondary index and then filters out values.
+  scope: per Scan.
+  link: [less efficient than other operations](../facts/dynamodb.md#dynamodb-scan-less-efficient-than-query)
+  link: [always scans the entire table or secondary index](../facts/dynamodb.md#dynamodb-scan-less-efficient-than-query)
+dynamodb-scan-limit-before-filter
+  claim: The Limit parameter of a Scan sets the maximum number of items that the Scan returns, prior to filter expression evaluation.
+  scope: per Scan.
+  link: [prior to filter expression evaluation](../facts/dynamodb.md#dynamodb-scan-limit-before-filter)
+  link: [`Limit` parameter](../facts/dynamodb.md#dynamodb-scan-limit-before-filter)
+dynamodb-scan-reads-every-item
+  claim: A Scan operation reads every item in a table or a secondary index.
+  scope: per Scan.
+  link: [reads every item in a table](../facts/dynamodb.md#dynamodb-scan-reads-every-item)
+  link: [DynamoDB reads every item](../facts/dynamodb.md#dynamodb-scan-reads-every-item)
+dynamodb-scan-reduce-page-size
+  claim: Because a Scan reads an entire page, you can reduce its impact on a table by setting a smaller page size.
+  scope: per Scan.
+  link: [setting a smaller page size](../facts/dynamodb.md#dynamodb-scan-reduce-page-size)
+  link: [reads an entire page](../facts/dynamodb.md#dynamodb-scan-reduce-page-size)
+dynamodb-scan-result-1mb
+  claim: The result set from a Scan is limited to 1 MB per call. You can use the LastEvaluatedKey from the scan response to retrieve more results.
+  scope: per Scan call; maximum; not adjustable; use LastEvaluatedKey to retrieve more results.
+  link: [1 MB per call](../facts/dynamodb.md#dynamodb-scan-result-1mb)
+dynamodb-scan-slows-as-table-grows
+  claim: As a table or index grows, the Scan operation slows.
+  scope: per Scan.
+  link: [as a table or index grows](../facts/dynamodb.md#dynamodb-scan-slows-as-table-grows)
+  link: [the `Scan` operation slows](../facts/dynamodb.md#dynamodb-scan-slows-as-table-grows)
+dynamodb-scan-spike-throttles-other-requests
+  claim: A large Scan can use up capacity units that other, possibly more important, requests for the same table need, so those requests are likely to get a throughput exceeded exception.
+  scope: per table; provisioned mode.
+  link: [prevents other potentially more important requests](../facts/dynamodb.md#dynamodb-scan-spike-throttles-other-requests)
+  link: [`ProvisionedThroughputExceeded` exception](../facts/dynamodb.md#dynamodb-scan-spike-throttles-other-requests)
+dynamodb-schemaless-except-primary-key
+  claim: DynamoDB is schemaless: other than the primary key attributes, you do not have to define any attributes or data types when you create a table.
+  scope: per table.
+  link: [other than the primary key attributes](../facts/dynamodb.md#dynamodb-schemaless-except-primary-key)
+  link: [don't have to define any attributes](../facts/dynamodb.md#dynamodb-schemaless-except-primary-key)
+dynamodb-sdk-exponential-backoff
+  claim: In addition to simple retries, each AWS SDK implements an exponential backoff algorithm for better flow control.
+  scope: per SDK.
+  link: [exponential backoff algorithm](../facts/dynamodb.md#dynamodb-sdk-exponential-backoff)
+  link: [better flow control](../facts/dynamodb.md#dynamodb-sdk-exponential-backoff)
+dynamodb-sdk-retries-throttled-requests
+  claim: The AWS SDKs for DynamoDB automatically retry requests that receive a provisioned throughput exceeded exception, and the request is eventually successful unless the retry queue is too large to finish.
+  scope: per request.
+  link: [automatically retry requests that receive this exception](../facts/dynamodb.md#dynamodb-sdk-retries-throttled-requests)
+  link: [eventually successful](../facts/dynamodb.md#dynamodb-sdk-retries-throttled-requests)
+dynamodb-serverless-no-servers
+  claim: DynamoDB is serverless: you do not provision servers, and you do not patch, manage, install, maintain or operate any software.
+  scope: per service.
+  link: [don't need to provision any servers](../facts/dynamodb.md#dynamodb-serverless-no-servers)
+  link: [patch, manage, install, maintain, or operate any software](../facts/dynamodb.md#dynamodb-serverless-no-servers)
+dynamodb-set-types-same-type-elements
+  claim: DynamoDB supports sets of number, string or binary values, and all the elements within a set must be of the same type.
+  scope: per set attribute.
+  link: [sets of number, string, or binary values](../facts/dynamodb.md#dynamodb-set-types-same-type-elements)
+  link: [must be of the same type](../facts/dynamodb.md#dynamodb-set-types-same-type-elements)
+dynamodb-sets-unique-unordered
+  claim: Each value within a set must be unique, and the order of the values within a set is not preserved.
+  scope: per set attribute.
+  link: [must be unique](../facts/dynamodb.md#dynamodb-sets-unique-unordered)
+  link: [not preserved](../facts/dynamodb.md#dynamodb-sets-unique-unordered)
+dynamodb-size-units-binary
+  claim: All size measurements in DynamoDB use binary-based units: 1 KB is 1024 bytes, 1 MB is 1024 KB, 1 GB is 1024 MB and 1 TB is 1024 GB.
+  scope: all DynamoDB size measurements; fixed.
+  link: [1 KB = 1024 bytes](../facts/dynamodb.md#dynamodb-size-units-binary)
+dynamodb-sla-standard-vs-global-tables
+  claim: The DynamoDB SLA commits to a Monthly Uptime Percentage for each AWS Region of at least 99.99% if the Standard SLA applies, or at least 99.999% if the Global Tables SLA applies.
+  scope: per AWS Region, per monthly billing cycle; minimum; 99.99% under the Standard SLA; 99.999% under the Global Tables SLA.
+  link: [99.99%](../facts/dynamodb.md#dynamodb-sla-standard-vs-global-tables)
+  link: [99.999%](../facts/dynamodb.md#dynamodb-sla-standard-vs-global-tables)
+dynamodb-sort-key-length
+  claim: The minimum length of a sort key value is 1 byte and the maximum length is 1024 bytes.
+  scope: per sort key value; maximum; not adjustable.
+  link: [1 byte](../facts/dynamodb.md#dynamodb-sort-key-length)
+  link: [1024 bytes](../facts/dynamodb.md#dynamodb-sort-key-length)
+dynamodb-sparse-gsi-lower-write-throughput
+  claim: By designing a global secondary index to be sparse, you can provision it with lower write throughput than the base table while still achieving excellent performance.
+  scope: per global secondary index; provisioned capacity mode.
+  link: [provision it with lower write throughput](../facts/dynamodb.md#dynamodb-sparse-gsi-lower-write-throughput)
+  link: [still achieving excellent performance](../facts/dynamodb.md#dynamodb-sparse-gsi-lower-write-throughput)
+dynamodb-sparse-index-definition
+  claim: An index where only a subset of items from the base table appear is called a sparse index.
+  scope: per index.
+  link: [only a subset of items](../facts/dynamodb.md#dynamodb-sparse-index-definition)
+  link: [sparse](../facts/dynamodb.md#dynamodb-sparse-index-definition)
+dynamodb-sparse-index-faster-cheaper-than-scan
+  claim: When thousands of orders exist but only a few are open, it is faster and less expensive to query a sparse index for open orders than to scan the entire table.
+  scope: per index.
+  link: [faster and less expensive to query that index](../facts/dynamodb.md#dynamodb-sparse-index-faster-cheaper-than-scan)
+  link: [than to scan the entire table](../facts/dynamodb.md#dynamodb-sparse-index-faster-cheaper-than-scan)
+dynamodb-stream-records-24-hours
+  claim: Stream records have a lifetime of 24 hours; after that they are automatically removed from the stream.
+  scope: per stream record; fixed; not adjustable.
+  link: [lifetime of 24 hours](../facts/dynamodb.md#dynamodb-stream-records-24-hours)
+  link: [automatically removed from the stream](../facts/dynamodb.md#dynamodb-stream-records-24-hours)
+dynamodb-streams-consumers-flink-eventbridge-lambda
+  claim: You can consume DynamoDB Streams records with AWS Lambda, which is synchronously invoked when new stream records are available (you can subscribe up to two Lambda functions to the same stream), with Apache Flink through Amazon Managed Service for Apache Flink, and with an Amazon EventBridge pipe, which consumes events from DynamoDB Streams and routes them to a target such as an EventBridge bus.
+  scope: DynamoDB Streams consumers; maximum.
+  link: [your Lambda function is synchronously invoked](../facts/dynamodb.md#dynamodb-streams-consumers-flink-eventbridge-lambda)
+  link: [subscribe up to two Lambda functions](../facts/dynamodb.md#dynamodb-streams-consumers-flink-eventbridge-lambda)
+  link: [Amazon Managed Service for Apache Flink](../facts/dynamodb.md#dynamodb-streams-consumers-flink-eventbridge-lambda)
+  say: Lambda is invoked synchronously | up to two Lambda functions per stream | Managed Service for Apache Flink
+dynamodb-streams-disabled-stream-readable-24h
+  claim: If you disable a stream, any open shards are closed, and the data in the stream continues to be readable for 24 hours.
+  scope: per stream.
+  link: [continue to be readable for 24 hours](../facts/dynamodb.md#dynamodb-streams-disabled-stream-readable-24h)
+  link: [any shards that are open will be closed](../facts/dynamodb.md#dynamodb-streams-disabled-stream-readable-24h)
+dynamodb-streams-encrypted-at-rest
+  claim: Encryption at rest encrypts the data in DynamoDB streams.
+  scope: per stream.
+  link: [encrypts the data in DynamoDB streams](../facts/dynamodb.md#dynamodb-streams-encrypted-at-rest)
+  link: [Encryption at rest encrypts the data](../facts/dynamodb.md#dynamodb-streams-encrypted-at-rest)
+dynamodb-streams-lambda-retries-until-success-or-expiry
+  claim: If your function returns an error, Lambda retries the batch until it processes successfully or the data expires.
+  scope: per batch.
+  link: [until it processes successfully or the data expires](../facts/dynamodb.md#dynamodb-streams-lambda-retries-until-success-or-expiry)
+  link: [Lambda retries the batch](../facts/dynamodb.md#dynamodb-streams-lambda-retries-until-success-or-expiry)
+dynamodb-streams-lambda-triggers
+  claim: DynamoDB is integrated with Lambda so that you can create triggers, which are pieces of code that automatically respond to events in DynamoDB Streams.
+  scope: per stream.
+  link: [automatically respond to events in DynamoDB Streams](../facts/dynamodb.md#dynamodb-streams-lambda-triggers)
+  link: [integrated with AWS Lambda](../facts/dynamodb.md#dynamodb-streams-lambda-triggers)
+dynamodb-streams-lambda-two-functions-per-stream
+  claim: You can subscribe up to two Lambda functions to the same DynamoDB stream; more than two might cause read throttling.
+  scope: per DynamoDB stream; maximum; not adjustable.
+  link: [up to two Lambda functions](../facts/dynamodb.md#dynamodb-streams-lambda-two-functions-per-stream)
+  link: [read throttling might occur](../facts/dynamodb.md#dynamodb-streams-lambda-two-functions-per-stream)
+dynamodb-streams-no-performance-impact-on-enable
+  claim: DynamoDB Streams operates asynchronously, so there is no performance impact on a table if you enable a stream.
+  scope: per table.
+  link: [operates asynchronously](../facts/dynamodb.md#dynamodb-streams-no-performance-impact-on-enable)
+  link: [no performance impact on a table](../facts/dynamodb.md#dynamodb-streams-no-performance-impact-on-enable)
+dynamodb-streams-no-record-for-no-change
+  claim: If a PutItem or UpdateItem operation does not change any data in an item, DynamoDB Streams does not write a stream record for that operation.
+  scope: per stream.
+  link: [write a stream record](../facts/dynamodb.md#dynamodb-streams-no-record-for-no-change)
+  link: [does not change any data in an item](../facts/dynamodb.md#dynamodb-streams-no-record-for-no-change)
+dynamodb-streams-optional-feature
+  claim: DynamoDB Streams is an optional feature that captures data modification events in a table; the events appear in the stream in near-real time and in the order that they occurred.
+  scope: per table.
+  link: [optional feature that captures data modification events](../facts/dynamodb.md#dynamodb-streams-optional-feature)
+  link: [in the order that the events occurred](../facts/dynamodb.md#dynamodb-streams-optional-feature)
+dynamodb-streams-order-per-item-not-partition
+  claim: DynamoDB Streams guarantees ordering at the level of an individual item, across all modifications to the same primary key, and not across an entire partition.
+  scope: per item.
+  link: [ordering at the level of an individual item](../facts/dynamodb.md#dynamodb-streams-order-per-item-not-partition)
+  link: [not across an entire partition](../facts/dynamodb.md#dynamodb-streams-order-per-item-not-partition)
+dynamodb-streams-record-exactly-once
+  claim: DynamoDB Streams makes sure each stream record appears exactly once in the stream, and that stream records for a modified item appear in the same sequence as the actual modifications.
+  scope: per DynamoDB stream; per-item ordering; Kinesis Data Streams for DynamoDB can show duplicates.
+  link: [exactly once in the stream](../facts/dynamodb.md#dynamodb-streams-record-exactly-once)
+dynamodb-streams-separate-endpoint-same-region
+  claim: To read and process DynamoDB Streams records, your application must access a DynamoDB Streams endpoint in the same Region.
+  scope: per Region.
+  link: [a DynamoDB Streams endpoint in the same Region](../facts/dynamodb.md#dynamodb-streams-separate-endpoint-same-region)
+  link: [read and process DynamoDB Streams records](../facts/dynamodb.md#dynamodb-streams-separate-endpoint-same-region)
+dynamodb-streams-shard-readers
+  claim: For single-Region tables that are not global tables, you can design for up to two simultaneous processes reading the same DynamoDB Streams shard. For global tables, limit simultaneous readers to one.
+  scope: per DynamoDB Streams shard; maximum; not adjustable; two for single-Region tables that are not global tables; one recommended for global tables; exceeding can cause throttling.
+  link: [up to two simultaneous processes](../facts/dynamodb.md#dynamodb-streams-shard-readers)
+  link: [one](../facts/dynamodb.md#dynamodb-streams-shard-readers)
+dynamodb-streams-time-ordered-changes
+  claim: Whenever an application creates, updates or deletes items in a table, DynamoDB Streams records a time-ordered sequence of every item-level change in near-real time.
+  scope: per table; a stream is enabled on the table.
+  link: [time-ordered sequence of every item-level change](../facts/dynamodb.md#dynamodb-streams-time-ordered-changes)
+  link: [near-real time](../facts/dynamodb.md#dynamodb-streams-time-ordered-changes)
+dynamodb-streams-view-keys-only
+  claim: The KEYS_ONLY stream view type writes only the key attributes of the modified item to the stream.
+  scope: per stream.
+  link: [`KEYS_ONLY`](../facts/dynamodb.md#dynamodb-streams-view-keys-only)
+  link: [Only the key attributes of the modified item](../facts/dynamodb.md#dynamodb-streams-view-keys-only)
+dynamodb-streams-view-new-and-old-images
+  claim: The NEW_AND_OLD_IMAGES stream view type writes both the new and the old images of the item.
+  scope: per stream.
+  link: [`NEW_AND_OLD_IMAGES`](../facts/dynamodb.md#dynamodb-streams-view-new-and-old-images)
+  link: [Both the new and the old images](../facts/dynamodb.md#dynamodb-streams-view-new-and-old-images)
+dynamodb-streams-view-new-image
+  claim: The NEW_IMAGE stream view type writes the entire item as it appears after it was modified.
+  scope: per stream.
+  link: [`NEW_IMAGE`](../facts/dynamodb.md#dynamodb-streams-view-new-image)
+  link: [as it appears after it was modified](../facts/dynamodb.md#dynamodb-streams-view-new-image)
+dynamodb-streams-view-old-image
+  claim: The OLD_IMAGE stream view type writes the entire item as it appeared before it was modified.
+  scope: per stream.
+  link: [`OLD_IMAGE`](../facts/dynamodb.md#dynamodb-streams-view-old-image)
+  link: [as it appeared before it was modified](../facts/dynamodb.md#dynamodb-streams-view-old-image)
+dynamodb-streams-view-type-not-editable
+  claim: It is not possible to edit a StreamViewType once a stream has been set up; to change it you must disable the current stream and create a new one.
+  scope: per stream.
+  link: [not possible to edit a `StreamViewType`](../facts/dynamodb.md#dynamodb-streams-view-type-not-editable)
+  link: [disable the current stream](../facts/dynamodb.md#dynamodb-streams-view-type-not-editable)
+dynamodb-streams-vs-kds-consumers-per-shard
+  claim: Kinesis Data Streams for DynamoDB supports up to 5 simultaneous consumers per shard, or up to 20 with enhanced fan-out. DynamoDB Streams supports up to 2 simultaneous consumers per shard.
+  scope: per shard; maximum; not adjustable; Kinesis Data Streams: 5, or 20 with enhanced fan-out; DynamoDB Streams: 2.
+  link: [5 simultaneous](../facts/dynamodb.md#dynamodb-streams-vs-kds-consumers-per-shard)
+  link: [20 simultaneous consumers per shard](../facts/dynamodb.md#dynamodb-streams-vs-kds-consumers-per-shard)
+  link: [2 simultaneous](../facts/dynamodb.md#dynamodb-streams-vs-kds-consumers-per-shard)
+dynamodb-streams-vs-kds-duplicates
+  claim: Duplicate records might occasionally appear in a Kinesis data stream for DynamoDB, while no duplicate records appear in a DynamoDB stream.
+  scope: change data capture streaming options.
+  link: [Duplicate records might occasionally appear in the stream](../facts/dynamodb.md#dynamodb-streams-vs-kds-duplicates)
+  link: [No duplicate records appear in the stream](../facts/dynamodb.md#dynamodb-streams-vs-kds-duplicates)
+  say: Kinesis can contain duplicates | DynamoDB Streams has no duplicates
+dynamodb-streams-vs-kds-ordering
+  claim: In DynamoDB Streams, the records for each modified item appear in the same sequence as the actual modifications to the item. For Kinesis Data Streams for DynamoDB, the timestamp attribute on each record identifies the actual order of changes.
+  scope: change data capture streaming options.
+  link: [same sequence as the actual modifications](../facts/dynamodb.md#dynamodb-streams-vs-kds-ordering)
+  link: [timestamp attribute on each stream record](../facts/dynamodb.md#dynamodb-streams-vs-kds-ordering)
+  say: per-item order is preserved | order comes from a timestamp attribute
+dynamodb-streams-vs-kds-processing-options
+  claim: Kinesis Data Streams for DynamoDB records can be processed with AWS Lambda, Amazon Managed Service for Apache Flink, Kinesis Data Firehose or AWS Glue streaming ETL; DynamoDB Streams records are processed with AWS Lambda or the DynamoDB Streams Kinesis adapter.
+  scope: change data capture streaming options.
+  link: [Amazon Managed Service for Apache Flink](../facts/dynamodb.md#dynamodb-streams-vs-kds-processing-options)
+  say: Lambda, Flink, Firehose or Glue
+dynamodb-streams-vs-kds-retention
+  claim: Kinesis Data Streams for DynamoDB keeps change records up to 1 year, while DynamoDB Streams keeps them for 24 hours.
+  scope: change data capture streaming options; maximum; not adjustable.
+  link: [Up to 1 year](../facts/dynamodb.md#dynamodb-streams-vs-kds-retention)
+  link: [24 hours](../facts/dynamodb.md#dynamodb-streams-vs-kds-retention)
+  say: up to one year | twenty-four hours
+dynamodb-strong-read-twice-eventual
+  claim: Read capacity units are based on strongly consistent reads, which consume twice as many database resources as eventually consistent reads.
+  scope: per read; fixed; provisioned capacity mode.
+  link: [twice as many database resources](../facts/dynamodb.md#dynamodb-strong-read-twice-eventual)
+dynamodb-strong-reads-only-tables-and-lsi
+  claim: Strongly consistent reads are supported only on tables and local secondary indexes; they are not supported from a global secondary index or a DynamoDB stream.
+  scope: per read.
+  link: [only supported on tables and local secondary indexes](../facts/dynamodb.md#dynamodb-strong-reads-only-tables-and-lsi)
+  link: [a DynamoDB stream are not supported](../facts/dynamodb.md#dynamodb-strong-reads-only-tables-and-lsi)
+dynamodb-successful-write-http-200-durable
+  claim: When a write returns an HTTP 200 response (OK), the write completed successfully and has been durably persisted.
+  scope: per write.
+  link: [durably persisted](../facts/dynamodb.md#dynamodb-successful-write-http-200-durable)
+  link: [HTTP 200 response (OK)](../facts/dynamodb.md#dynamodb-successful-write-http-200-durable)
+dynamodb-switch-to-ondemand-takes-minutes
+  claim: Switching from provisioned to on-demand mode can take several minutes, and during the switch the table delivers throughput consistent with the previously provisioned capacity units.
+  scope: per table.
+  link: [the process can take several minutes](../facts/dynamodb.md#dynamodb-switch-to-ondemand-takes-minutes)
+  link: [consistent with the previously provisioned](../facts/dynamodb.md#dynamodb-switch-to-ondemand-takes-minutes)
+dynamodb-table-class-change-limit
+  claim: No more than two table class updates on your table are allowed in a 30-day trailing period.
+  scope: per table, per 30-day trailing period; maximum; not adjustable.
+  link: [No more than two table class updates](../facts/dynamodb.md#dynamodb-table-class-change-limit)
+  link: [30-day trailing period](../facts/dynamodb.md#dynamodb-table-class-change-limit)
+dynamodb-table-class-default-standard
+  claim: The DynamoDB Standard table class is the default, and is recommended for the vast majority of workloads.
+  scope: per table; default; adjustable; table class can be changed after creation.
+  link: [Standard table class is the default](../facts/dynamodb.md#dynamodb-table-class-default-standard)
+dynamodb-table-class-default-standard-no-performance-effect
+  claim: The Standard table class is the default option for new tables, and choosing either table class has no effect on table performance, availability, reliability or durability.
+  scope: per DynamoDB table; default; adjustable; the class can be changed twice in a 30-day period.
+  link: [the default option for new tables](../facts/dynamodb.md#dynamodb-table-class-default-standard-no-performance-effect)
+  link: [no effect on table performance, availability](../facts/dynamodb.md#dynamodb-table-class-default-standard-no-performance-effect)
+  say: Standard is the default | no effect on performance or durability
+dynamodb-table-class-ia-60-lower-25-higher
+  claim: The Standard-IA table class offers about 60% lower storage cost than Standard, and its reads and writes are billed about 25% higher than the Standard table class.
+  scope: per table, Standard-IA compared with Standard; approximate percentages as stated in the guide.
+  link: [~60% lower](../facts/dynamodb.md#dynamodb-table-class-ia-60-lower-25-higher)
+  link: [~25% higher](../facts/dynamodb.md#dynamodb-table-class-ia-60-lower-25-higher)
+dynamodb-table-class-ia-threshold-50-percent
+  claim: When storage exceeds 50% of the throughput (reads and writes) cost of a table using the Standard table class, the Standard-IA table class can help reduce the total table cost.
+  scope: per table; fixed; storage cost compared with the throughput cost of the Standard class.
+  link: [storage exceeds 50%](../facts/dynamodb.md#dynamodb-table-class-ia-threshold-50-percent)
+dynamodb-table-class-indexes-share-table-class
+  claim: All secondary indexes associated with a table use the same table class as the table.
+  scope: per table.
+  link: [use the same table class](../facts/dynamodb.md#dynamodb-table-class-indexes-share-table-class)
+  link: [All secondary indexes associated with the table](../facts/dynamodb.md#dynamodb-table-class-indexes-share-table-class)
+dynamodb-table-class-not-permanent
+  claim: The choice of a table class is not permanent: you can change the setting using the AWS Management Console, AWS CLI, or AWS SDK.
+  scope: per table.
+  link: [choice of a table class is not permanent](../facts/dynamodb.md#dynamodb-table-class-not-permanent)
+  link: [change this setting using the AWS Management Console](../facts/dynamodb.md#dynamodb-table-class-not-permanent)
+dynamodb-table-class-standard-ia-feature-compatible
+  claim: DynamoDB Standard-IA tables are compatible with all existing DynamoDB features such as auto scaling, on-demand mode, time-to-live (TTL), on-demand backups, point-in-time recovery (PITR), and global secondary indexes.
+  scope: per table.
+  link: [compatible with all existing DynamoDB features](../facts/dynamodb.md#dynamodb-table-class-standard-ia-feature-compatible)
+  link: [auto scaling, on-demand mode, time-to-live (TTL)](../facts/dynamodb.md#dynamodb-table-class-standard-ia-feature-compatible)
+dynamodb-table-class-standard-ia-lower-storage-cost
+  claim: The DynamoDB Standard-IA table class offers lower storage costs than DynamoDB Standard and is the most cost-effective option for tables where storage is the dominant cost.
+  scope: per table.
+  link: [lower storage costs than DynamoDB Standard](../facts/dynamodb.md#dynamodb-table-class-standard-ia-lower-storage-cost)
+  link: [storage is the dominant cost](../facts/dynamodb.md#dynamodb-table-class-standard-ia-lower-storage-cost)
+dynamodb-table-class-standard-ia-same-performance
+  claim: DynamoDB Standard-IA tables offer the same performance, durability, and availability as DynamoDB Standard tables.
+  scope: per table.
+  link: [same performance, durability, and availability](../facts/dynamodb.md#dynamodb-table-class-standard-ia-same-performance)
+  link: [durability, and availability as DynamoDB Standard tables](../facts/dynamodb.md#dynamodb-table-class-standard-ia-same-performance)
+dynamodb-table-class-standard-lower-throughput-cost
+  claim: The DynamoDB Standard table class offers lower throughput costs than Standard-IA and is the most cost-effective option for tables where throughput is the dominant cost.
+  scope: per table.
+  link: [lower throughput costs than DynamoDB Standard-IA](../facts/dynamodb.md#dynamodb-table-class-standard-lower-throughput-cost)
+  link: [throughput is the dominant cost](../facts/dynamodb.md#dynamodb-table-class-standard-lower-throughput-cost)
+dynamodb-table-class-standard-vs-ia-50-percent-storage
+  claim: DynamoDB Standard is best suited for tables whose storage cost is about 50% or less of the monthly table cost, and Standard-IA for tables whose storage cost is about 50% or more, which are tables that create or read fewer items per month than they keep in storage.
+  scope: per DynamoDB table.
+  link: [approximately 50% or less of the overall monthly cost](../facts/dynamodb.md#dynamodb-table-class-standard-vs-ia-50-percent-storage)
+  link: [approximately 50% or more of the overall monthly cost](../facts/dynamodb.md#dynamodb-table-class-standard-vs-ia-50-percent-storage)
+  say: storage is half the bill or less | storage is half the bill or more
+dynamodb-table-class-switch-no-code-change
+  claim: Switching between the DynamoDB Standard and Standard-IA table classes does not require changing your application code, because you use the same APIs and service endpoints.
+  scope: per table.
+  link: [does not require changing your application code](../facts/dynamodb.md#dynamodb-table-class-switch-no-code-change)
+  link: [same DynamoDB APIs and service endpoints](../facts/dynamodb.md#dynamodb-table-class-switch-no-code-change)
+dynamodb-table-class-update-background
+  claim: A table class update is a background process, and you can still access your table normally during the update.
+  scope: per table.
+  link: [You can still access your table normally](../facts/dynamodb.md#dynamodb-table-class-update-background)
+  link: [background process](../facts/dynamodb.md#dynamodb-table-class-update-background)
+dynamodb-table-name-length
+  claim: Names for tables and secondary indexes must be at least 3 characters long, but no greater than 255 characters long.
+  scope: per table or secondary index name; maximum; not adjustable; allowed characters are A-Z, a-z, 0-9, underscore, hyphen and dot.
+  link: [at least 3 characters](../facts/dynamodb.md#dynamodb-table-name-length)
+  link: [255 characters](../facts/dynamodb.md#dynamodb-table-name-length)
+dynamodb-table-size-no-practical-limit
+  claim: There is no practical limit on a table's size. Tables are unconstrained in terms of the number of items or the number of bytes.
+  scope: per table; maximum; not adjustable; no practical limit.
+  link: [no practical limit on a table's size](../facts/dynamodb.md#dynamodb-table-size-no-practical-limit)
+dynamodb-table-throughput-quota-on-demand
+  claim: In on-demand capacity mode, the default throughput quota per table is 40,000 read request units and 40,000 write request units, and it can be adjusted.
+  scope: per table, per Region; default; adjustable; on-demand capacity mode.
+  link: [40,000 read request units](../facts/dynamodb.md#dynamodb-table-throughput-quota-on-demand)
+  link: [40,000 write request units](../facts/dynamodb.md#dynamodb-table-throughput-quota-on-demand)
+dynamodb-table-throughput-quota-provisioned
+  claim: In provisioned capacity mode, the default throughput quota per table is 40,000 read capacity units and 40,000 write capacity units, and it can be adjusted.
+  scope: per table, per Region; default; adjustable; provisioned capacity mode.
+  link: [40,000 read capacity units](../facts/dynamodb.md#dynamodb-table-throughput-quota-provisioned)
+  link: [40,000 write capacity units](../facts/dynamodb.md#dynamodb-table-throughput-quota-provisioned)
+dynamodb-tables-per-account-default
+  claim: For any AWS account, the initial quota is 2,500 tables per AWS Region.
+  scope: per account, per Region; default; adjustable; increase through the AWS account team.
+  link: [2,500 tables](../facts/dynamodb.md#dynamodb-tables-per-account-default)
+dynamodb-tables-per-account-max-increase
+  claim: If you need more than 2,500 tables for a single account, you reach out to your AWS account team to explore an increase up to a maximum of 10,000 tables.
+  scope: per account, per Region; maximum; adjustable; through the AWS account team.
+  link: [10,000 tables](../facts/dynamodb.md#dynamodb-tables-per-account-max-increase)
+dynamodb-three-az-replication-built-in
+  claim: DynamoDB automatically replicates your data across three Availability Zones in a Region, providing built-in high durability and a 99.99% availability SLA.
+  scope: per Region.
+  link: [across three Availability Zones in a Region](../facts/dynamodb.md#dynamodb-three-az-replication-built-in)
+  link: [99.99% availability SLA](../facts/dynamodb.md#dynamodb-three-az-replication-built-in)
+dynamodb-throttling-key-range-hot-partitions
+  claim: When individual partitions exceed their throughput limits, DynamoDB returns a KeyRangeThroughputExceeded throttling reason type in the throttling exception.
+  scope: per partition.
+  link: [`KeyRangeThroughputExceeded`](../facts/dynamodb.md#dynamodb-throttling-key-range-hot-partitions)
+  link: [individual partitions exceed their throughput limits](../facts/dynamodb.md#dynamodb-throttling-key-range-hot-partitions)
+dynamodb-throttling-with-autoscaling-possible
+  claim: Throttling can occur regardless of whether Auto Scaling is enabled, because Auto Scaling adapts to increases in consumption but does not respond instantly and is limited by the maximum capacity you configure.
+  scope: per table; provisioned capacity mode.
+  link: [Throttling can occur regardless](../facts/dynamodb.md#dynamodb-throttling-with-autoscaling-possible)
+  link: [does not respond instantly](../facts/dynamodb.md#dynamodb-throttling-with-autoscaling-possible)
+dynamodb-throughput-quota-not-max
+  claim: You can request any number of read capacity units or write capacity units for your DynamoDB tables through a service quota increase.
+  scope: per table throughput; default.
+  link: [through a service quota increase](../facts/dynamodb.md#dynamodb-throughput-quota-not-max)
+dynamodb-throughput-quotas-are-per-second
+  claim: All capacity unit and request unit quotas are measured per second, so a quota of 40,000 read capacity units means 40,000 reads per second.
+  scope: all capacity unit and request unit quotas.
+  link: [measured per second](../facts/dynamodb.md#dynamodb-throughput-quotas-are-per-second)
+dynamodb-time-series-old-tables-standard-ia
+  claim: In the time series pattern, switch a period's table to Standard-IA after it is no longer actively written to and is accessed infrequently, but you still need to retain its data.
+  scope: per application.
+  link: [Switch a period's table to Standard-IA](../facts/dynamodb.md#dynamodb-time-series-old-tables-standard-ia)
+  link: [no longer actively written to](../facts/dynamodb.md#dynamodb-time-series-old-tables-standard-ia)
+dynamodb-time-series-older-tables-scale-down
+  claim: In the time series pattern, you allocate the required resources for the current period and scale down provisioning for older tables that are not used actively, which saves costs.
+  scope: per application.
+  link: [scale down provisioning for older tables](../facts/dynamodb.md#dynamodb-time-series-older-tables-scale-down)
+  link: [therefore saving costs](../facts/dynamodb.md#dynamodb-time-series-older-tables-scale-down)
+dynamodb-time-series-one-table-per-period
+  claim: For time series data, AWS says you can often best handle it by using one table per application per period.
+  scope: per application.
+  link: [one table per application per period](../facts/dynamodb.md#dynamodb-time-series-one-table-per-period)
+  link: [for time series data](../facts/dynamodb.md#dynamodb-time-series-one-table-per-period)
+dynamodb-transactget-100-actions
+  claim: TransactGetItems is a synchronous read operation that groups up to 100 Get actions together.
+  scope: per TransactGetItems call; maximum; not adjustable; aggregate size of the items cannot exceed 4 MB.
+  link: [up to 100 Get actions](../facts/dynamodb.md#dynamodb-transactget-100-actions)
+dynamodb-transaction-changes-propagate-gradually
+  claim: Changes from a completed transaction propagate gradually, so stream records from the same transaction might appear at different times, and stream consumers should not assume transaction atomicity or ordering guarantees.
+  scope: per transaction.
+  link: [shouldn't assume transaction atomicity or ordering guarantees](../facts/dynamodb.md#dynamodb-transaction-changes-propagate-gradually)
+  link: [propagation occurs gradually](../facts/dynamodb.md#dynamodb-transaction-changes-propagate-gradually)
+dynamodb-transaction-client-token-10-minutes
+  claim: A client token is valid for 10 minutes after the request that uses it finishes. After 10 minutes, a request that uses the same client token is treated as a new request.
+  scope: per client token of TransactWriteItems; fixed; not adjustable; window starts after the request that uses the token finishes.
+  link: [10 minutes](../facts/dynamodb.md#dynamodb-transaction-client-token-10-minutes)
+dynamodb-transaction-max-data
+  claim: A transaction cannot contain more than 4 MB of data.
+  scope: per transaction; maximum; not adjustable.
+  link: [4 MB](../facts/dynamodb.md#dynamodb-transaction-max-data)
+dynamodb-transaction-max-items
+  claim: A transaction cannot contain more than 100 unique items.
+  scope: per transaction; maximum; not adjustable.
+  link: [100 unique items](../facts/dynamodb.md#dynamodb-transaction-max-items)
+dynamodb-transaction-not-across-gt-regions
+  claim: Transactions are not supported across Regions in global tables; ACID guarantees apply only within the Region where the write is made originally.
+  scope: global tables; ACID guarantees only within the Region where the write is made originally.
+  link: [not supported across Regions](../facts/dynamodb.md#dynamodb-transaction-not-across-gt-regions)
+dynamodb-transaction-single-account-region
+  claim: A transaction cannot operate on tables in more than one AWS account or Region.
+  scope: per transaction.
+  link: [more than one AWS account or Region](../facts/dynamodb.md#dynamodb-transaction-single-account-region)
+dynamodb-transaction-two-units-prepare-commit
+  claim: Each item in a write transaction requires two write capacity units: one to prepare the transaction and one to commit it. The guide's example therefore provisions six WCUs for the table.
+  scope: per item in a write transaction; fixed; one unit to prepare and one to commit.
+  link: [two write capacity units](../facts/dynamodb.md#dynamodb-transaction-two-units-prepare-commit)
+  link: [six WCUs](../facts/dynamodb.md#dynamodb-transaction-two-units-prepare-commit)
+dynamodb-transactional-units-double
+  claim: On-demand tables: transactional read requests require two read request units to perform one read per second for items up to 4 KB, and transactional write requests require two write request units to perform one write per second for items up to 1 KB.
+  scope: per transactional request; fixed; on-demand tables, which use request units.
+  link: [two read request units](../facts/dynamodb.md#dynamodb-transactional-units-double)
+  link: [two write request units](../facts/dynamodb.md#dynamodb-transactional-units-double)
+dynamodb-transactions-acid-multiple-items-tables
+  claim: DynamoDB transactions make coordinated, all-or-nothing changes to multiple items both within and across tables, and provide atomicity, consistency, isolation and durability (ACID).
+  scope: per transaction.
+  link: [all-or-nothing changes to multiple items](../facts/dynamodb.md#dynamodb-transactions-acid-multiple-items-tables)
+  link: [atomicity, consistency, isolation, and durability (ACID)](../facts/dynamodb.md#dynamodb-transactions-acid-multiple-items-tables)
+dynamodb-transactions-all-or-nothing
+  claim: DynamoDB has native, server-side support for transactions: coordinated, all-or-nothing changes to multiple items within and across tables.
+  scope: per service.
+  link: [all-or-nothing changes to multiple items](../facts/dynamodb.md#dynamodb-transactions-all-or-nothing)
+  link: [within and across tables](../facts/dynamodb.md#dynamodb-transactions-all-or-nothing)
+dynamodb-transactions-capacity-consumed-even-on-failure
+  claim: A transaction consumes its underlying read or write capacity even when the transaction does not succeed.
+  scope: per transaction.
+  link: [consumed even when a transaction does not succeed](../facts/dynamodb.md#dynamodb-transactions-capacity-consumed-even-on-failure)
+  link: [This capacity is consumed](../facts/dynamodb.md#dynamodb-transactions-capacity-consumed-even-on-failure)
+dynamodb-transactions-no-extra-cost-two-operations
+  claim: There is no additional cost to enable transactions; you pay only for the reads or writes that are part of the transaction, and DynamoDB performs two underlying reads or writes of every item, one to prepare and one to commit.
+  scope: per transaction.
+  link: [two underlying reads or writes of every item](../facts/dynamodb.md#dynamodb-transactions-no-extra-cost-two-operations)
+  link: [no additional cost to enable transactions](../facts/dynamodb.md#dynamodb-transactions-no-extra-cost-two-operations)
+dynamodb-transactions-not-on-indexes
+  claim: Transactions cannot be performed using indexes.
+  scope: per transaction.
+  link: [Transactions cannot be performed using indexes](../facts/dynamodb.md#dynamodb-transactions-not-on-indexes)
+  link: [cannot be performed using indexes](../facts/dynamodb.md#dynamodb-transactions-not-on-indexes)
+dynamodb-transactions-serializable-isolation
+  claim: Serializable isolation ensures that the results of multiple concurrent operations are the same as if no operation begins until the previous one has finished.
+  scope: per transaction.
+  link: [no operation begins until the previous one](../facts/dynamodb.md#dynamodb-transactions-serializable-isolation)
+  link: [multiple concurrent operations](../facts/dynamodb.md#dynamodb-transactions-serializable-isolation)
+dynamodb-transactwrite-100-actions
+  claim: TransactWriteItems is a synchronous and idempotent write operation that groups up to 100 write actions in a single all-or-nothing operation.
+  scope: per TransactWriteItems call; maximum; not adjustable; actions can target up to 100 distinct items in tables of the same account and Region.
+  link: [up to 100 write actions](../facts/dynamodb.md#dynamodb-transactwrite-100-actions)
+dynamodb-transactwriteitems-all-or-nothing
+  claim: TransactWriteItems is a batch operation that allows Put, Update and Delete operations on multiple items, within and across tables, with a guaranteed all-or-nothing result.
+  scope: per transaction.
+  link: [guaranteed all-or-nothing result](../facts/dynamodb.md#dynamodb-transactwriteitems-all-or-nothing)
+  link: [within and across tables](../facts/dynamodb.md#dynamodb-transactwriteitems-all-or-nothing)
+dynamodb-transactwriteitems-idempotent-client-token
+  claim: You can optionally include a client token in a TransactWriteItems call to make sure that the request is idempotent, which helps prevent application errors if the same operation is submitted multiple times.
+  scope: per request.
+  link: [include a client token](../facts/dynamodb.md#dynamodb-transactwriteitems-idempotent-client-token)
+  link: [helps prevent application errors](../facts/dynamodb.md#dynamodb-transactwriteitems-idempotent-client-token)
+dynamodb-transactwriteitems-same-account-same-region
+  claim: The actions of a TransactWriteItems operation can target up to 100 distinct items in one or more DynamoDB tables within the same AWS account and in the same Region.
+  scope: per transaction; maximum.
+  link: [same AWS account and in the same Region](../facts/dynamodb.md#dynamodb-transactwriteitems-same-account-same-region)
+  link: [up to 100 distinct items](../facts/dynamodb.md#dynamodb-transactwriteitems-same-account-same-region)
+dynamodb-transactwriteitems-succeeds-or-fails-as-unit
+  claim: Actions grouped with the transaction write API are submitted as a single TransactWriteItems operation that either succeeds or fails as a unit, and the same is true for multiple Get actions submitted as a single TransactGetItems operation.
+  scope: per transaction.
+  link: [either succeeds or fails as a unit](../facts/dynamodb.md#dynamodb-transactwriteitems-succeeds-or-fails-as-unit)
+  link: [submit the actions as a single](../facts/dynamodb.md#dynamodb-transactwriteitems-succeeds-or-fails-as-unit)
+dynamodb-transactwriteitems-vs-batchwriteitem
+  claim: A TransactWriteItems operation differs from BatchWriteItem in that all the actions it contains must be completed successfully or no changes are made, whereas with BatchWriteItem only some of the actions might succeed.
+  scope: per request.
+  link: [no changes are made at all](../facts/dynamodb.md#dynamodb-transactwriteitems-vs-batchwriteitem)
+  link: [only some of the actions](../facts/dynamodb.md#dynamodb-transactwriteitems-vs-batchwriteitem)
+dynamodb-ttl-attribute-number-epoch-seconds
+  claim: The TTL timestamp must be stored as a Number data type in Unix epoch time format at the seconds granularity.
+  scope: per TTL attribute; fixed; Number type, epoch seconds.
+  link: [Unix epoch time format at the seconds granularity](../facts/dynamodb.md#dynamodb-ttl-attribute-number-epoch-seconds)
+dynamodb-ttl-cost-effective-delete
+  claim: Time To Live (TTL) is a cost-effective method for deleting items that are no longer relevant.
+  scope: per table.
+  link: [cost-effective method for deleting items](../facts/dynamodb.md#dynamodb-ttl-cost-effective-delete)
+  link: [no longer relevant](../facts/dynamodb.md#dynamodb-ttl-cost-effective-delete)
+dynamodb-ttl-deletes-appear-in-streams-as-service
+  claim: After a TTL deletion, items go into DynamoDB Streams as service deletions instead of user deletes, and are removed from local and global secondary indexes like other deletes.
+  scope: per item.
+  link: [service deletions instead of user deletes](../facts/dynamodb.md#dynamodb-ttl-deletes-appear-in-streams-as-service)
+  link: [go into DynamoDB Streams](../facts/dynamodb.md#dynamodb-ttl-deletes-appear-in-streams-as-service)
+dynamodb-ttl-deletes-within-days-no-wcu
+  claim: DynamoDB automatically deletes expired items within a few days of their expiration time, without consuming write throughput.
+  scope: per item with a valid, expired TTL attribute; deletion consumes no write throughput.
+  link: [within a few days of their expiration time](../facts/dynamodb.md#dynamodb-ttl-deletes-within-days-no-wcu)
+dynamodb-ttl-enable-then-define-attribute
+  claim: To use TTL, first enable it on a table and then define a specific attribute to store the TTL expiration timestamp.
+  scope: per table.
+  link: [first enable it on a table](../facts/dynamodb.md#dynamodb-ttl-enable-then-define-attribute)
+  link: [define a specific attribute](../facts/dynamodb.md#dynamodb-ttl-enable-then-define-attribute)
+dynamodb-ttl-expired-item-still-updatable
+  claim: You can still update expired items that are pending deletion, including changing or removing their TTL attributes.
+  scope: per item.
+  link: [update the expired items that are pending deletion](../facts/dynamodb.md#dynamodb-ttl-expired-item-still-updatable)
+  link: [changing or removing their TTL attributes](../facts/dynamodb.md#dynamodb-ttl-expired-item-still-updatable)
+dynamodb-ttl-expired-items-count-for-storage-reads
+  claim: Expired items pending deletion still count towards storage and read costs until they are deleted.
+  scope: per item.
+  link: [still count towards storage and read costs](../facts/dynamodb.md#dynamodb-ttl-expired-items-count-for-storage-reads)
+  link: [until they are deleted](../facts/dynamodb.md#dynamodb-ttl-expired-items-count-for-storage-reads)
+dynamodb-ttl-expired-items-deleted-at-any-time
+  claim: Items with valid, expired TTL attributes might be deleted by the system at any time, typically within a few days after their expiration.
+  scope: per item.
+  link: [deleted by the system at any time](../facts/dynamodb.md#dynamodb-ttl-expired-items-deleted-at-any-time)
+  link: [typically within a few days after their expiration](../facts/dynamodb.md#dynamodb-ttl-expired-items-deleted-at-any-time)
+dynamodb-ttl-expired-items-visible-until-deleted
+  claim: If expired items pending deletion are not filtered, they continue to show in read and write operations until the background process deletes them.
+  scope: per item.
+  link: [continue to show in read and write operations](../facts/dynamodb.md#dynamodb-ttl-expired-items-visible-until-deleted)
+  link: [deleted by the background process](../facts/dynamodb.md#dynamodb-ttl-expired-items-visible-until-deleted)
+dynamodb-ttl-filter-expired-items-on-read
+  claim: Expired items that are pending deletion can be filtered from read and write operations.
+  scope: per item.
+  link: [can be filtered from read and write operations](../facts/dynamodb.md#dynamodb-ttl-filter-expired-items-on-read)
+  link: [Expired items that are pending deletion](../facts/dynamodb.md#dynamodb-ttl-filter-expired-items-on-read)
+dynamodb-ttl-five-years-past-ignored
+  claim: To be considered for expiry and deletion, the TTL can't be more than five years in the past.
+  scope: per TTL timestamp; maximum; not adjustable; no minimum TTL duration; any future time works.
+  link: [more than five years in the past](../facts/dynamodb.md#dynamodb-ttl-five-years-past-ignored)
+dynamodb-ttl-global-table-initial-delete-no-wcu
+  claim: With global tables, the initial TTL delete does not consume Write Capacity Units (WCU) in the Region in which the TTL expiry occurs.
+  scope: global tables version 2019.11.21 (Current) with TTL; replicated deletes consume replicated write units in each replica Region.
+  link: [does not consume Write Capacity Units (WCU)](../facts/dynamodb.md#dynamodb-ttl-global-table-initial-delete-no-wcu)
+dynamodb-ttl-no-minimum-duration
+  claim: There is no minimum TTL duration.
+  scope: per item; minimum.
+  link: [no minimum TTL duration](../facts/dynamodb.md#dynamodb-ttl-no-minimum-duration)
+  link: [minimum TTL duration](../facts/dynamodb.md#dynamodb-ttl-no-minimum-duration)
+dynamodb-ttl-non-number-attribute-ignored
+  claim: Items with a TTL attribute that is not a Number type are ignored by the TTL process.
+  scope: per item.
+  link: [not a Number type](../facts/dynamodb.md#dynamodb-ttl-non-number-attribute-ignored)
+  link: [ignored by the TTL process](../facts/dynamodb.md#dynamodb-ttl-non-number-attribute-ignored)
+dynamodb-ttl-per-item-expiration-timestamp
+  claim: TTL lets you define a per-item expiration timestamp that indicates when an item is no longer needed.
+  scope: per item.
+  link: [per-item expiration timestamp](../facts/dynamodb.md#dynamodb-ttl-per-item-expiration-timestamp)
+  link: [no longer needed](../facts/dynamodb.md#dynamodb-ttl-per-item-expiration-timestamp)
+dynamodb-ttl-stream-identification-only-in-source-region
+  claim: TTL deletions can be identified in DynamoDB Streams, but only in the Region where the deletion occurred, not in global table Regions where the deletion is replicated.
+  scope: per global table.
+  link: [only in the Region where the deletion occurred](../facts/dynamodb.md#dynamodb-ttl-stream-identification-only-in-source-region)
+  link: [not identifiable in DynamoDB streams](../facts/dynamodb.md#dynamodb-ttl-stream-identification-only-in-source-region)
+dynamodb-ttl-streams-lambda-no-getrecords-charge
+  claim: You are not charged for GetRecords API calls on your DynamoDB stream when using Lambda to consume events, and Lambda can filter events by identifying JSON patterns in a stream event.
+  scope: per stream.
+  link: [aren’t charged for `GetRecords` API calls](../facts/dynamodb.md#dynamodb-ttl-streams-lambda-no-getrecords-charge)
+  link: [when using Lambda to consume events](../facts/dynamodb.md#dynamodb-ttl-streams-lambda-no-getrecords-charge)
+dynamodb-ttl-toggle-once-per-hour
+  claim: The UpdateTableTimeToLive method supports only one request to enable or disable Time to Live (TTL) per specified table per hour.
+  scope: per table, per hour; maximum; not adjustable; the change can take up to one hour to fully process.
+  link: [one request to enable or disable](../facts/dynamodb.md#dynamodb-ttl-toggle-once-per-hour)
+dynamodb-uniform-distribution-distinct-keys
+  claim: DynamoDB is optimized for uniform distribution of items across a table's partitions, and AWS recommends a partition key that can have a large number of distinct values relative to the number of items in the table.
+  scope: per partition key.
+  link: [large number of distinct values](../facts/dynamodb.md#dynamodb-uniform-distribution-distinct-keys)
+  link: [uniform distribution of items](../facts/dynamodb.md#dynamodb-uniform-distribution-distinct-keys)
+dynamodb-updateitem-atomic-counter
+  claim: UpdateItem can implement an atomic counter, which increments or decrements a numeric attribute without interfering with other write requests.
+  scope: per item.
+  link: [atomic counter](../facts/dynamodb.md#dynamodb-updateitem-atomic-counter)
+  link: [without interfering with other write requests](../facts/dynamodb.md#dynamodb-updateitem-atomic-counter)
+dynamodb-updateitem-conditional-update
+  claim: UpdateItem can perform conditional updates, so that the update is only successful when a user-defined condition is met.
+  scope: per item.
+  link: [conditional updates](../facts/dynamodb.md#dynamodb-updateitem-conditional-update)
+  link: [user-defined condition is met](../facts/dynamodb.md#dynamodb-updateitem-conditional-update)
+dynamodb-use-query-instead-of-scan
+  claim: For faster response times, AWS advises designing tables and indexes so that applications can use Query instead of Scan.
+  scope: per application.
+  link: [use `Query` instead of `Scan`](../facts/dynamodb.md#dynamodb-use-query-instead-of-scan)
+  link: [design your tables and indexes](../facts/dynamodb.md#dynamodb-use-query-instead-of-scan)
+dynamodb-vector-indexes-similarity-search
+  claim: Vector indexes are a type of index in DynamoDB that enable similarity search on vector embeddings stored in table items, so you can store vectors next to operational data without a separate vector database.
+  scope: DynamoDB vector indexes.
+  link: [similarity search on vector embeddings](../facts/dynamodb.md#dynamodb-vector-indexes-similarity-search)
+  say: similarity search on vector embeddings
+dynamodb-vpc-endpoint-private-ip-access
+  claim: You can use a virtual private cloud (VPC) endpoint for DynamoDB so that Amazon EC2 instances in your VPC use their private IP addresses to access DynamoDB with no exposure to the public internet.
+  scope: per VPC.
+  link: [no exposure to the public internet](../facts/dynamodb.md#dynamodb-vpc-endpoint-private-ip-access)
+  link: [VPC) endpoint for DynamoDB](../facts/dynamodb.md#dynamodb-vpc-endpoint-private-ip-access)
+dynamodb-vs-aurora-global-database-single-writer
+  claim: An Aurora global database has one primary Region where data is written and up to 10 read-only secondary Regions; only the primary cluster performs writes. DynamoDB global tables are multi-active: every replica accepts reads and writes.
+  scope: Aurora Global Database versus DynamoDB global tables; Aurora write forwarding lets secondary clusters send writes to the primary.
+  link: [one primary AWS Region](../facts/dynamodb.md#dynamodb-vs-aurora-global-database-single-writer)
+  link: [up to 10 read-only secondary AWS Regions](../facts/dynamodb.md#dynamodb-vs-aurora-global-database-single-writer)
+  link: [Only the primary cluster performs write operations](../facts/dynamodb.md#dynamodb-vs-aurora-global-database-single-writer)
+  say: one writable primary Region | up to ten read-only secondary Regions | only the primary cluster writes
+dynamodb-wa-cache-not-durable-store
+  claim: The performance pillar lists relying on cached data as if it is durably stored and always available as an anti-pattern, and notes that data in a cache can be reconstructed if lost by fetching it from another data store.
+  scope: Well-Architected PERF03-BP05.
+  link: [as if it is durably stored](../facts/dynamodb.md#dynamodb-wa-cache-not-durable-store)
+  link: [reconstructed if lost](../facts/dynamodb.md#dynamodb-wa-cache-not-durable-store)
+  say: treating a cache as durable storage | can be rebuilt if lost
+dynamodb-wa-caching-benefits
+  claim: Storing data in a cache can improve read latency, read throughput, user experience and overall efficiency, and reduce costs; services with heavy read workloads or a high read-to-write ratio are candidates for caching.
+  scope: Well-Architected PERF03-BP05.
+  link: [improve read latency, read throughput](../facts/dynamodb.md#dynamodb-wa-caching-benefits)
+  link: [heavy read workloads, have a high read-to-write ratio](../facts/dynamodb.md#dynamodb-wa-caching-benefits)
+  say: better read latency and throughput | heavy read workloads
+dynamodb-wa-key-value-purpose-and-use-cases
+  claim: The Well-Architected performance pillar names high-traffic web apps, ecommerce systems and gaming applications as typical use cases for key-value databases such as DynamoDB.
+  scope: Well-Architected PERF03-BP01.
+  link: [High-traffic web apps, ecommerce systems, and gaming applications](../facts/dynamodb.md#dynamodb-wa-key-value-purpose-and-use-cases)
+  say: high-traffic web apps, ecommerce systems and gaming
+dynamodb-wa-managed-nosql-reduces-overhead
+  claim: Using Amazon RDS instead of Amazon EC2, and DynamoDB or Amazon DocumentDB instead of self-hosting a NoSQL database, can reduce operational overhead.
+  scope: Well-Architected PERF03-BP01.
+  link: [can reduce operational overhead](../facts/dynamodb.md#dynamodb-wa-managed-nosql-reduces-overhead)
+  say: reduces operational overhead
+dynamodb-wa-nosql-denormalize-no-joins
+  claim: In a NoSQL data model you typically de-normalize your data into a single document or a collection of documents that is retrieved in a single request, rather than joining across documents or tables.
+  scope: Well-Architected PERF03-BP01.
+  link: [de-normalize your data into a single document](../facts/dynamodb.md#dynamodb-wa-nosql-denormalize-no-joins)
+  link: [rather than joining across documents or tables](../facts/dynamodb.md#dynamodb-wa-nosql-denormalize-no-joins)
+  say: de-normalize into one document | instead of joining
+dynamodb-wa-oltp-dynamodb-vs-rds-joins
+  claim: For high-throughput read as-is transactional processing the performance pillar suggests a NoSQL database such as DynamoDB. For high-throughput and complex read patterns such as joins with consistency, it says to use Amazon RDS.
+  scope: Well-Architected PERF03-BP01.
+  link: [consider a NoSQL database such as DynamoDB](../facts/dynamodb.md#dynamodb-wa-oltp-dynamodb-vs-rds-joins)
+  link: [complex read patterns (like join)](../facts/dynamodb.md#dynamodb-wa-oltp-dynamodb-vs-rds-joins)
+  say: a NoSQL database such as DynamoDB | Amazon RDS for join-heavy reads
+dynamodb-wa-purpose-built-anti-patterns
+  claim: The performance pillar lists as anti-patterns sticking to one data store because of internal experience with one database type, and assuming all workloads have similar data storage and access requirements.
+  scope: Well-Architected PERF03-BP01.
+  link: [stick to one data store](../facts/dynamodb.md#dynamodb-wa-purpose-built-anti-patterns)
+  link: [similar data storage and access requirements](../facts/dynamodb.md#dynamodb-wa-purpose-built-anti-patterns)
+  say: sticking to one data store | assuming all workloads need the same store
+dynamodb-wa-relational-storage-upper-bounds
+  claim: The performance pillar says relational databases have upper bounds on provisioned storage and often must be horizontally partitioned, for example by sharding, once they reach these limits.
+  scope: Well-Architected PERF03-BP01.
+  link: [upper bounds on provisioned storage](../facts/dynamodb.md#dynamodb-wa-relational-storage-upper-bounds)
+  say: upper bounds on provisioned storage
+dynamodb-warm-throughput-cannot-decrease
+  claim: After warm throughput is increased, the values can't be decreased.
+  scope: per table.
+  link: [the values can't be decreased](../facts/dynamodb.md#dynamodb-warm-throughput-cannot-decrease)
+  link: [After warm throughput is increased](../facts/dynamodb.md#dynamodb-warm-throughput-cannot-decrease)
+dynamodb-warm-throughput-default-free-prewarm-charged
+  claim: Warm throughput values are available by default for all tables and secondary indexes at no cost, but if you proactively increase them to pre-warm tables, you are charged for those requests.
+  scope: per table.
+  link: [available by default](../facts/dynamodb.md#dynamodb-warm-throughput-default-free-prewarm-charged)
+  link: [you will be charged for those requests](../facts/dynamodb.md#dynamodb-warm-throughput-default-free-prewarm-charged)
+  link: [secondary indexes at no cost](../facts/dynamodb.md#dynamodb-warm-throughput-default-free-prewarm-charged)
+dynamodb-warm-throughput-definition
+  claim: Warm throughput refers to the number of read and write operations your DynamoDB table can instantaneously support, and it is available by default for all tables and global secondary indexes.
+  scope: per table or global secondary index.
+  link: [can instantaneously support](../facts/dynamodb.md#dynamodb-warm-throughput-definition)
+  link: [available by default for all tables](../facts/dynamodb.md#dynamodb-warm-throughput-definition)
+dynamodb-warm-throughput-prewarm-for-peak-events
+  claim: Pre-warming a table means increasing its warm throughput proactively, which allows you to set a baseline that your tables can instantly support.
+  scope: per table.
+  link: [pre-warming](../facts/dynamodb.md#dynamodb-warm-throughput-prewarm-for-peak-events)
+  link: [baseline that your tables can instantly support](../facts/dynamodb.md#dynamodb-warm-throughput-prewarm-for-peak-events)
+dynamodb-wcu-definition
+  claim: A write capacity unit (WCU) represents one write per second for an item up to 1 KB.
+  scope: per write capacity unit; fixed; provisioned capacity mode.
+  link: [one write per second for an item up to 1 KB](../facts/dynamodb.md#dynamodb-wcu-definition)
+dynamodb-write-2kb-example
+  claim: A 2 KB item needs 2 write units for one write request, or 4 write units for a transactional write request.
+  scope: per write request, 2 KB item; fixed; worked example.
+  link: [2 write units](../facts/dynamodb.md#dynamodb-write-2kb-example)
+  link: [4 write units](../facts/dynamodb.md#dynamodb-write-2kb-example)
+dynamodb-write-capacity-formula
+  claim: To find the write capacity units that one write of an item needs, divide the item size of the operation by 1 KB, then round up to the nearest whole number.
+  scope: per write operation; fixed; provisioned capacity mode.
+  link: [divide the item size of the operation by 1 KB](../facts/dynamodb.md#dynamodb-write-capacity-formula)
+dynamodb-write-rounding-1kb
+  claim: Item sizes for writes are rounded up to the next 1 KB multiple, so writing a 500-byte item consumes the same throughput as writing a 1 KB item.
+  scope: per write of an item; fixed.
+  link: [next 1 KB multiple](../facts/dynamodb.md#dynamodb-write-rounding-1kb)
+dynamodb-write-sharding-calculated-suffix
+  claim: A randomizing strategy can greatly improve write throughput, but it is difficult to read a specific item because you do not know which suffix value was used when writing it; a different strategy makes it easier to read individual items.
+  scope: per partition key.
+  link: [difficult to read a specific item](../facts/dynamodb.md#dynamodb-write-sharding-calculated-suffix)
+  link: [make it easier to read individual items](../facts/dynamodb.md#dynamodb-write-sharding-calculated-suffix)
+dynamodb-write-sharding-random-suffix
+  claim: Write sharding with a random suffix adds a random number to the end of the partition key values, so the writes are randomized across a larger key space.
+  scope: per partition key.
+  link: [add a random number](../facts/dynamodb.md#dynamodb-write-sharding-random-suffix)
+  link: [randomize the writes across the larger space](../facts/dynamodb.md#dynamodb-write-sharding-random-suffix)
+dynamodb-write-sharding-read-merge
+  claim: With random suffixes, reading all the items for a given day means querying the items for every suffix and then merging the results.
+  scope: per partition key.
+  link: [query the items for all the suffixes](../facts/dynamodb.md#dynamodb-write-sharding-read-merge)
+  link: [merge the results](../facts/dynamodb.md#dynamodb-write-sharding-read-merge)
+dynamodb-write-unit-1kb
+  claim: One write unit represents one write for an item up to 1 KB in size. A transactional write needs 2 write units for an item up to 1 KB.
+  scope: per write request; fixed; transactional write costs twice the standard write.
+  link: [up to 1 KB](../facts/dynamodb.md#dynamodb-write-unit-1kb)
+  link: [2 write units](../facts/dynamodb.md#dynamodb-write-unit-1kb)
+dynamodb-writes-unconditional-by-default
+  claim: By default, the DynamoDB write operations PutItem and DeleteItem are unconditional: each operation overwrites an existing item that has the specified primary key.
+  scope: per write; default; not adjustable.
+  link: [unconditional](../facts/dynamodb.md#dynamodb-writes-unconditional-by-default)
+  link: [overwrites an existing item](../facts/dynamodb.md#dynamodb-writes-unconditional-by-default)
+dynamodb-wru-definition
+  claim: One write request unit represents one write operation per second, for an item up to 1 KB in size.
+  scope: per write request unit; fixed; on-demand capacity mode.
+  link: [one write operation per second, for an item up to 1 KB](../facts/dynamodb.md#dynamodb-wru-definition)
+dynamodb-zero-etl-no-production-impact
+  claim: Zero-ETL integrations have no impact on production workloads running on DynamoDB.
+  scope: per table.
+  link: [no impact on production workloads](../facts/dynamodb.md#dynamodb-zero-etl-no-production-impact)
+  link: [Zero-ETL integrations](../facts/dynamodb.md#dynamodb-zero-etl-no-production-impact)
+dynamodb-zero-etl-opensearch-search-without-code
+  claim: Amazon DynamoDB zero-ETL integration with Amazon OpenSearch Service lets you search your DynamoDB data by automatically replicating and transforming it without custom code or infrastructure.
+  scope: DynamoDB zero-ETL integrations.
+  link: [perform a search on your DynamoDB data](../facts/dynamodb.md#dynamodb-zero-etl-opensearch-search-without-code)
+  say: search your DynamoDB data
+dynamodb-zero-etl-redshift-no-code-pipeline
+  claim: Amazon DynamoDB zero-ETL integration with Amazon Redshift provides a no-code, fully managed ETL pipeline with replication from DynamoDB to Amazon Redshift.
+  scope: DynamoDB zero-ETL integrations.
+  link: [no-code, fully managed ETL pipeline](../facts/dynamodb.md#dynamodb-zero-etl-redshift-no-code-pipeline)
+  say: a no-code, fully managed pipeline to Redshift
+dynamodb-zero-etl-sagemaker-lakehouse-data-lake
+  claim: The DynamoDB zero-ETL integration with SageMaker AI Lakehouse automates extracting and loading data from DynamoDB into a customer's data lake.
+  scope: DynamoDB zero-ETL integrations.
+  link: [into a customer's data lake](../facts/dynamodb.md#dynamodb-zero-etl-sagemaker-lakehouse-data-lake)
+  say: automatic extract and load into a data lake

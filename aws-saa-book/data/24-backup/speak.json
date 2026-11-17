@@ -1,0 +1,335 @@
+{
+ "v": 1,
+ "chapter": "backup",
+ "items": [
+  {
+   "id": "backup-s01",
+   "kind": "explain",
+   "prompt": "If an attacker gets administrator access in production, can the attacker delete our backups?",
+   "persona": "Chen, security lead of Callvale",
+   "ten_second": "Not if the backup vault is locked in compliance mode, with a copy in another account. Governance mode does not stop an administrator.",
+   "sixty_second": [
+    "The short answer is: not if the backup vault is locked in compliance mode.",
+    "It works like this. AWS Backup Vault Lock protects the backups in a vault.",
+    "If anyone tries to delete a backup or change its lifecycle, AWS Backup denies it.",
+    "That includes the root user.",
+    "Compliance mode starts with a grace time of at least three days.",
+    "During that time, you can still remove the lock. After it, no user can change it.",
+    "The thing to watch is governance mode.",
+    "A user with enough IAM permissions can remove that lock. So can an attacker with administrator access.",
+    "Also copy your backups to a second account in your organization.",
+    "If a backup is deleted, you copy it back and restore it.",
+    "In your case, I'd put the locked vault in a separate backup account.",
+    "Who can sign in to that account today?"
+   ],
+   "skeleton": [
+    "compliance lock denies deletes, even root",
+    "grace time, then no one",
+    "governance lock: admins can remove",
+    "copy to second account"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "If any user, including the root user, tries to delete a backup or change its lifecycle in a locked vault, AWS Backup denies the operation.",
+     "accept": [
+      "even the root user cannot delete a locked backup",
+      "the lock blocks deletes and lifecycle changes"
+     ],
+     "facts": [
+      "backup-vault-lock-denies-delete-and-lifecycle-change-even-root"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "After the grace time, a compliance-mode lock cannot be altered or deleted by any user.",
+     "accept": [
+      "after the grace time nobody can remove a compliance lock",
+      "compliance mode becomes permanent"
+     ],
+     "facts": [
+      "backup-vault-lock-compliance-immutable-by-anyone"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A governance-mode lock can be removed by users with sufficient IAM permissions.",
+     "accept": [
+      "an administrator can remove a governance lock",
+      "governance mode does not stop admins"
+     ],
+     "facts": [
+      "backup-vault-lock-governance-lock-removable-with-iam"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "With a cross-account copy in your organization, you can copy a deleted original backup back from the destination account and then restore it.",
+     "accept": [
+      "keep a copy in a second account",
+      "copy the backup back and restore it"
+     ],
+     "facts": [
+      "backup-cross-account-copy-purpose-recover-deleted-original"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "The grace time of a compliance-mode lock is at least 3 days (72 hours), and during it you can still remove the lock.",
+     "accept": [
+      "you can test the lock for a few days first",
+      "the lock can be removed during the grace time"
+     ],
+     "facts": [
+      "backup-vault-lock-grace-time-minimum-3-days",
+      "backup-vault-lock-compliance-grace-time-remove-or-change"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Vault access policies only control user access to AWS Backup APIs; EBS and RDS snapshots also need separate access policies in IAM.",
+     "accept": [
+      "the vault policy covers only the AWS Backup APIs",
+      "also limit the EBS and RDS snapshot APIs in IAM"
+     ],
+     "facts": [
+      "backup-vault-access-policy-controls-only-backup-apis"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Vault Lock means nobody can ever delete a backup.",
+     "correct": "That depends on the mode. A governance-mode lock can be removed by users with sufficient IAM permissions.",
+     "fact": "backup-vault-lock-governance-lock-removable-with-iam"
+    },
+    {
+     "error": "Locked backups stay even if we close the account.",
+     "correct": "If you close the account and do not reopen it in time, AWS deletes the contents of the backup vault, even if AWS Backup Vault Lock was in place.",
+     "fact": "backup-vault-lock-account-closure-deletes-vault-after-90-days"
+    }
+   ],
+   "terms": [
+    {
+     "say": "lock the backup vault",
+     "avoid": [
+      "lock the bucket"
+     ]
+    },
+    {
+     "say": "compliance mode",
+     "avoid": [
+      "strict mode"
+     ]
+    },
+    {
+     "say": "grace time",
+     "avoid": [
+      "trial period"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we test the lock before it becomes permanent?",
+     "answer": "Yes. In compliance mode the grace time is at least 3 days (72 hours). During the grace time you can still remove the vault lock and change its configuration.",
+     "facts": [
+      "backup-vault-lock-grace-time-minimum-3-days",
+      "backup-vault-lock-compliance-grace-time-remove-or-change"
+     ]
+    },
+    {
+     "question": "What happens if we set the retention too long?",
+     "answer": "Backups in a locked vault cannot be deleted until their lifecycle completes, so they keep costing storage. A recovery point with retention set to Always is retained forever after the grace time.",
+     "facts": [
+      "backup-vault-lock-locked-backups-persist-until-lifecycle-ends"
+     ]
+    }
+   ],
+   "facts": [
+    "backup-vault-lock-denies-delete-and-lifecycle-change-even-root",
+    "backup-vault-lock-compliance-immutable-by-anyone",
+    "backup-vault-lock-governance-lock-removable-with-iam",
+    "backup-cross-account-copy-purpose-recover-deleted-original",
+    "backup-vault-lock-grace-time-minimum-3-days",
+    "backup-vault-lock-compliance-grace-time-remove-or-change",
+    "backup-vault-access-policy-controls-only-backup-apis",
+    "backup-vault-lock-account-closure-deletes-vault-after-90-days",
+    "backup-vault-lock-locked-backups-persist-until-lifecycle-ends"
+   ],
+   "section": "2-deep.md#vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "backup",
+   "status": "candidate",
+   "rev": 2
+  },
+  {
+   "id": "backup-s02",
+   "kind": "compare",
+   "prompt": "We already have RDS automated backups and EBS snapshots. Why would we add AWS Backup?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Both give you backups. AWS Backup adds one policy across services and accounts, a lock, and audit reports. Your native backups keep working.",
+   "sixty_second": [
+    "Both give you backups, and your RDS and EBS settings keep working as before.",
+    "The difference is control from one place, across services and accounts.",
+    "It works like this. AWS Backup manages and monitors backups across your services from a single place.",
+    "One backup plan picks resources by tag, with a schedule and a retention period.",
+    "Vault Lock helps prevent manual deletion of those backups.",
+    "And Audit Manager reports on whether your backups follow the policy.",
+    "The thing to watch is that AWS Backup doesn't govern backups made outside it.",
+    "So the automated backups that RDS makes on its own stay outside that policy.",
+    "In your case, I'd start with one plan for the production databases and volumes.",
+    "How many accounts hold data that you must keep?"
+   ],
+   "skeleton": [
+    "both back up, native unchanged",
+    "one plan, many services",
+    "lock and audit on top",
+    "outside backups not governed"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "AWS Backup manages and monitors backups across the AWS services you use, including EBS volumes, from a single place.",
+     "accept": [
+      "one place for all backups",
+      "it manages backups across services"
+     ],
+     "facts": [
+      "backup-faq-dlm-vs-backup-when-to-use"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "All existing per-service backup capabilities remain unchanged when you use AWS Backup.",
+     "accept": [
+      "RDS and EBS backups keep working",
+      "it does not replace the native backups"
+     ],
+     "facts": [
+      "backup-faq-per-service-capabilities-unchanged"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Backups that other AWS services create on their own are not available for central governance through AWS Backup.",
+     "accept": [
+      "native backups are not governed by AWS Backup",
+      "backups made outside AWS Backup are not in its policy"
+     ],
+     "facts": [
+      "backup-native-service-backups-not-centrally-governed",
+      "backup-does-not-govern-backups-outside-aws-backup"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "AWS Backup Vault Lock helps prevent manual deletion of backups and checks that backups are stored with a Write-Once-Read-Many (WORM) model.",
+     "accept": [
+      "a lock stops manual deletes",
+      "write once, read many"
+     ],
+     "facts": [
+      "backup-faq-vault-lock-purpose-worm"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "AWS Backup Audit Manager audits and reports on the compliance of your data protection policies.",
+     "accept": [
+      "audit reports for the backup policy",
+      "proof for auditors"
+     ],
+     "facts": [
+      "backup-faq-audit-manager-purpose"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "How AWS Backup relates to native backups varies by service: for RDS continuous backups it uses the same infrastructure, for DynamoDB it is a separate backup layer.",
+     "accept": [
+      "for some services it uses the same backups",
+      "for DynamoDB it is a separate layer"
+     ],
+     "facts": [
+      "backup-native-relationship-varies-by-service"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "AWS Backup replaces RDS automated backups.",
+     "correct": "All existing per-service backup capabilities remain unchanged when you use AWS Backup.",
+     "fact": "backup-faq-per-service-capabilities-unchanged"
+    },
+    {
+     "error": "AWS Backup also governs the snapshots our scripts make.",
+     "correct": "AWS Backup does not govern backups you take in your AWS environment outside of AWS Backup.",
+     "fact": "backup-does-not-govern-backups-outside-aws-backup"
+    }
+   ],
+   "terms": [
+    {
+     "say": "backup plan",
+     "avoid": [
+      "backup template"
+     ]
+    },
+    {
+     "say": "recovery point",
+     "avoid": [
+      "restore point"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What do we pay for?",
+     "answer": "You pay for the backup storage you use, backup data transferred between Regions, backup data you restore, and backup evaluations. There is no minimum fee and no setup charge.",
+     "facts": [
+      "backup-pricing-overview-dimensions"
+     ]
+    },
+    {
+     "question": "Can it also back up our servers on premises?",
+     "answer": "Yes. AWS Backup can back up on-premises Storage Gateway volumes and VMware virtual machines, so you manage backups both on premises and on AWS in one way.",
+     "facts": [
+      "backup-faq-can-back-up-on-premises"
+     ]
+    }
+   ],
+   "facts": [
+    "backup-faq-dlm-vs-backup-when-to-use",
+    "backup-faq-per-service-capabilities-unchanged",
+    "backup-native-service-backups-not-centrally-governed",
+    "backup-does-not-govern-backups-outside-aws-backup",
+    "backup-faq-vault-lock-purpose-worm",
+    "backup-faq-audit-manager-purpose",
+    "backup-native-relationship-varies-by-service",
+    "backup-pricing-overview-dimensions",
+    "backup-faq-can-back-up-on-premises"
+   ],
+   "section": "2-deep.md#a-backup-plan-turns-the-rpo-and-the-retention-into-scheduled-rules",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "backup",
+   "status": "candidate",
+   "rev": 2
+  }
+ ]
+}

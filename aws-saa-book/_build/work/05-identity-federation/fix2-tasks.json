@@ -1,0 +1,175 @@
+[
+ {
+  "id": "identity-federation-t02",
+  "type": "try",
+  "title": "Create an identity pool and the role it hands out",
+  "kills": "\"A Cognito user pool hands AWS credentials to the app.\"",
+  "trap": "identity-federation-trap-user-pool-gives-aws-credentials",
+  "section": "2-deep.md#a-user-pool-signs-users-in-and-an-identity-pool-hands-out-aws-credentials",
+  "pass_route": true,
+  "minutes": 12,
+  "cost": "$0. Identity pools are provided at no charge, and IAM roles have no additional charge.",
+  "cost_if_forgotten": "$0 a day. Delete both resources anyway, so that no unused role and no unused identity pool stay in the account.",
+  "cost_facts": [
+   "cognito-identity-pools-no-charge",
+   "iam-offered-at-no-additional-charge"
+  ],
+  "permissions": [
+   "cognito-identity:CreateIdentityPool",
+   "cognito-identity:TagResource",
+   "cognito-identity:DescribeIdentityPool",
+   "cognito-identity:SetIdentityPoolRoles",
+   "cognito-identity:GetIdentityPoolRoles",
+   "cognito-identity:DeleteIdentityPool",
+   "iam:CreateRole",
+   "iam:TagRole",
+   "iam:UpdateAssumeRolePolicy",
+   "iam:PassRole",
+   "iam:DeleteRole",
+   "iam:GetRole",
+   "tag:GetResources"
+  ],
+  "read_only_alternative": "Use this when your account allows no new resources. It changes nothing. List the identity pools with aws cognito-identity list-identity-pools --max-results 10. Pick one identity pool ID as <IDENTITY_POOL_ID> and read its roles with aws cognito-identity get-identity-pool-roles --identity-pool-id <IDENTITY_POOL_ID>. Then read the example trust policy on the Amazon Cognito page \"IAM roles\": find the aud condition that names the identity pool.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Create an identity pool that allows no guests. It has no sign-in provider yet: a real app connects its user pool here.",
+    "command": "aws cognito-identity create-identity-pool --identity-pool-name saa-identity-federation-t02 --no-allow-unauthenticated-identities --identity-pool-tags book=saa,task=identity-federation-t02",
+    "capture": {
+     "name": "IDENTITY_POOL_ID",
+     "query": "IdentityPoolId"
+    },
+    "expect": "No output. IDENTITY_POOL_ID now holds the identity pool ID: your Region, a colon and a long code.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read the identity pool. Look for users or user profiles in the output.",
+    "command": "aws cognito-identity describe-identity-pool --identity-pool-id $IDENTITY_POOL_ID",
+    "expect": "The pool ID, the name, AllowUnauthenticatedIdentities false and the two tags. No users and no profiles: the identity pool keeps no user profiles.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Create the IAM role for signed-in users of this identity pool. Its trust policy names the identity pool (aud) and signed-in users (amr), not a user pool. The role gets no permissions policy.",
+    "command": "aws iam create-role --role-name saa-identity-federation-t02-auth --assume-role-policy-document \"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":{\\\"Federated\\\":\\\"cognito-identity.amazonaws.com\\\"},\\\"Action\\\":\\\"sts:AssumeRoleWithWebIdentity\\\",\\\"Condition\\\":{\\\"StringEquals\\\":{\\\"cognito-identity.amazonaws.com:aud\\\":\\\"$IDENTITY_POOL_ID\\\"},\\\"ForAnyValue:StringLike\\\":{\\\"cognito-identity.amazonaws.com:amr\\\":\\\"authenticated\\\"}}}]}\" --tags Key=book,Value=saa Key=task,Value=identity-federation-t02",
+    "capture": {
+     "name": "ROLE_ARN",
+     "query": "Role.Arn"
+    },
+    "expect": "No output. ROLE_ARN now holds the ARN of saa-identity-federation-t02-auth.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Break it on purpose: replace the trust policy with one that keeps the amr check and drops the aud condition.",
+    "command": "aws iam update-assume-role-policy --role-name saa-identity-federation-t02-auth --policy-document '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Federated\":\"cognito-identity.amazonaws.com\"},\"Action\":\"sts:AssumeRoleWithWebIdentity\",\"Condition\":{\"ForAnyValue:StringLike\":{\"cognito-identity.amazonaws.com:amr\":\"authenticated\"}}}]}'",
+    "expect": "An error from IAM. The role keeps the trust policy from step 3.",
+    "break_it": true,
+    "predict": "The new policy still checks that the user signed in. Will IAM save it without the aud condition?",
+    "explain": "With cognito-identity.amazonaws.com as the principal, IAM does not let a trust policy [permit any identity pool to assume the role](../facts/cognito.md#cognito-identity-pool-trust-policy-aud-condition-enforced). The policy needs an aud condition that names your identity pool: without it, [IAM returns an error](../facts/cognito.md#cognito-identity-pool-trust-policy-aud-condition-enforced). The amr check alone is not enough."
+   },
+   {
+    "text": "No fix is needed: the safe trust policy from step 3 is still in place. Attach the role to the identity pool as its authenticated role.",
+    "command": "aws cognito-identity set-identity-pool-roles --identity-pool-id $IDENTITY_POOL_ID --roles authenticated=$ROLE_ARN",
+    "expect": "No output.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read the roles of the identity pool. This mapping is where a sign-in turns into temporary AWS credentials.",
+    "command": "aws cognito-identity get-identity-pool-roles --identity-pool-id $IDENTITY_POOL_ID --query \"Roles\"",
+    "expect": "authenticated, with the ARN of saa-identity-federation-t02-auth. There is no unauthenticated role, because the pool allows no guests. The role belongs to the identity pool, not to a user pool.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the role.",
+    "command": "aws iam delete-role --role-name saa-identity-federation-t02-auth"
+   },
+   {
+    "text": "Delete the identity pool.",
+    "command": "aws cognito-identity delete-identity-pool --identity-pool-id $IDENTITY_POOL_ID"
+   }
+  ],
+  "verify": {
+   "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=identity-federation-t02 --query \"ResourceTagMappingList[].ResourceARN\"",
+   "expect": "An empty list: the identity pool is gone. The tagging API does not list IAM roles, so also run aws iam get-role --role-name saa-identity-federation-t02-auth and expect a NoSuchEntity error: the role is gone too."
+  },
+  "still_costs": [
+   "Nothing after the cleanup. Identity pools are provided at no charge, and IAM has no additional charge.",
+   "The verify list does not show IAM roles: GetResources does not currently support IAM users and roles. Check the role with aws iam get-role --role-name saa-identity-federation-t02-auth and expect an error that the role does not exist.",
+   "If the CloudShell session ended before the cleanup, IDENTITY_POOL_ID is empty. Find the pool ID again with aws cognito-identity list-identity-pools --max-results 10."
+  ],
+  "facts": [
+   "cognito-user-pool-vs-identity-pool",
+   "cognito-identity-pools-store-no-profiles",
+   "cognito-pools-used-together-or-alone",
+   "cognito-identity-pool-trust-policy-aud-condition-enforced",
+   "cognito-identity-pool-role-trust-policy-aud-amr",
+   "cognito-identity-pools-no-charge",
+   "iam-offered-at-no-additional-charge",
+   "iam-tagging-api-getresources-no-iam-roles"
+  ],
+  "sources": [
+   {
+    "title": "Amazon Cognito Identity examples using AWS CLI (create-identity-pool, describe-identity-pool, set-identity-pool-roles, get-identity-pool-roles, delete-identity-pool)",
+    "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_cognito-identity_code_examples.html"
+   },
+   {
+    "title": "Getting started with Amazon Cognito identity pools",
+    "url": "https://docs.aws.amazon.com/cognito/latest/developerguide/getting-started-with-identity-pools.html"
+   },
+   {
+    "title": "Amazon Cognito IAM roles: set up a trust policy (example with aud and amr)",
+    "url": "https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: create-identity-pool",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/create-identity-pool.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: describe-identity-pool",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/describe-identity-pool.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: set-identity-pool-roles",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/set-identity-pool-roles.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: get-identity-pool-roles",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/get-identity-pool-roles.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: delete-identity-pool",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/delete-identity-pool.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: create-role",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: update-assume-role-policy",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/update-assume-role-policy.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: delete-role",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: get-resources",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+   },
+   {
+    "title": "Resource Groups Tagging API Reference: supported services (Amazon Cognito Identity)",
+    "url": "https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/Welcome.html"
+   }
+  ],
+  "chapter": "identity-federation",
+  "status": "candidate",
+  "rev": 1,
+  "label": "checked against docs, not run in a real account",
+  "checked": "2026-10-13"
+ }
+]

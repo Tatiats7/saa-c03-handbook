@@ -1,0 +1,454 @@
+[
+ {
+  "id": "aws-map-q001",
+  "section": "2-deep.md#availability-zones-fail-separately-so-production-uses-at-least-two",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K1"
+  ],
+  "topics": [
+   "resilience",
+   "compute"
+  ],
+  "services": [
+   "ec2",
+   "elb",
+   "ec2-auto-scaling",
+   "route53"
+  ],
+  "concept": "multi-az-for-zone-failure",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a web application on Amazon EC2 instances in one Availability Zone of an AWS Region. The application keeps no state on the instances, and users reach it through one DNS name. After several short outages, the company wants a more reliable design. The application must remain available if an Availability Zone fails. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "in one Availability Zone",
+   "if an Availability Zone fails",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run the instances in two Availability Zones of the current Region behind an Application Load Balancer, with an Auto Scaling group that spans both zones.",
+    "correct": true,
+    "why": "Two zones meet the requirement, and the reliability pillar asks for production workloads in [at least two Availability Zones (AZs) in a Region](../facts/global-infrastructure.md#global-infrastructure-production-at-least-two-azs).",
+    "concept": "multi-az-behind-load-balancer",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Run a second copy of the application in another AWS Region, and use Amazon Route 53 failover routing with health checks to send users to the healthy copy.",
+    "correct": false,
+    "why": "It also survives a zone failure, but it pays for a full copy in a second Region, and [most customers can achieve their resilience goals in a single Region](../facts/global-infrastructure.md#global-infrastructure-most-customers-single-region-suffices).",
+    "concept": "multi-region-failover",
+    "trap": "aws-map-trap-multi-region-for-high-availability",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Run active copies of the application in three AWS Regions at the same time, and use Amazon Route 53 latency routing with health checks to send each user to a copy.",
+    "correct": false,
+    "why": "Three active Regions survive a zone failure, but AWS names this anti-pattern: [you implement a multi-Region architecture when a multi-AZ architecture would satisfy business requirements](../facts/global-infrastructure.md#global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern).",
+    "concept": "multi-region-active-active",
+    "trap": null,
+    "misconception": "More active Regions are the safest answer to any failure.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add more instances in the current Availability Zone behind an Application Load Balancer, with an Auto Scaling group that replaces any unhealthy instance.",
+    "correct": false,
+    "why": "If all instances are in one zone and that zone fails, [none of your EC2 instances would be available](../facts/global-infrastructure.md#global-infrastructure-single-az-failure-takes-all-instances), however many instances run there.",
+    "concept": "more-instances-one-az",
+    "trap": "aws-map-trap-one-az-is-highly-available",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "An EC2 instance is a zonal resource, [specific to the Availability Zone in which you create it](../facts/global-infrastructure.md#global-infrastructure-zonal-resource-deploy-in-multiple-azs). AWS says to [deploy your application in multiple Availability Zones, so that your application remains available even if one Availability Zone fails](../facts/global-infrastructure.md#global-infrastructure-zonal-resource-deploy-in-multiple-azs). A second zone in the same Region adds a few instances and a load balancer, which costs less than a copy in another Region.",
+  "takeaway": "A zone failure calls for two Availability Zones behind a load balancer, not a second Region.",
+  "twin": "If the stem said \"must remain available if the AWS Region fails\" instead: the second copy in another Region, because the separation between Regions [avoids correlated failures between them](../facts/global-infrastructure.md#global-infrastructure-multi-region-avoids-correlated-failures).",
+  "say": "Two Availability Zones behind a load balancer survive a zone failure, and that is the cheapest fix.",
+  "facts": [
+   "global-infrastructure-production-at-least-two-azs",
+   "global-infrastructure-most-customers-single-region-suffices",
+   "global-infrastructure-multi-region-when-multi-az-suffices-is-anti-pattern",
+   "global-infrastructure-single-az-failure-takes-all-instances",
+   "global-infrastructure-zonal-resource-deploy-in-multiple-azs",
+   "global-infrastructure-multi-region-avoids-correlated-failures"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-must",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q006",
+  "section": "2-deep.md#the-best-region-is-near-your-users-and-meets-your-data-rules",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.2",
+  "bullets": [
+   "4.2.K3"
+  ],
+  "topics": [
+   "cost",
+   "compute"
+  ],
+  "services": [
+   "ec2"
+  ],
+  "concept": "cheaper-region-for-dev-test",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs its production workload on Amazon EC2 instances in the Asia Pacific (Sydney) Region to serve users in Australia. The engineers also work in Sydney. The company needs a new development and test environment that holds only synthetic test data. The company has no data privacy, security, or business requirements about where the environment runs, and extra latency for the engineers is not a concern. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "no data privacy, security, or business requirements",
+   "is not a concern",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run the development and test EC2 instances in the Asia Pacific (Sydney) Region, next to the production workload of the company.",
+    "correct": false,
+    "why": "It works, but resource prices are [different in each Region](../facts/global-infrastructure.md#global-infrastructure-region-pricing-differs-local-market), and nothing in the stem requires Sydney.",
+    "concept": "same-region-as-production",
+    "trap": null,
+    "misconception": "An EC2 instance costs the same in every Region.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Run the development and test EC2 instances in a Local Zone near the office of the engineers to give them lower latency.",
+    "correct": false,
+    "why": "The stem says latency is not a concern, and resources in Local Zones have [different prices than they do in parent AWS Regions](../facts/global-infrastructure.md#global-infrastructure-local-zones-pricing-no-enable-charge-different-prices).",
+    "concept": "local-zone-for-dev-test",
+    "trap": null,
+    "misconception": "A Local Zone is a cheaper place to run test workloads.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Run the development and test EC2 instances in a Region with lower prices than Sydney, such as US East (N. Virginia).",
+    "correct": true,
+    "why": "AWS gives this case as its own example: [deploying non-critical (development and test) Amazon EC2 instances in US East (N. Virginia) (us-east-1) will cost you less](../facts/well-architected.md#well-architected-cheaper-region-for-non-critical-when-no-restrictions).",
+    "concept": "lower-priced-region",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Run the development and test EC2 instances on AWS Outposts in the office of the company, so that the test data stays on premises.",
+    "correct": false,
+    "why": "Outposts is for [workloads that need to remain on premises due to latency requirements](../facts/global-infrastructure.md#global-infrastructure-faq-outposts-for-workloads-that-must-stay-on-premises), and this test environment has no such requirement.",
+    "concept": "outposts-for-dev-test",
+    "trap": null,
+    "misconception": "Test environments belong on premises.",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "AWS says to [use Regions that provide lower prices for AWS services to deploy your workloads if you have no obligations in data privacy, security and business requirements](../facts/well-architected.md#well-architected-cheaper-region-for-non-critical-when-no-restrictions). The stem removes each of those obligations and says latency is not a concern, so price decides the Region.",
+  "takeaway": "With no residency, security, or latency need, choose the lower-priced Region for development and test.",
+  "twin": "If the stem said \"the test data includes customer records that must stay in Australia\" instead: the Sydney Region, because AWS says to [only deploy in Regions with higher costs to meet latency, data residency and data sovereignty requirements](../facts/well-architected.md#well-architected-region-pricing-differs-choose-by-cost).",
+  "say": "Prices differ by Region, so with no data rules I'd put development and test in a cheaper Region.",
+  "facts": [
+   "global-infrastructure-region-pricing-differs-local-market",
+   "global-infrastructure-local-zones-pricing-no-enable-charge-different-prices",
+   "well-architected-cheaper-region-for-non-critical-when-no-restrictions",
+   "global-infrastructure-faq-outposts-for-workloads-that-must-stay-on-premises",
+   "well-architected-region-pricing-differs-choose-by-cost"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-acceptable"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q008",
+  "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": [
+   "1.1.K3"
+  ],
+  "topics": [
+   "security",
+   "storage"
+  ],
+  "services": [
+   "s3",
+   "ec2"
+  ],
+  "concept": "data-residency-region-choice",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company is expanding into a new country where an AWS Region exists. A new law requires that the personal data of customers in that country must remain in the country. The company will store the data in Amazon S3 and process it on Amazon EC2 instances. Other AWS Regions nearby offer lower prices. Which solution will ensure data residency with the LEAST operational overhead?",
+  "keywords": [
+   "must remain in the country",
+   "ensure data residency",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create the S3 bucket and the EC2 instances in the Region in that country, and do not turn on any cross-Region replication or copy feature.",
+    "correct": true,
+    "why": "AWS services [process and store customer content in the AWS region(s) where the services are used by the customer](../facts/global-infrastructure.md#global-infrastructure-customer-content-stays-in-chosen-region), so the data stays in that country.",
+    "concept": "region-in-country-no-replication",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Create the resources in the Region in that country, and turn off the account setting that lets AWS copy data to other Regions.",
+    "correct": false,
+    "why": "There is nothing to turn off: AWS keeps resources out of other Regions [unless you explicitly use a replication or copy feature offered by an AWS service or replicate the resource yourself](../facts/global-infrastructure.md#global-infrastructure-no-automatic-cross-region-replication).",
+    "concept": "cross-region-copy-setting",
+    "trap": "aws-map-trap-region-auto-replicates",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Create the resources in a lower-priced Region in a neighboring country, because that Region is the nearest one with lower prices.",
+    "correct": false,
+    "why": "The services [process and store customer content in the AWS region(s) where the services are used by the customer](../facts/global-infrastructure.md#global-infrastructure-customer-content-stays-in-chosen-region), so the data would sit in the other country.",
+    "concept": "nearby-region-other-country",
+    "trap": null,
+    "misconception": "A nearby Region in another country satisfies a data residency law.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Create the resources in the Region in that country, and run a scheduled job that deletes any copies of the data in other Regions.",
+    "correct": false,
+    "why": "The job adds work with no effect, because no copy exists in another Region [unless you explicitly use a replication or copy feature offered by an AWS service or replicate the resource yourself](../facts/global-infrastructure.md#global-infrastructure-no-automatic-cross-region-replication).",
+    "concept": "cleanup-job-other-regions",
+    "trap": "aws-map-trap-region-auto-replicates",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "AWS services [process and store customer content in the AWS region(s) where the services are used by the customer](../facts/global-infrastructure.md#global-infrastructure-customer-content-stays-in-chosen-region). So the data stays in the Region in that country as long as the company adds no replication or copy feature. No extra setting or job is needed.",
+  "takeaway": "Data stays in the Region you choose unless you configure replication or copying yourself.",
+  "twin": "If the stem said \"the law allows any Region inside the European Union\" instead: the lowest-priced Region in the European Union, because prices are [different in each Region](../facts/global-infrastructure.md#global-infrastructure-region-pricing-differs-local-market).",
+  "say": "Your data stays in the Region you pick; nothing leaves it unless you turn on replication or copy it.",
+  "facts": [
+   "global-infrastructure-customer-content-stays-in-chosen-region",
+   "global-infrastructure-no-automatic-cross-region-replication",
+   "global-infrastructure-region-pricing-differs-local-market"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-data-residency",
+   "ee-ensure"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the solution that will ensure data residency with the LEAST operational overhead.",
+    "I mark the constraints: the personal data must remain in one country, that country has an AWS Region, and the data lives in Amazon S3 and on EC2 instances. The lower prices nearby are bait.",
+    "Before I look at the options, I predict: create everything in the Region in that country and add no replication, because AWS stores customer content in the Region where I use the service.",
+    "I remove the neighboring Region, because the data would sit in another country. I remove the account setting, because there is no such setting: AWS does not copy my data to another Region unless I use a replication or copy feature.",
+    "Between the plain deployment and the deployment with a cleanup job, the difference is extra work; the stem says LEAST operational overhead, and the job deletes copies that do not exist, so I choose the plain deployment.",
+    "Check: the Region in that country with no replication meets the law, needs no job, and needs no setting. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ },
+ {
+  "id": "aws-map-q011",
+  "section": "2-deep.md#each-request-goes-to-one-region-and-your-resources-stay-there",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": [
+   "1.1.K3"
+  ],
+  "topics": [
+   "start",
+   "compute"
+  ],
+  "services": [
+   "ec2",
+   "management-console"
+  ],
+  "concept": "regional-resource-wrong-region-view",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "An engineer at a company launched three Amazon EC2 instances yesterday by using the AWS Management Console. Today the engineer signs in to the console again and opens the list of EC2 instances. The list is empty. Nobody in the company stopped, terminated, or moved any instance, and the IAM permissions of the engineer are unchanged. What is the most likely reason for the empty list?",
+  "keywords": [
+   "The list is empty",
+   "Nobody in the company stopped, terminated, or moved any instance"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "AWS moved the instances to another AWS Region overnight to balance the capacity of its data centers.",
+    "correct": false,
+    "why": "AWS does not move the instances, because a regional resource is [specific to the Region in which you create it](../facts/global-infrastructure.md#global-infrastructure-regional-resource-visible-only-in-its-region).",
+    "concept": "aws-moves-instances",
+    "trap": "aws-map-trap-region-auto-replicates",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "The console is showing a different AWS Region from the Region where the engineer launched the instances.",
+    "correct": true,
+    "why": "When created resources do not appear, [the console might be displaying resources from a different Region](../facts/management-console.md#management-console-missing-resources-check-region).",
+    "concept": "console-region-selector",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "The instances stopped overnight, and the EC2 console hides stopped instances from the list of instances.",
+    "correct": false,
+    "why": "The stem says that no instance was stopped, so a hidden stopped instance does not explain the empty list.",
+    "concept": "stopped-instances-hidden",
+    "trap": null,
+    "misconception": "The EC2 console hides stopped instances.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "The EC2 console lists the instances of an account only when the engineer signs in from the same computer.",
+    "correct": false,
+    "why": "The list follows the selected Region, and [you see only the resources that are tied to that Region](../facts/global-infrastructure.md#global-infrastructure-regional-resource-visible-only-in-its-region).",
+    "concept": "console-per-device",
+    "trap": null,
+    "misconception": "The console view depends on the device that the engineer uses.",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "EC2 instances are regional resources: [Some resources (such as Amazon EC2 instances) are specific to the Region where they were created](../facts/management-console.md#management-console-missing-resources-check-region). The console shows one Region at a time, and [you see only the resources that are tied to that Region](../facts/global-infrastructure.md#global-infrastructure-regional-resource-visible-only-in-its-region). The engineer selects the launch Region, and the instances appear.",
+  "takeaway": "Instances missing from the console: check the selected Region first.",
+  "twin": "If the stem said \"created an IAM role yesterday\" instead: the Region is not the cause, because [You don't need to choose a Region for the AWS Management Console or for some services, such as AWS Identity and Access Management](../facts/management-console.md#management-console-some-services-need-no-region-selection).",
+  "say": "If your instances seem gone, check the Region selector first; EC2 instances live in one Region.",
+  "facts": [
+   "global-infrastructure-regional-resource-visible-only-in-its-region",
+   "management-console-missing-resources-check-region",
+   "management-console-some-services-need-no-region-selection"
+  ],
+  "sources": [],
+  "exam_english": [],
+  "twin_of": null
+ },
+ {
+  "id": "aws-map-q007",
+  "section": "2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.K1"
+  ],
+  "topics": [
+   "resilience",
+   "compute"
+  ],
+  "services": [
+   "ec2",
+   "route53",
+   "elb",
+   "ec2-auto-scaling"
+  ],
+  "concept": "multi-region-for-region-failure",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a web application on Amazon EC2 instances in one Availability Zone of an AWS Region. The application keeps no state on the instances, and users reach it through one DNS name. After several short outages, the company wants a more reliable design. The application must remain available if the AWS Region fails. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "in one Availability Zone",
+   "if the AWS Region fails",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Run the instances in two Availability Zones of the current Region behind an Application Load Balancer, with an Auto Scaling group that spans both zones.",
+    "correct": false,
+    "why": "Two zones survive a zone failure, but both zones sit inside the failed Region, so the application stops with that Region.",
+    "concept": "multi-az-for-region-failure",
+    "trap": null,
+    "misconception": "Several Availability Zones also protect against the failure of their own Region.",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Run a second copy of the application in another AWS Region, and use Amazon Route 53 failover routing with health checks to send users to the healthy copy.",
+    "correct": true,
+    "why": "A copy in a second Region does not share the failure, and Route 53 can [use the status of health checks to perform failovers between Regions](../facts/global-infrastructure.md#global-infrastructure-route53-failover-use-health-checks-not-record-changes).",
+    "concept": "multi-region-failover",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Run active copies of the application in three AWS Regions at the same time, and use Amazon Route 53 latency routing with health checks to send each user to a copy.",
+    "correct": false,
+    "why": "Three active Regions also survive the failure, but they run three full copies where one copy in a second Region meets the requirement.",
+    "concept": "multi-region-active-active",
+    "trap": null,
+    "misconception": "Surviving one Region failure needs active copies in more than two Regions.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add more instances in the current Availability Zone behind an Application Load Balancer, with an Auto Scaling group that replaces any unhealthy instance.",
+    "correct": false,
+    "why": "If that one zone fails, [none of your EC2 instances would be available](../facts/global-infrastructure.md#global-infrastructure-single-az-failure-takes-all-instances), and a Region failure takes that zone too.",
+    "concept": "more-instances-one-az",
+    "trap": "aws-map-trap-one-az-is-highly-available",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "Each Region is [designed to be isolated from the other Regions](../facts/global-infrastructure.md#global-infrastructure-region-isolated-for-fault-tolerance), and that separation [avoids correlated failures between them](../facts/global-infrastructure.md#global-infrastructure-multi-region-avoids-correlated-failures). A copy in a second Region keeps serving when the first Region fails, and Route 53 health checks send users to it. One standby copy costs less than active copies in three Regions.",
+  "takeaway": "A Region failure needs a copy in a second Region; the zones of the failed Region fail with it.",
+  "twin": "If the stem said \"must remain available if an Availability Zone fails\" instead: two Availability Zones behind a load balancer, because [most customers can achieve their resilience goals in a single Region](../facts/global-infrastructure.md#global-infrastructure-most-customers-single-region-suffices).",
+  "say": "To survive a Region failure, you need a second copy in another Region and health-check failover.",
+  "facts": [
+   "global-infrastructure-route53-failover-use-health-checks-not-record-changes",
+   "global-infrastructure-single-az-failure-takes-all-instances",
+   "global-infrastructure-region-isolated-for-fault-tolerance",
+   "global-infrastructure-multi-region-avoids-correlated-failures",
+   "global-infrastructure-most-customers-single-region-suffices"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-must",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": "aws-map-q001"
+ }
+]

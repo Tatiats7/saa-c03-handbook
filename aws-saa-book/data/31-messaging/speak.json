@@ -1,0 +1,689 @@
+{
+ "v": 1,
+ "chapter": "messaging",
+ "items": [
+  {
+   "id": "messaging-s01",
+   "chapter": "messaging",
+   "kind": "decide",
+   "prompt": "SQS, SNS, EventBridge: all three move messages. When do I use which?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "SQS holds work for one consumer. SNS pushes a copy to every subscriber. EventBridge routes events from AWS services and SaaS apps by content.",
+   "sixty_second": [
+    "The short answer is: SQS for work, SNS for copies, EventBridge for events.",
+    "It works like this. SQS is a queue that consumers poll.",
+    "A message stays in the queue until it's processed or it expires.",
+    "SNS is a topic that pushes each message to every subscriber, right away.",
+    "EventBridge receives events from AWS services and SaaS apps.",
+    "A rule matches the event content and sends it to up to five targets.",
+    "The thing to watch is that a standard SNS topic doesn't store messages.",
+    "So put a queue behind the topic for any consumer that can be down.",
+    "In your case, a topic can fan out each finished transcript to a queue per system.",
+    "Which of your systems must keep working when another one is down?"
+   ],
+   "skeleton": [
+    "queue: work at own pace",
+    "topic: a copy for everyone",
+    "rule: match and route events",
+    "queue behind the topic"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "SQS is pull-based: consumers poll the queue, and a message stays in the queue until it is processed or expires.",
+     "accept": [
+      "consumers poll the queue",
+      "the queue keeps the message until it is processed"
+     ],
+     "facts": [
+      "lambda-trigger-sqs-sns-eventbridge-model",
+      "sqs-decision-keeps-until-processed"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "SNS is push-based, and a standard topic does not persist messages: it delivers them to subscribers in real time.",
+     "accept": [
+      "SNS pushes to subscribers",
+      "SNS does not store messages for later"
+     ],
+     "facts": [
+      "lambda-trigger-sqs-sns-eventbridge-model",
+      "sns-decision-no-persistence"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "To fan out identical messages, subscribe several SQS queues to one SNS topic; SNS delivers each message to all of them.",
+     "accept": [
+      "a topic with a queue per consumer",
+      "fan out to several queues"
+     ],
+     "facts": [
+      "sns-faq-fanout-identical-messages-to-multiple-sqs-queues"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "EventBridge rules match events and route them to targets; the default event bus receives events from AWS services automatically.",
+     "accept": [
+      "rules match events and send them to targets",
+      "AWS service events arrive on the default bus"
+     ],
+     "facts": [
+      "lambda-trigger-sqs-sns-eventbridge-model",
+      "eventbridge-default-bus-receives-aws-service-events"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "EventBridge is the only event-based service that integrates directly with third-party SaaS partners.",
+     "accept": [
+      "EventBridge for SaaS events"
+     ],
+     "facts": [
+      "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "The maximum number of targets of one EventBridge rule is 5.",
+     "accept": [
+      "a rule has a small target limit"
+     ],
+     "facts": [
+      "eventbridge-quota-targets-per-rule"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "SNS stores messages until the subscriber is back.",
+     "correct": "A standard SNS topic does not persist messages; it delivers them to subscribers in real time. Subscribe an SQS queue to keep each copy.",
+     "fact": "sns-decision-no-persistence"
+    },
+    {
+     "error": "One SQS queue gives every service its own copy.",
+     "correct": "To fan out identical messages, subscribe one SQS queue per service to an SNS topic. SNS delivers each message to all the subscribed queues.",
+     "fact": "sns-faq-fanout-identical-messages-to-multiple-sqs-queues"
+    },
+    {
+     "error": "An event bus keeps every event for replay by default.",
+     "correct": "A Classic event bus, the type with rules and targets, does not retain events. To keep events, add an archive.",
+     "fact": "eventbridge-classic-bus-does-not-retain-events"
+    }
+   ],
+   "terms": [
+    {
+     "say": "topic",
+     "avoid": [
+      "channel"
+     ]
+    },
+    {
+     "say": "event bus",
+     "avoid": [
+      "event stream"
+     ]
+    },
+    {
+     "say": "fan out",
+     "avoid": [
+      "broadcast queue"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Is there a limit on targets for one EventBridge rule?",
+     "answer": "Yes. The maximum number of targets of one rule is 5, and this quota is not adjustable. For more receivers, add a second rule or send to an SNS topic.",
+     "facts": [
+      "eventbridge-quota-targets-per-rule"
+     ]
+    },
+    {
+     "question": "Which one should receive events from our SaaS tools?",
+     "answer": "EventBridge. It is the only event-based service that integrates directly with third-party SaaS partners.",
+     "facts": [
+      "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners"
+     ]
+    }
+   ],
+   "facts": [
+    "lambda-trigger-sqs-sns-eventbridge-model",
+    "sqs-decision-keeps-until-processed",
+    "sns-decision-no-persistence",
+    "sns-faq-fanout-identical-messages-to-multiple-sqs-queues",
+    "eventbridge-default-bus-receives-aws-service-events",
+    "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners",
+    "eventbridge-quota-targets-per-rule",
+    "eventbridge-classic-bus-does-not-retain-events",
+    "sqs-lens-sqs-sns-eventbridge-roles-in-event-driven-design"
+   ],
+   "section": "1-fast.md#choose-it-or-not",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "messaging-s02",
+   "chapter": "messaging",
+   "kind": "explain",
+   "prompt": "Our worker crashed in the middle of a job. Did we lose that message?",
+   "persona": "a startup CTO you advise",
+   "ten_second": "No. Receiving a message only hides it. If your worker doesn't delete it, the message comes back when the visibility timeout ends.",
+   "sixty_second": [
+    "The short answer is no, as long as the worker didn't delete it.",
+    "It works like this. When a worker receives a message, the message stays in the queue.",
+    "It's only hidden from other consumers for a time.",
+    "That hidden time is the visibility timeout. The default is thirty seconds.",
+    "If the worker crashes before the delete, the message becomes visible again.",
+    "Then the same worker or another one receives it and tries again.",
+    "The thing to watch is that the job can now run twice.",
+    "So the worker must be idempotent: a second run must do no harm.",
+    "Also set the timeout longer than your longest job.",
+    "With a redrive policy, a message that keeps failing moves to a dead-letter queue.",
+    "In your case, how long does your longest job take?"
+   ],
+   "skeleton": [
+    "receive hides, delete removes",
+    "comes back after the timeout",
+    "make the worker idempotent",
+    "timeout longer than the job"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Receiving a message does not delete it: the message stays in the queue, temporarily invisible to other consumers.",
+     "accept": [
+      "receiving only hides the message",
+      "the message stays in the queue"
+     ],
+     "facts": [
+      "sqs-receive-keeps-message-hidden"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "If the consumer does not process and delete the message before the visibility timeout expires, the message becomes visible again and is not lost.",
+     "accept": [
+      "it comes back after the timeout",
+      "the message is not lost"
+     ],
+     "facts": [
+      "sqs-failed-processing-message-not-lost"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "The default visibility timeout is 30 seconds.",
+     "accept": [
+      "thirty seconds by default"
+     ],
+     "facts": [
+      "sqs-visibility-timeout-default"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "A standard queue gives at-least-once delivery, so design the consumers to be idempotent.",
+     "accept": [
+      "the job can run twice",
+      "make the worker idempotent"
+     ],
+     "facts": [
+      "sqs-standard-at-least-once-duplicates",
+      "sqs-faq-standard-queue-design-idempotent-consumers"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "A redrive policy sets maxReceiveCount, the number of receives before SQS moves a message to the dead-letter queue.",
+     "accept": [
+      "a dead-letter queue after too many receives"
+     ],
+     "facts": [
+      "sqs-dlq-max-receive-count-meaning"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "A visibility timeout shorter than the processing time lets another consumer receive a duplicate.",
+     "accept": [
+      "a short timeout gives duplicates"
+     ],
+     "facts": [
+      "sqs-visibility-timeout-too-short-gives-duplicate"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "The message is gone.",
+     "correct": "A message that is not processed and deleted before the visibility timeout expires becomes visible again, so it is not lost.",
+     "fact": "sqs-failed-processing-message-not-lost"
+    },
+    {
+     "error": "SQS delivers each message exactly once.",
+     "correct": "A standard queue gives at-least-once delivery: more than one copy of a message can be delivered.",
+     "fact": "sqs-standard-at-least-once-duplicates"
+    },
+    {
+     "error": "The dead-letter queue retries the message for you.",
+     "correct": "Retries happen in the source queue. After maxReceiveCount receives, SQS moves the message to the dead-letter queue.",
+     "fact": "sqs-dlq-max-receive-count-meaning"
+    }
+   ],
+   "terms": [
+    {
+     "say": "visibility timeout",
+     "avoid": [
+      "lock timeout"
+     ]
+    },
+    {
+     "say": "dead-letter queue",
+     "avoid": [
+      "error queue"
+     ]
+    },
+    {
+     "say": "idempotent",
+     "avoid": [
+      "repeatable"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "How long should the visibility timeout be?",
+     "answer": "Longer than the processing time. If it is shorter, another consumer receives a duplicate. If it is far longer, a failed message waits a long time before the next attempt.",
+     "facts": [
+      "sqs-visibility-timeout-too-short-gives-duplicate",
+      "sqs-visibility-timeout-too-long-delays-retry"
+     ]
+    },
+    {
+     "question": "What if one job needs more time than the timeout?",
+     "answer": "The worker can extend the timeout of that message with ChangeMessageVisibility. The maximum is 12 hours from the ReceiveMessage request, and extending does not reset it.",
+     "facts": [
+      "sqs-change-message-visibility-extend-shorten",
+      "sqs-visibility-timeout-extend-no-reset"
+     ]
+    }
+   ],
+   "facts": [
+    "sqs-receive-keeps-message-hidden",
+    "sqs-failed-processing-message-not-lost",
+    "sqs-visibility-timeout-default",
+    "sqs-dlq-max-receive-count-meaning",
+    "sqs-standard-at-least-once-duplicates",
+    "sqs-faq-standard-queue-design-idempotent-consumers",
+    "sqs-visibility-timeout-too-short-gives-duplicate",
+    "sqs-visibility-timeout-too-long-delays-retry",
+    "sqs-change-message-visibility-extend-shorten",
+    "sqs-visibility-timeout-extend-no-reset"
+   ],
+   "section": "2-deep.md#a-received-message-stays-hidden-until-it-is-deleted-or-the-timeout-ends",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "messaging-s03",
+   "chapter": "messaging",
+   "kind": "compare",
+   "prompt": "Standard queue or FIFO queue: which should we start with?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Start with a standard queue. Choose FIFO when order per customer, or no duplicates, is a hard rule.",
+   "sixty_second": [
+    "Both keep your messages safe. The difference is order and duplicates against throughput.",
+    "It works like this. A standard queue scales to a nearly unlimited rate.",
+    "But it can deliver a message twice, and the order can change.",
+    "A FIFO queue keeps strict order inside each message group.",
+    "It doesn't introduce duplicates, but its rate is lower.",
+    "Different message groups are processed in parallel.",
+    "The thing to watch is that you can't convert a standard queue to FIFO later.",
+    "You'd create a new FIFO queue instead.",
+    "In your case, start with a standard queue and idempotent workers.",
+    "If order per customer matters, use FIFO, with the customer ID as group ID.",
+    "Does anything break if one customer's events arrive out of order?"
+   ],
+   "skeleton": [
+    "order and duplicates against throughput",
+    "standard: fast, twice, any order",
+    "FIFO: order per group",
+    "no conversion later"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Standard queues support a nearly unlimited number of API calls per second for each action.",
+     "accept": [
+      "a standard queue scales almost without limit"
+     ],
+     "facts": [
+      "sqs-standard-throughput-nearly-unlimited"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "A standard queue gives at-least-once delivery: a message can be delivered more than once, and messages can arrive out of order.",
+     "accept": [
+      "duplicates are possible",
+      "the order can change"
+     ],
+     "facts": [
+      "sqs-standard-at-least-once-duplicates"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A FIFO queue keeps strict order within one message group ID and does not introduce duplicates into the queue.",
+     "accept": [
+      "order per message group",
+      "no duplicates in a FIFO queue"
+     ],
+     "facts": [
+      "sqs-fifo-order-strict-within-group",
+      "sqs-faq-fifo-exactly-once-processing"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "You cannot convert an existing standard queue into a FIFO queue; you create a new FIFO queue.",
+     "accept": [
+      "the queue type is fixed",
+      "no conversion to FIFO later"
+     ],
+     "facts": [
+      "sqs-cannot-convert-standard-queue-to-fifo"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "A FIFO queue processes messages of different message group IDs in parallel.",
+     "accept": [
+      "groups run in parallel"
+     ],
+     "facts": [
+      "sqs-fifo-groups-processed-in-parallel"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "By default, a FIFO queue supports 300 messages per second, or 3,000 messages per second with batching.",
+     "accept": [
+      "FIFO has a lower rate"
+     ],
+     "facts": [
+      "sqs-faq-fifo-default-throughput-3000-with-batching-300-without"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "A standard queue keeps the order.",
+     "correct": "A standard queue makes a best-effort attempt to keep the order. Messages can occasionally arrive out of order.",
+     "fact": "sqs-standard-best-effort-ordering"
+    },
+    {
+     "error": "A FIFO queue keeps one order across all customers.",
+     "correct": "Messages with different message group IDs can arrive or be processed out of order relative to one another.",
+     "fact": "sqs-fifo-no-order-across-groups"
+    },
+    {
+     "error": "You can switch the queue to FIFO later.",
+     "correct": "You cannot convert an existing standard queue into a FIFO queue. You create a new FIFO queue.",
+     "fact": "sqs-cannot-convert-standard-queue-to-fifo"
+    }
+   ],
+   "terms": [
+    {
+     "say": "FIFO queue",
+     "avoid": [
+      "ordered queue"
+     ]
+    },
+    {
+     "say": "message group ID",
+     "avoid": [
+      "partition key"
+     ]
+    },
+    {
+     "say": "standard queue",
+     "avoid": [
+      "normal queue"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Is a FIFO queue fast enough for us?",
+     "answer": "By default, a FIFO queue supports 300 messages per second, or 3,000 messages per second with batching. For more, turn on high throughput mode: up to 70,000 transactions per second in some Regions. More message groups give more parallel processing.",
+     "facts": [
+      "sqs-faq-fifo-default-throughput-3000-with-batching-300-without",
+      "sqs-fifo-ht-top-regions-70000-tps",
+      "sqs-fifo-groups-processed-in-parallel"
+     ]
+    },
+    {
+     "question": "What stops a FIFO queue from delivering the same message twice?",
+     "answer": "Messages with the same deduplication ID sent within a 5 minute deduplication interval are treated as duplicates, and only one copy is delivered.",
+     "facts": [
+      "sqs-fifo-deduplication-interval-5-minutes"
+     ]
+    }
+   ],
+   "facts": [
+    "sqs-standard-throughput-nearly-unlimited",
+    "sqs-standard-at-least-once-duplicates",
+    "sqs-standard-best-effort-ordering",
+    "sqs-faq-fifo-exactly-once-processing",
+    "sqs-fifo-order-strict-within-group",
+    "sqs-fifo-groups-processed-in-parallel",
+    "sqs-fifo-no-order-across-groups",
+    "sqs-cannot-convert-standard-queue-to-fifo",
+    "sqs-faq-fifo-default-throughput-3000-with-batching-300-without",
+    "sqs-fifo-ht-top-regions-70000-tps",
+    "sqs-fifo-deduplication-interval-5-minutes"
+   ],
+   "section": "2-deep.md#a-fifo-queue-keeps-order-inside-each-message-group-and-drops-duplicates",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "messaging-s04",
+   "chapter": "messaging",
+   "kind": "explain",
+   "prompt": "On launch day, uploads failed. What did we change so that it cannot happen again?",
+   "persona": "Ana, CEO of Callvale",
+   "ten_second": "Each upload now waits safely in a queue instead of failing when the worker is busy. Results reach every system that needs them.",
+   "sixty_second": [
+    "The short answer is: an upload no longer waits for a busy worker.",
+    "It works like this. Each upload now goes into a queue, a waiting list that AWS keeps safe.",
+    "Each message is stored in several separate locations before AWS confirms it.",
+    "Workers take jobs from the queue at their own pace.",
+    "A recording that keeps failing is moved aside, so it blocks no one.",
+    "When a transcript is ready, one message reaches both the webhooks and search.",
+    "The thing to watch is that processing isn't instant. Customers see a processing status first.",
+    "If no worker processes a message, the queue deletes it after four days by default.",
+    "In your case, the next step is a warning when a job takes too long.",
+    "How long can a customer wait for a transcript before we warn them?"
+   ],
+   "skeleton": [
+    "uploads wait in a queue",
+    "stored in several locations",
+    "failing recordings moved aside",
+    "not instant: show a status"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "SQS stores each message redundantly in multiple Availability Zones before it acknowledges the send.",
+     "accept": [
+      "stored in several locations before it is confirmed"
+     ],
+     "facts": [
+      "sqs-send-stored-multi-az-before-ack"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "With a queue, components send and receive messages without each component being available at the same time.",
+     "accept": [
+      "the upload does not wait for the worker",
+      "the worker can be busy or down"
+     ],
+     "facts": [
+      "sns-faq-sqs-components-need-not-be-available-at-same-time"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A redrive policy moves a message to a dead-letter queue after the maximum number of receives, so one failing recording blocks no one.",
+     "accept": [
+      "failing recordings are moved aside"
+     ],
+     "facts": [
+      "sqs-dlq-max-receive-count-meaning"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "When a message is published to the topic, SNS sends it to each subscribed queue, so webhooks and search both get every transcript.",
+     "accept": [
+      "one message reaches every system"
+     ],
+     "facts": [
+      "sns-publish-sends-message-to-each-subscribed-queue"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "By default, an SQS queue keeps a message for 4 days.",
+     "accept": [
+      "the queue deletes an old message after four days by default"
+     ],
+     "facts": [
+      "sqs-message-retention-default"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "SQS scales transparently to handle load increases or spikes without provisioning instructions.",
+     "accept": [
+      "the queue absorbs the spike"
+     ],
+     "facts": [
+      "sqs-scales-transparently-for-spikes"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Nothing can ever fail again.",
+     "correct": "Processing can still fail. A message that is not processed and deleted becomes visible again for another attempt, so it is not lost.",
+     "fact": "sqs-failed-processing-message-not-lost"
+    },
+    {
+     "error": "Transcripts are ready at once now.",
+     "correct": "The queue lets components send and receive messages without each being available at the same time, so processing happens later, not at once.",
+     "fact": "sns-faq-sqs-components-need-not-be-available-at-same-time"
+    },
+    {
+     "error": "We fixed it with more servers.",
+     "correct": "The fix is the queue between the steps. SQS scales transparently for spikes without any provisioning instructions.",
+     "fact": "sqs-scales-transparently-for-spikes"
+    }
+   ],
+   "terms": [
+    {
+     "say": "queue",
+     "avoid": [
+      "waiting line"
+     ]
+    },
+    {
+     "say": "dead-letter queue",
+     "avoid": [
+      "error queue"
+     ]
+    },
+    {
+     "say": "topic",
+     "avoid": [
+      "channel"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What happens to a recording that keeps failing?",
+     "answer": "After the maximum number of receives, SQS moves it to a dead-letter queue, so it blocks no one. After a fix, a redrive moves it back to the source queue by default.",
+     "facts": [
+      "sqs-dlq-max-receive-count-meaning",
+      "sqs-redrive-defaults-to-source-queue-same-type"
+     ]
+    },
+    {
+     "question": "Can a message wait in the queue forever?",
+     "answer": "No. A queue keeps a message for 4 days by default. The retention period can be set from 60 seconds to 14 days.",
+     "facts": [
+      "sqs-message-retention-default",
+      "sqs-message-retention-range"
+     ]
+    }
+   ],
+   "facts": [
+    "sqs-send-stored-multi-az-before-ack",
+    "sns-faq-sqs-components-need-not-be-available-at-same-time",
+    "sqs-scales-transparently-for-spikes",
+    "sqs-message-retention-default",
+    "sqs-message-retention-range",
+    "sqs-dlq-max-receive-count-meaning",
+    "sns-publish-sends-message-to-each-subscribed-queue",
+    "sqs-failed-processing-message-not-lost",
+    "sqs-redrive-defaults-to-source-queue-same-type"
+   ],
+   "section": "2-deep.md#decision-record",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "status": "ready",
+   "rev": 1
+  }
+ ]
+}

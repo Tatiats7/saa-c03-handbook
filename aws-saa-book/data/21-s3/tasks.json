@@ -1,0 +1,377 @@
+{
+ "v": 1,
+ "chapter": "s3",
+ "items": [
+  {
+   "id": "s3-t01",
+   "type": "look",
+   "title": "Read the settings that keep a new bucket private",
+   "kills": "\"A new bucket is public and unencrypted until you change its settings.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "sts:GetCallerIdentity",
+    "s3:GetAccountPublicAccessBlock",
+    "s3:ListAllMyBuckets",
+    "s3:GetBucketPublicAccessBlock",
+    "s3:GetEncryptionConfiguration"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Keep your account ID in the variable ACCOUNT_ID for the next step.",
+     "command": "aws sts get-caller-identity",
+     "capture": {
+      "name": "ACCOUNT_ID",
+      "query": "Account"
+     },
+     "expect": "No output. The variable ACCOUNT_ID now holds your account ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the Block Public Access settings of the whole account. S3 combines them with the settings of each bucket and applies the most restrictive combination.",
+     "command": "aws s3control get-public-access-block --account-id $ACCOUNT_ID",
+     "expect": "Either the four settings BlockPublicAcls, IgnorePublicAcls, BlockPublicPolicy and RestrictPublicBuckets with true or false, or an error. An error that no configuration was found means the account has no account-level setting.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the names of your buckets. If the list is empty, stop here: the last two steps need a bucket.",
+     "command": "aws s3api list-buckets --query \"Buckets[].Name\"",
+     "expect": "A list of bucket names, or an empty list.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Pick one bucket from the list as <BUCKET>. Read the Block Public Access settings of that bucket.",
+     "command": "aws s3api get-public-access-block --bucket <BUCKET>",
+     "expect": "The same four settings, each true for a bucket that kept its defaults. An error that no configuration was found means the bucket has no setting of its own; the account settings of step 2 still apply.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the default encryption of the same bucket.",
+     "command": "aws s3api get-bucket-encryption --bucket <BUCKET> --query \"ServerSideEncryptionConfiguration.Rules[].ApplyServerSideEncryptionByDefault.SSEAlgorithm\"",
+     "expect": "[\"AES256\"], the name of SSE-S3, for a bucket that kept its defaults. A bucket that uses SSE-KMS shows aws:kms instead. Every bucket shows a value, because every bucket has default encryption.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "s3-faq-secure-by-default",
+    "s3-block-public-access-default-on",
+    "s3-block-public-access-account-level-recommended",
+    "s3-block-public-access-four-settings-most-restrictive",
+    "s3-sse-s3-default-every-bucket",
+    "s3-bucket-policy-require-sse-kms-on-put"
+   ],
+   "sources": [
+    {
+     "title": "Getting started with Amazon S3 using the AWS CLI",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/GettingStartedS3CLI.html"
+    },
+    {
+     "title": "Configuring block public access settings for your account",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/configuring-block-public-access-account.html"
+    }
+   ],
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "s3-t02",
+   "type": "try",
+   "title": "Share a private object with a presigned URL that expires",
+   "kills": "\"A browser can download from a private bucket only if the bucket is made public.\"",
+   "trap": null,
+   "section": "2-deep.md#a-presigned-url-lends-the-permission-of-its-signer-until-the-url-expires",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "about $0: one object of a few kilobytes for some minutes and a few requests; S3 has no minimum charge",
+   "cost_if_forgotten": "about $0 a day: one object of a few kilobytes",
+   "cost_facts": [],
+   "permissions": [
+    "s3:CreateBucket",
+    "s3:PutBucketTagging",
+    "s3:PutObject",
+    "s3:GetObject",
+    "s3:DeleteObject",
+    "s3:DeleteBucket",
+    "s3:ListBucket"
+   ],
+   "read_only_alternative": "This alternative creates no resource. Choose an object that you can already read in a bucket of your account as <BUCKET> and <KEY>. Run aws s3 presign s3://<BUCKET>/<KEY> --expires-in 60, open the URL in a browser tab, wait 2 minutes and reload the tab. The first load shows the object; the second shows AccessDenied.",
+   "steps": [
+    {
+     "text": "Choose 8 random lowercase letters and digits as <SUFFIX>: bucket names are global, so a plain name is often taken. Create the bucket in the Region of your CloudShell session.",
+     "command": "aws s3 mb s3://saa-s3-t02-<SUFFIX>",
+     "expect": "make_bucket: saa-s3-t02- and your suffix. If the name is taken, choose another suffix and use it in every later command.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Tag the bucket with the book tag and the task tag.",
+     "command": "aws s3api put-bucket-tagging --bucket saa-s3-t02-<SUFFIX> --tagging 'TagSet=[{Key=book,Value=saa},{Key=task,Value=s3-t02}]'",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Upload the small text file /etc/os-release as the object note.txt. Linux systems keep their name and version in this file.",
+     "command": "aws s3api put-object --bucket saa-s3-t02-<SUFFIX> --key note.txt --body /etc/os-release --content-type text/plain",
+     "expect": "JSON with an ETag and \"ServerSideEncryption\": \"AES256\". You asked for no encryption, and the object is encrypted with SSE-S3.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the object without a signature, as a stranger on the internet would. <REGION> is the Region code of your CloudShell session, for example us-east-1.",
+     "command": "curl -sS https://saa-s3-t02-<SUFFIX>.s3.<REGION>.amazonaws.com/note.txt",
+     "expect": "An XML error with the code AccessDenied. The bucket is private.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a presigned URL for note.txt that expires in 60 seconds. The command signs the URL with the credentials of your CloudShell session.",
+     "command": "aws s3 presign s3://saa-s3-t02-<SUFFIX>/note.txt --expires-in 60",
+     "expect": "One long https URL. Its query string holds X-Amz-Expires=60, X-Amz-Credential and X-Amz-Signature.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Copy the URL and open it in a new browser tab within the minute.",
+     "command": null,
+     "expect": "The text of the file, with lines such as NAME and VERSION. The bucket is still private.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Wait until 2 minutes have passed since you created the URL. Reload the same browser tab.",
+     "command": null,
+     "expect": "An XML error with the code AccessDenied and a message that the request has expired.",
+     "break_it": true,
+     "predict": "The URL, the object and the bucket have not changed. What does the tab show now?",
+     "explain": "S3 checks the expiry [at the time of the HTTP request](../facts/s3.md#s3-presigned-url-reusable-until-expiry), so the same URL now fails. The URL is [limited by the permissions of the user](../facts/s3.md#s3-presigned-url-creator-needs-permission) who created it, and it lends that permission for a limited time. When the signer used temporary credentials, [the URL expires when the credential expires](../facts/s3.md#s3-presigned-url-expires-with-temporary-credentials), even before its own expiry time."
+    },
+    {
+     "text": "Fix it: create a new presigned URL that expires in 300 seconds, and open the new URL in the tab.",
+     "command": "aws s3 presign s3://saa-s3-t02-<SUFFIX>/note.txt --expires-in 300",
+     "expect": "A new URL. The tab shows the text again until this URL expires.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the object.",
+     "command": "aws s3api delete-object --bucket saa-s3-t02-<SUFFIX> --key note.txt"
+    },
+    {
+     "text": "Delete the empty bucket.",
+     "command": "aws s3api delete-bucket --bucket saa-s3-t02-<SUFFIX>"
+    }
+   ],
+   "verify": {
+    "command": "aws s3api head-bucket --bucket saa-s3-t02-<SUFFIX>",
+    "expect": "An error that shows 404 (Not Found): the bucket no longer exists."
+   },
+   "still_costs": [
+    "Nothing you would notice: the storage charge depends on the size of the objects and on how long they are stored, and note.txt is a few kilobytes. Delete the bucket anyway, so that no unused bucket stays in the account."
+   ],
+   "facts": [
+    "s3-private-by-default",
+    "s3-presigned-url-time-limited-creator-credentials",
+    "s3-presigned-url-creator-needs-permission",
+    "s3-presigned-url-reusable-until-expiry",
+    "s3-presigned-url-expires-with-temporary-credentials",
+    "s3-presign-cli-sdk-expiration",
+    "s3-bucket-name-global-namespace-default",
+    "s3-sse-s3-default-every-bucket",
+    "s3-faq-no-minimum-charge",
+    "s3-pricing-storage-rate-size-duration-class"
+   ],
+   "sources": [
+    {
+     "title": "Sharing objects with presigned URLs",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html"
+    },
+    {
+     "title": "Download and upload objects with presigned URLs",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html"
+    },
+    {
+     "title": "Getting started with Amazon S3 using the AWS CLI",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/GettingStartedS3CLI.html"
+    },
+    {
+     "title": "Using high-level (s3) commands in the AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html"
+    }
+   ],
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "s3-t03",
+   "type": "try",
+   "title": "Delete a versioned object and get it back",
+   "kills": "\"In a versioned bucket a delete removes the object, and a delete can never destroy data for good.\"",
+   "trap": "s3-trap-versioning-stops-deletes",
+   "section": "2-deep.md#versioning-turns-a-delete-into-a-delete-marker-and-keeps-every-version",
+   "pass_route": false,
+   "minutes": 12,
+   "cost": "about $0: one version and one delete marker of a few kilobytes for some minutes and a few requests; S3 has no minimum charge",
+   "cost_if_forgotten": "about $0 a day: a few kilobytes, but every version stays billed until you delete it by its version ID",
+   "cost_facts": [],
+   "permissions": [
+    "s3:CreateBucket",
+    "s3:PutBucketTagging",
+    "s3:PutBucketVersioning",
+    "s3:PutObject",
+    "s3:DeleteObject",
+    "s3:GetObject",
+    "s3:GetObjectVersion",
+    "s3:ListBucketVersions",
+    "s3:DeleteObjectVersion",
+    "s3:DeleteBucket",
+    "s3:ListBucket"
+   ],
+   "read_only_alternative": "This alternative creates nothing. If a bucket in your account has versioning turned on, use it as <BUCKET> and run aws s3api list-object-versions --bucket <BUCKET> --max-items 20. Each entry under DeleteMarkers with IsLatest true is a deleted object whose older versions are still stored.",
+   "steps": [
+    {
+     "text": "Choose 8 random lowercase letters and digits as <SUFFIX>. Create the bucket in the Region of your CloudShell session.",
+     "command": "aws s3 mb s3://saa-s3-t03-<SUFFIX>",
+     "expect": "make_bucket: saa-s3-t03- and your suffix. If the name is taken, choose another suffix and use it in every later command.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Tag the bucket with the book tag and the task tag.",
+     "command": "aws s3api put-bucket-tagging --bucket saa-s3-t03-<SUFFIX> --tagging 'TagSet=[{Key=book,Value=saa},{Key=task,Value=s3-t03}]'",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Turn on versioning. A new bucket starts with versioning off.",
+     "command": "aws s3api put-bucket-versioning --bucket saa-s3-t03-<SUFFIX> --versioning-configuration Status=Enabled",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Upload the small text file /etc/os-release as note.txt. Keep the version ID of this first version in V1.",
+     "command": "aws s3api put-object --bucket saa-s3-t03-<SUFFIX> --key note.txt --body /etc/os-release --content-type text/plain",
+     "capture": {
+      "name": "V1",
+      "query": "VersionId"
+     },
+     "expect": "No output. V1 now holds a long version ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Delete note.txt the usual way, with no version ID. Keep the version ID that the delete returns in MARKER.",
+     "command": "aws s3api delete-object --bucket saa-s3-t03-<SUFFIX> --key note.txt",
+     "capture": {
+      "name": "MARKER",
+      "query": "VersionId"
+     },
+     "expect": "No output. MARKER now holds a second, new version ID.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read note.txt with a plain request that names no version ID. The command asks for the metadata of the object.",
+     "command": "aws s3api head-object --bucket saa-s3-t03-<SUFFIX> --key note.txt",
+     "expect": "An error with 404 and Not Found.",
+     "break_it": true,
+     "predict": "You deleted note.txt, but versioning is on. Does the read work, and is the data gone?",
+     "explain": "Your delete named no version ID, so S3 added a delete marker, which [becomes the current (or newest) version](../facts/s3.md#s3-delete-marker-soft-delete). A plain GET of note.txt now returns [404 Not Found](../facts/s3.md#s3-versioning-get-delete-marker-404), and this plain HEAD request gets the same answer. The first version is still stored, and it [can be retrieved or restored](../facts/s3.md#s3-versioning-preserves-on-overwrite-and-delete)."
+    },
+    {
+     "text": "Fix it: delete the delete marker by its version ID, the one in MARKER. A delete that names a version ID removes only that version.",
+     "command": "aws s3api delete-object --bucket saa-s3-t03-<SUFFIX> --key note.txt --version-id $MARKER",
+     "expect": "JSON that names the version ID of the marker. The marker is gone.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read note.txt again with the same plain request as in step 6.",
+     "command": "aws s3api head-object --bucket saa-s3-t03-<SUFFIX> --key note.txt",
+     "expect": "JSON with the metadata of note.txt. Its VersionId equals V1: the first version is current again, and nothing was lost.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the first version by its version ID. A delete that names a version ID removes that version permanently. If CloudShell restarted, step 8 shows the ID as VersionId. The bucket is now empty.",
+     "command": "aws s3api delete-object --bucket saa-s3-t03-<SUFFIX> --key note.txt --version-id $V1"
+    },
+    {
+     "text": "Delete the empty bucket.",
+     "command": "aws s3api delete-bucket --bucket saa-s3-t03-<SUFFIX>"
+    }
+   ],
+   "verify": {
+    "command": "aws s3api head-bucket --bucket saa-s3-t03-<SUFFIX>",
+    "expect": "An error that shows 404 (Not Found): the bucket no longer exists."
+   },
+   "still_costs": [
+    "Every version left in a versioned bucket is billed as storage, because S3 charges for each version of an object. If delete-bucket fails, list the versions of the bucket with list-object-versions and delete each entry by its version ID."
+   ],
+   "facts": [
+    "s3-versioning-off-by-default",
+    "s3-delete-marker-soft-delete",
+    "s3-versioning-get-delete-marker-404",
+    "s3-versioning-preserves-on-overwrite-and-delete",
+    "s3-versioning-delete-with-version-id-permanent",
+    "s3-delete-specific-version-needs-version-id",
+    "s3-versioning-every-version-billed",
+    "s3-faq-no-minimum-charge",
+    "s3-versioning-delete-the-delete-marker-restores"
+   ],
+   "sources": [
+    {
+     "title": "Enabling versioning on buckets",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html"
+    },
+    {
+     "title": "Restoring previous versions",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/RestoringPreviousVersions.html"
+    },
+    {
+     "title": "Deleting object versions from a versioning-enabled bucket",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html"
+    },
+    {
+     "title": "Listing objects in a versioning-enabled bucket",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/list-obj-version-enabled-bucket.html"
+    },
+    {
+     "title": "Getting started with Amazon S3 using the AWS CLI",
+     "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/GettingStartedS3CLI.html"
+    }
+   ],
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

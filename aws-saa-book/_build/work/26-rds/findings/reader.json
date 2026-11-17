@@ -1,0 +1,215 @@
+{
+ "lens": "reader",
+ "chapter": "26",
+ "findings": [
+  {
+   "id": "reader-01",
+   "file": "26-rds/3-do.md",
+   "section": "whole file; also 4-say.md, 1-fast.md Look first, and the two Try it callouts of 2-deep.md",
+   "quote": "# Amazon RDS: do it\n\nNothing here yet.",
+   "type": "empty-generated-file",
+   "severity": "blocking",
+   "evidence": "TOOLS-items.md line 21: only items with status ready are printed. data/26-rds/tasks.json (rds-t01, rds-t02, rds-t03), speak.json (rds-s01 to rds-s04) and cards.json (rds-c001 to rds-c032) are all status candidate, although the tasks, speak and cards stages are pass. TOOLS-rules.md R5 (line 149): a reviewer sets cards, speak items and tasks to ready in the stage of that kind. Effect for the reader: 3-do.md and 4-say.md say 'Nothing here yet.', the 1-fast.md 'Look first (3 min)' section has an empty task region (<!-- task:start id=rds-t01 --> <!-- task:end -->), and both '> **Try it:** ... See [3-do.md](3-do.md)' links in 2-deep.md lead to an empty page. She needs the spoken answers this week (READER.md). Fix: run the item lints, set the clean items to ready, then sync 26.",
+   "status": "fixed",
+   "resolution": "fix-26: item lints (--ship) clean after the fixes; 32 cards, 4 speak items and 3 tasks set ready; sync 26 wrote 3-do.md, 4-say.md and the rds-t01 region in 1-fast.md Look first; both Try it links now lead to printed tasks; sync --check clean."
+  },
+  {
+   "id": "reader-02",
+   "file": "26-rds/1-fast.md",
+   "section": "Check, Check 1",
+   "quote": "**Check 1.** A team wants its RDS for PostgreSQL copy to fail over automatically and to take read traffic. Is a Multi-AZ DB instance enough?",
+   "type": "check-answerable-from-skim",
+   "severity": "should",
+   "evidence": "READER.md: 'questions must test what the gist misses'. The skim alone answers it: the compare table row 'Serves reads? | No: a Multi-AZ standby cannot serve read requests' and the first trap in bold give the answer word for word. Ask what the gist misses instead, for example the engine limit of a Multi-AZ DB cluster (rds-multi-az-cluster-engines-mysql-postgresql: not available for Db2, MariaDB, Oracle or SQL Server), or a case where the reads may be slightly stale versus must be current.",
+   "status": "fixed",
+   "resolution": "fix-26: Check 1 now asks: 'A team runs RDS for SQL Server. It wants automatic failover and copies that also take read traffic. Can it use a Multi-AZ DB cluster?' Answer: no, clusters run MySQL or PostgreSQL; use a Multi-AZ DB instance plus a read replica. The fast file teaches the engine limit in the first signal row's guard ('a Multi-AZ DB cluster (MySQL or PostgreSQL)'), so the Check stays inside the fast file but tests what the skim misses."
+  },
+  {
+   "id": "reader-03",
+   "file": "26-rds/2-deep.md",
+   "section": "The instance class sets compute and the storage type sets IOPS (3 min), Stop and answer",
+   "quote": "**Stop and answer.** A reporting database is slow at peak. CPU use is moderate, but ReadIOPS is high. What does the best practice suggest first?",
+   "type": "leap-no-cause-effect",
+   "severity": "should",
+   "evidence": "The subsection never explains why high ReadIOPS points to memory: reads that miss the memory cache go to storage, so ReadIOPS rise when the working set does not fit in memory. Without that step, the same subsection's own signal ('\"I/O-intensive\" points to Provisioned IOPS') leads her to the opposite answer. Fact rds-bp-working-set-in-memory (claim: 'to check, the ReadIOPS metric should be small and stable while the DB instance is under load') supports the missing step; add it to step 2 of the list.",
+   "status": "fixed",
+   "resolution": "fix-26: step 2 adds 'ReadIOPS that rise under load mean that it no longer fits.' (the check in rds-bp-working-set-in-memory). The verified question rds-q022 (memory-optimized class for the working set) now ships and tests this step."
+  },
+  {
+   "id": "reader-04",
+   "file": "26-rds/2-deep.md",
+   "section": "RDS Proxy shares a small pool of connections among many clients (4 min), Stop and answer",
+   "quote": "**Stop and answer.** A database has max_connections set to 1,000, and its proxy has MaxConnectionsPercent set to 95. How many database connections can the proxy open?",
+   "type": "term-before-explained",
+   "severity": "should",
+   "evidence": "MaxConnectionsPercent appears for the first time inside the question; the steps above it only say the proxy 'queues or throttles application connections'. Rule: STYLE.md, one term per concept, introduced before use. Add one sentence to step 4: the setting MaxConnectionsPercent caps the proxy's share of max_connections (rds-proxy-max-connections-percent-example).",
+   "status": "fixed",
+   "resolution": "fix-26: step 4 now opens with 'The setting MaxConnectionsPercent caps its share of max_connections.' before the Stop and answer uses it."
+  },
+  {
+   "id": "reader-05",
+   "file": "26-rds/2-deep.md",
+   "section": "Encryption at rest is chosen at creation and covers every copy (4 min)",
+   "quote": "Why is encryption cheap to turn on? RDS uses the [AES-256 encryption algorithm](../facts/rds.md#rds-encryption-aes256-transparent) on the host, and clients need no change.",
+   "type": "misleading-wording",
+   "severity": "should",
+   "evidence": "'cheap' reads as a cost claim; the answer is about effort and transparency, not price, and the algorithm name is not a reason. The fact rds-encryption-aes256-transparent says RDS 'handles access authentication and decryption transparently with minimal performance impact, so client applications need no changes'. Rewrite: 'Why does encryption need no change in the application? RDS encrypts and decrypts on the host, transparently, with minimal performance impact.'",
+   "status": "fixed",
+   "resolution": "fix-26: the line now reads 'Why do clients need no change? RDS uses the [AES-256 encryption algorithm] transparently on the host.'"
+  },
+  {
+   "id": "reader-06",
+   "file": "26-rds/2-deep.md",
+   "section": "A read replica in another Region can be promoted after a disaster (4 min), figure rds-dr-ladder",
+   "quote": "![A decision ladder with four questions. Losing an Availability Zone leads to Multi-AZ; too many reads leads to a read replica; losing the Region leads to a cross-Region read replica; undoing a bad change leads to a point-in-time restore; keeping a copy for years leads to manual snapshots.]",
+   "type": "caption-error",
+   "severity": "should",
+   "evidence": "The alt text says 'four questions' and then lists five branches (zone, reads, Region, bad change, years). READER.md: captions must give a correct gist on their own. Check the diagram spec diagrams/src/rds-dr-ladder.json and make the count match.",
+   "status": "fixed",
+   "resolution": "fix-26: the spec has four rungs and an else outcome. Alt text changed in the spec and in 2-deep.md to 'A ladder of four questions and a last answer: zone failure, Multi-AZ; too many reads, read replica; Region failure, cross-Region read replica; bad change, point-in-time restore; otherwise, manual snapshots for years.' SVG rebuilt (diagram build); diagrams gate passes."
+  },
+  {
+   "id": "reader-07",
+   "file": "data/26-rds/speak.json",
+   "section": "rds-s04, sixty_second line 7 (printed in 4-say.md once ready)",
+   "quote": "If an agent must run on the host, keep that database on EC2.",
+   "type": "contradiction-across-files",
+   "severity": "should",
+   "evidence": "Quiz Question 10 (rds-q006) and card rds-c032 teach the opposite for the same need: a vendor agent on the host plus managed administration points to RDS Custom (rds-custom-vs-rds-vs-ec2: 'If you need administrative rights to the database and underlying operating system ... Amazon RDS Custom is the better choice'). For PostgreSQL the spoken answer may be right (the verified facts name only RDS Custom for Oracle and for SQL Server: rds-change-custom-oracle-end-of-support, rds-proxy-not-rds-custom-sqlserver; the engine list itself is not verified), but the chapter never states which engines RDS Custom supports, so she reads a contradiction. Either ground the engine scope of RDS Custom (no verified fact yet: request one) and say it in 2-deep.md step 4 and in s04, or have s04 name RDS Custom 'where your engine supports it'.",
+   "status": "fixed",
+   "resolution": "fix-26: second option taken, since the engine-list fact is not verified (request fr-0086). rds-s04 now says 'If an agent needs the host, check RDS Custom for your engine, or use EC2.' and its correction says 'or RDS Custom if it runs your engine'. 2-deep.md step 4 and the 1-fast.md trap and signal guard say the same. Card rds-c032 is scoped to a SQL Server database, which matches q006 (packaged SQL Server application)."
+  },
+  {
+   "id": "reader-08",
+   "file": "data/26-rds/speak.json",
+   "section": "rds-s01 (persona Ana)",
+   "quote": "It works like this. The second database is a standby in another Availability Zone of our Region.",
+   "type": "persona-register",
+   "severity": "should",
+   "evidence": "STARTUP.md line 37: Ana 'uses no AWS terms and asks you to explain each term that you use'. The 60-second answer uses 'Availability Zone', 'Region' and 'Amazon RDS' without a plain explanation. Add a short gloss the first time, for example 'another Availability Zone, a separate data center site in the same Region'.",
+   "status": "fixed",
+   "resolution": "fix-26: rds-s01 line 2 now reads 'It works like this. The standby runs in another Availability Zone: a separate, isolated location.' (the word 'Region' is gone from the script; 'data center' is an avoid term of this item, P107), and line 4 says 'AWS switches' instead of 'Amazon RDS switches'. 60-second answer stays inside 105 to 145 words."
+  },
+  {
+   "id": "reader-09",
+   "file": "data/26-rds/cards.json",
+   "section": "rds-c008, rds-c019, rds-c021, rds-c026, rds-c030 (and rds-c006)",
+   "quote": "In Amazon RDS, an IAM database authentication token has a lifetime of {{c1::15 minutes}}.",
+   "type": "card-not-taught-in-section",
+   "severity": "should",
+   "evidence": "Each card names a section that does not teach its content: c008 (IAM DB auth token, fact rds-iam-auth-token-lifetime) points to the encryption section, which never mentions IAM database authentication; c019 (Blue/Green) points to the Multi-AZ section; c021 (no failover on deadlocks, rds-multi-az-no-failover-db-operations) points to the failover section; c026 (writable MySQL replica) points to the read replica section; c030 (AWS managed key snapshot cannot be shared, rds-share-default-kms-key-not-shareable) points to the snapshots section; c006 (7-day stop) points to the instance class section. A card whose 'review' link leads to a section without the answer leaves her nowhere to look under stress. Teach each point in its section (see exam findings exam-03, exam-04, exam-05) or move the card to a section that has it.",
+   "status": "fixed",
+   "resolution": "fix-26: each section now teaches its card: c019 (blue/green, Multi-AZ DB instance trap), c021 (failover step 1: no failover for long running queries, deadlocks or corruption errors), c026 (Go deeper 'a writable replica' in the read replica subsection), c030 (snapshot trap: default KMS key snapshot cannot be shared, copy with a customer managed key), c006 and c031 (instance class step 5, stop when idle). c008 was replaced by a Multi-AZ DB cluster engine card taught in that subsection."
+  },
+  {
+   "id": "reader-10",
+   "file": "26-rds/1-fast.md",
+   "section": "Check, Check 3",
+   "quote": "**Check 3.** An application on two EC2 instances keeps its own pool of 20 long-lived connections. Does it need RDS Proxy?",
+   "type": "check-answerable-from-skim",
+   "severity": "note",
+   "evidence": "The signals table 'But not if' cell for RDS Proxy ('latency matters more than pooling: connect directly') gives most of the answer at skim level. READER.md: questions test what the gist misses.",
+   "status": "fixed",
+   "resolution": "fix-26: the signals row guard changed (exam-06) to 'reads drive the CPU and connections are few: a read replica', so the table no longer gives Check 3's answer; Check 3 now tests the latency and pool trade-off that only the reveal and 2-deep teach."
+  },
+  {
+   "id": "reader-11",
+   "file": "26-rds/2-deep.md",
+   "section": "The instance class sets compute and the storage type sets IOPS (3 min), storage table",
+   "quote": "| io2 Block Express | [High-performance OLTP workloads](../facts/rds.md#rds-storage-choice-oltp-moderate) |",
+   "type": "term-before-explained",
+   "severity": "note",
+   "evidence": "OLTP appears in the table, and the definition ('OLTP is online transaction processing.') comes in the paragraph after it. Move the definition above the table.",
+   "status": "fixed",
+   "resolution": "fix-26: 'OLTP is online transaction processing.' now stands directly above the storage table."
+  },
+  {
+   "id": "reader-12",
+   "file": "data/26-rds/speak.json",
+   "section": "rds-s03, sixty_second line 10",
+   "quote": "Session settings can pin a connection, and then other clients can't share it.",
+   "type": "term-not-taught",
+   "severity": "note",
+   "evidence": "Pinning is not taught anywhere in 2-deep.md, so a follow-up 'what is pinning?' finds no support in the chapter. Fact rds-proxy-pinning-reduces-reuse exists; either add one line to the RDS Proxy subsection or drop the term from the spoken answer.",
+   "status": "fixed",
+   "resolution": "fix-26: pinning dropped from rds-s03 (line 9 'The thing to watch is cost.', line 10 'And if the CPU is high from reads, the proxy does not help.', skeleton cue 'cost per database vCPU', nice point kp6 removed). 2-deep.md is at its 4,500-word limit, so no line was added there."
+  },
+  {
+   "id": "reader-13",
+   "file": "26-rds/1-fast.md",
+   "section": "Check, answer to Predict 2",
+   "quote": "**Predict 2:** Yes. A restore reaches [any second during your retention period](../facts/rds.md#rds-faq-pitr-any-second-latest-restorable).",
+   "type": "missing-condition",
+   "severity": "note",
+   "evidence": "The answer is yes only when automated backups are on: 'setting the backup retention period to 0 disables automated backups' (rds-backup-retention-range, used in 2-deep.md Spot the bug). Add 'if automated backups are on'.",
+   "status": "fixed",
+   "resolution": "fix-26: the answer now reads 'Predict 2: Yes, if automated backups are on.'"
+  },
+  {
+   "id": "reader-14",
+   "file": "26-rds/2-deep.md",
+   "section": "Decision record",
+   "quote": "**Decision.** RDS for PostgreSQL, Multi-AZ, with automated backups. DynamoDB would change the code.",
+   "type": "incomplete-reasoning",
+   "severity": "note",
+   "evidence": "The record rejects the DynamoDB option with a reason but gives none for 'A second database instance with replication that Ben builds' (STARTUP.md line 38: Ben 'distrusts everything that he must operate at night'). The section is also over its budget (lint W201: 348 words, limit 280); the numbered list under the after figure repeats the figure caption and can be cut to make room for the missing reason.",
+   "status": "fixed",
+   "resolution": "fix-26: the Decision now gives both reasons: 'Ben's own replication means night work, and DynamoDB means new code.' The numbered lists must equal the diagram spec steps (L703), so they stay; the before and after alt texts and two step sentences were shortened in the specs (rebuilt), and the section dropped from 357 to 312 words (W201 still warns at 280)."
+  },
+  {
+   "id": "reader-15",
+   "file": "26-rds/2-deep.md",
+   "section": "On failover RDS points the same endpoint at the standby; A read replica receives changes later; A read replica in another Region (Stop and answer)",
+   "quote": "1. **RDS detects the failure.** For example, [Loss of network connectivity to primary](../facts/rds.md#rds-faq-multiaz-failover-triggers) or a zone outage.",
+   "type": "display-capitalization",
+   "severity": "note",
+   "evidence": "Verbatim displays keep a capital letter in mid-sentence: 'For example, [Loss of network ...]', 'for [Business reporting or data warehousing scenarios]', 'RDS uses [Automatic failover to standby]'. For a second-language reader this looks like an error. Rephrase around the display (put it at the start of a sentence or after a colon), since a number-free display must stay verbatim (RULINGS 2026-10-11).",
+   "status": "fixed",
+   "resolution": "fix-26: the three link texts are now lowercase ('loss of network connectivity to primary', 'business reporting or data warehousing scenarios', 'automatic failover to standby'); the display comparison ignores case (1-fast.md already linked 'automatic failover to standby' in lowercase and passes L303), and the words stay verbatim."
+  },
+  {
+   "id": "reader-16",
+   "file": "26-rds/2-deep.md",
+   "section": "Numbers that decide answers",
+   "quote": "| [up to 66%](../facts/rds-proxy.md#rds-proxy-failover-66-percent) | Shorter failover with RDS Proxy | \"Reduce failover time\" points to the proxy |\n### B-list",
+   "type": "markdown-layout",
+   "severity": "note",
+   "evidence": "Both number tables run straight into the next heading without a blank line ('### B-list' and '## Decision record'). Some Markdown renderers read the heading as a table row. Add a blank line after each table.",
+   "status": "fixed",
+   "resolution": "fix-26: blank line added after the A-list table. The B-list (three numbers that the subsections already teach with links) was removed to keep 2-deep.md within its 4,500-word limit after the fixes, so its table no longer runs into the Decision record heading."
+  },
+  {
+   "id": "reader-17",
+   "file": "26-rds/2-deep.md",
+   "section": "Encryption at rest is chosen at creation and covers every copy (4 min), step 4",
+   "quote": "To require it, you change a parameter.",
+   "type": "vague-mechanism",
+   "severity": "note",
+   "evidence": "The parameter is not named in the prose; only task rds-t03 names rds.force_ssl, and that task is not printed (reader-01). Name it: for PostgreSQL, rds.force_ssl (fact rds-tls-force-postgresql).",
+   "status": "fixed",
+   "resolution": "fix-26: step 4 names it: 'On RDS for PostgreSQL, `rds.force_ssl` requires it, and it is on by default from [version 15 and later].' (see claims-04)."
+  },
+  {
+   "id": "reader-18",
+   "file": "data/26-rds/tasks.json",
+   "section": "rds-t01 (1-fast.md Look first)",
+   "quote": "\"minutes\": 4",
+   "type": "time-box-and-value",
+   "severity": "note",
+   "evidence": "The section heading says 'Look first (3 min)' and the task says 4 minutes. The task also kills a weak belief ('Amazon RDS is a database that you install and configure yourself') by reading a quota and two True flags; a read of MultiAZCapable False for some class, or of the backup retention of an existing instance, would teach a decision. Align the time box at least.",
+   "status": "fixed",
+   "resolution": "fix-26: rds-t01 minutes set to 3, equal to the 'Look first (3 min)' time box. The task content was kept (read-only Look; its commands are in the CLI report)."
+  },
+  {
+   "id": "reader-19",
+   "file": "data/26-rds/tasks.json",
+   "section": "rds-t02, step 5 explain",
+   "quote": "The RDS FAQ asks for more: [at least one subnet for every Availability Zone](../facts/rds.md#rds-faq-subnet-group-every-az) of the Region.",
+   "type": "confusing-rule",
+   "severity": "note",
+   "evidence": "The FAQ quote says a group 'should have' a subnet in every zone (a recommendation); the API refuses fewer than two zones (a requirement). 'asks for more' blurs the two right after the refused request. Say: 'The API requires two zones; the FAQ recommends a subnet in every zone of the Region.'",
+   "status": "fixed",
+   "resolution": "fix-26: rds-t02 step 5 explain now ends 'The API requires two zones; the RDS FAQ also recommends [at least one subnet for every Availability Zone] of the Region.'"
+  }
+ ]
+}

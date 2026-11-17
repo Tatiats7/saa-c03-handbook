@@ -1,0 +1,154 @@
+[
+ {
+  "id": "detection-t02",
+  "type": "try",
+  "title": "Turn on GuardDuty without creating any logs",
+  "kills": "\"GuardDuty needs VPC Flow Logs and a CloudTrail trail that you turn on first.\"",
+  "trap": "detection-trap-guardduty-needs-log-setup",
+  "section": "2-deep.md#guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+  "pass_route": true,
+  "minutes": 10,
+  "cost": "$0 in the 30-day free trial, which starts the first time an account uses GuardDuty in a Region. An account past its trial pays by the volume of logs and events that GuardDuty analyzes.",
+  "cost_if_forgotten": "$0 a day while the free trial lasts. After the trial, the detector adds charges by the volume of logs and events that it analyzes.",
+  "cost_facts": [
+   "guardduty-pricing-based-on-volume-analyzed"
+  ],
+  "permissions": [
+   "guardduty:ListDetectors",
+   "ec2:DescribeFlowLogs",
+   "cloudtrail:DescribeTrails",
+   "guardduty:CreateDetector",
+   "guardduty:TagResource",
+   "iam:CreateServiceLinkedRole",
+   "guardduty:GetDetector",
+   "guardduty:DeleteDetector",
+   "tag:GetResources"
+  ],
+  "read_only_alternative": "Use this when GuardDuty is already on in the Region or you cannot create a detector. It changes nothing. Get the detector ID with aws guardduty list-detectors and use it as <DETECTOR_ID>. Read the data sources: aws guardduty get-detector --detector-id <DETECTOR_ID> --query \"Features[].[Name,Status]\" and compare them with aws ec2 describe-flow-logs --query \"FlowLogs[].FlowLogId\". FLOW_LOGS shows ENABLED even when the flow log list is empty. Then list the findings with aws guardduty list-findings --detector-id <DETECTOR_ID> and read one with aws guardduty get-findings --detector-id <DETECTOR_ID> --finding-ids <FINDING_ID>.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Check that GuardDuty is off in this Region. If the list shows a detector ID, stop and use the read-only alternative: the cleanup would delete that detector and its findings.",
+    "command": "aws guardduty list-detectors",
+    "expect": "\"DetectorIds\": [], an empty list.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "List the VPC flow logs in this Region. You create no flow log in this task.",
+    "command": "aws ec2 describe-flow-logs --query \"FlowLogs[].FlowLogId\"",
+    "expect": "A list of flow log IDs, often empty in a test account. Note the result.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "List the CloudTrail trails that this Region can see. You create no trail in this task.",
+    "command": "aws cloudtrail describe-trails --query \"trailList[].Name\"",
+    "expect": "A list of trail names, often empty in a test account.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Turn on GuardDuty in this Region: create a detector with the two book tags. Keep its ID.",
+    "command": "aws guardduty create-detector --enable --tags book=saa,task=detection-t02",
+    "capture": {
+     "name": "DETECTOR_ID",
+     "query": "DetectorId"
+    },
+    "expect": "No output. DETECTOR_ID now holds the ID of the new detector.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read which data sources the new detector analyzes.",
+    "command": "aws guardduty get-detector --detector-id $DETECTOR_ID --query \"Features[].[Name,Status]\"",
+    "expect": "Pairs of a feature name and a status. FLOW_LOGS, CLOUD_TRAIL and DNS_LOGS show ENABLED. Some optional protection plans can also show ENABLED, because GuardDuty turns some of them on automatically.",
+    "break_it": true,
+    "predict": "You turned on no flow log and no trail for GuardDuty. Will FLOW_LOGS and CLOUD_TRAIL show ENABLED or DISABLED?",
+    "explain": "GuardDuty [pulls independent data streams directly](../facts/guardduty.md#guardduty-faq-no-need-to-enable-source-logs) from CloudTrail, VPC Flow Logs and DNS query logs. [You don't need to create or configure](../facts/guardduty.md#guardduty-flow-logs-not-required) VPC flow logs for GuardDuty to read flow log data. [GuardDuty does not manage or retain your logs](../facts/guardduty.md#guardduty-does-not-retain-logs): the data is [analyzed in near real time and discarded thereafter](../facts/guardduty.md#guardduty-does-not-retain-logs)."
+   },
+   {
+    "text": "No fix is needed: GuardDuty works without your logs. List the flow logs again to check that GuardDuty added none.",
+    "command": "aws ec2 describe-flow-logs --query \"FlowLogs[].FlowLogId\"",
+    "expect": "The same list as in step 2.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the detector. This turns GuardDuty off in this Region and deletes the findings of the detector.",
+    "command": "aws guardduty delete-detector --detector-id $DETECTOR_ID"
+   }
+  ],
+  "verify": {
+   "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=detection-t02 --query \"ResourceTagMappingList[].ResourceARN\"",
+   "expect": "An empty list. Then run aws guardduty list-detectors as well: DetectorIds shows an empty list. If it shows an ID, run the cleanup again."
+  },
+  "still_costs": [
+   "Nothing after the cleanup. A detector that stays on costs $0 a day during the free trial. After the trial, it adds charges by the volume of logs and events analyzed, also for the protection plans that are on.",
+   "GuardDuty can create the service-linked roles AWSServiceRoleForAmazonGuardDuty and AWSServiceRoleForAmazonGuardDutyMalwareProtection. They stay after the cleanup. IAM roles have no charge.",
+   "If the CloudShell session ended before the cleanup, DETECTOR_ID is empty. Find the ID again with aws guardduty list-detectors."
+  ],
+  "facts": [
+   "guardduty-faq-no-need-to-enable-source-logs",
+   "guardduty-flow-logs-not-required",
+   "guardduty-does-not-change-cloudtrail-config",
+   "guardduty-does-not-retain-logs",
+   "guardduty-faq-independent-of-resources",
+   "guardduty-foundational-sources-list",
+   "guardduty-detector-one-per-region",
+   "guardduty-disable-deletes-findings",
+   "guardduty-free-trial-30-days-per-region",
+   "guardduty-pricing-based-on-volume-analyzed",
+   "iam-offered-at-no-additional-charge",
+   "guardduty-first-enable-all-plans-except-runtime"
+  ],
+  "sources": [
+   {
+    "title": "GuardDuty examples using AWS CLI (create-detector, get-detector, delete-detector)",
+    "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_guardduty_code_examples.html"
+   },
+   {
+    "title": "Getting started with GuardDuty",
+    "url": "https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_settingup.html"
+   },
+   {
+    "title": "GuardDuty foundational data sources",
+    "url": "https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_data-sources.html"
+   },
+   {
+    "title": "Mapping dataSources to features (FLOW_LOGS, CLOUD_TRAIL, DNS_LOGS)",
+    "url": "https://docs.aws.amazon.com/guardduty/latest/ug/guardduty-feature-object-api-changes-march2023.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: create-detector",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/guardduty/create-detector.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: get-detector",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/guardduty/get-detector.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: delete-detector",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/guardduty/delete-detector.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: describe-flow-logs",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-flow-logs.html"
+   },
+   {
+    "title": "AWS CLI Command Reference: describe-trails",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudtrail/describe-trails.html"
+   },
+   {
+    "title": "Resource Groups Tagging API Reference: supported services",
+    "url": "https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/Welcome.html"
+   }
+  ],
+  "chapter": "detection",
+  "status": "candidate",
+  "rev": 1,
+  "label": "checked against docs, not run in a real account",
+  "checked": "2026-10-12"
+ }
+]

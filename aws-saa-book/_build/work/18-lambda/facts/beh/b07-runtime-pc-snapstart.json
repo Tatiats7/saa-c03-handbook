@@ -1,0 +1,308 @@
+[
+ {
+  "id": "lambda-lifecycle-phases",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "An execution environment goes through an Init phase (Lambda starts extensions, bootstraps the runtime and runs the function's static code), an Invoke phase (Lambda sends an Invoke event to the runtime and each extension) and a Shutdown phase (Lambda sends a Shutdown event to each registered external extension before it shuts the runtime down).",
+  "question": "What are the phases of the Lambda execution environment lifecycle?",
+  "values": [
+   {"key": "init", "display": "Init phase", "spoken": "the init phase"},
+   {"key": "invoke", "display": "sends an Invoke event to the runtime"},
+   {"key": "shutdown", "display": "sends a Shutdown event"}
+  ],
+  "qualifiers": {"scope": "per execution environment", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/lambda-runtime-environment", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html", "quote": "In the `Init` phase, Lambda performs three tasks: Start all extensions (`Extension init`) Bootstrap the runtime (`Runtime init`) Run the function's static code (`Function init`)", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/lambda-runtime-environment", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html", "quote": "When a Lambda function is invoked in response to a `Next` API request, Lambda sends an `Invoke` event to the runtime and to each extension.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/lambda-runtime-environment", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html", "quote": "When Lambda is about to shut down the runtime, it sends a `Shutdown` event to each registered external extension.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-invoke-phase-limited-by-timeout",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "The function's timeout setting limits the duration of the entire Invoke phase, so the function and all extensions must complete within the timeout.",
+  "question": "What does a Lambda function's timeout setting limit?",
+  "values": [
+   {"key": "limit", "display": "limits the duration of the entire Invoke phase", "spoken": "the timeout covers the whole invoke phase"},
+   {"key": "extensions", "display": "the function and all extensions"}
+  ],
+  "qualifiers": {"scope": "per invocation", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/lambda-runtime-environment", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html", "quote": "The function's timeout setting limits the duration of the entire `Invoke` phase. For example, if you set the function timeout as 360 seconds, the function and all extensions need to complete within 360 seconds.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-pc-not-latest-no-cold-start",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "A function using provisioned concurrency does not show cold start behavior because the execution environment is prepared ahead of invocation, but provisioned concurrency must be applied to a specific version or alias of a function, not the $LATEST version.",
+  "question": "Can provisioned concurrency be configured on $LATEST, and does it remove cold starts?",
+  "values": [
+   {"key": "where", "display": "a specific version or alias of a function", "spoken": "a published version or an alias"},
+   {"key": "not-latest", "display": "not the $LATEST version"},
+   {"key": "cold", "display": "does not exhibit cold start behavior"}
+  ],
+  "qualifiers": {"scope": "provisioned concurrency", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/provisioned-concurrency", "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html", "quote": "A function using provisioned concurrency does not exhibit cold start behavior since the execution environment is prepared ahead of invocation. However, provisioned concurrency must be applied to a specific version or alias of a function, not the $LATEST version.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5", "3.2.S4"]
+ },
+ {
+  "id": "lambda-pc-event-source-alias",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "If a function has an event source, the event source must point to the alias or version that has provisioned concurrency; otherwise the function does not use the provisioned concurrency environments.",
+  "question": "Why might an event source not benefit from a function's provisioned concurrency?",
+  "values": [
+   {"key": "point", "display": "points to the correct function alias or version", "spoken": "point the event source at the right alias or version"},
+   {"key": "otherwise", "display": "won't use provisioned concurrency environments"}
+  ],
+  "qualifiers": {"scope": "provisioned concurrency with an event source", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/provisioned-concurrency", "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html", "quote": "If your function has an event source, make sure that event source points to the correct function alias or version. Otherwise, your function won't use provisioned concurrency environments.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-pc-auto-scaling-target-utilization",
+  "service": "lambda", "home_chapter": "18", "kind": "capability",
+  "claim": "Application Auto Scaling can adjust the provisioned concurrency of an alias to keep utilization near a target value, for example 70 percent, and any target between 10% and 90% can be used.",
+  "question": "How can provisioned concurrency follow demand automatically, and what target utilization values are allowed?",
+  "values": [
+   {"key": "example", "display": "near 70 percent", "spoken": "about seventy percent"},
+   {"key": "range", "display": "between 10% and 90%", "spoken": "ten to ninety percent"}
+  ],
+  "qualifiers": {"scope": "provisioned concurrency with Application Auto Scaling, per alias", "default_or_max": "", "adjustable": true, "condition": "target tracking scaling policy"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/provisioned-concurrency", "url": "https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html", "quote": "Apply a scaling policy to the target. The following example configures Application Auto Scaling to adjust the provisioned concurrency configuration for an alias to keep utilization near 70 percent, but you can apply any value between 10% and 90%.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5", "3.2.S4"]
+ },
+ {
+  "id": "lambda-pc-scales-beyond-setting",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "Provisioned concurrency is the number of pre-initialized execution environments Lambda allocates to a function; Lambda serves requests with them when available and can also scale the function above the provisioned concurrency setting if required.",
+  "question": "What happens to requests above a function's provisioned concurrency?",
+  "values": [
+   {"key": "what", "display": "pre-initialized execution environments", "spoken": "environments that are already initialized"},
+   {"key": "beyond", "display": "above and beyond your provisioned concurrency setting"}
+  ],
+  "qualifiers": {"scope": "provisioned concurrency", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/best-practices", "url": "https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html", "quote": "Provisioned concurrency is the number of pre-initialized execution environments that Lambda allocates to your function. Lambda handles incoming requests using provisioned concurrency when available. Lambda can also scale your function above and beyond your provisioned concurrency setting if required.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-snapstart-published-versions-only",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "SnapStart can be used only on published function versions and on aliases that point to versions, not on the unpublished version ($LATEST); Lambda runs the initialization when you publish a function version.",
+  "question": "On which function versions can SnapStart be used, and when does Lambda initialize a SnapStart function?",
+  "values": [
+   {"key": "only", "display": "only on published function versions", "spoken": "only on published versions and their aliases"},
+   {"key": "latest", "display": "can't use SnapStart on a function's unpublished version"},
+   {"key": "publish", "display": "when you publish a function version"}
+  ],
+  "qualifiers": {"scope": "Lambda SnapStart", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "You can use SnapStart only on published function versions and aliases that point to versions. You can't use SnapStart on a function's unpublished version ($LATEST).", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "With SnapStart, Lambda initializes your function when you publish a function version.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-snapstart-unsupported-features",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "SnapStart does not support provisioned concurrency, Amazon EFS, Amazon S3 Files, or ephemeral storage greater than 512 MB.",
+  "question": "Which Lambda features cannot be combined with SnapStart?",
+  "values": [
+   {"key": "list", "display": "does not support provisioned concurrency", "spoken": "not with provisioned concurrency, EFS or large ephemeral storage"},
+   {"key": "tmp", "display": "ephemeral storage greater than 512 MB"}
+  ],
+  "qualifiers": {"scope": "Lambda SnapStart", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "SnapStart does not support provisioned concurrency, Amazon Elastic File System (Amazon EFS), Amazon S3 Files, or ephemeral storage greater than 512 MB.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "frequently-changing", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-snapstart-runtimes-guide",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "The guide lists SnapStart support for the managed runtimes Java 11 and later, Python 3.12 and later and .NET 8 and later, with the matching AWS base images, across both ZIP and container image deployment formats; other managed runtimes such as Node.js and Ruby, and OS-only runtimes, are not supported.",
+  "question": "Which runtimes and deployment formats support Lambda SnapStart according to the developer guide?",
+  "values": [
+   {"key": "java", "display": "Java 11 and later", "spoken": "Java eleven and later"},
+   {"key": "python", "display": "Python 3.12 and later"},
+   {"key": "dotnet", "display": ".NET 8 and later"},
+   {"key": "formats", "display": "across ZIP and container image deployment format"}
+  ],
+  "qualifiers": {"scope": "Lambda SnapStart", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "SnapStart supports the following Lambda managed runtimes and the corresponding AWS Lambda base images across ZIP and container image deployment format: Java 11 and later Python 3.12 and later .NET 8 and later.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "Other managed runtimes (such as `nodejs24.x` and `ruby4.0`) and OS-only runtimes are not supported.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "frequently-changing", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"],
+  "note": "The guide now says SnapStart works across ZIP and container image formats; older material says ZIP only. Record the guide as current truth."
+ },
+ {
+  "id": "lambda-snapstart-snapshot-encrypted-cached",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "For SnapStart, Lambda takes a Firecracker MicroVM snapshot of the memory and disk state of the initialized execution environment, encrypts it and caches it; it keeps several copies of each snapshot for resiliency and patches them with runtime and security updates automatically.",
+  "question": "What does Lambda do with a SnapStart snapshot after it takes it?",
+  "values": [
+   {"key": "snapshot", "display": "snapshot of the memory and disk state", "spoken": "a snapshot of memory and disk"},
+   {"key": "encrypt", "display": "encrypts the snapshot"},
+   {"key": "copies", "display": "maintains several copies of each snapshot"}
+  ],
+  "qualifiers": {"scope": "Lambda SnapStart", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "Lambda takes a Firecracker MicroVM snapshot of the memory and disk state of the initialized execution environment, encrypts the snapshot, and intelligently caches it to optimize retrieval latency.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "To ensure resiliency, Lambda maintains several copies of each snapshot. Lambda automatically patches snapshots and their copies with the latest runtime and security updates.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-snapstart-vs-pc-guide",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "SnapStart reduces one-time initialization latency from several seconds to as low as sub-second in optimal scenarios and works best at scale; provisioned concurrency keeps functions initialized and ready in double-digit milliseconds and is the choice when strict cold start latency requirements cannot be met by SnapStart.",
+  "question": "When should you choose provisioned concurrency over SnapStart?",
+  "values": [
+   {"key": "snapstart", "display": "as low as sub-second", "spoken": "down to under a second"},
+   {"key": "pc", "display": "ready to respond in double-digit milliseconds"},
+   {"key": "choice", "display": "strict cold start latency requirements"}
+  ],
+  "qualifiers": {"scope": "SnapStart versus provisioned concurrency", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "Use SnapStart to reduce this latency from several seconds to as low as sub-second, in optimal scenarios. SnapStart works best when used with function invocations at scale. Functions that are invoked infrequently might not experience the same performance improvements.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/snapstart", "url": "https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html", "quote": "Provisioned concurrency keeps functions initialized and ready to respond in double-digit milliseconds. Use provisioned concurrency if your application has strict cold start latency requirements that can't be adequately addressed by SnapStart.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5", "3.2.S4"]
+ },
+ {
+  "id": "lambda-layer-zip-contents",
+  "service": "lambda", "home_chapter": "18", "kind": "capability",
+  "claim": "A Lambda layer is a .zip file archive with supplementary code or data, usually library dependencies, a custom runtime or configuration files; Lambda extracts the layer contents into the /opt directory of the execution environment.",
+  "question": "What is a Lambda layer and where does its content appear at run time?",
+  "values": [
+   {"key": "what", "display": ".zip file archive that contains supplementary code","spoken": "a zip archive with extra code or data"},
+   {"key": "opt", "display": "into the /opt directory"}
+  ],
+  "qualifiers": {"scope": "Lambda layer", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/chapter-layers", "url": "https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html", "quote": "A Lambda layer is a .zip file archive that contains supplementary code or data. Layers usually contain library dependencies, a custom runtime, or configuration files.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/chapter-layers", "url": "https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html", "quote": "When you add a layer to a function, Lambda extracts the layer contents into the `/opt` directory in your function's execution environment.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-layer-version-immutable",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "A layer version is an immutable snapshot of a layer; each published update creates a new layer version with an incremented version number and its own ARN.",
+  "question": "What happens when you publish an update to a Lambda layer?",
+  "values": [
+   {"key": "immutable", "display": "an immutable snapshot","spoken": "each layer version is immutable"},
+   {"key": "new", "display": "creates a new layer version"}
+  ],
+  "qualifiers": {"scope": "Lambda layer version", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/chapter-layers", "url": "https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html", "quote": "A layer version is an immutable snapshot of a specific version of a layer. When you create a new layer, Lambda creates a new layer version with a version number of 1. Each time you publish an update to the layer, Lambda increments the version number and creates a new layer version.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/chapter-layers", "url": "https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html", "quote": "Every layer version is identified by a unique Amazon Resource Name (ARN).", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-layer-cross-account-policy",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "Layers can be shared across functions in your account, and to use a layer from another account, the owner of that account must grant your account permission in a resource-based policy.",
+  "question": "How can a Lambda function use a layer that belongs to another AWS account?",
+  "values": [
+   {"key": "share", "display": "any number of functions in your account","spoken": "share it across functions"},
+   {"key": "cross", "display": "grant your account permission"}
+  ],
+  "qualifiers": {"scope": "Lambda layer sharing", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/chapter-layers", "url": "https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html", "quote": "After you create a layer, you can apply it to any number of functions in your account.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/adding-layers", "url": "https://docs.aws.amazon.com/lambda/latest/dg/adding-layers.html", "quote": "To use a layer in another account, the owner of that account must grant your account permission in a resource-based policy.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-container-image-ecr-same-region",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "A container image function is created from an image in an Amazon ECR repository that must be in the same AWS Region as the function; the image can be in a different AWS account if it is in the same Region.",
+  "question": "Where must the container image for a Lambda function be stored?",
+  "values": [
+   {"key": "region", "display": "in the same AWS Region","spoken": "an ECR repository in the same Region"},
+   {"key": "account", "display": "an image in a different AWS account"}
+  ],
+  "qualifiers": {"scope": "Lambda function defined as a container image", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/images-create", "url": "https://docs.aws.amazon.com/lambda/latest/dg/images-create.html", "quote": "The Amazon ECR repository must be in the same AWS Region as the Lambda function. You can create a function using an image in a different AWS account, as long as the image is in the same Region as the Lambda function.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5", "2.1.K12"]
+ },
+ {
+  "id": "lambda-container-image-single-architecture",
+  "service": "lambda", "home_chapter": "18", "kind": "restriction",
+  "claim": "Lambda provides multi-architecture base images, but a function's image must target only one architecture; Lambda does not support functions that use multi-architecture container images.",
+  "question": "Can a Lambda container image function use a multi-architecture image?",
+  "values": [
+   {"key": "one", "display": "must target only one of the architectures", "spoken": "one architecture per image"},
+   {"key": "no-multi", "display": "multi-architecture container images"}
+  ],
+  "qualifiers": {"scope": "Lambda function defined as a container image", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/images-create", "url": "https://docs.aws.amazon.com/lambda/latest/dg/images-create.html", "quote": "Lambda provides multi-architecture base images. However, the image you build for your function must target only one of the architectures. Lambda does not support functions that use multi-architecture container images.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "reference",
+  "bullets": ["3.2.K5"]
+ },
+ {
+  "id": "lambda-runtime-patching-managed-vs-image",
+  "service": "lambda", "home_chapter": "18", "kind": "behavior",
+  "claim": "By default Lambda applies security updates automatically to functions that use managed runtimes, but for functions deployed as container images you are responsible for rebuilding the image from the latest base image and redeploying it.",
+  "question": "Who patches the runtime of a Lambda function deployed as a container image?",
+  "values": [
+   {"key": "managed", "display": "apply these updates automatically","spoken": "Lambda patches managed runtimes for you"},
+   {"key": "image", "display": "you're responsible for rebuilding your function's container image"}
+  ],
+  "qualifiers": {"scope": "runtime security updates", "default_or_max": "default", "adjustable": true, "condition": "default automatic runtime update setting"},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/lambda-runtimes", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html", "quote": "By default, Lambda will apply these updates automatically to functions using managed runtimes.", "table_header": null},
+   {"source_id": "docs/lambda/latest/dg/lambda-runtimes", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html", "quote": "For functions deployed using container images, you're responsible for rebuilding your function's container image from the latest base image and redeploying the container image.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": true, "tier0": true, "volatility": "stable", "changed": null, "exam_relevance": "core",
+  "bullets": ["3.2.K5", "2.1.K12"]
+ },
+ {
+  "id": "lambda-os-only-runtime-other-languages",
+  "service": "lambda", "home_chapter": "18", "kind": "capability",
+  "claim": "To use other languages in Lambda, such as Go or Rust, you use an OS-only runtime, and you can deploy other languages by implementing a custom runtime alongside the function code or in a layer.",
+  "question": "How do you run a language such as Go or Rust on Lambda?",
+  "values": [
+   {"key": "os-only", "display": "use an OS-only runtime", "spoken": "an OS-only runtime"},
+   {"key": "custom", "display": "implementing a custom runtime"}
+  ],
+  "qualifiers": {"scope": "Lambda runtimes", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "docs/lambda/latest/dg/lambda-runtimes", "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html", "quote": "To use other languages in Lambda, such as Go or Rust, use an OS-only runtime. The Lambda execution environment provides a runtime interface for getting invocation events and sending responses. You can deploy other languages by implementing a custom runtime alongside your function code, or in a layer.", "table_header": null}
+  ],
+  "source_tier": 1, "hard": false, "tier0": false, "volatility": "stable", "changed": null, "exam_relevance": "extended",
+  "bullets": ["3.2.K5"]
+ }
+]

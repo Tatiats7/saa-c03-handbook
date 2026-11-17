@@ -1,0 +1,91 @@
+{
+ "id": "cloudfront-q020",
+ "section": "2-deep.md#origin-access-control-keeps-the-bucket-private-and-lets-your-distribution-read-it",
+ "pool": "chapter",
+ "layer": "extended",
+ "domain": 3,
+ "task": "3.4",
+ "bullets": [
+  "3.4.K1"
+ ],
+ "topics": [
+  "security"
+ ],
+ "services": [
+  "cloudfront",
+  "s3",
+  "api-gateway",
+  "lambda"
+ ],
+ "concept": "oac-for-uploads-through-cloudfront",
+ "difficulty": 2,
+ "type": "single",
+ "select": 1,
+ "qualifier": "LEAST operational overhead",
+ "stem": "A company runs a photo-sharing mobile app. Users upload photos with HTTP PUT requests through an Amazon CloudFront distribution to an Amazon S3 bucket, and other users download the photos through the same distribution. The objects in the bucket are encrypted with server-side encryption with AWS KMS keys (SSE-KMS). The bucket must not be publicly accessible, and users must not reach the bucket directly. The company wants to restrict bucket access to the distribution. Which solution will meet these requirements with the LEAST operational overhead?",
+ "keywords": [
+  "upload photos with HTTP PUT requests through an Amazon CloudFront distribution",
+  "encrypted with server-side encryption with AWS KMS keys (SSE-KMS)",
+  "must not be publicly accessible",
+  "LEAST operational overhead"
+ ],
+ "options": [
+  {
+   "id": "a",
+   "text": "Configure an origin access identity (OAI) on the S3 origin, allow PUT in the cache behavior, and let the bucket policy and the AWS KMS key policy allow access by the OAI.",
+   "correct": false,
+   "why": "With SSE-KMS, [you must use OAC instead](../facts/s3.md#s3-website-sse-kms-needs-cloudfront-oac) of OAI, and OAI does not support [Dynamic requests (PUT, POST, or DELETE) to Amazon S3](../facts/cloudfront.md#cloudfront-oai-legacy-not-for-all-scenarios), so the uploads through CloudFront fail.",
+   "concept": "oai-for-uploads",
+   "trap": "cloudfront-trap-oai-is-current",
+   "misconception": null,
+   "distractor_type": "impossible-feature"
+  },
+  {
+   "id": "b",
+   "text": "Make the bucket policy allow public reads and writes, and change the app so that it sends every upload and download to the CloudFront domain name.",
+   "correct": false,
+   "why": "A public policy breaks the first requirement, and CloudFront needs none: with origin access control the bucket allows the [CloudFront service principal (cloudfront.amazonaws.com)](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal).",
+   "concept": "public-bucket-for-uploads",
+   "trap": "cloudfront-trap-public-bucket",
+   "misconception": null,
+   "distractor_type": "wrong-configuration"
+  },
+  {
+   "id": "c",
+   "text": "Send uploads to an Amazon API Gateway REST API with an AWS Lambda function that writes each photo to the bucket, and use origin access control for downloads.",
+   "correct": false,
+   "why": "It works, but it adds an API, a function and code for every upload, while origin access control lets CloudFront send the PUT requests to the bucket itself.",
+   "concept": "upload-api",
+   "trap": "how-the-exam-asks-trap-works-means-correct",
+   "misconception": null,
+   "distractor_type": "violates-qualifier"
+  },
+  {
+   "id": "d",
+   "text": "Configure origin access control on the S3 origin, allow PUT in the cache behavior, and let the bucket policy and the AWS KMS key policy allow access by the distribution.",
+   "correct": true,
+   "why": "Origin access control supports [Dynamic requests (PUT and DELETE) to Amazon S3](../facts/cloudfront.md#cloudfront-oac-supports-all-regions-dynamic-requests), and for SSE-KMS [you must use OAC instead](../facts/s3.md#s3-website-sse-kms-needs-cloudfront-oac) of OAI.",
+   "concept": "oac-for-uploads",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  }
+ ],
+ "explanation": "CloudFront reaches a private S3 origin through [origin access control (OAC) and origin access identity](../facts/cloudfront.md#cloudfront-oac-oai-two-ways-oac-recommended) (OAI), and two needs decide between them: [OAI doesn't support these features](../facts/cloudfront.md#cloudfront-oac-supports-all-regions-dynamic-requests), such as PUT requests, and with SSE-KMS [you must use OAC instead](../facts/s3.md#s3-website-sse-kms-needs-cloudfront-oac). The bucket policy allows CloudFront [only when the request is on behalf](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal) of the distribution, so the bucket stays private.",
+ "takeaway": "For PUT requests or SSE-KMS through CloudFront to a private bucket, choose origin access control over OAI.",
+ "twin": "If the stem said \"users only download photos through the distribution\" instead: still origin access control, the method that AWS recommends over the older origin access identity.",
+ "say": "Uploads and SSE-KMS through CloudFront need origin access control, because the older OAI handles neither.",
+ "facts": [
+  "cloudfront-oai-legacy-not-for-all-scenarios",
+  "cloudfront-oac-bucket-policy-cloudfront-service-principal",
+  "cloudfront-oac-supports-all-regions-dynamic-requests",
+  "cloudfront-oac-oai-two-ways-oac-recommended",
+  "s3-website-sse-kms-needs-cloudfront-oac"
+ ],
+ "sources": [],
+ "exam_english": [
+  "ee-restrict",
+  "ee-least-operational-overhead"
+ ],
+ "twin_of": null
+}

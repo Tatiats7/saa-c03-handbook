@@ -1,0 +1,23 @@
+{
+ "by": "tasks-14",
+ "date": "2026-10-13",
+ "file": "data/14-elb/tasks.json",
+ "tasks": ["elb-t01 look", "elb-t02 try (pass_route)", "elb-t03 try"],
+ "changes_from_brief": [
+  "elb-t02: no curl. T104 accepts curl only with an https:// URL, and an HTTPS listener needs a certificate that a learning account does not have. The task observes the rule order through describe-rules instead of HTTP responses. Because no client calls the load balancer, it is internal (no public IPv4 charge, no security group rule, no 0.0.0.0/0), created as in the create-load-balancer CLI example 2 (internal scheme, no --security-groups option). Cleanup deletes each rule and the listener before the load balancer, because T107 pairs every create with its own delete.",
+  "elb-t02: the title has no comma (the schema title pattern allows letters, digits, spaces and hyphens only): 'Route by path with listener rules and break the rule order'.",
+  "elb-t03: redesigned. The planned task registers an unreachable IP target, but register-targets is a create verb for T106 and takes no tag option, and it is not in SPEC tasks.untaggable_operations, so any register-targets step fails T106. The 503 and fail-open observations also needed curl over http. The task now creates only a target group ($0, no load balancer), reads the default health check settings and the deregistration delay, breaks it with an unhealthy threshold of 1 (rejected: the range is 2 to 10), and fixes it with a 10-second interval. kills is now 'The load balancer stops sending requests to a target after one failed health check.'; trap is null. The prose writer's Try it callout for elb-t03 in the health-checks subsection must describe this task, not the fail-open one.",
+  "elb-t03: the expect lines leave out the health check timeout. The ALB guide (fact elb-alb-health-check-timeout-default-5-seconds) says 5 seconds for instance and ip targets, but the create-target-group CLI reference (saved 2026-10-13) says 'For target groups with a protocol of HTTP, the default is 6 seconds.' A reviewer or registrar should look at this conflict."
+ ],
+ "for_the_orchestrator": [
+  "Contract gap: add register-targets (and deregister-targets is already a delete verb) to SPEC tasks.untaggable_operations, or teach T106 that register-* attaches a target and makes no taggable resource. Until then no task can register a target.",
+  "Contract gap: T104 allows curl only with https://, so no task can call an HTTP listener of a load balancer. Chapters 14, 17 and 29 meet this again."
+ ],
+ "fact_requests": {
+  "fr-0054": "Tagging API GetResources lists ELB resources (backs the verify of elb-t02 and elb-t03 under tasks.verify_rule)",
+  "fr-0055": "first matching rule's actions are performed (backs the elb-t02 break-it explain)",
+  "fr-0056": "TLS versions of ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09 and ELBSecurityPolicy-2016-08 (backs the elb-t01 expect lines)",
+  "fr-0057": "ALB hourly and LCU-hour price in one Region (would let the elb-t02 cost line show an amount; today it says 'More than $0' with the billing dimensions)"
+ },
+ "checks": "tasks lint 14: 0 errors, 0 warnings; tasks check-cli 14 --reference: 24 commands ok (awscli 1.46.1). Not emulated: elb-t02 passes two subnet IDs through one captured variable, which works in the CloudShell bash shell but not in the argument-list emulator."
+}

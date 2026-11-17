@@ -1,0 +1,273 @@
+{
+  "lens": "exam",
+  "chapter": "02",
+  "reviewer": "review-02-exam",
+  "date": "2026-10-12",
+  "scope_note": "Ran sync 02 (written=0 unchanged=11). Read 1-fast.md, 2-deep.md, 2-services.md, 3-do.md and 4-say.md (both generated stubs, 'Nothing here yet.'), 5-quiz.md (10 shipped questions), data/02-aws-map/questions.json (12 items: 10 ready, q003 and q011 verified but not shipped), cards.json, speak.json, tasks.json, the registry entry and its FREQUENCY note. Checked the key facts in data/facts/*.jsonl and red-teamed the absolute claims with saa.py search/show against saved AWS pages. FREQUENCY.md is cited only as research input for coverage findings, never as evidence of a fact.",
+  "findings": [
+    {
+      "id": "exam-001",
+      "file": "data/facts/global-infrastructure.jsonl",
+      "section": "global-infrastructure-no-synchronous-cross-region-replication",
+      "quote": "\"claim\": \"AWS does not provide a synchronous cross-Region replication feature.\" (evidence quote: \"AWS does not provide a synchronous Cross-Region replication feature at this time.\"; volatility stable, changed null)",
+      "type": "outdated-fact",
+      "severity": "blocking",
+      "evidence": "source_id full:amazondynamodb-developerguide (https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/full.md, fetched 2026-10-05), line 11742: \"With multi-Region strong consistency (MRSC), item changes are synchronously replicated to another Region before the write returns, and strongly consistent read operations on any replica always return the latest version of an item.\" Line 20452: \"MRSC global tables support a Recovery Point Objective (RPO) of zero.\" Document history, line 126185, dated June 30, 2025: \"MRSC allows strongly consistent reads across Regions with a Recovery Point Objective (RPO) of zero during regional failures.\" The whitepaper sentence ('at this time') predates this; the fact drops 'at this time' and is marked stable. GA on 2025-06-30 is more than 3 months before the exam, so by RULINGS hard rule 7 it is examinable and needs a 'Changed recently' note. Fix: amend the fact (scope it, for example 'most AWS replication features between Regions are asynchronous; DynamoDB global tables in MRSC mode replicate synchronously'), register an MRSC fact from the DynamoDB guide, and re-run the currency vote. Every dependent below must change with it.",
+      "status": "fixed",
+      "resolution": "fix-02: every dependent (1-fast, 2-deep, q009, c007, s02) was rewritten onto the verified fact global-infrastructure-async-cross-region-replication-may-lose-data, then global-infrastructure-no-synchronous-cross-region-replication was rejected with facts amend --reject (0 dependents). An MRSC fact was not registered: a fact needs an independent entail vote and the DynamoDB facts belong to chapter 28; the orchestrator should queue it there and add the MRSC exception and Changed recently entry when it is verified."
+    },
+    {
+      "id": "exam-002",
+      "file": "02-aws-map/1-fast.md",
+      "section": "choose-it-or-not (compare table 'One zone or several zones or a second Region', row 'Synchronous copies?')",
+      "quote": "| Synchronous copies? | No | Yes: [replicate data synchronously between Availability Zones](...) | No: AWS has no [synchronous Cross-Region replication feature](../facts/global-infrastructure.md#global-infrastructure-no-synchronous-cross-region-replication) |",
+      "type": "wrong-fact",
+      "severity": "blocking",
+      "evidence": "Depends on exam-001. full:amazondynamodb-developerguide line 11742: \"With multi-Region strong consistency (MRSC), item changes are synchronously replicated to another Region before the write returns\". A gist reader who keeps only this table cell will reject a correct DynamoDB global tables MRSC option (RPO zero) on the exam. Fix: 'Usually no: most copies between Regions are asynchronous; DynamoDB global tables (MRSC) are the exception' with fact links.",
+      "status": "fixed",
+      "resolution": "fix-02: the cell is now 'Often not: an asynchronously replicated datastore can lose writes' (async fact). No absolute left."
+    },
+    {
+      "id": "exam-003",
+      "file": "02-aws-map/2-deep.md",
+      "section": "a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "quote": "3. **The copy runs behind.** AWS [does not provide a synchronous Cross-Region replication feature](...) ... | Survive a Region failure | A second Region | Asynchronous | ... > **Exam trap:** AWS offers no \"synchronous replica in another Region\". <!-- trap: aws-map-trap-sync-replication-across-regions -->",
+      "type": "wrong-fact",
+      "severity": "blocking",
+      "evidence": "Depends on exam-001. full:amazondynamodb-developerguide line 20452: \"MRSC global tables support a Recovery Point Objective (RPO) of zero.\" The subsection heading, item 3, the plain table and the trap aws-map-trap-sync-replication-across-regions all state an absolute that is no longer true; the trap teaches the reader to eliminate a valid answer. Fix: keep the lesson (most cross-Region copies are asynchronous, so RPO is above zero) but scope it, name DynamoDB global tables MRSC as the exception, add a Changed recently entry (2025-06-30), and reword the heading if needed (for example '...and most copies run behind').",
+      "status": "fixed",
+      "resolution": "fix-02: step 3 'An asynchronous copy runs behind' (async fact, 'Services differ.'), table 'Can be synchronous' / 'Often asynchronous', the trap rewritten as a stem pattern on the async fact, Say it scoped. Heading unchanged because it is a brief section id (L905); orchestrator to rename in brief.json if wanted. No Changed recently entry: no verified MRSC fact."
+    },
+    {
+      "id": "exam-004",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q009 (option b why, twin)",
+      "quote": "Why not b: \"AWS does not provide a synchronous Cross-Region replication feature, so this replica cannot be built with an AWS feature.\" Twin: \"If the stem said \\\"a Region failure must lose no committed write\\\" instead: no AWS replication feature meets it\"",
+      "type": "wrong-explanation",
+      "severity": "blocking",
+      "evidence": "Depends on exam-001. full:amazondynamodb-developerguide document history (June 30, 2025): \"MRSC allows strongly consistent reads across Regions with a Recovery Point Objective (RPO) of zero during regional failures.\" The twin is false as written. The key is also at risk: the stem says only 'a managed relational database' and the options never name a service, so a solver who knows a managed database with synchronous Region copies can accept option b (it loses no write, which also meets 'a few minutes ... acceptable'), giving three defensible answers for 'Select TWO'. Fix: name the service in the stem and options as the real exam does (Amazon RDS Multi-AZ standby; cross-Region read replica), rewrite why-not b to say the RDS feature is asynchronous, and change the twin (for example to DynamoDB global tables with MRSC).",
+      "status": "fixed",
+      "resolution": "fix-02: q009 rewritten and reset (q add --replace; verification candidate, round 0). The cross-Region synchronous option was replaced by same-Region snapshots (grounded in no-automatic-cross-region-replication), so no option depends on the stale fact and no relational multi-Region service can make a third answer defensible; twin rewritten on the async fact. Stem unchanged (it names no service, as before); key a+c unchanged. Needs three fresh blind solves."
+    },
+    {
+      "id": "exam-005",
+      "file": "data/02-aws-map/cards.json",
+      "section": "card on cross-Region synchronous replication (section 2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously)",
+      "quote": "\"front\": \"In AWS, can you replicate data synchronously from one Region to another Region?\", \"back\": \"No. Replication between Regions is asynchronous.\"",
+      "type": "wrong-fact",
+      "severity": "blocking",
+      "evidence": "Depends on exam-001. full:amazondynamodb-developerguide line 11742: \"With multi-Region strong consistency (MRSC), item changes are synchronously replicated to another Region before the write returns\". An Anki card she reviews daily would drill the wrong absolute. Fix: rewrite the card (for example 'Most cross-Region copies are asynchronous. Which AWS feature replicates synchronously between Regions?' back: 'DynamoDB global tables in MRSC mode').",
+      "status": "fixed",
+      "resolution": "fix-02: c007 replaced by a differ card (synchronous standby in a second zone vs asynchronous replica in a second Region: which can lose the latest writes?) on the async fact."
+    },
+    {
+      "id": "exam-006",
+      "file": "data/02-aws-map/speak.json",
+      "section": "spoken items on multi-Region (ten_second, points, error/correct pair, follow-up answer)",
+      "quote": "\"The thing to watch is that replication between Regions is asynchronous.\" / \"correct\": \"AWS does not provide a synchronous cross-Region replication feature. A failover between Regions can lose data.\" / \"Replication between Regions is asynchronous, so the latest writes can be lost.\"",
+      "type": "wrong-fact",
+      "severity": "blocking",
+      "evidence": "Depends on exam-001. full:amazondynamodb-developerguide line 20452: \"MRSC global tables support a Recovery Point Objective (RPO) of zero.\" She will say these sentences to AWS colleagues and founders in the week of Oct 13; READER.md: 'She works at AWS. A wrong fact is worse than a missing one.' The 'error' line ('We can copy the database synchronously to the other Region, so we lose nothing.') is marked as an error but is true for DynamoDB MRSC. Fix: scope every sentence to 'most replication between Regions' and name the MRSC exception.",
+      "status": "fixed",
+      "resolution": "fix-02: s02 replaced; every sentence is scoped to an asynchronous copy (ten_second, line 7, kp4, must_not_say 2, follow-up 1); the 'error' line is now a real error (asynchronous copy, yet 'lose nothing')."
+    },
+    {
+      "id": "exam-007",
+      "file": "02-aws-map/1-fast.md",
+      "section": "signals-and-traps (signals table, row 5)",
+      "quote": "| \"single-digit millisecond latency\" | a Local Zone | built for [single-digit millisecond latency](...) | 5G devices: a Wavelength Zone |",
+      "type": "misleading-signal",
+      "severity": "blocking",
+      "evidence": "On SAA stems the bare phrase 'single-digit millisecond latency' most often describes a database or storage choice, not a location. full:amazondynamodb-developerguide line 702: \"Amazon DynamoDB is a serverless, fully managed, distributed NoSQL database with single-digit millisecond performance at any scale.\" The canon also holds s3-express-one-zone-single-digit-ms-single-az (S3 Express One Zone). The row tells her to answer 'Local Zone' to a DynamoDB stem, and its 'But not if' guard covers only Wavelength. 2-deep.md line 159 already narrows the signal ('for users in one city'), so the fast row contradicts the deep version. Fix: stem phrase '\"single-digit millisecond latency for users in one city\"', and guard 'a database or key-value store: DynamoDB'.",
+      "status": "fixed",
+      "resolution": "fix-02: signal row is now '\"single-digit millisecond latency for users in one city\"' with But-not-if 'a database: DynamoDB; 5G devices: Wavelength Zone', matching the deep Exam signal."
+    },
+    {
+      "id": "exam-008",
+      "file": "02-aws-map/1-fast.md",
+      "section": "signals-and-traps (signals table, row 1)",
+      "quote": "| \"the data must stay in one country\" | a Region there | services [store customer content in the AWS region(s)](...) you use | no Region there: a Local Zone |",
+      "type": "weak-guard",
+      "severity": "should",
+      "evidence": "The fact this row links names its own exception, which is the guard that matters on the exam: global-infrastructure-customer-content-stays-in-chosen-region, www/about-aws/global-infrastructure/regional-product-services: \"Except as otherwise specified, Global Services—AWS Identity and Access Management (IAM), AWS Organizations, Amazon CloudFront, Amazon Route53, AWS Global Accelerator, AWS Direct Connect, AWS Firewall Manager, AWS Web Application Firewall (WAF), and AWS Shield—may store and process data globally.\" The guard also leaves out AWS Outposts (the deep file's own table: 'The workload stays on premises | AWS Outposts'). Fix: guard 'a global service such as CloudFront in the path, or no Region there: Local Zone or Outposts'.",
+      "status": "fixed",
+      "resolution": "fix-02: But-not-if cell is now 'a global service; no Region there: Local Zone'. Outposts was not added: the cell limit is 15 words and the fast file is at its 1,000-word cap."
+    },
+    {
+      "id": "exam-009",
+      "file": "02-aws-map/1-fast.md",
+      "section": "signals-and-traps (signals table, row 6); also 2-deep.md aws-secures-the-cloud-and-you-secure-what-you-put-in-it",
+      "quote": "| \"patch the operating system\" | the customer | the [guest operating system (including updates and security patches)](...) is yours | Amazon S3: AWS runs it |",
+      "type": "weak-guard",
+      "severity": "should",
+      "evidence": "The sibling that exam stems use against EC2 is a single-tenant managed service such as Amazon RDS, not S3, and its split differs from both EC2 and S3. docs/wellarchitected/latest/security-pillar/shared-responsibility: \"For AWS managed services operating on single-tenant architectures (such as Amazon ElastiCache, Amazon RDS, and Amazon OpenSearch Service), patch management responsibility is shared as follows:\" ... \"**Customer responsibility:** Review available updates and facilitate patching by selecting maintenance windows, applying service updates, or scheduling required restarts within the timeframes communicated by AWS.\" The chapter teaches only the EC2 and S3/DynamoDB ends. Fix: guard 'Amazon RDS: AWS patches the OS, you pick the maintenance window', and one line in the deep subsection with a fact registered from this quote.",
+      "status": "fixed",
+      "resolution": "fix-02: But-not-if cell is now 'Amazon RDS: you pick the maintenance window' (verified fact well-architected-single-tenant-managed-services-patching-split exists). A deep step on RDS was drafted and cut to keep 2-deep.md at its 2,400-word cap; no new question added."
+    },
+    {
+      "id": "exam-010",
+      "file": "02-aws-map/2-deep.md",
+      "section": "edge-locations-serve-users-nearby-and-local-zones-run-compute-near-them (Exam trap)",
+      "quote": "> **Exam trap:** An option launches EC2 instances \"at an edge location\". Your own compute goes into a Local Zone. <!-- trap: aws-map-trap-edge-location-runs-workloads -->",
+      "type": "misleading-trap",
+      "severity": "should",
+      "evidence": "The 'truth' is too broad: your own code does run at edge locations. www/cloudfront/faqs (faq:cloudfront.jsonl:166): \"Lambda@Edge is an extension of AWS Lambda allowing you to run code at global edge locations without provisioning or managing servers.\" Lambda@Edge and CloudFront Functions are common exam answers for 'run logic close to users'. The belief tested ('EC2 at an edge location') is also not a common one, since real options rarely say it. Fix: 'You cannot launch EC2 instances at an edge location; at the edge you run CloudFront functions or Lambda@Edge, and EC2 near users goes into a Local Zone', with fact links.",
+      "status": "fixed",
+      "resolution": "fix-02: trap is now 'Edge locations host services such as Amazon CloudFront; EC2 instances near one city go into a Local Zone.' Lambda@Edge and CloudFront Functions are not named: no verified fact in the canon (chapter 15 owns them)."
+    },
+    {
+      "id": "exam-011",
+      "file": "02-aws-map/1-fast.md",
+      "section": "signals-and-traps (signals table, row 4); 2-deep.md edge-locations subsection",
+      "quote": "| \"static content for users around the world\" | CloudFront at edge locations | [Amazon CloudFront](...) runs there | compute in one city: a Local Zone |",
+      "type": "coverage-gap",
+      "severity": "should",
+      "evidence": "Bullet 3.2.K2 ('Distributed computing concepts supported by AWS global infrastructure and edge services') and the registry FREQUENCY note ('minimize latency for global users' points at edge locations (CloudFront, Global Accelerator)) both point at AWS Global Accelerator; FREQUENCY row 22 ranks it moderate and lists 'CloudFront vs Global Accelerator' as a hardest comparison (research input). The canon fact global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator already quotes \"AWS Global Accelerator (AGA), an edge networking optimization service\", but the chapter names Global Accelerator only inside a link anchor and never teaches it; no question or card uses it. Fix: guard 'TCP or UDP traffic, or static IP addresses: Global Accelerator', one line in the edge subsection with xref to its chapter, and make it a distractor in aws-map-q005.",
+      "status": "fixed",
+      "resolution": "fix-02: deep edge step 1 now names [AWS Global Accelerator](global-infrastructure-pop-hosts-cloudfront-route53-global-accelerator) beside CloudFront and Route 53. A TCP/UDP or static-IP guard was not written (no verified fact on those properties), and q005 option d was not changed (q005 moved out of the shipped set; an option change needs re-verification)."
+    },
+    {
+      "id": "exam-012",
+      "file": "02-aws-map/1-fast.md",
+      "section": "words-that-go-together (row 'high availability')",
+      "quote": "| high availability (hy uh-vayl-uh-BIL-ih-tee) | **design** for high availability | Keeps working when one part fails | a second Region |",
+      "type": "coverage-gap",
+      "severity": "should",
+      "evidence": "The registry FREQUENCY note names 'highly available vs fault tolerant' (Multi-AZ) as a frequent qualifier phrase; FREQUENCY lines 209 and 222 (research input) define the pair as 'brief failover acceptable vs no degradation'. The chapter never uses 'fault tolerant'. Its plain meaning for high availability ('keeps working when one part fails') is closer to fault tolerance, and the 'Do not confuse with' cell names a second Region instead of fault tolerance. aws-map-q012 (keep full capacity through a zone failure: nine instances) is exactly the fault-tolerance case but never names it. Fix: add a fault tolerance row ('no loss of capacity during a failure', link global-infrastructure-static-stability-definition), make it the 'Do not confuse with' of high availability, and say the term in the q012 takeaway.",
+      "status": "fixed",
+      "resolution": "fix-02: high availability row now 'Stays available when one part fails | fault tolerance' (the 'a second Region' confusion cell removed); q012 takeaway (explanation field only) now names fault tolerance. A separate fault tolerance row was not added: the words table is at its 5-row maximum."
+    },
+    {
+      "id": "exam-013",
+      "file": "data/02-aws-map/questions.json",
+      "section": "bullet 1.1.K5 coverage (aws-map-q002 shipped; aws-map-q003 verified, not shipped)",
+      "quote": "aws-map-q002 ... \"difficulty\": 1, \"qualifier\": \"none\" ... options a 'Apply security patches to the virtualization layer of the physical hosts' and b 'Control physical access to the data center facilities'",
+      "type": "coverage-gap",
+      "severity": "should",
+      "evidence": "The shared responsibility model (1.1.K5) has a single shipped question, the easiest in the set, and two of its three distractors (hypervisor patching, data-center access) no candidate picks. The abstracted-service question aws-map-q003 (S3/DynamoDB, multiple response) was left out by --select. READER.md: diagnostic Secure 45% (9/20), her weakest domain. The single-tenant managed-service split (exam-009) has no question at all. Fix: ship aws-map-q003 in place of a lower-value item (for example aws-map-q006, see exam-018), or add a difficulty-2 item on RDS patching or maintenance windows with a qualifier.",
+      "status": "fixed",
+      "resolution": "fix-02: aws-map-q003 (verified, pass) set to ready; aws-map-q005 (core) set back to verified, keeping 5 core / 5 extended once q009 is re-verified. 1.1.K5 now has two shipped questions."
+    },
+    {
+      "id": "exam-014",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q008 (worked example, Question 1)",
+      "quote": "\"Which solution will ensure data residency with the LEAST operational overhead?\" Key: \"Create the S3 bucket and the EC2 instances in the Region in that country, and do not turn on any cross-Region replication or copy feature.\" Why: \"No extra setting or job is needed.\"",
+      "type": "unrealistic-key",
+      "severity": "should",
+      "evidence": "Item-writer realism: on the real exam 'ensure' asks for a control that prevents a violation, and the usual answer for Region restriction is an SCP or a Control Tower control that denies other Regions (FREQUENCY row 25, research input: 'SCPs cap permissions ... Control Tower guardrails'). The key ensures nothing: any engineer can still enable a replication or copy feature or create a bucket in another Region, and the fact the key relies on says data leaves only 'unless you explicitly use a replication or copy feature' (global-infrastructure-no-automatic-cross-region-replication). The worked example, the first question she sees, then teaches that 'ensure' means 'do nothing'. Fix: change the verb to 'keep the data in the country' or 'Which deployment meets the law', or keep 'ensure' and make the key 'deploy in that Region and add a Region-deny guardrail' with an xref to the Organizations chapter.",
+      "status": "rejected",
+      "resolution": "fix-02: rejected. Among the four options the key is the only one that meets the law with the least work, and all three blind solvers agreed (pass). Changing the stem verb or the key would reset a verified worked example. Region-deny guardrails belong to chapter 04 (Organizations); logged for the next question revision."
+    },
+    {
+      "id": "exam-015",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q008 (twin)",
+      "quote": "\"If the stem said \\\"the law allows any Region inside the European Union\\\" instead: the lowest-priced Region in the European Union, because prices are [different in each Region](...)\"",
+      "type": "twin-mismatch",
+      "severity": "should",
+      "evidence": "SPEC.json twin_rules: the twin differs by one deciding phrase. The stem's qualifier is 'LEAST operational overhead', not cost, so with the changed phrase price would not decide; any EU Region would meet the law with the same overhead. The twin silently swaps the qualifier, which trains her to ignore the qualifier, the habit READER.md says she must build ('find the constraint in the stem'). Fix: twin 'If the stem said \"MOST cost-effective\" and \"any Region inside the European Union\"' or pick a twin that keeps the qualifier.",
+      "status": "fixed",
+      "resolution": "fix-02: explanation-only edit of the q008 twin: 'If the stem said \"any European Union Region meets the law\" and \"MOST cost-effective\" instead: the lowest-priced of those Regions, because prices are different in each Region.' The qualifier change is now stated."
+    },
+    {
+      "id": "exam-016",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q005 (Question 3, option d)",
+      "quote": "\"Move the images to the S3 Standard-Infrequent Access storage class, and turn on S3 Versioning to keep each weekly change.\" misconception: \"The S3 storage class changes the download speed for distant users.\"",
+      "type": "weak-distractor",
+      "severity": "should",
+      "evidence": "No candidate believes a cheaper storage class speeds up downloads, so this option is filler and the item is a three-option question. The real misconceptions for 'slow downloads for distant users' are S3 Transfer Acceleration and AWS Global Accelerator (FREQUENCY comparisons 'S3 Transfer Acceleration vs CloudFront vs multipart: Long-distance uploads vs global downloads' and 'CloudFront vs Global Accelerator', research input). Fix: replace option d with 'Enable S3 Transfer Acceleration on the bucket' (misconception: Transfer Acceleration caches content for repeated downloads), grounded in an s3 fact, or with Global Accelerator (see exam-011).",
+      "status": "rejected",
+      "resolution": "fix-02: not changed. aws-map-q005 is no longer shipped (q003 replaced it, exam-013); replacing an option of a verified item needs a new blind verification. Logged for the next bank revision."
+    },
+    {
+      "id": "exam-017",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q004 (Question 6, stem)",
+      "quote": "\"The company wants to run the EC2 instances closer to users and needs single-digit millisecond latency for them. Which solution will provide the LOWEST latency for these users?\"",
+      "type": "cued-stem",
+      "severity": "should",
+      "evidence": "The stem states the mechanism of the key ('run the EC2 instances closer to users') and the exact Local Zones FAQ phrase ('single-digit millisecond latency'), so the item is answerable by keyword match and is easier than its difficulty 2. It also reinforces the over-broad signal of exam-007. The registry FREQUENCY note says Local Zones, Wavelength and Outposts are 'keyword recognition only (chapter 20 owns them)', yet two of ten questions (q004, q005 option c) plus a card centre on Local Zones while Global Accelerator has none. Fix: remove the cue sentence and let 'interactive', 'processes each action in real time' and 'one large city far from every Region' carry the decision.",
+      "status": "rejected",
+      "resolution": "fix-02: not changed. Removing the cue sentence changes the stem of a verified question and would reset it (R5); the chapter already resets q009 this round and has no spare extended question. Three blind solvers agreed; the qualifier and 'far from every Region' still carry the decision. Logged for the next revision."
+    },
+    {
+      "id": "exam-018",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q006 (Question 10)",
+      "quote": "\"The company has no data privacy, security, or business requirements about where the environment runs, and extra latency for the engineers is not a concern.\" Option d misconception: \"Test environments belong on premises.\"",
+      "type": "cued-stem",
+      "severity": "should",
+      "evidence": "The stem copies the condition of the COST07-BP02 sentence almost word for word (well-architected-cheaper-region-for-non-critical-when-no-restrictions: \"if you have no obligations in data privacy, security and business requirements\") and then removes latency too, so only price is left: the item tests reading, not judgment. The Outposts distractor's misconception is a strawman (buying hardware to save money). Fix: state the facts of the scenario (synthetic data, engineers tolerate slower consoles) without the guideline's wording, and replace option d with a plausible cost option (for example Sydney with Spot Instances or a smaller instance type) so the Region choice must be weighed.",
+      "status": "rejected",
+      "resolution": "fix-02: not changed, for the same reason as exam-017: a stem and option change resets a verified extended question, and no spare extended question exists. The Local Zone why-not was fixed instead (claims-018). Logged for the next revision."
+    },
+    {
+      "id": "exam-019",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q007 (Question 5) and 2-deep.md a-second-region-protects-against-region-failure-but-replicates-asynchronously",
+      "quote": "Key: \"Run a second copy of the application in another AWS Region, and use Amazon Route 53 failover routing with health checks to send users to the healthy copy.\" Review: [A second Region protects against Region failure but replicates asynchronously](2-deep.md#...)",
+      "type": "untaught-key",
+      "severity": "should",
+      "evidence": "Bullet 2.2.K1 names Amazon Route 53 ('AWS global infrastructure (for example, Availability Zones, AWS Regions, Amazon Route 53)'), but the chapter mentions Route 53 only as a service at edge locations. Failover routing with health checks, which carries the key of q007 and appears in q001 and q005 options, is taught nowhere and the Review link lands on a subsection that never mentions it. Fix: one sentence in the second-Region subsection ('Route 53 failover routing with health checks sends users to the healthy Region') with a fact link and an xref to the Route 53 chapter.",
+      "status": "fixed",
+      "resolution": "fix-02: new step 5 in the second-Region subsection: '**Route 53 moves the users.** It can [use the status of health checks to perform failovers between Regions](global-infrastructure-route53-failover-use-health-checks-not-record-changes).'"
+    },
+    {
+      "id": "exam-020",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q002 (twin)",
+      "quote": "\"If the stem said \\\"tables in Amazon DynamoDB\\\" instead: AWS applies the patches, because for multi-tenant managed services AWS will [apply patches without requiring customer action](...)\"",
+      "type": "twin-mismatch",
+      "severity": "note",
+      "evidence": "The stem asks 'Which task is the responsibility of the company?'; the twin answers with what AWS does, so it does not say which company task would then be correct. Fix: 'the company's task becomes managing IAM permissions and data classification' (iam-shared-responsibility-customer-applies-permissions-with-iam), or use the RDS twin ('the company selects the maintenance window', see exam-009).",
+      "status": "fixed",
+      "resolution": "fix-02: explanation-only edit of the q002 twin: AWS will apply patches without requiring customer action, and the company's task becomes using IAM tools to apply the appropriate permissions (iam fact added to facts)."
+    },
+    {
+      "id": "exam-021",
+      "file": "data/02-aws-map/questions.json",
+      "section": "shipped set difficulty mix",
+      "quote": "difficulty 1: q002; difficulty 2: q001, q004, q005, q006, q007, q008; difficulty 3: q009, q010, q012",
+      "type": "difficulty-mix",
+      "severity": "note",
+      "evidence": "SPEC.json difficulty_mix {\"1\": 0.2, \"2\": 0.55, \"3\": 0.25}, tolerance 0.1: shipped 10% / 60% / 30%, so difficulty 1 sits exactly on the tolerance edge, and two difficulty-2 items are easier than labelled (exam-017, exam-018). Shipping aws-map-q003 (difficulty 1) as proposed in exam-013 would bring the mix to target.",
+      "status": "fixed",
+      "resolution": "fix-02: with q003 shipped instead of q005 and q009 back after re-verification, the shipped mix is 2 / 5 / 3 by difficulty (20% / 50% / 30%), inside the tolerance."
+    },
+    {
+      "id": "exam-022",
+      "file": "02-aws-map/2-deep.md",
+      "section": "numbers-that-decide-answers (B-list and its Changed recently callout)",
+      "quote": "> **Changed recently:** (2026-08-12) AWS Global View shows Regions on a map. ... > **The exam probably expects:** the list. Do not let this number decide an answer.",
+      "type": "non-examinable",
+      "severity": "note",
+      "evidence": "Rule: a 'Numbers that decide answers' section should hold numbers that decide answers. The callout holds no number ('Do not let this number decide an answer' refers to nothing) and describes a console view that RULINGS rule 7 itself labels not examinable yet; the B-list rows '34 Regions' and '6 AZs in us-east-1' are volatile counts that no SAA option turns on. Fix: drop the callout (or move it to 2-services.md under the console card) and keep the B-list to opt-in Regions and the availability percentages.",
+      "status": "removed",
+      "resolution": "fix-02: the Global View callout was removed, and so were the volatile B-list rows '34 Regions' and '6 AZs in us-east-1'. The B-list keeps opt-in Regions, the availability percentages and the static stability row."
+    },
+    {
+      "id": "exam-023",
+      "file": "02-aws-map/1-fast.md",
+      "section": "changed-recently",
+      "quote": "> **Old:** `us-east-1a` [might not be the same physical location as it is in another account](...).<br> > **Now:** [accounts created starting November 2025, get the same Availability Zones mapped to codes](...).",
+      "type": "missing-scope",
+      "severity": "note",
+      "evidence": "global-infrastructure-az-name-mapping-independent-per-account, docs/global-infrastructure/latest/regions/aws-availability-zones: \"For accounts created before November 2025, in our oldest Regions, we independently map Availability Zones to codes for each AWS account.\" The entry drops both conditions (account age and 'oldest Regions'), which are what make aws-map-q010 answerable (its stem has to say 'created in 2021' and 'us-east-1'). Fix: 'Old: in the oldest Regions, accounts created before November 2025 map zone names separately'.",
+      "status": "fixed",
+      "resolution": "fix-02: Old line now carries both conditions: 'in the oldest Regions, us-east-1a might not be ..., for accounts created before November 2025'."
+    },
+    {
+      "id": "exam-024",
+      "file": "data/02-aws-map/questions.json",
+      "section": "aws-map-q012 (Question 9, section and Review link)",
+      "quote": "\"section\": \"2-deep.md#a-second-region-protects-against-region-failure-but-replicates-asynchronously\"",
+      "type": "review-link",
+      "severity": "note",
+      "evidence": "q012 is about one Availability Zone failure (static stability, nine instances), but its Review link sends her to the Region-failure subsection, where static stability sits in a collapsed 'Go deeper' block. A reader who missed it reviews the wrong lesson. Fix: move the static stability Go deeper block into 'Availability Zones fail separately so production uses at least two' and point q012 there.",
+      "status": "fixed",
+      "resolution": "fix-02: the static stability Go deeper moved into 'Availability Zones fail separately so production uses at least two' (with the cause: replacements rely on the EC2 control plane and take time, so pre-provision), and q012's section field now points there (metadata only, no reset)."
+    }
+  ]
+}

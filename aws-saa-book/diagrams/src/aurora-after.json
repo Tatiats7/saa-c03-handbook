@@ -1,0 +1,117 @@
+{
+  "id": "aurora-after",
+  "kind": "arch",
+  "size": "s",
+  "chapter": "27",
+  "title": "Callvale after: an Aurora cluster with two Aurora Replicas",
+  "claim": "The services write through the cluster endpoint and read through the reader endpoint of one Aurora cluster that shares one volume.",
+  "alt": "After: the Fargate services send writes to the cluster endpoint and dashboard queries to the reader endpoint. The Aurora writer is in AZ 1 and two Aurora Replicas are in AZ 2 and AZ 3; all three use one cluster volume. Dev and staging use Aurora Serverless v2.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "groups": [
+    {
+      "id": "dev",
+      "type": "generic",
+      "label": "Dev and staging",
+      "cells": "A5:B5"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "svc",
+      "icon": "fargate",
+      "label": "Fargate services",
+      "at": "A1:B1"
+    },
+    {
+      "id": "writer",
+      "icon": "aurora-instance",
+      "label": "Aurora writer\nAZ 1",
+      "at": "A2:B2"
+    },
+    {
+      "id": "r1",
+      "icon": "aurora-instance",
+      "label": "Aurora Replica\nAZ 2",
+      "at": "A3"
+    },
+    {
+      "id": "r2",
+      "icon": "aurora-instance",
+      "label": "Aurora Replica\nAZ 3",
+      "at": "B3"
+    },
+    {
+      "id": "vol",
+      "icon": "aurora",
+      "label": "Cluster volume\nsix copies",
+      "at": "A4:B4",
+      "emph": true
+    },
+    {
+      "id": "sls",
+      "icon": "aurora-serverless",
+      "label": "Aurora Serverless v2",
+      "at": "A5:B5"
+    }
+  ],
+  "edges": [
+    {
+      "from": "svc",
+      "to": "writer",
+      "label": "cluster endpoint",
+      "step": 1,
+      "emph": true,
+      "say": "The services send writes to the cluster endpoint, which connects to the current primary DB instance."
+    },
+    {
+      "from": "svc",
+      "to": "r1",
+      "label": "reader endpoint",
+      "step": 2,
+      "say": "Dashboard queries use the reader endpoint, which balances connections to available Aurora Replicas.",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "svc",
+      "to": "r2",
+      "step": 2,
+      "fromSide": "right",
+      "toSide": "right"
+    },
+    {
+      "from": "writer",
+      "to": "vol",
+      "step": 3,
+      "emph": true,
+      "say": "The writer and both replicas connect to the same storage volume, which keeps six copies of the data."
+    },
+    {
+      "from": "r1",
+      "to": "vol",
+      "step": 3,
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "from": "r2",
+      "to": "vol",
+      "step": 3,
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "from": "writer",
+      "to": "r1",
+      "label": "fails over",
+      "step": 4,
+      "dashed": true,
+      "say": "If the writer fails, Aurora automatically fails over to an Aurora Replica.",
+      "fromSide": "left",
+      "toSide": "top"
+    }
+  ],
+  "notes": "Brief 27 story pair, after (2-deep.md#decision-record, after Decision). Same cells as aurora-before; the cluster volume in row 4, the dev and staging group in row 5. Step facts: 1 aurora-cluster-endpoint-connects-to-current-primary; 2 aurora-reader-endpoint-balances-connections-not-queries; 3 aurora-adding-replicas-read-same-volume-offload and aurora-storage-six-copies-three-azs ('six copies' is its display); 4 aurora-auto-failover-to-replica. AZ 1 to AZ 3 are labels. No second Region (stage 4). Keep say and Markdown steps equal (L703)."
+}

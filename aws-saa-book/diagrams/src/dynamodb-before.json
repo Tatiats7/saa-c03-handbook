@@ -1,0 +1,88 @@
+{
+  "id": "dynamodb-before",
+  "kind": "arch",
+  "size": "s",
+  "chapter": "28",
+  "title": "Callvale before: job status in PostgreSQL",
+  "claim": "Every pipeline step updates the call's status row in PostgreSQL, and at peak the updates queue behind locks and connections.",
+  "alt": "Before: the S3 upload event starts the start-job function; the pipeline functions for converting, transcribing and saving results each update the call's status row in the PostgreSQL database through RDS Proxy; the dashboard reads the same table.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "nodes": [
+    {
+      "id": "uploads",
+      "icon": "s3",
+      "label": "Uploads",
+      "at": "A1"
+    },
+    {
+      "id": "start",
+      "icon": "lambda-function",
+      "label": "start-job",
+      "at": "A2"
+    },
+    {
+      "id": "pipe",
+      "icon": "lambda-function",
+      "label": "Pipeline\nfunctions",
+      "at": "A3"
+    },
+    {
+      "id": "dash",
+      "icon": "client",
+      "label": "Dashboard",
+      "at": "B2"
+    },
+    {
+      "id": "proxy",
+      "icon": "rds-proxy",
+      "label": "RDS Proxy",
+      "at": "A4"
+    },
+    {
+      "id": "db",
+      "icon": "db-instance",
+      "label": "PostgreSQL\nstatus rows",
+      "at": "A5:B5",
+      "emph": true
+    }
+  ],
+  "edges": [
+    {
+      "from": "uploads",
+      "to": "start",
+      "label": "event",
+      "step": 1,
+      "say": "An upload to Amazon S3 starts the start-job function."
+    },
+    {
+      "from": "start",
+      "to": "pipe",
+      "label": "starts"
+    },
+    {
+      "from": "pipe",
+      "to": "proxy",
+      "label": "updates",
+      "step": 2,
+      "say": "Each pipeline step updates the status row of the call in PostgreSQL."
+    },
+    {
+      "from": "dash",
+      "to": "db",
+      "label": "reads",
+      "step": 3,
+      "say": "The dashboard reads the same status rows to list a customer's jobs."
+    },
+    {
+      "from": "proxy",
+      "to": "db",
+      "label": "slow at peak",
+      "step": 4,
+      "emph": true,
+      "say": "At peak, row locks and connections slow every update."
+    }
+  ],
+  "notes": "Brief 28 story pair, before (pipeline state P2); 2-deep.md#decision-record (after Context). Title, claim, alt and steps from brief.json. Story steps: no fact link, no number. Two columns. Same cells as dynamodb-after where possible: uploads, start-job and the pipeline in column A, the dashboard at B2, the data store in rows 4 and 5. The database is the highlight."
+}

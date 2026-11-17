@@ -1,0 +1,1490 @@
+{
+ "batch": "18-entail-010",
+ "lens": "entail",
+ "instructions": "For each fact, read only the quotes and their context. Verdict `support` when the quotes alone state every part of the claim and of each value, with the same scope and qualifiers; `partial` when a part is missing; `not-supported` when the quotes say something else; `unsure` otherwise. A quote with a `heading` is the value line under that heading on the page: read the two together. Do not use what you remember.",
+ "facts": [
+  {
+   "id": "lambda-sqs-scaling-5-batches-300-per-minute-1250",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "For a standard SQS queue, Lambda starts with five batches and five concurrent invocations, adds up to 300 more concurrent invokes per minute while messages remain, and one event source mapping can process at most 1,250 invokes simultaneously.",
+   "values": [
+    {
+     "key": "start",
+     "display": "five batches at a time with five concurrent invocations"
+    },
+    {
+     "key": "rate",
+     "display": "up to 300 more concurrent invokes per minute"
+    },
+    {
+     "key": "max",
+     "display": "1,250"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per SQS event source mapping, standard queue",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-scaling.html",
+     "title": "Configuring scaling behavior for SQS event source mappings",
+     "quote": "When messages are available, Lambda starts processing five batches at a time with five concurrent invocations of your function. If messages are still available, Lambda increases the number of processes that are reading batches by up to 300 more concurrent invokes per minute. The maximum number of invokes that an event source mapping can process simultaneously is 1,250.",
+     "table_header": null,
+     "context": "\nFor standard queues, Lambda uses [ long polling](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html#sqs-long-polling) to poll a queue until it becomes active. When messages are available, Lambda starts processing five batches at a time with five concurrent invocations of your function. If messages are still available, Lambda increases the number of processes that are reading batches by up to 300 more concurrent invokes per minute. The maximum number of invokes that an event source mapping can process simultaneously is 1,250. When traffic is low, Lambda scales back the processing to five concurrent invokes, and can optimize to as few as 2 concurrent invokes to reduce the Amazon SQS calls and corresponding costs. However, this optimization is not available when you enable the maximum concurrency setting.\n",
+     "headings": [
+      "Configuring scaling behavior for SQS event source mappings"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sqs-throttle-drop-after-visibility",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "If an SQS invocation fails because of throttling, Lambda gradually backs off retries by reducing the concurrency of the event source mapping and keeps retrying the message until its timestamp exceeds the queue's visibility timeout, at which point Lambda drops the message.",
+   "values": [
+    {
+     "key": "retry",
+     "display": "Lambda continues to retry the message",
+     "spoken": "Lambda keeps retrying"
+    },
+    {
+     "key": "drop",
+     "display": "Lambda drops the message"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon SQS event source mapping",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "throttling errors"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html",
+     "title": "Handling errors for an SQS event source in Lambda",
+     "quote": "If the invocation fails due to throttling, Lambda gradually backs off retries by reducing the amount of concurrency allocated to your Amazon SQS event source mapping. Lambda continues to retry the message until the message's timestamp exceeds your queue's visibility timeout, at which point Lambda drops the message.",
+     "table_header": null,
+     "context": "## Backoff strategy for failed invocations\n<a name=\"services-sqs-backoff-strategy\"></a>\n\nWhen an invocation fails, Lambda attempts to retry the invocation while implementing a backoff strategy. The backoff strategy differs slightly depending on whether Lambda encountered the failure due to an error in your function code, or due to throttling.\n+  If your **function code** caused the error, Lambda stops processing and retrying the invocation. In the meantime, Lambda gradually backs off, reducing the amount of concurrency allocated to your Amazon SQS event source mapping. After your queue's visibility timeout runs out, the message reappears in the queue. \n+ If the invocation fails due to **throttling**, Lambda gradually backs off retries by reducing the amount of concurrency allocated to your Amazon SQS event source mapping. Lambda continues to retry the message until the message's timestamp exceeds your queue's visibility timeout, at which point Lambda drops the message.\n\n## Implementing partial batch responses\n<a name=\"services-sqs-batchfailurereporting\"></a>\n\nWhen your Lambda function encounters an error while processing a batch, all messages in that batch become visible in the queue again by default, including messages that Lambda processed successfully. As a result, your function can end up processing the same message several times.",
+     "headings": [
+      "Handling errors for an SQS event source in Lambda",
+      "Backoff strategy for failed invocations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sqs-timeout-not-above-visibility",
+   "rev": 2,
+   "kind": "restriction",
+   "claim": "A function's timeout must be less than or equal to the queue's visibility timeout; Lambda validates this when you create or update an SQS event source mapping and returns an error if the function timeout exceeds the visibility timeout.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "must be less than or equal to",
+     "spoken": "the function timeout must not exceed the visibility timeout"
+    },
+    {
+     "key": "error",
+     "display": "returns an error"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon SQS event source mapping",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html",
+     "title": "Creating and configuring an Amazon SQS event source mapping",
+     "quote": "Your function's timeout must be less than or equal to the queue's visibility timeout. Lambda validates this requirement when you create or update an event source mapping and returns an error if the function timeout exceeds the queue's visibility timeout.",
+     "table_header": null,
+     "context": "To allow your function time to process each batch of records, set the source queue's [ visibility timeout](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html) to at least six times the [configuration timeout](configuration-timeout.md) on your function. The extra time allows Lambda to retry if your function is throttled while processing a previous batch.\n\n**Note**  \nYour function's timeout must be less than or equal to the queue's visibility timeout. Lambda validates this requirement when you create or update an event source mapping and returns an error if the function timeout exceeds the queue's visibility timeout.\n\nBy default, if Lambda encounters an error at any point while processing a batch, all messages in that batch return to the queue. After the [ visibility timeout](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html), the messages become visible to Lambda again. You can configure your event source mapping to use [ partial batch responses](services-sqs-errorhandling.md#services-sqs-batchfailurereporting) to return only the failed messages back to the queue.\n",
+     "headings": [
+      "Creating and configuring an Amazon SQS event source mapping",
+      "Configuring a queue to use with Lambda"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sqs-visibility-six-times-timeout",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "AWS recommends setting the source queue's visibility timeout to at least six times the function's configured timeout, so that Lambda has time to retry if the function is throttled while processing a previous batch.",
+   "values": [
+    {
+     "key": "ratio",
+     "display": "at least six times",
+     "spoken": "at least six times the function timeout"
+    },
+    {
+     "key": "setting",
+     "display": "visibility timeout"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon SQS queue used as a Lambda event source",
+    "default_or_max": "min",
+    "adjustable": true,
+    "condition": "a recommendation, not an enforced value"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html",
+     "title": "Creating and configuring an Amazon SQS event source mapping",
+     "quote": "To allow your function time to process each batch of records, set the source queue's visibility timeout to at least six times the configuration timeout on your function. The extra time allows Lambda to retry if your function is throttled while processing a previous batch.",
+     "table_header": null,
+     "context": "<a name=\"events-sqs-queueconfig\"></a>\n\nIf you don't already have an existing Amazon SQS queue, [create one](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-create-queue.html) to serve as an event source for your Lambda Event Function. The Lambda Event Function and the Amazon SQS queue must be in the same AWS Region, although they can be in [different AWS accounts](with-sqs-cross-account-example.md).\n\nTo allow your function time to process each batch of records, set the source queue's [ visibility timeout](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html) to at least six times the [configuration timeout](configuration-timeout.md) on your function. The extra time allows Lambda to retry if your function is throttled while processing a previous batch.\n\n**Note**  \nYour function's timeout must be less than or equal to the queue's visibility timeout. Lambda validates this requirement when you create or update an event source mapping and returns an error if the function timeout exceeds the queue's visibility timeout.\n",
+     "headings": [
+      "Creating and configuring an Amazon SQS event source mapping",
+      "Configuring a queue to use with Lambda"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sqs-visibility-timeout-retry",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "SQS messages in a batch stay hidden for the queue's visibility timeout; if the function errors on the batch, by default all messages in it become visible again after the timeout expires, so the code must tolerate repeats.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "become visible in the queue again"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per SQS event source mapping",
+    "default_or_max": "default",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html",
+     "title": "Using Lambda with Amazon SQS",
+     "quote": "If your function successfully processes all messages in the batch, Lambda deletes the messages from the queue. By default, if your function encounters an error while processing a batch, all messages in that batch become visible in the queue again after the visibility timeout expires. For this reason, your function code must be able to process the same message multiple times without unintended side effects.",
+     "table_header": null,
+     "context": "<a name=\"sqs-polling-behavior\"></a>\n\nWith Amazon SQS event source mappings, Lambda polls the queue and invokes your function [ synchronously](invocation-sync.md) with an event. Each event can contain a batch of multiple messages from the queue. Lambda receives these events one batch at a time, and invokes your function once for each batch. When your function successfully processes a batch, Lambda deletes its messages from the queue.\n\nWhen Lambda receives a batch, the messages stay in the queue but are hidden for the length of the queue's [ visibility timeout](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html). If your function successfully processes all messages in the batch, Lambda deletes the messages from the queue. By default, if your function encounters an error while processing a batch, all messages in that batch become visible in the queue again after the visibility timeout expires. For this reason, your function code must be able to process the same message multiple times without unintended side effects.\n\n**Warning**  \nLambda event source mappings process each event at least once, and duplicate processing of records can occur. To avoid potential issues related to duplicate events, we strongly recommend that you make your function code idempotent. To learn more, see [How do I make my Lambda function idempotent](https://repost.aws/knowledge-center/lambda-function-idempotent) in the AWS Knowledge Center.\n",
+     "headings": [
+      "Using Lambda with Amazon SQS",
+      "Understanding polling and batching behavior for Amazon SQS event source mappings"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-stateless-store-state-elsewhere",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "A standard function should assume its environment exists only for a single invocation: commit permanent data changes to a durable store such as Amazon S3, DynamoDB or Amazon SQS before exiting, and do not rely on temporary files or internal state kept across invocations.",
+   "values": [
+    {
+     "key": "single",
+     "display": "exists only for a single invocation",
+     "spoken": "treat each invocation as if the environment is new"
+    },
+    {
+     "key": "durable",
+     "display": "durable store such as Amazon S3"
+    },
+    {
+     "key": "no-rely",
+     "display": "should not rely on any existing data structures"
+    }
+   ],
+   "qualifiers": {
+    "scope": "standard functions",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html",
+     "title": "Designing Lambda applications",
+     "quote": "For standard Lambda functions, you should assume that the environment exists only for a single invocation.",
+     "table_header": null,
+     "context": "This abstraction helps you focus on the integration aspects of your application, the flow of data, and the business logic where your workload provides value to your end users. Allowing the services to manage the underlying mechanics helps you develop applications more quickly with less custom code to maintain.\n\n## Implement statelessness in functions\n<a name=\"statelessness-functions\"></a>\n\nFor standard Lambda functions, you should assume that the environment exists only for a single invocation. The function should initialize any required state when it is first started. For example, your function might require fetching data from a DynamoDB table. It should commit any permanent data changes to a durable store such as Amazon S3, DynamoDB, or Amazon SQS before exiting. It should not rely on any existing data structures or temporary files, or any internal state that would be managed by multiple invocations.\n\nTo initialize database connections and libraries, or load state, you can take advantage of [static initialization](lambda-runtime-environment.md#static-initialization). Since execution environments are reused where possible to improve performance, you can amortize the time taken to initialize these resources over multiple invocations. However, you should not store any variables or data used in the function within this global scope.\n\n## Minimize coupling\n<a name=\"minimize-coupling\"></a>",
+     "headings": [
+      "Designing Lambda applications",
+      "Implement statelessness in functions"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/concepts-application-design.html",
+     "title": "Designing Lambda applications",
+     "quote": "It should commit any permanent data changes to a durable store such as Amazon S3, DynamoDB, or Amazon SQS before exiting. It should not rely on any existing data structures or temporary files, or any internal state that would be managed by multiple invocations.",
+     "table_header": null,
+     "context": "This abstraction helps you focus on the integration aspects of your application, the flow of data, and the business logic where your workload provides value to your end users. Allowing the services to manage the underlying mechanics helps you develop applications more quickly with less custom code to maintain.\n\n## Implement statelessness in functions\n<a name=\"statelessness-functions\"></a>\n\nFor standard Lambda functions, you should assume that the environment exists only for a single invocation. The function should initialize any required state when it is first started. For example, your function might require fetching data from a DynamoDB table. It should commit any permanent data changes to a durable store such as Amazon S3, DynamoDB, or Amazon SQS before exiting. It should not rely on any existing data structures or temporary files, or any internal state that would be managed by multiple invocations.\n\nTo initialize database connections and libraries, or load state, you can take advantage of [static initialization](lambda-runtime-environment.md#static-initialization). Since execution environments are reused where possible to improve performance, you can amortize the time taken to initialize these resources over multiple invocations. However, you should not store any variables or data used in the function within this global scope.\n\n## Minimize coupling\n<a name=\"minimize-coupling\"></a>",
+     "headings": [
+      "Designing Lambda applications",
+      "Implement statelessness in functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-static-init-reuse-connections",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Initialization code outside the handler runs once per new execution environment and is not run again on a warm environment, so static initialization is the place to open database connections and SDK clients that later invocations reuse.",
+   "values": [
+    {
+     "key": "not-again",
+     "display": "is not run again",
+     "spoken": "init code runs once per environment"
+    },
+    {
+     "key": "reuse",
+     "display": "reuse connections over multiple invocations"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per execution environment",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html",
+     "title": "Understanding the Lambda execution environment lifecycle",
+     "quote": "The initialization code is not run again if an invocation uses a warm execution environment.",
+     "table_header": null,
+     "context": "def lambda_handler(event, context):\n\n  # Handler logic...\n```\n\nThe largest contributor of latency before function execution comes from initialization code. This code runs when a new execution environment is created for the first time. The initialization code is not run again if an invocation uses a warm execution environment. Factors that affect initialization code latency include:\n+ The size of the function package, in terms of imported libraries and dependencies, and Lambda layers.\n+ The amount of code and initialization work.\n+ The performance of libraries and other services in setting up connections and other resources.\n\nThere are a number of steps that developers can take to optimize static initialization latency. If a function has many objects and connections, you might be able to rearchitect a single function into multiple, specialized functions. These are individually smaller and each have less initialization code.",
+     "headings": [
+      "Handler logic..."
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html",
+     "title": "Understanding the Lambda execution environment lifecycle",
+     "quote": "Static initialization is also often the best place to open database connections to allow a function to reuse connections over multiple invocations to the same execution environment.",
+     "table_header": null,
+     "context": "// Instead of const AWS = AWSXRay.captureAWS(require('aws-sdk')), use:\nconst dynamodb = new DynamoDB.DocumentClient()\nAWSXRay.captureAWSClient(dynamodb.service)\n```\n\nStatic initialization is also often the best place to open database connections to allow a function to reuse connections over multiple invocations to the same execution environment. However, you might have large numbers of objects that are only used in certain execution paths in your function. In this case, you can lazily load variables in the global scope to reduce the static initialization duration.\n\nAvoid global variables for context-specific information. If your function has a global variable that is used only for the lifetime of a single invocation and is reset for the next invocation, use a variable scope that is local to the handler. Not only does this prevent global variable leaks across invocations, it also improves the static initialization performance.",
+     "headings": [
+      "Handler logic..."
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-step-functions-orchestrate-errors",
+   "rev": 1,
+   "kind": "capability",
+   "claim": "AWS Step Functions provides visual workflow orchestration for Lambda functions and other AWS services: each task gets its own function, and Step Functions coordinates the flow of data between functions and handles errors at each step.",
+   "values": [
+    {
+     "key": "what",
+     "display": "visual workflow orchestration",
+     "spoken": "visual workflow orchestration"
+    },
+    {
+     "key": "errors",
+     "display": "handles errors at each step"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Step Functions with Lambda",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-step-functions.html",
+     "title": "Orchestrating Lambda functions with Step Functions",
+     "quote": "AWS Step Functions provides visual workflow orchestration for coordinating Lambda functions with other AWS services.",
+     "table_header": null,
+     "context": "\n\n# Orchestrating Lambda functions with Step Functions\n<a name=\"with-step-functions\"></a>\n\nAWS Step Functions provides visual workflow orchestration for coordinating Lambda functions with other AWS services. With native integrations to 220\\+ AWS services and fully managed, zero-maintenance infrastructure, Step Functions is ideal when you need visual workflow design and fully-managed service integrations.\n\nFor orchestration using standard programming languages within Lambda where workflow logic lives alongside business logic, consider [Lambda durable functions](durable-functions.md). For help choosing between these options, see [Durable functions or Step Functions](durable-step-functions.md).\n\nFor example, processing an order might require validating the order details, checking inventory levels, processing payment, and generating an invoice. Write separate Lambda functions for each task and use Step Functions to manage the workflow. Step Functions coordinates the flow of data between your functions and handles errors at each step. This separation makes your workflows easier to visualize, modify, and maintain as they grow more complex.\n",
+     "headings": [
+      "Orchestrating Lambda functions with Step Functions"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-step-functions.html",
+     "title": "Orchestrating Lambda functions with Step Functions",
+     "quote": "Write separate Lambda functions for each task and use Step Functions to manage the workflow. Step Functions coordinates the flow of data between your functions and handles errors at each step.",
+     "table_header": null,
+     "context": "\nAWS Step Functions provides visual workflow orchestration for coordinating Lambda functions with other AWS services. With native integrations to 220\\+ AWS services and fully managed, zero-maintenance infrastructure, Step Functions is ideal when you need visual workflow design and fully-managed service integrations.\n\nFor orchestration using standard programming languages within Lambda where workflow logic lives alongside business logic, consider [Lambda durable functions](durable-functions.md). For help choosing between these options, see [Durable functions or Step Functions](durable-step-functions.md).\n\nFor example, processing an order might require validating the order details, checking inventory levels, processing payment, and generating an invoice. Write separate Lambda functions for each task and use Step Functions to manage the workflow. Step Functions coordinates the flow of data between your functions and handles errors at each step. This separation makes your workflows easier to visualize, modify, and maintain as they grow more complex.\n\n## When to use Step Functions with Lambda\n<a name=\"when-to-use-step-functions\"></a>\n\nThe following scenarios are good examples of when Step Functions is a particularly good fit for orchestrating Lambda-based applications.",
+     "headings": [
+      "Orchestrating Lambda functions with Step Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-stream-bisect-batch-on-error",
+   "rev": 1,
+   "kind": "capability",
+   "claim": "For function errors on a Kinesis event source mapping, BisectBatchOnFunctionError splits a failed batch into two smaller batches to isolate bad records and avoid timeouts, and splitting does not consume the retry quota.",
+   "values": [
+    {
+     "key": "setting",
+     "display": "BisectBatchOnFunctionError",
+     "spoken": "bisect batch on function error"
+    },
+    {
+     "key": "effect",
+     "display": "splits a failed batch into two smaller batches"
+    },
+    {
+     "key": "quota",
+     "display": "doesn't consume the retry quota"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Kinesis event source mapping",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "function errors"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/kinesis-on-failure-destination.html",
+     "title": "Retain discarded batch records for a Kinesis Data Streams event source in Lambda",
+     "quote": "For function errors, you can also configure BisectBatchOnFunctionError, which splits a failed batch into two smaller batches, isolating bad records and avoiding timeouts. Splitting batches doesn't consume the retry quota.",
+     "table_header": null,
+     "context": "+ **Before invocation:** If a Lambda event source mapping is unable to invoke the function due to throttling or other issues, it retries until the records expire or exceed the maximum age configured on the event source mapping ([MaximumRecordAgeInSeconds](https://docs.aws.amazon.com/lambda/latest/api/API_CreateEventSourceMapping.html#lambda-CreateEventSourceMapping-request-MaximumRecordAgeInSeconds)).\n+ **During invocation:** If the function is invoked but returns an error, Lambda retries until the records expire, exceed the maximum age ([MaximumRecordAgeInSeconds](https://docs.aws.amazon.com/lambda/latest/api/API_CreateEventSourceMapping.html#lambda-CreateEventSourceMapping-request-MaximumRecordAgeInSeconds)), or reach the configured retry quota ([MaximumRetryAttempts](https://docs.aws.amazon.com/lambda/latest/api/API_CreateEventSourceMapping.html#lambda-CreateEventSourceMapping-request-MaximumRetryAttempts)). For function errors, you can also configure [BisectBatchOnFunctionError](https://docs.aws.amazon.com/lambda/latest/api/API_CreateEventSourceMapping.html#lambda-CreateEventSourceMapping-response-BisectBatchOnFunctionError), which splits a failed batch into two smaller batches, isolating bad records and avoiding timeouts. Splitting batches doesn't consume the retry quota.\n",
+     "headings": [
+      "Retain discarded batch records for a Kinesis Data Streams event source in Lambda"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-streaming-200-mb-vs-6-mb",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "Response streaming functions can return payloads up to 200 MB, compared with the 6 MB maximum for buffered responses.",
+   "values": [
+    {
+     "key": "streamed",
+     "display": "up to 200 MB"
+    },
+    {
+     "key": "buffered",
+     "display": "6 MB maximum"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per invocation, response payload",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html",
+     "title": "Response streaming for Lambda functions",
+     "quote": "Additionally, response streaming functions can return payloads up to 200 MB, compared to the 6 MB maximum for buffered responses.",
+     "table_header": null,
+     "context": "\n# Response streaming for Lambda functions\n<a name=\"configuration-response-streaming\"></a>\n\nLambda functions can natively stream response payloads back to clients through [Lambda function URLs](urls-configuration.md) or by using the [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) API (through the AWS SDK or direct API calls). Your Lambda function can also stream response payloads through the [Amazon API Gateway proxy integration](https://docs.aws.amazon.com/apigateway/latest/developerguide/response-transfer-mode-lambda.html), which uses the [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) API to invoke your function. Response streaming can benefit latency sensitive applications by improving time to first byte (TTFB) performance. This is because you can send partial responses back to the client as they become available. Additionally, response streaming functions can return payloads up to 200 MB, compared to the 6 MB maximum for buffered responses.\n\nStreaming a response also means that your function doesn't need to fit the entire response in memory. For very large responses, this can reduce the amount of memory you need to configure for your function. To help choose between function URLs and API Gateway for your use case, see [Select a method to invoke your Lambda function using an HTTP request](furls-http-invoke-decision.md).\n\n**Note**  ",
+     "headings": [
+      "Response streaming for Lambda functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-streaming-bandwidth-2-mbps",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "The first 6 MB of a streamed response has uncapped bandwidth; after that Lambda streams at a maximum of 2 MBps, and responses that never exceed 6 MB never hit the cap.",
+   "values": [
+    {
+     "key": "cap",
+     "display": "maximum rate of 2 MBps"
+    },
+    {
+     "key": "free",
+     "display": "first 6 MB"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per invocation, streamed response payload",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html",
+     "title": "Response streaming for Lambda functions",
+     "quote": "The first 6 MB of your function's response payload has uncapped bandwidth. After this initial burst, Lambda streams your response at a maximum rate of 2 MBps. If your function responses never exceed 6 MB, then this bandwidth limit never applies.",
+     "table_header": null,
+     "context": "+ [Tutorial: Creating a response streaming Lambda function with a function URL](response-streaming-tutorial.md)\n\n## Bandwidth limits for response streaming\n<a name=\"config-rs-bandwidth-cap\"></a>\n\nThe first 6 MB of your function's response payload has uncapped bandwidth. After this initial burst, Lambda streams your response at a maximum rate of 2 MBps. If your function responses never exceed 6 MB, then this bandwidth limit never applies. \n\n**Note**  \nBandwidth limits only apply to your function's response payload, and not to network access by your function.\n\nThe rate of uncapped bandwidth varies depending on a number of factors, including your function's processing speed. You can normally expect a rate higher than 2 MBps for the first 6 MB of your function's response. If your function is streaming a response to a destination outside of AWS, the streaming rate also depends on the speed of the external internet connection. ",
+     "headings": [
+      "Response streaming for Lambda functions",
+      "Bandwidth limits for response streaming"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-streaming-bytes-price",
+   "rev": 1,
+   "kind": "price",
+   "claim": "Response streaming is priced at $0.008 per GB streamed; the free tier provides 100 GB per month, and the first 6 MB streamed per request are also free.",
+   "values": [
+    {
+     "key": "price",
+     "display": "$0.008 per GB streamed"
+    },
+    {
+     "key": "free-tier",
+     "display": "100 GB per month"
+    },
+    {
+     "key": "free-per-request",
+     "display": "first 6 MB streamed per request are also free"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per GB streamed, per account, per month (pricing example region)",
+    "default_or_max": "default",
+    "adjustable": false,
+    "condition": "bytes streamed by response streaming functions"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://aws.amazon.com/lambda/pricing/",
+     "title": "AWS Lambda Pricing",
+     "quote": "The monthly bytes streamed price is $0.008 per GB streamed and the free tier provides 100 GB per month. The first 6 MB streamed per request are also free.",
+     "table_header": null,
+     "context": "The monthly request price is $0.20 per one million requests and the free tier provides 1 million request per month.\nTotal requests – Free tier requests = monthly billable requests\n3 million requests – 1 million free tier requests = 2 million monthly billable requests\nMonthly request charges = 2M * $0.2/M = $0.40\nProcessed bytes charges\nThe monthly bytes streamed price is $0.008 per GB streamed and the free tier provides 100 GB per month. The first 6 MB streamed per request are also free.\nFree bytes streamed (GB) = 2 million requests * 100 KB = 190.7 GB\nSince 100 KB < 6 MB per request, the 190.7 GB streamed are free.\nChargeable bytes streamed (GB) = 1 million requests * (7 MB – 6 MB) = 976.56 GB\nMonthly bytes streamed charges = 976.56 GB * $0.008 = $7.81\nTotal monthly charges:",
+     "headings": [
+      "AWS Lambda pricing",
+      "Lambda HTTP Response Stream Pricing",
+      "Pricing Example: Streaming Server Side Rendered Web Content"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-streaming-furl-not-in-vpc",
+   "rev": 2,
+   "kind": "restriction",
+   "claim": "Lambda function URLs do not support response streaming within a VPC environment.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "do not support response streaming"
+    }
+   ],
+   "qualifiers": {
+    "scope": "function URLs in a VPC",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html",
+     "title": "Response streaming for Lambda functions",
+     "quote": "Lambda function URLs do not support response streaming within a VPC environment.",
+     "table_header": null,
+     "context": "\n## VPC compatibility with response streaming\n<a name=\"config-rs-vpc-compatibility\"></a>\n\nWhen using Lambda functions in a VPC environment, there are important considerations for response streaming:\n+ Lambda function URLs do not support response streaming within a VPC environment.\n+ You can use response streaming within a VPC by invoking your Lambda function through the AWS SDK using the `InvokeWithResponseStream` API. This requires setting up the appropriate VPC endpoints for Lambda.\n+ For VPC environments, you'll need to create an interface VPC endpoint for Lambda to enable communication between your resources in the VPC and the Lambda service.\n\nA typical architecture for response streaming in a VPC might include:\n",
+     "headings": [
+      "Response streaming for Lambda functions",
+      "VPC compatibility with response streaming"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-streaming-nodejs-managed-runtimes",
+   "rev": 1,
+   "kind": "restriction",
+   "claim": "Lambda supports response streaming natively on Node.js managed runtimes; other languages need a custom runtime or the Lambda Web Adapter.",
+   "values": [
+    {
+     "key": "runtimes",
+     "display": "Node.js managed runtimes"
+    }
+   ],
+   "qualifiers": {
+    "scope": "response streaming",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html",
+     "title": "Response streaming for Lambda functions",
+     "quote": "Lambda supports response streaming on Node.js managed runtimes. For other languages, including Python, you can [use a custom runtime with a custom Runtime API integration](runtimes-custom.md#runtimes-custom-response-streaming) to stream responses or use the [Lambda Web Adapter](https://github.com/awslabs/aws-lambda-web-adapter).",
+     "table_header": null,
+     "context": "The speed at which Lambda streams your responses depends on the response size. The streaming rate for the first 6 MB of your function's response is uncapped. For responses larger than 6 MB, the remainder of the response is subject to a bandwidth cap. For more information on streaming bandwidth, see [Bandwidth limits for response streaming](#config-rs-bandwidth-cap).\n\nStreaming responses incur cost and streamed responses are not interrupted or stopped when the invoking client connection is broken. Customers are billed for the full function duration, so customers should exercise caution when configuring long function timeouts.\n\nLambda supports response streaming on Node.js managed runtimes. For other languages, including Python, you can [use a custom runtime with a custom Runtime API integration](runtimes-custom.md#runtimes-custom-response-streaming) to stream responses or use the [Lambda Web Adapter](https://github.com/awslabs/aws-lambda-web-adapter).\n\n**Note**  \nWhen testing your function through the Lambda console, you'll always see responses as buffered.\n",
+     "headings": [
+      "Response streaming for Lambda functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-streaming-paths",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "A function can stream its response through a Lambda function URL, through the InvokeWithResponseStream API, or through the API Gateway proxy integration that uses that API.",
+   "values": [
+    {
+     "key": "paths",
+     "display": "InvokeWithResponseStream"
+    },
+    {
+     "key": "furl",
+     "display": "Lambda function URLs"
+    }
+   ],
+   "qualifiers": {
+    "scope": "response streaming",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-response-streaming.html",
+     "title": "Response streaming for Lambda functions",
+     "quote": "Lambda functions can natively stream response payloads back to clients through [Lambda function URLs](urls-configuration.md) or by using the [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) API (through the AWS SDK or direct API calls).",
+     "table_header": null,
+     "context": "\n# Response streaming for Lambda functions\n<a name=\"configuration-response-streaming\"></a>\n\nLambda functions can natively stream response payloads back to clients through [Lambda function URLs](urls-configuration.md) or by using the [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) API (through the AWS SDK or direct API calls). Your Lambda function can also stream response payloads through the [Amazon API Gateway proxy integration](https://docs.aws.amazon.com/apigateway/latest/developerguide/response-transfer-mode-lambda.html), which uses the [InvokeWithResponseStream](https://docs.aws.amazon.com/lambda/latest/api/API_InvokeWithResponseStream.html) API to invoke your function. Response streaming can benefit latency sensitive applications by improving time to first byte (TTFB) performance. This is because you can send partial responses back to the client as they become available. Additionally, response streaming functions can return payloads up to 200 MB, compared to the 6 MB maximum for buffered responses.\n\nStreaming a response also means that your function doesn't need to fit the entire response in memory. For very large responses, this can reduce the amount of memory you need to configure for your function. To help choose between function URLs and API Gateway for your use case, see [Select a method to invoke your Lambda function using an HTTP request](furls-http-invoke-decision.md).\n\n**Note**  ",
+     "headings": [
+      "Response streaming for Lambda functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sync-error-caller-retries",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "When a synchronous invocation fails, the error comes back in the response and the caller must retry manually; Lambda does not retry synchronous invocations for you.",
+   "values": [
+    {
+     "key": "manual",
+     "display": "retry the invocation manually",
+     "spoken": "the caller retries, not Lambda"
+    },
+    {
+     "key": "error",
+     "display": "view the error message in the response"
+    }
+   ],
+   "qualifiers": {
+    "scope": "synchronous invocations",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-invocation.html",
+     "title": "Understanding Lambda function invocation methods",
+     "quote": "If the function invocation results in an error, for synchronous invocations, view the error message in the response and retry the invocation manually.",
+     "table_header": null,
+     "context": "\n```\nhttps://{{url-id}}.lambda-url.{{us-east-1}}.on.aws\n```\n\nIf the function invocation results in an error, for synchronous invocations, view the error message in the response and retry the invocation manually. For asynchronous invocations, Lambda handles retries automatically and can send invocation records to a [destination](invocation-async-retain-records.md#invocation-async-destinations).",
+     "headings": [
+      "Understanding Lambda function invocation methods"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sync-invocation-waits",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "In a synchronous invocation Lambda runs the function and the caller waits for the response; the Invoke API uses InvocationType RequestResponse for synchronous and Event for asynchronous invocation.",
+   "values": [
+    {
+     "key": "waits",
+     "display": "runs the function and waits for a response",
+     "spoken": "the caller waits for the response"
+    },
+    {
+     "key": "types",
+     "display": "a value of Event indicates asynchronous invocation"
+    },
+    {
+     "key": "sync",
+     "display": "RequestResponse"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per invocation",
+    "default_or_max": "",
+    "adjustable": true,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/invocation-sync.html",
+     "title": "Invoke a Lambda function synchronously",
+     "quote": "When you invoke a function synchronously, Lambda runs the function and waits for a response. When the function completes, Lambda returns the response from the function's code with additional data, such as the version of the function that was invoked.",
+     "table_header": null,
+     "context": "\n\n# Invoke a Lambda function synchronously\n<a name=\"invocation-sync\"></a>\n\nWhen you invoke a function synchronously, Lambda runs the function and waits for a response. When the function completes, Lambda returns the response from the function's code with additional data, such as the version of the function that was invoked. To invoke a function synchronously with the AWS CLI, use the `invoke` command.\n\n```\naws lambda invoke --function-name {{my-function}} \\\n    --cli-binary-format raw-in-base64-out \\\n    --payload '{ \"key\": \"value\" }' response.json",
+     "headings": [
+      "Invoke a Lambda function synchronously"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-invocation.html",
+     "title": "Understanding Lambda function invocation methods",
+     "quote": "A value of `RequestResponse` indicates synchronous invocation, and a value of `Event` indicates asynchronous invocation.",
+     "table_header": null,
+     "context": "\nAll of these methods are *direct* ways to invoke your function. In Lambda, a common use case is to invoke your function based on an event that occurs elsewhere in your application. Some services can invoke a Lambda function with each new event.\n\nThis is called a [trigger](lambda-services.md). For stream and queue-based services, Lambda invokes the function with batches of records. This is called an [event source mapping](invocation-eventsourcemapping.md).\n\nWhen you invoke a function, you can choose to invoke it synchronously or asynchronously. With [synchronous invocation](invocation-sync.md), you wait for the function to process the event and return a response. With [asynchronous invocation](invocation-async.md), Lambda queues the event for processing and returns a response immediately. The [`InvocationType` request parameter in the Invoke API](https://docs.aws.amazon.com/lambda/latest/api/API_Invoke.html#API_Invoke_RequestParameters) determines how Lambda invokes your function. A value of `RequestResponse` indicates synchronous invocation, and a value of `Event` indicates asynchronous invocation.\n\nTo invoke your function over IPv6, use Lambda's public [dual-stack endpoints](https://docs.aws.amazon.com/general/latest/gr/rande.html#dual-stack-endpoints). Dual-stack endpoints support both IPv4 and IPv6. Lambda dual-stack endpoints use the following syntax:\n\n```\n{{protocol}}://lambda.{{us-east-1}}.api.aws",
+     "headings": [
+      "Understanding Lambda function invocation methods"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sync-requests-per-env",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "For synchronous invocations, each instance of the execution environment can serve up to 10 requests per second, so the total invocation limit is 10 times the concurrency limit.",
+   "values": [
+    {
+     "key": "rate",
+     "display": "10 requests per second"
+    },
+    {
+     "key": "total",
+     "display": "10 times your concurrency limit"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per function, per Region, synchronous invocations",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html",
+     "title": "Lambda quotas",
+     "quote": "| Invocation requests per function per Region (synchronous) | Each instance of your execution environment can serve up to 10 requests per second. In other words, the total invocation limit is 10 times your concurrency limit. See [Understanding Lambda function scaling](lambda-concurrency.md). |",
+     "table_header": "| Resource | Quota |",
+     "context": "The following quotas are associated with Lambda API requests.\n\n\n| Resource | Quota | \n| --- | --- | \n| Invocation requests per function per Region (synchronous) | Each instance of your execution environment can serve up to 10 requests per second. In other words, the total invocation limit is 10 times your concurrency limit. See [Understanding Lambda function scaling](lambda-concurrency.md). | \n| Invocation requests per function per Region (asynchronous) | Each instance of your execution environment can serve an unlimited number of requests. In other words, the total invocation limit is based only on concurrency available to your function. See [Understanding Lambda function scaling](lambda-concurrency.md). | \n| Invocation requests per function version or alias (requests per second) | 10 x allocated [provisioned concurrency](configuration-concurrency.md) This quota applies only to functions that use provisioned concurrency.  | \n| [GetFunction](https://docs.aws.amazon.com/lambda/latest/api/API_GetFunction.html) API requests | 100 requests per second. Cannot be increased. | \n| [GetPolicy](https://docs.aws.amazon.com/lambda/latest/api/API_GetPolicy.html) API requests | 15 requests per second. Cannot be increased. | \n| Remainder of the control plane API requests (excludes invocation, GetFunction, and GetPolicy requests) | 15 requests per second across all APIs (not 15 requests per second per API). Cannot be increased. | ",
+     "headings": [
+      "Lambda quotas",
+      "Lambda API requests"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sync-service-controls-error-strategy",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "When a service invokes a function synchronously, that service waits for the function's response, defines the data the function needs to return, and controls the error strategy, such as whether to retry on errors.",
+   "values": [
+    {
+     "key": "waits",
+     "display": "waits for the response from your function",
+     "spoken": "the calling service waits for the response"
+    },
+    {
+     "key": "errors",
+     "display": "The service controls the error strategy"
+    }
+   ],
+   "qualifiers": {
+    "scope": "synchronous invocation by an AWS service",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "For synchronous invocation, the service that generates the event waits for the response from your function. That service defines the data that the function needs to return in the response. The service controls the error strategy, such as whether to retry on errors.",
+     "table_header": null,
+     "context": "In addition to event-driven invocations, you can use Lambda with [Amazon EC2](services-ec2.md), [self-managed Apache Kafka](with-kafka-esm.md), and [Kubernetes](with-kubernetes.md).\n\nAn Event Function can have multiple triggers. Each trigger acts as a client invoking your function independently, and each event that Lambda passes to your function has data from only one trigger. Lambda converts the event document into an object and passes it to your function handler.\n\nDepending on the service, the event-driven invocation can be [synchronous](invocation-sync.md) or [asynchronous](invocation-async.md).\n+ For synchronous invocation, the service that generates the event waits for the response from your function. That service defines the data that the function needs to return in the response. The service controls the error strategy, such as whether to retry on errors.\n+ For asynchronous invocation, Lambda queues the event before passing it to your function. When Lambda queues the event, it immediately sends a success response to the service that generated the event. After the function processes the event, Lambda doesn't return a response to the event-generating service.\n\n## Creating a trigger\n<a name=\"lambda-invocation-trigger\"></a>\n",
+     "headings": [
+      "Invoking Lambda with events from other AWS services"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-sync-status-200-with-function-error",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "For a synchronous invocation, the status code from Lambda is 200 whenever Lambda was able to run the function, even if the function itself returned an error.",
+   "values": [
+    {
+     "key": "code",
+     "display": "status code is 200, even if the function returned an error",
+     "spoken": "two hundred, even when the function code failed"
+    },
+    {
+     "key": "value",
+     "display": "200"
+    }
+   ],
+   "qualifiers": {
+    "scope": "synchronous invocations",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "Lambda was able to run the function"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/invocation-sync.html",
+     "title": "Invoke a Lambda function synchronously",
+     "quote": "If Lambda was able to run the function, the status code is 200, even if the function returned an error.",
+     "table_header": null,
+     "context": "The `payload` is a string that contains an event in JSON format. The name of the file where the AWS CLI writes the response from the function is `response.json`. If the function returns an object or error, the response body is the object or error in JSON format. If the function exits without error, the response body is `null`.\n\n**Note**  \nLambda does not wait for external extensions to complete before sending the response. External extensions run as independent processes in the execution environment and continue to run after the function invocation is complete. For more information, see [Augment Lambda functions using Lambda extensions](lambda-extensions.md).\n\nThe output from the command, which is displayed in the terminal, includes information from headers in the response from Lambda. This includes the version that processed the event (useful when you use [aliases](configuration-aliases.md)), and the status code returned by Lambda. If Lambda was able to run the function, the status code is 200, even if the function returned an error.\n\n**Note**  \nFor functions with a long timeout, your client might be disconnected during synchronous invocation while it waits for a response. Configure your HTTP client, SDK, firewall, proxy, or operating system to allow for long connections with timeout or keep-alive settings.\n\nIf Lambda isn't able to run the function, the error is displayed in the output.",
+     "headings": [
+      "Invoke a Lambda function synchronously"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tenant-isolation-create-time-only",
+   "rev": 1,
+   "kind": "restriction",
+   "claim": "Tenant isolation is an immutable function property that can only be enabled when you create the function.",
+   "values": [
+    {
+     "key": "when",
+     "display": "can only be enabled when creating a function"
+    }
+   ],
+   "qualifiers": {
+    "scope": "functions with tenant isolation mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation.html",
+     "title": "Tenant isolation",
+     "quote": "It can only be enabled when creating a function.",
+     "table_header": null,
+     "context": "\n## Considerations\n<a name=\"tenant-isolation-considerations\"></a>\n\nWhen using tenant isolation with your Lambda functions, keep the following in mind:\n+ **Immutable configuration**: Tenant isolation is an immutable function property. It can only be enabled when creating a function.\n+ **Required tenant-id parameter**: Functions using tenant isolation mode must be invoked with a `tenant-id` parameter. Omitting this parameter causes function invocations to fail.\n+ **Execution role applies to all tenants**: Invocations from all tenants use the permissions defined in your Lambda function's [execution role](lambda-intro-execution-role.md).\n+ **Concurrency**: There are no changes to your function's [concurrency](lambda-concurrency.md) or [scaling behavior](scaling-behavior.md) when using tenant isolation. Lambda imposes a limit of 2,500 tenant-isolated execution environments (active or idle) for every 1,000 [concurrent executions](gettingstarted-limits.md#compute-and-storage) configured for your Lambda function.\n\n## Pricing",
+     "headings": [
+      "Tenant isolation",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tenant-isolation-env-never-shared",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "With tenant isolation, execution environments are never reused across different tenants; without it, execution environments might be reused across invocations of the same function.",
+   "values": [
+    {
+     "key": "with",
+     "display": "never reused across different tenants"
+    }
+   ],
+   "qualifiers": {
+    "scope": "functions with tenant isolation mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation.html",
+     "title": "Tenant isolation",
+     "quote": "| Environment reuse | Execution environments are never reused across different tenants | Execution environments might be reused across invocations of the same function |",
+     "table_header": "| Feature | With tenant isolation | Without tenant isolation |",
+     "context": "\n\n| Feature | With tenant isolation | Without tenant isolation | \n| --- | --- | --- | \n| Isolation type | Tenant-level isolation | Function-level isolation | \n| Environment reuse | Execution environments are never reused across different tenants | Execution environments might be reused across invocations of the same function | \n| Data isolation | Data from other tenants is not accessible | Data from previous invocations of the same function version might be accessible | \n| Cold starts | More cold starts due to tenant-specific environments | Fewer cold starts due to environment reuse | \n| Pricing | Additional charge besides the standard Lambda pricing | Standard Lambda pricing | ",
+     "headings": [
+      "Tenant isolation",
+      "Isolation mode"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tenant-isolation-pricing-dimension",
+   "rev": 1,
+   "kind": "pricing-dimension",
+   "claim": "With tenant isolation you are charged each time Lambda creates a new tenant-isolated execution environment; the price depends on the memory you allocate and the CPU architecture, in addition to standard Lambda pricing.",
+   "values": [
+    {
+     "key": "dim",
+     "display": "creates a new tenant-isolated execution environment"
+    }
+   ],
+   "qualifiers": {
+    "scope": "functions with tenant isolation mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation.html",
+     "title": "Tenant isolation",
+     "quote": "You are charged when Lambda creates a new tenant-isolated execution environment. The price depends on the amount of [memory](configuration-memory.md) that you allocate to your function and the [CPU architecture](foundation-arch.md) that you use.",
+     "table_header": null,
+     "context": "+ **Concurrency**: There are no changes to your function's [concurrency](lambda-concurrency.md) or [scaling behavior](scaling-behavior.md) when using tenant isolation. Lambda imposes a limit of 2,500 tenant-isolated execution environments (active or idle) for every 1,000 [concurrent executions](gettingstarted-limits.md#compute-and-storage) configured for your Lambda function.\n\n## Pricing\n<a name=\"tenant-isolation-pricing\"></a>\n\nYou are charged when Lambda creates a new tenant-isolated execution environment. The price depends on the amount of [memory](configuration-memory.md) that you allocate to your function and the [CPU architecture](foundation-arch.md) that you use. For more information, see [AWS Lambda pricing](https://aws.amazon.com/lambda/pricing).\n\n## Isolation mode\n<a name=\"tenant-isolation-modes\"></a>\n\nThe following table outlines differences between Lambda functions with and without tenant isolation.",
+     "headings": [
+      "Tenant isolation",
+      "Pricing"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation.html",
+     "title": "Tenant isolation",
+     "quote": "| Pricing | Additional charge besides the standard Lambda pricing | Standard Lambda pricing |",
+     "table_header": "| Feature | With tenant isolation | Without tenant isolation |",
+     "context": "| --- | --- | --- | \n| Isolation type | Tenant-level isolation | Function-level isolation | \n| Environment reuse | Execution environments are never reused across different tenants | Execution environments might be reused across invocations of the same function | \n| Data isolation | Data from other tenants is not accessible | Data from previous invocations of the same function version might be accessible | \n| Cold starts | More cold starts due to tenant-specific environments | Fewer cold starts due to environment reuse | \n| Pricing | Additional charge besides the standard Lambda pricing | Standard Lambda pricing | ",
+     "headings": [
+      "Tenant isolation",
+      "Isolation mode"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tenant-isolation-routing",
+   "rev": 1,
+   "kind": "capability",
+   "claim": "With tenant isolation mode, Lambda uses a customer-specified tenant identifier to route requests so that a function's execution environments serve invocations from only that end-user or tenant.",
+   "values": [
+    {
+     "key": "how",
+     "display": "customer-specified tenant identifier",
+     "spoken": "a tenant ID on each invoke"
+    }
+   ],
+   "qualifiers": {
+    "scope": "functions created with tenant isolation mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation.html",
+     "title": "Tenant isolation",
+     "quote": "With tenant isolation mode, Lambda uses a customer-specified tenant identifier to route requests to underlying function execution environments, ensuring that a function's execution environments are only used to serve invocations from the specified end-user or tenant.",
+     "table_header": null,
+     "context": "\nUse tenant isolation mode when you need isolated request processing for individual end-users or tenants invoking a Lambda function. This capability simplifies building multi-tenant applications that process tenant-specific code or data, such as SaaS platforms for workflow automation or code execution, by removing the need to manage tenant-specific function resources and request routing logic.\n\nMulti-tenant applications have strict isolation requirements when running code or processing data for individual tenants or end-users. With tenant isolation mode, Lambda uses a customer-specified tenant identifier to route requests to underlying function execution environments, ensuring that a function's execution environments are only used to serve invocations from the specified end-user or tenant. Lambda's function execution environments use [Firecracker virtualization](https://firecracker-microvm.github.io/) to provide workload isolation.\n\nWhen a function using tenant isolation mode receives an invoke with a tenant identifier, Lambda first attempts to locate an available execution environment associated with that tenant identifier. If no execution environments exist, Lambda creates and assigns a new execution environment to that tenant. As function invocations with the specified tenant identifier scale up, Lambda locates or creates new execution environments as necessary.\n",
+     "headings": [
+      "Tenant isolation"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tenant-isolation-unsupported-features",
+   "rev": 1,
+   "kind": "restriction",
+   "claim": "Tenant isolation mode is not supported with functions that use function URLs, provisioned concurrency, or SnapStart.",
+   "values": [
+    {
+     "key": "no",
+     "display": "function URLs"
+    }
+   ],
+   "qualifiers": {
+    "scope": "functions with tenant isolation mode",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation.html",
+     "title": "Tenant isolation",
+     "quote": "Tenant isolation mode is not supported with functions that use [function URLs](urls-configuration.md), [provisioned concurrency](provisioned-concurrency.md), or [SnapStart](snapstart.md).",
+     "table_header": null,
+     "context": "Multiple invocation requests from the same tenant can re-use the same function execution environment, reducing cold-starts and improving response times for latency sensitive applications.\n\n## Supported features and limitations\n<a name=\"tenant-isolation-features\"></a>\n\nTenant isolation mode is not supported with functions that use [function URLs](urls-configuration.md), [provisioned concurrency](provisioned-concurrency.md), or [SnapStart](snapstart.md). You can send requests to a tenant-isolated function using [synchronous invocations](invocation-sync.md), [asynchronous invocations](invocation-async.md), or by using [Amazon API Gateway as an event-trigger](services-apigateway.md).\n\n## Supported AWS Regions\n<a name=\"tenant-isolation-regions\"></a>\n\nTenant isolation mode is supported in all [commercial Regions](https://docs.aws.amazon.com/general/latest/gr/glos-chap.html#region) except Asia Pacific (New Zealand).",
+     "headings": [
+      "Tenant isolation",
+      "Supported features and limitations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-test-events-console",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "The console editor keeps at most 10 test events per function.",
+   "values": [
+    {
+     "key": "max",
+     "display": "10"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per function, console editor",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html",
+     "title": "Lambda quotas",
+     "quote": "| Test events (console editor) | 10 |",
+     "table_header": "| Resource | Quota |",
+     "context": "| [Deployment package (.zip file archive)](configuration-function-zip.md) size | 50 MB (zipped, when uploaded through the Lambda API or SDKs). Upload larger files with Amazon S3.<br />50 MB (when uploaded through the Lambda console)<br />250 MB The maximum size of the contents of a deployment package, including layers and custom runtimes. (unzipped)<br /> | \n| Container image settings size | 16 KB | \n| [Container image](images-create.md) code package size | 10 GB (maximum uncompressed image size, including all layers) | \n| Test events (console editor) | 10 | \n| `/tmp` directory storage | Between 512 MB and 10,240 MB, in 1-MB increments | \n| File descriptors | 1,024 Lambda Managed Instances use a higher file descriptor limit of 4,096. For more information, see [Understanding the Lambda Managed Instances execution environment](lambda-managed-instances-execution-environment.md).  | \n| Execution processes/threads | 1,024 Lambda Managed Instances use the default process and thread limits from [Bottlerocket](https://aws.amazon.com/bottlerocket/). For more information, see [Understanding the Lambda Managed Instances execution environment](lambda-managed-instances-execution-environment.md).  | ",
+     "headings": [
+      "Lambda quotas",
+      "Function configuration, deployment, and execution"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-throttle-429",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "When requests arrive faster than the function can scale, or the function is at maximum concurrency, additional requests fail with a throttling error (429 status code).",
+   "values": [
+    {
+     "key": "error",
+     "display": "throttling error (429 status code)"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per function",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/scaling-behavior.html",
+     "title": "Lambda scaling behavior",
+     "quote": "If requests come in faster than your function can scale, or if your function is at maximum concurrency, then additional requests fail with a throttling error (429 status code).",
+     "table_header": null,
+     "context": "**Note**  \nIn practice, Lambda makes a best attempt to refill your concurrency scaling rate continuously over time, rather than in one single refill of 1,000 units every 10 seconds.\n\nLambda doesn't accrue unused portions of your concurrency scaling rate. This means that at any instant in time, your scaling rate is always 1,000 concurrency units at maximum. For example, if you don't use any of your available 1,000 concurrency units in a 10-second interval, you won't accrue 1,000 additional units in the next 10-second interval. Your concurrency scaling rate is still 1,000 in the next 10-second interval.\n\nAs long as your function continues to receive increasing numbers of requests, then Lambda scales at the fastest rate available to you, up to your account's concurrency limit. You can limit the amount of concurrency that individual functions can use by [configuring reserved concurrency](configuration-concurrency.md). If requests come in faster than your function can scale, or if your function is at maximum concurrency, then additional requests fail with a throttling error (429 status code).",
+     "headings": [
+      "Lambda scaling behavior",
+      "Concurrency scaling rate"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-timeout-default",
+   "rev": 1,
+   "kind": "default",
+   "claim": "The default function timeout is 3 seconds; you can raise it in increments of 1 second up to the maximum of 900 seconds (15 minutes).",
+   "values": [
+    {
+     "key": "default",
+     "display": "3 seconds"
+    },
+    {
+     "key": "increment",
+     "display": "increments of 1 second"
+    },
+    {
+     "key": "max",
+     "display": "900 seconds (15 minutes)"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per function",
+    "default_or_max": "default",
+    "adjustable": true,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-timeout.html",
+     "title": "Configure Lambda function timeout",
+     "quote": "The default value for this setting is 3 seconds, but you can adjust this in increments of 1 second up to a maximum value of 900 seconds (15 minutes).",
+     "table_header": null,
+     "context": "\n\n# Configure Lambda function timeout\n<a name=\"configuration-timeout\"></a>\n\nLambda runs your code for a set amount of time before timing out. *Timeout* is the maximum amount of time in seconds that a Lambda function can run. The default value for this setting is 3 seconds, but you can adjust this in increments of 1 second up to a maximum value of 900 seconds (15 minutes).\n\nFor functions using AWS Lambda Managed Instances, asynchronous invocations and event source mapping invocations (except Amazon MQ and Amazon DocumentDB) support a maximum allowed value of 5,400 seconds (90 minutes).\n\nThis page describes how and when to update the timeout setting for a Lambda function.\n",
+     "headings": [
+      "Configure Lambda function timeout"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-timeout-max",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "The maximum function timeout is 900 seconds (15 minutes).",
+   "values": [
+    {
+     "key": "max-seconds",
+     "display": "900 seconds"
+    },
+    {
+     "key": "max-minutes",
+     "display": "15 minutes"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per function",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html",
+     "title": "Lambda quotas",
+     "quote": "| Function timeout | 900 seconds (15 minutes). For functions using AWS Lambda Managed Instances, asynchronous invocations and event source mapping invocations (except Amazon MQ and Amazon DocumentDB) support a maximum allowed value of 5,400 seconds (90 minutes). |",
+     "table_header": "| Resource | Quota |",
+     "context": "\n\n| Resource | Quota | \n| --- | --- | \n| Function [memory allocation](configuration-memory.md) | 128 MB to 10,240 MB, in 1-MB increments.<br />**Note:** Lambda allocates CPU power in proportion to the amount of memory configured. You can increase or decrease the memory and CPU power allocated to your function using the **Memory (MB)** setting. At 1,769 MB, a function has the equivalent of one vCPU. | \n| Function timeout | 900 seconds (15 minutes). For functions using AWS Lambda Managed Instances, asynchronous invocations and event source mapping invocations (except Amazon MQ and Amazon DocumentDB) support a maximum allowed value of 5,400 seconds (90 minutes). | \n| Function [environment variables](configuration-envvars.md) | 4 KB, for all environment variables associated with the function, in aggregate | \n| Function [resource-based policy](access-control-resource-based.md) | 20 KB | \n| Function [layers](chapter-layers.md) | 5 layers | \n| Function [concurrency scaling limit](scaling-behavior.md) | For each function, 1,000 execution environments every 10 seconds | \n| [Invocation payload](lambda-invocation.md) (request and response) | 6 MB each for request and response (synchronous)<br />200 MB for each [streamed response](configuration-response-streaming.md) (synchronous)<br />1 MB (asynchronous)<br />1 MB for the total combined size of request line and header values | ",
+     "headings": [
+      "Lambda quotas",
+      "Function configuration, deployment, and execution"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tmp-encrypted-at-rest",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "All data stored in /tmp is encrypted at rest with a key managed by AWS.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "encrypted at rest"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per execution environment, /tmp directory",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-ephemeral-storage.html",
+     "title": "Configure ephemeral storage for Lambda functions",
+     "quote": "All data stored in `/tmp` is encrypted at rest with a key managed by AWS.",
+     "table_header": null,
+     "context": "\n\n# Configure ephemeral storage for Lambda functions\n<a name=\"configuration-ephemeral-storage\"></a>\n\nLambda provides ephemeral storage for functions in the `/tmp` directory. This storage is temporary and unique to each execution environment. You can control the amount of ephemeral storage allocated to your function using the **Ephemeral storage** setting. You can configure ephemeral storage between 512 MB and 10,240 MB, in 1-MB increments. All data stored in `/tmp` is encrypted at rest with a key managed by AWS.\n\nThis page describes common use cases and how to update the ephemeral storage for a Lambda function.\n\n**Topics**\n+ [Common use cases for increased ephemeral storage](#configuration-ephemeral-storage-use-cases)",
+     "headings": [
+      "Configure ephemeral storage for Lambda functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tmp-storage-range",
+   "rev": 1,
+   "kind": "limit",
+   "claim": "The /tmp directory storage can be set between 512 MB and 10,240 MB, in 1-MB increments.",
+   "values": [
+    {
+     "key": "min",
+     "display": "512 MB"
+    },
+    {
+     "key": "max",
+     "display": "10,240 MB"
+    },
+    {
+     "key": "increment",
+     "display": "1-MB increments"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per function, /tmp directory",
+    "default_or_max": "max",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html",
+     "title": "Lambda quotas",
+     "quote": "| `/tmp` directory storage | Between 512 MB and 10,240 MB, in 1-MB increments |",
+     "table_header": "| Resource | Quota |",
+     "context": "| [Deployment package (.zip file archive)](configuration-function-zip.md) size | 50 MB (zipped, when uploaded through the Lambda API or SDKs). Upload larger files with Amazon S3.<br />50 MB (when uploaded through the Lambda console)<br />250 MB The maximum size of the contents of a deployment package, including layers and custom runtimes. (unzipped)<br /> | \n| Container image settings size | 16 KB | \n| [Container image](images-create.md) code package size | 10 GB (maximum uncompressed image size, including all layers) | \n| Test events (console editor) | 10 | \n| `/tmp` directory storage | Between 512 MB and 10,240 MB, in 1-MB increments | \n| File descriptors | 1,024 Lambda Managed Instances use a higher file descriptor limit of 4,096. For more information, see [Understanding the Lambda Managed Instances execution environment](lambda-managed-instances-execution-environment.md).  | \n| Execution processes/threads | 1,024 Lambda Managed Instances use the default process and thread limits from [Bottlerocket](https://aws.amazon.com/bottlerocket/). For more information, see [Understanding the Lambda Managed Instances execution environment](lambda-managed-instances-execution-environment.md).  | \n\n## Lambda API requests",
+     "headings": [
+      "Lambda quotas",
+      "Function configuration, deployment, and execution"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tmp-transient-cache",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Each execution environment has between 512 MB and 10,240 MB of disk space in the /tmp directory; its content remains while the environment is frozen, so /tmp works as a transient cache across invocations of the same environment, not as durable storage.",
+   "values": [
+    {
+     "key": "size",
+     "display": "between 512 MB and 10,240 MB",
+     "spoken": "from five hundred twelve megabytes to ten gigabytes"
+    },
+    {
+     "key": "cache",
+     "display": "transient cache"
+    },
+    {
+     "key": "remains",
+     "display": "remains when the execution environment is frozen"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per execution environment",
+    "default_or_max": "",
+    "adjustable": true,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtime-environment.html",
+     "title": "Understanding the Lambda execution environment lifecycle",
+     "quote": "Each execution environment provides between 512 MB and 10,240 MB, in 1-MB increments, of disk space in the `/tmp` directory. The directory content remains when the execution environment is frozen, providing a transient cache that can be used for multiple invocations.",
+     "table_header": null,
+     "context": "\nWhen the function is invoked again, Lambda thaws the environment for reuse. Reusing the execution environment has the following implications: \n+ Objects declared outside of the function's handler method remain initialized, providing additional optimization when the function is invoked again. For example, if your Lambda function establishes a database connection, instead of reestablishing the connection, the original connection is used in subsequent invocations. We recommend adding logic in your code to check if a connection exists before creating a new one.\n+ Each execution environment provides between 512 MB and 10,240 MB, in 1-MB increments, of disk space in the `/tmp` directory. The directory content remains when the execution environment is frozen, providing a transient cache that can be used for multiple invocations. You can add extra code to check if the cache has the data that you stored. For more information on deployment size limits, see [Lambda quotas](gettingstarted-limits.md).\n+ Background processes or callbacks that were initiated by your Lambda function and did not complete when the function ended resume if Lambda reuses the execution environment. Make sure that any background processes or callbacks in your code are complete before the code exits.\n\n## Cold starts and latency",
+     "headings": [
+      "Understanding the Lambda execution environment lifecycle",
+      "Lambda execution environment lifecycle",
+      "Shutdown phase"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-tmp-unique-per-environment",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "The /tmp ephemeral storage is temporary and unique to each execution environment.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "temporary and unique to each execution environment"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per execution environment, /tmp directory",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-ephemeral-storage.html",
+     "title": "Configure ephemeral storage for Lambda functions",
+     "quote": "Lambda provides ephemeral storage for functions in the `/tmp` directory. This storage is temporary and unique to each execution environment.",
+     "table_header": null,
+     "context": "\n\n# Configure ephemeral storage for Lambda functions\n<a name=\"configuration-ephemeral-storage\"></a>\n\nLambda provides ephemeral storage for functions in the `/tmp` directory. This storage is temporary and unique to each execution environment. You can control the amount of ephemeral storage allocated to your function using the **Ephemeral storage** setting. You can configure ephemeral storage between 512 MB and 10,240 MB, in 1-MB increments. All data stored in `/tmp` is encrypted at rest with a key managed by AWS.\n\nThis page describes common use cases and how to update the ephemeral storage for a Lambda function.\n\n**Topics**\n+ [Common use cases for increased ephemeral storage](#configuration-ephemeral-storage-use-cases)",
+     "headings": [
+      "Configure ephemeral storage for Lambda functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-alb-sync",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Elastic Load Balancing (an Application Load Balancer) is an event-driven trigger that invokes a Lambda function synchronously.",
+   "values": [
+    {
+     "key": "method",
+     "display": "Event-driven; synchronous invocation",
+     "spoken": "event-driven, synchronous invocation"
+    },
+    {
+     "key": "service",
+     "display": "Application Load Balancer"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Application Load Balancer as a Lambda trigger",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [Elastic Load Balancing (Application Load Balancer)](services-alb.md) | Event-driven; synchronous invocation |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "| [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-events.html) | Event-driven; synchronous invocation | \n| [AWS Config](governance-config.md) | Event-driven; asynchronous invocation | \n| [Connect Customer](https://docs.aws.amazon.com/connect/latest/adminguide/connect-lambda-functions.html) | Event-driven; synchronous invocation | \n| [Amazon DocumentDB](with-documentdb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon DynamoDB](with-ddb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Elastic Load Balancing (Application Load Balancer)](services-alb.md) | Event-driven; synchronous invocation | \n| [EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) | Event-driven; asynchronous invocation (event buses and rules), synchronous or asynchronous invocation (pipes) | \n| [Amazon EventBridge Scheduler](with-eventbridge-scheduler.md) | Event-driven (time based); asynchronous invocation | \n| [AWS IoT](services-iot.md) | Event-driven; asynchronous invocation | \n| [Amazon Kinesis](with-kinesis.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon Data Firehose](https://docs.aws.amazon.com/firehose/latest/dev/data-transformation.html) | Event-driven; synchronous invocation | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-apigateway-sync",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Amazon API Gateway is an event-driven trigger that invokes a Lambda function synchronously.",
+   "values": [
+    {
+     "key": "method",
+     "display": "Event-driven; synchronous invocation",
+     "spoken": "event-driven, synchronous invocation"
+    },
+    {
+     "key": "service",
+     "display": "Amazon API Gateway"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon API Gateway as a Lambda trigger",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [Amazon API Gateway](services-apigateway.md) | Event-driven; synchronous invocation |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "\n| Service | Method of invocation | \n| --- | --- | \n| [Amazon Managed Streaming for Apache Kafka](with-msk.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Self-managed Apache Kafka](with-kafka.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon API Gateway](services-apigateway.md) | Event-driven; synchronous invocation | \n| [AWS CloudFormation](services-cloudformation.md) | Event-driven; asynchronous invocation | \n| [Amazon CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html#LambdaFunctionExample) | Event-driven; asynchronous invocation | \n| [AWS CodeCommit](https://docs.aws.amazon.com/codecommit/latest/userguide/how-to-notify-lambda-cc.html) | Event-driven; asynchronous invocation | \n| [AWS CodePipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/actions-invoke-lambda-function.html) | Event-driven; asynchronous invocation | \n| [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-events.html) | Event-driven; synchronous invocation | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-cloudwatch-logs-async",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Amazon CloudWatch Logs is an event-driven trigger that invokes a Lambda function asynchronously.",
+   "values": [
+    {
+     "key": "method",
+     "display": "Event-driven; asynchronous invocation",
+     "spoken": "event-driven, asynchronous invocation"
+    },
+    {
+     "key": "service",
+     "display": "Amazon CloudWatch Logs"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon CloudWatch Logs as a Lambda trigger",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [Amazon CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html#LambdaFunctionExample) | Event-driven; asynchronous invocation |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "| --- | --- | \n| [Amazon Managed Streaming for Apache Kafka](with-msk.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Self-managed Apache Kafka](with-kafka.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon API Gateway](services-apigateway.md) | Event-driven; synchronous invocation | \n| [AWS CloudFormation](services-cloudformation.md) | Event-driven; asynchronous invocation | \n| [Amazon CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html#LambdaFunctionExample) | Event-driven; asynchronous invocation | \n| [AWS CodeCommit](https://docs.aws.amazon.com/codecommit/latest/userguide/how-to-notify-lambda-cc.html) | Event-driven; asynchronous invocation | \n| [AWS CodePipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/actions-invoke-lambda-function.html) | Event-driven; asynchronous invocation | \n| [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-events.html) | Event-driven; synchronous invocation | \n| [AWS Config](governance-config.md) | Event-driven; asynchronous invocation | \n| [Connect Customer](https://docs.aws.amazon.com/connect/latest/adminguide/connect-lambda-functions.html) | Event-driven; synchronous invocation | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-cognito-sync",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Amazon Cognito is an event-driven trigger that invokes a Lambda function synchronously.",
+   "values": [
+    {
+     "key": "method",
+     "display": "Event-driven; synchronous invocation",
+     "spoken": "event-driven, synchronous invocation"
+    },
+    {
+     "key": "service",
+     "display": "Amazon Cognito"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon Cognito as a Lambda trigger",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-events.html) | Event-driven; synchronous invocation |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "| [Amazon API Gateway](services-apigateway.md) | Event-driven; synchronous invocation | \n| [AWS CloudFormation](services-cloudformation.md) | Event-driven; asynchronous invocation | \n| [Amazon CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html#LambdaFunctionExample) | Event-driven; asynchronous invocation | \n| [AWS CodeCommit](https://docs.aws.amazon.com/codecommit/latest/userguide/how-to-notify-lambda-cc.html) | Event-driven; asynchronous invocation | \n| [AWS CodePipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/actions-invoke-lambda-function.html) | Event-driven; asynchronous invocation | \n| [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-events.html) | Event-driven; synchronous invocation | \n| [AWS Config](governance-config.md) | Event-driven; asynchronous invocation | \n| [Connect Customer](https://docs.aws.amazon.com/connect/latest/adminguide/connect-lambda-functions.html) | Event-driven; synchronous invocation | \n| [Amazon DocumentDB](with-documentdb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon DynamoDB](with-ddb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Elastic Load Balancing (Application Load Balancer)](services-alb.md) | Event-driven; synchronous invocation | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-dynamodb-esm",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Amazon DynamoDB invokes Lambda through an event source mapping.",
+   "values": [
+    {
+     "key": "method",
+     "display": "Event source mapping",
+     "spoken": "an event source mapping"
+    },
+    {
+     "key": "service",
+     "display": "Amazon DynamoDB"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon DynamoDB as a Lambda event source",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [Amazon DynamoDB](with-ddb.md) | [Event source mapping](invocation-eventsourcemapping.md) |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "| [AWS CodePipeline](https://docs.aws.amazon.com/codepipeline/latest/userguide/actions-invoke-lambda-function.html) | Event-driven; asynchronous invocation | \n| [Amazon Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-events.html) | Event-driven; synchronous invocation | \n| [AWS Config](governance-config.md) | Event-driven; asynchronous invocation | \n| [Connect Customer](https://docs.aws.amazon.com/connect/latest/adminguide/connect-lambda-functions.html) | Event-driven; synchronous invocation | \n| [Amazon DocumentDB](with-documentdb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon DynamoDB](with-ddb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Elastic Load Balancing (Application Load Balancer)](services-alb.md) | Event-driven; synchronous invocation | \n| [EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) | Event-driven; asynchronous invocation (event buses and rules), synchronous or asynchronous invocation (pipes) | \n| [Amazon EventBridge Scheduler](with-eventbridge-scheduler.md) | Event-driven (time based); asynchronous invocation | \n| [AWS IoT](services-iot.md) | Event-driven; asynchronous invocation | \n| [Amazon Kinesis](with-kinesis.md) | [Event source mapping](invocation-eventsourcemapping.md) | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-eventbridge-async-rules",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "EventBridge invokes a Lambda function asynchronously from event buses and rules, and synchronously or asynchronously from pipes.",
+   "values": [
+    {
+     "key": "rules",
+     "display": "asynchronous invocation (event buses and rules)",
+     "spoken": "asynchronous for event buses and rules"
+    },
+    {
+     "key": "pipes",
+     "display": "synchronous or asynchronous invocation (pipes)"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon EventBridge as a Lambda trigger",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) | Event-driven; asynchronous invocation (event buses and rules), synchronous or asynchronous invocation (pipes) |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "| [AWS Config](governance-config.md) | Event-driven; asynchronous invocation | \n| [Connect Customer](https://docs.aws.amazon.com/connect/latest/adminguide/connect-lambda-functions.html) | Event-driven; synchronous invocation | \n| [Amazon DocumentDB](with-documentdb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon DynamoDB](with-ddb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Elastic Load Balancing (Application Load Balancer)](services-alb.md) | Event-driven; synchronous invocation | \n| [EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) | Event-driven; asynchronous invocation (event buses and rules), synchronous or asynchronous invocation (pipes) | \n| [Amazon EventBridge Scheduler](with-eventbridge-scheduler.md) | Event-driven (time based); asynchronous invocation | \n| [AWS IoT](services-iot.md) | Event-driven; asynchronous invocation | \n| [Amazon Kinesis](with-kinesis.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon Data Firehose](https://docs.aws.amazon.com/firehose/latest/dev/data-transformation.html) | Event-driven; synchronous invocation | \n| [Amazon Lex](https://docs.aws.amazon.com/lexv2/latest/dg/lambda.html) | Event-driven; synchronous invocation | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lambda-trigger-kinesis-esm",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Amazon Kinesis invokes Lambda through an event source mapping.",
+   "values": [
+    {
+     "key": "method",
+     "display": "Event source mapping",
+     "spoken": "an event source mapping"
+    },
+    {
+     "key": "service",
+     "display": "Amazon Kinesis"
+    }
+   ],
+   "qualifiers": {
+    "scope": "Amazon Kinesis as a Lambda event source",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html",
+     "title": "Invoking Lambda with events from other AWS services",
+     "quote": "| [Amazon Kinesis](with-kinesis.md) | [Event source mapping](invocation-eventsourcemapping.md) |",
+     "table_header": "| Service | Method of invocation |",
+     "context": "| [Amazon DynamoDB](with-ddb.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Elastic Load Balancing (Application Load Balancer)](services-alb.md) | Event-driven; synchronous invocation | \n| [EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) | Event-driven; asynchronous invocation (event buses and rules), synchronous or asynchronous invocation (pipes) | \n| [Amazon EventBridge Scheduler](with-eventbridge-scheduler.md) | Event-driven (time based); asynchronous invocation | \n| [AWS IoT](services-iot.md) | Event-driven; asynchronous invocation | \n| [Amazon Kinesis](with-kinesis.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon Data Firehose](https://docs.aws.amazon.com/firehose/latest/dev/data-transformation.html) | Event-driven; synchronous invocation | \n| [Amazon Lex](https://docs.aws.amazon.com/lexv2/latest/dg/lambda.html) | Event-driven; synchronous invocation | \n| [Amazon MQ](with-mq.md) | [Event source mapping](invocation-eventsourcemapping.md) | \n| [Amazon Simple Email Service](https://docs.aws.amazon.com/ses/latest/dg/receiving-email-action-lambda.html) | Event-driven; asynchronous invocation | \n| [Amazon Simple Notification Service](with-sns.md) | Event-driven; asynchronous invocation | ",
+     "headings": [
+      "Invoking Lambda with events from other AWS services",
+      "Services that can invoke Lambda Event Functions"
+     ]
+    }
+   ]
+  }
+ ]
+}

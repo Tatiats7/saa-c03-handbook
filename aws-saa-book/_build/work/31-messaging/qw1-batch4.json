@@ -1,0 +1,91 @@
+[
+ {
+  "id": "messaging-q007",
+  "section": "2-deep.md#queues-subscribed-to-a-topic-give-each-consumer-its-own-durable-copy",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.S1",
+   "3.2.K3"
+  ],
+  "topics": [
+   "integration",
+   "resilience"
+  ],
+  "services": [
+   "sns",
+   "sqs"
+  ],
+  "concept": "fan-out-every-service-gets-every-message",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an order API on Amazon EC2 instances. The API sends each order directly to the order service, which writes the order to a relational database. During sales, the database cannot keep up, requests time out, and orders are lost. The order service, the shipping service and the analytics service must each process every order. Each service must process every order, even after it has been offline for a few hours. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "must each process every order",
+   "even after it has been offline for a few hours",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Have the API send each order to one Amazon SQS queue, and have each service that processes orders poll that queue and process the orders it receives.",
+    "correct": false,
+    "why": "A queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss): three services that poll one queue split the orders, so each service misses most of them.",
+    "concept": "shared-queue",
+    "trap": "messaging-trap-queue-broadcasts",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Have the API publish each order to an Amazon SNS topic, subscribe one Amazon SQS queue for each service that processes orders, and have each service poll its queue.",
+    "correct": true,
+    "why": "Each service gets its own queue with a copy of every order, and each queue holds the orders while its service is offline.",
+    "concept": "sns-sqs-fanout",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Have the API publish each order to an Amazon SNS topic, and subscribe the HTTPS endpoint of each service that processes orders so that each service receives every order.",
+    "correct": false,
+    "why": "In SNS, [messages are not persisted](../facts/sns.md#sns-decision-no-persistence), and HTTPS retries end within [3,600 seconds](../facts/sns.md#sns-retry-http-total-retry-time-max), so a service offline for hours loses orders.",
+    "concept": "sns-https-push",
+    "trap": "messaging-trap-topic-stores-messages",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Move the database to a larger instance class, and add a read replica so that the database can take more of the load during sales.",
+    "correct": false,
+    "why": "A larger database still takes every write at the moment of the peak, and it gives the shipping and analytics services no orders at all.",
+    "concept": "scale-up-database",
+    "trap": null,
+    "misconception": "a larger database removes the need for messaging between the services",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Three services each need every order, and each can be offline for hours.Each order published to the topic is [fanned out to the SQS queues](../facts/sns.md#sns-faq-fanout-identical-messages-to-multiple-sqs-queues), one queue per service, and each queue keeps its copy until its service processes it. AWS uses this pattern to prevent message loss [when subscribers are offline](../facts/sns.md#sns-with-sqs-prevents-loss-for-offline-subscribers).",
+  "takeaway": "Several consumers that each need every message and can go offline: SNS topic to one SQS queue each.",
+  "twin": "If the stem said \"Only the company's order service processes the orders\" instead: one SQS queue that the order service polls, because one consumer needs no topic.",
+  "say": "Every service needs every order and can be offline, so I fan out from an SNS topic to one SQS queue per service.",
+  "facts": [
+   "sns-faq-fanout-identical-messages-to-multiple-sqs-queues",
+   "sns-with-sqs-prevents-loss-for-offline-subscribers",
+   "sqs-typically-single-subscriber-order-and-loss",
+   "sns-decision-no-persistence",
+   "sns-retry-http-total-retry-time-max"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": "messaging-q001"
+ }
+]

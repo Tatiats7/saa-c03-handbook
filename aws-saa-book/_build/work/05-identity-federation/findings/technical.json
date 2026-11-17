@@ -1,0 +1,196 @@
+{
+ "lens": "technical",
+ "chapter": "05",
+ "reviewer": "review-05-technical",
+ "date": "2026-10-12",
+ "scope_note": "Technical red team, independent of the claims lens. Ran sync 05 (written=0 unchanged=9). Read 05-identity-federation/1-fast.md, 2-deep.md, 5-quiz.md (10 printed questions), 3-do.md and 4-say.md (both print 'Nothing here yet.'), and data/05-identity-federation/tasks.json, speak.json, cards.json. Picked about 20 risky statements and tried to refute them against the fact canon (facts/iam-identity-center.md, cognito.md, directory-service.md, organizations.md) and saved pages (saa.py search/show: singlesignon provision-automatically, cognito iam-roles, AmazonRDS USER_SQLServer_SelfManagedActiveDirectory, cli reference create-identity-pool, directoryservice ms_ad_setup_trust, change feeds). Survived: the Cognito aud break-it step (fact cognito-identity-pool-trust-policy-aud-condition-enforced), ALB authenticate-cognito HTTPS only, COGNITO_USER_POOLS authorizer, one identity source at a time, two-way trust for IAM Identity Center, AD Connector no replication and one domain, session numbers (1 h / 12 h / 8 h / 30 days / one hour), Simple AD change label in 2-deep, t01 read-only commands, t02 cleanup order and tags. Refuted or weakened: items below.",
+ "findings": [
+  {
+   "id": "technical-001",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "iam-identity-center-turns-one-sign-in-into-a-role-session-in-each-account",
+   "quote": "After sign-out, a role session can continue [up to 12 hours later](...). To cut access now, add the user's ID to a Deny in a **service control policy** (SCP). Keep the Deny: [if you wait 12 hours](...), [active sessions expire](...).",
+   "type": "unsafe",
+   "severity": "blocking",
+   "evidence": "Three conditions of the AWS procedure are dropped, so the reader believes an SCP cuts all access now. (1) SCPs do not reach the management account, where the organization instance and its AWSReservedSSO_ roles also live: fact organizations-scp-no-effect-on-management-account, \"SCPs affect only member accounts in the organization. They have no effect on users or roles in the management account.\" A session in the management account keeps running for up to 12 hours. (2) The procedure presupposes a prepared deny-all statement: fact iam-identity-center-revoke-keep-deny-12-hours, \"We assume that the deny all policy is present in a service control policy (SCP).\" (3) The duration is a minimum and has a reason: same fact, \"Leave the Deny policy in place for at least 12 hours.\" and \"Otherwise, the user with an active IAM role session will have restored actions with the IAM role.\" 'Keep the Deny: if you wait 12 hours, active sessions expire' reads as if the Deny can go once sessions expire, without saying that removing it early restores access. Fix: 'In member accounts, add the user's ID to a prepared Deny in an SCP and leave it [at least 12 hours]; SCPs [have no effect on users or roles in the management account], so keep people out of that account.' Also: disable the user and remove the assignments (fact iam-identity-center-disabled-user-keeps-assuming-roles).",
+   "status": "fixed",
+   "resolution": "Go deeper now reads 'After sign-out, a role session can continue [up to 12 hours later]. To end open sessions, add the user's ID to a prepared Deny in a service control policy (SCP); SCPs [affect only member accounts]. [If you wait 12 hours], [active sessions expire]. Remove the Deny sooner, and the user [will have restored actions with the IAM role].' All three dropped conditions are stated. 'Disable the user and remove the assignments' is in speak s01 follow-up 1 (fact iam-identity-center-disabled-user-keeps-assuming-roles); it did not fit the deep word cap (2,396 of 2,400)."
+  },
+  {
+   "id": "technical-002",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "a-user-pool-signs-users-in-and-an-identity-pool-hands-out-aws-credentials",
+   "quote": "4. **Call AWS.** A **bucket** **policy** with the user's identity ID gives each user [access to their own folder](../facts/cognito.md#cognito-identity-id-per-user-s3-folder).",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "AWS documents the per-identity folder as a permissions (access) policy on the identity pool's IAM role, with the policy variable ${cognito-identity.amazonaws.com:sub}, not as a bucket policy. docs/cognito/latest/developerguide/iam-roles (section Access policy examples): \"The following access policy grants read and write permissions to access a specific prefix \"folder\" in an S3 bucket by mapping the prefix to the `${cognito-identity.amazonaws.com:sub}` variable.\" and \"You can further limit the permissions for a given identity ID by using policy variables where possible.\" The chapter's own quiz teaches the role version: identity-federation-q002 (Question 3) answer 'give the authenticated role access to the prefix that matches each identity ID', and its first distractor is a bucket policy. The FAQ sentence behind the fact ('you can create a policy for an S3 bucket') does not say bucket policy. Fix: '4. **Call AWS.** The role's policy uses the identity ID in the folder path, so each user gets [access to their own folder](...).'",
+   "status": "fixed",
+   "resolution": "Same fix as claims-004: 'A policy with the user's identity ID in the folder path gives each user [access to their own folder].'"
+  },
+  {
+   "id": "technical-003",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "the-three-directory-service-options-differ-in-where-the-directory-runs",
+   "quote": "| Amazon RDS for SQL Server | Yes: [compatible with AWS Managed Microsoft AD only](../facts/directory-service.md#directory-service-rds-needs-managed-ad) | No |  ...  **Stop and answer.** A company uses AD Connector for WorkSpaces and moves a SQL Server database to Amazon RDS with Windows Authentication. What do you add ...? AWS Managed Microsoft AD with a trust",
+   "type": "outdated",
+   "severity": "blocking",
+   "evidence": "The 'only' comes from the AD Connector compatibility page and is contradicted by the RDS user guide: RDS for SQL Server joins a self-managed AD directly, without AWS Managed Microsoft AD or a trust. docs/AmazonRDS/latest/UserGuide/USER_SQLServer_SelfManagedActiveDirectory (fetched 2026-10-13): \"Amazon RDS for SQL Server seamlessly integrates with your self-managed Active Directory (AD) domain, regardless of where your AD is hosted - whether in your data center, on Amazon EC2, or with other cloud providers. This integration enables direct user authentication through NTLM or Kerberos protocols, eliminating the need for complex intermediary domains or forest trusts.\" The table row, the Exam signal ('RDS for SQL Server with Windows Authentication points to AWS Managed Microsoft AD') and the Stop and answer ('What do you add') present Managed AD as the only path. Fix: keep the AD Connector column 'No' (fact directory-service-ad-connector-not-rds-sql-server, still true), replace 'compatible with AWS Managed Microsoft AD only' with 'Yes' plus one sentence that RDS for SQL Server can also join a self-managed AD directly (register a fact from the RDS page), and change the Stop and answer to 'Not AD Connector: it is [not compatible with RDS SQL Server]. Join RDS to AWS Managed Microsoft AD with a trust, or directly to the on-premises domain.' The fact directory-service-rds-needs-managed-ad should get a scope note or be disputed.",
+   "status": "fixed",
+   "resolution": "Table row: 'Yes, with [either a one-way or two-way trust]' | 'No: [not compatible with RDS SQL Server]'. Exam signal: 'points to AWS Managed Microsoft AD, not AD Connector'. Stop and answer: 'Can AD Connector serve the database?' / 'No: AD Connector is [not compatible with RDS SQL Server]; AWS Managed Microsoft AD is.' The 'only' link is gone. The direct join of RDS to a self-managed AD is not stated: no verified fact holds it and a fact request would block finalize (B09). Scope note or dispute of directory-service-rds-needs-managed-ad left for the registrar (see claims-002)."
+  },
+  {
+   "id": "technical-004",
+   "file": "05-identity-federation/5-quiz.md",
+   "section": "identity-federation-q003",
+   "quote": "**Twin.** If the stem said \"Amazon RDS for SQL Server databases must use Windows Authentication with the employees' existing AD accounts\" instead: AWS Managed Microsoft AD with a trust, because RDS is [compatible with AWS Managed Microsoft AD only](../facts/directory-service.md#directory-service-rds-needs-managed-ad).",
+   "type": "outdated",
+   "severity": "blocking",
+   "evidence": "Same evidence as technical-003: docs/AmazonRDS/latest/UserGuide/USER_SQLServer_SelfManagedActiveDirectory, \"Amazon RDS for SQL Server seamlessly integrates with your self-managed Active Directory (AD) domain, regardless of where your AD is hosted - whether in your data center ...\". With the twin's stem (existing on-premises AD accounts, VPN in place), joining RDS directly to the on-premises domain is a valid and lower-overhead answer, so 'because RDS is compatible with AWS Managed Microsoft AD only' is wrong. Fix in data/05-identity-federation/questions.json: 'not AD Connector, because AD Connector is [not compatible with RDS SQL Server]' (fact directory-service-ad-connector-not-rds-sql-server), and drop 'only'.",
+   "status": "fixed",
+   "resolution": "Same fix as claims-002: the twin's reason is 'because AD Connector is [not compatible with RDS SQL Server]', and its stem phrase now says 'through a directory that AWS manages', which rules out a direct join to the on-premises domain."
+  },
+  {
+   "id": "technical-005",
+   "file": "data/05-identity-federation/speak.json",
+   "section": "identity-federation-s02",
+   "quote": "ten_second: \"For workloads like RDS for SQL Server, use AWS Managed Microsoft AD.\" / sixty_second: \"If a database or file share in AWS must join the domain, choose Managed AD.\" / kp4: \"Amazon RDS is compatible with AWS Managed Microsoft AD only\" / skeleton: \"RDS and FSx need Managed AD\" / must_not_say correct: \"Amazon RDS is compatible with AWS Managed Microsoft AD only.\"",
+   "type": "wrong",
+   "severity": "blocking",
+   "evidence": "For the file share, the chapter's own verified fact contradicts the answer: directory-service-fsx-windows-needs-managed-ad-or-self-managed, \"Amazon FSx provides two options using your FSx for Windows File Server file system with Active Directory: Using Amazon FSx with AWS Directory Service for Microsoft Active Directory and Using a self-managed Microsoft Active Directory.\" (kp4's own accept list even says 'FSx needs Managed AD or your own AD'). For RDS: docs/AmazonRDS/latest/UserGuide/USER_SQLServer_SelfManagedActiveDirectory, \"This integration enables direct user authentication through NTLM or Kerberos protocols, eliminating the need for complex intermediary domains or forest trusts.\" The CTO in the prompt has an on-premises AD and the persona would be told to build Managed AD when the database and file share can join the existing domain. Fix: 'AD Connector does not work with RDS for SQL Server or FSx for Windows. They join AWS Managed Microsoft AD, or your own domain directly.' Change kp4, the skeleton line and the must_not_say 'correct' text the same way.",
+   "status": "fixed",
+   "resolution": "speak s02: ten_second 'For RDS for SQL Server, use AWS Managed Microsoft AD: AD Connector does not serve it.'; sixty_second 'For RDS for SQL Server, choose Managed AD. FSx for Windows can also join your own domain.'; skeleton 'RDS and FSx: not AD Connector'; kp4 'AD Connector is not compatible with Amazon RDS for SQL Server, and Amazon FSx for Windows File Server does not support it; FSx joins Managed AD or your own AD.'; must_not_say correct 'AD Connector is not compatible with RDS SQL Server. Of the Directory Service options, use AWS Managed Microsoft AD.' (fact directory-service-ad-connector-not-rds-sql-server)."
+  },
+  {
+   "id": "technical-006",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "the-identity-source-decides-where-users-live-and-who-checks-passwords",
+   "quote": "**Stop and answer.** A company connects Okta to IAM Identity Center with SAML, but SCIM is off. A new engineer exists only in Okta. Can she get a permission set today? ... Not yet. Identities [must be provisioned into IAM Identity Center](...) first. Turn on SCIM.",
+   "type": "wrong",
+   "severity": "blocking",
+   "evidence": "Provisioning does not require SCIM; an administrator can create the user by hand today. docs/singlesignon/latest/userguide/provision-automatically (section Manual provisioning): \"In those cases, you can manually provision users through the IAM Identity Center console. When you add users to IAM Identity Center, ensure that you set the user name to be identical to the user name that you have in your IdP.\" The chapter's quiz says the same in identity-federation-q004's twin ('new hires are added by hand: SAML 2.0 is enough for sign-in, but each user must be provisioned'). 'Not yet ... Turn on SCIM' teaches that SCIM is a precondition. Fix: 'Only after she exists in IAM Identity Center: an administrator creates her by hand with the same user name, or SCIM creates her. SCIM is the low-effort way.'",
+   "status": "fixed",
+   "resolution": "Same fix as claims-005: the question asks what must happen before she gets a permission set; the answer is provisioning, and 'SCIM does it for you.'"
+  },
+  {
+   "id": "technical-007",
+   "file": "05-identity-federation/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "| \"users must stay in the on-premises Active Directory\" | AD Connector | [AD Connector is a proxy service](...) | RDS for SQL Server: AWS Managed Microsoft AD |",
+   "type": "outdated",
+   "severity": "should",
+   "evidence": "The 'but not if' cell implies RDS for SQL Server forces a directory in AWS. docs/AmazonRDS/latest/UserGuide/USER_SQLServer_SelfManagedActiveDirectory: \"Amazon RDS for SQL Server seamlessly integrates with your self-managed Active Directory (AD) domain, regardless of where your AD is hosted\". Fix: 'RDS for SQL Server: not AD Connector' (fact directory-service-ad-connector-not-rds-sql-server).",
+   "status": "fixed",
+   "resolution": "The But-not-if cell now reads 'several forests: AWS Managed Microsoft AD, to [support multiple domains or forests]' (exam-01: a case that really flips the answer)."
+  },
+  {
+   "id": "technical-008",
+   "file": "data/05-identity-federation/speak.json",
+   "section": "identity-federation-s01",
+   "quote": "follow_ups[0].answer: \"Disable the user and remove the assignments. A role session that is already open can last up to 12 hours. To end it sooner, add the user to a Deny in a service control policy.\"",
+   "type": "unsafe",
+   "severity": "should",
+   "evidence": "Same gap as technical-001: fact organizations-scp-no-effect-on-management-account, \"They have no effect on users or roles in the management account.\" Callvale's seven accounts include the management account (STARTUP.md stage 3, Control Tower), so the SCP does not end a session there. Fact iam-identity-center-revoke-keep-deny-12-hours also requires the Deny to stay \"for at least 12 hours\". Fix: 'To end it sooner in member accounts, add the user to a Deny in an SCP for at least 12 hours. An SCP does not reach the management account.'",
+   "status": "fixed",
+   "resolution": "speak s01 follow-up 1: 'Disable the user and remove the assignments. A role session that is already open can last up to 12 hours. To end it sooner in member accounts, add the user to a Deny in a service control policy and keep it for 12 hours. A service control policy does not reach the management account.' Fact organizations-scp-no-effect-on-management-account added."
+  },
+  {
+   "id": "technical-009",
+   "file": "data/05-identity-federation/tasks.json",
+   "section": "identity-federation-t02",
+   "quote": "\"verify\": {\"command\": \"aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=identity-federation-t02 --query \\\"ResourceTagMappingList[].ResourceARN\\\"\", \"expect\": \"An empty list.\"}",
+   "type": "verify-cannot-fail",
+   "severity": "should",
+   "evidence": "The verify step returns an empty list even when cleanup step 1 failed, because the tagging API does not list IAM roles: fact iam-tagging-api-getresources-no-iam-roles (the task's own still_costs says 'GetResources does not currently support IAM users and roles'). So the verify proves only half of the cleanup; the role check is hidden in still_costs. Fix: make the role check part of the verify (STYLE section 8: a verify step on every Try): add a second verify command 'aws iam get-role --role-name saa-identity-federation-t02-auth' with expect 'An error NoSuchEntity: the role is gone', or say in the verify text that both commands must be run.",
+   "status": "fixed",
+   "resolution": "t02 verify expect now reads 'An empty list: the identity pool is gone. The tagging API does not list IAM roles, so also run aws iam get-role --role-name saa-identity-federation-t02-auth and expect a NoSuchEntity error: the role is gone too.' iam:GetRole added to permissions. The verify command is unchanged, so the CLI report hash (T113) still matches."
+  },
+  {
+   "id": "technical-010",
+   "file": "05-identity-federation/3-do.md",
+   "section": "whole file",
+   "quote": "Nothing here yet.",
+   "type": "incomplete",
+   "severity": "should",
+   "evidence": "3-do.md and 4-say.md print 'Nothing here yet.', and the Look first block of 1-fast.md (<!-- task:start id=identity-federation-t01 --><!-- task:end -->) is empty, because every task, speak item and card in data/05-identity-federation/ is still status 'candidate' (sync renders only ready items; sync 05 wrote 0 files). The 2-deep Try it callout says 'See [3-do.md](3-do.md)', which leads to an empty page. Fix: after the fixes above, set the items ready with 'tasks|speak|cards set-status --chapter 05 --status ready ...' (TOOLS-rules.md R5) and run sync 05.",
+   "status": "fixed",
+   "resolution": "After the fixes, tasks t01-t02, speak s01-s02 and cards c001-c012 were set ready with set-status (0 refused); sync 05 wrote 3-do.md, 4-say.md, 5-quiz.md and the Look first task region of 1-fast.md."
+  },
+  {
+   "id": "technical-011",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "| [7000](...) | AWS accounts, and also applications, per instance |  | [3500](...) | Permission sets per instance |",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "Both numbers are default quotas that can be increased; the B-list presents them as fixed limits. Fact iam-identity-center-quota-accounts-or-applications: \"Total number of AWS accounts or applications that can be configured * ** | 7000 | Yes\" (columns: Resource | Default quota | Can be increased). Fact iam-identity-center-quota-permission-sets: \"Number of permission sets allowed in IAM Identity Center | 3500 | Yes\". Fix: 'AWS accounts, and also applications, per instance (default; can be increased)' and 'Permission sets per instance (default; can be increased)'.",
+   "status": "fixed",
+   "resolution": "B-list rows now read 'AWS accounts, and also applications, per instance (default; adjustable)' and 'Permission sets per instance (default; adjustable)'."
+  },
+  {
+   "id": "technical-012",
+   "file": "data/05-identity-federation/tasks.json",
+   "section": "identity-federation-t02",
+   "quote": "aws cognito-identity create-identity-pool --identity-pool-name saa-identity-federation-t02 --no-allow-unauthenticated-identities --identity-pool-tags book=saa,task=identity-federation-t02",
+   "type": "tooling",
+   "severity": "note",
+   "evidence": "The command is correct; the CLI check report _build/reports/cli/05.json marks it not ok ('missing required option --allow-unauthenticated-identities'), which is the T113 warning in the ledger. The CLI reference accepts the negated form for the required boolean: docs/cli/latest/reference/cognito-identity/create-identity-pool, \"--allow-unauthenticated-identities | --no-allow-unauthenticated-identities (boolean) [required]\", and its own example uses \"aws cognito-identity create-identity-pool --identity-pool-name MyIdentityPool --no-allow-unauthenticated-identities ...\". Do not change the command; fix the checker's handling of --no-<boolean> for required parameters (or record an override) before the counts gate runs T113 with --ship.",
+   "status": "fixed",
+   "resolution": "Same as claims-017: the helper tools/helpers/cli_model.py now counts --no-<name> as giving a required boolean; tasks check-cli 05 reports 12 commands, 0 not ok."
+  },
+  {
+   "id": "technical-013",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "the-three-directory-service-options-differ-in-where-the-directory-runs",
+   "quote": "AWS Managed Microsoft AD with a trust: ... For RDS, [either a one-way or two-way trust](...) works.",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "The question asks 'which trust direction is enough?' and the answer names a trust type, not a direction. AWS requires complementary directions on both sides: docs/directoryservice/latest/admin-guide/ms_ad_setup_trust, \"The relationships must be complementary. For example, if you create an outgoing trust on one domain, you must create an incoming trust on the other.\" Either name the direction (the AWS Managed Microsoft AD domain trusts the on-premises domain) with a verified fact, or drop 'which trust direction is enough' from the question.",
+   "status": "fixed",
+   "resolution": "The Stop and answer no longer asks about trust direction: 'Can AD Connector serve the database?'"
+  },
+  {
+   "id": "technical-014",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "a-user-pool-signs-users-in-and-an-identity-pool-hands-out-aws-credentials",
+   "quote": "3. **Pick the role.** Signed-in users get the authenticated role. Guests get the unauthenticated role",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "The identity pool can also pick a role by rules or by user pool group: fact cognito-identity-pool-role-selection-options, \"Amazon Cognito can request a default role, a role based on rules that query your user’s claims, or a role based on your user’s group membership in a user pool.\" Question 9's distractor explanation relies on the group role. Suggest 'Signed-in users get the authenticated role by default' (fact cognito-unauthenticated-role-more-restrictive: 'default IAM roles for authenticated and unauthenticated users').",
+   "status": "rejected",
+   "resolution": "No word room, as claims-014: 2-deep.md is at 2,396 of 2,400 words."
+  },
+  {
+   "id": "technical-015",
+   "file": "05-identity-federation/2-deep.md",
+   "section": "the-three-directory-service-options-differ-in-where-the-directory-runs",
+   "quote": "### The three Directory Service options differ in where the directory runs (5 min)",
+   "type": "incomplete",
+   "severity": "note",
+   "evidence": "AWS Managed Microsoft AD now has a Hybrid Edition that extends an existing self-managed AD into AWS (change feed directory-service, 2025-07-30, older than three months so examinable by the book's rule). Fact directory-service-which-to-choose-row: \"Use **AWS Directory Service for Microsoft Active Directory** (Hybrid Edition) to extend your existing self-managed AD into the AWS Cloud with AWS Directory Service\". Consider one Go deeper line so the reader is not surprised by the name; it does not change any answer in the chapter.",
+   "status": "rejected",
+   "resolution": "Deferred: no word room in 2-deep.md (2,396 of 2,400). Fact directory-service-hybrid-edition-extends-existing-forest is ready for a later revision."
+  },
+  {
+   "id": "technical-016",
+   "file": "05-identity-federation/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| What is it? | ... | [Powered by Samba 4](...); [no longer open to new customers](../facts/directory-service.md#directory-service-simple-ad-closed-to-new-customers) |",
+   "type": "label-missing",
+   "severity": "note",
+   "evidence": "RULINGS hard rule 7: a change after 2026-07-15 is 'not examinable yet'. Fact directory-service-change-simple-ad-closed-2026-07 dates the closure July 30, 2026, and 2-deep labels it 'Status: not examinable yet' and says 'Do not let this change decide an answer.' The fast file shows the closure in the decision table without that label, and the fast 'Changed recently' section lists only the 2022 rename. Add '(not examinable yet)' after the link, or a second Changed recently note in 1-fast.",
+   "status": "fixed",
+   "resolution": "The 1-fast Simple AD cell now ends '(not examinable yet)'."
+  },
+  {
+   "id": "technical-017",
+   "file": "05-identity-federation/5-quiz.md",
+   "section": "identity-federation-q001",
+   "quote": "- \"Use an Amazon Cognito user pool that federates ...\": Amazon Cognito is [not a supported identity source](...) of IAM Identity Center, and it serves customer-facing applications, not the workforce.",
+   "type": "reason-mismatch",
+   "severity": "note",
+   "evidence": "The option does not use IAM Identity Center at all (user pool plus identity pool issuing AWS credentials), so 'not a supported identity source of IAM Identity Center' does not explain why it fails. The real reason is the stem: engineers need short-term credentials 'in every account' with one sign-in, and an identity pool gives credentials for its roles, with no per-account assignment model; fact iam-identity-center-cognito-is-not-an-identity-source also supports 'Amazon Cognito is a service that helps you manage identities for your customer facing applications'. Lead with that half and drop the identity-source clause.",
+   "status": "fixed",
+   "resolution": "Same fix as claims-010."
+  }
+ ]
+}

@@ -1,0 +1,185 @@
+{
+ "lens": "claims",
+ "chapter": "09",
+ "reviewer": "review-09-claims",
+ "reviewed": "2026-10-12",
+ "scope_note": "Ran 'saa.py sync 09' first (written=0 unchanged=12). Read 1-fast.md, 2-deep.md, 2-services.md, 3-do.md, 4-say.md, 5-quiz.md (10 shipped questions), data/09-detection/{questions,cards,speak,tasks}.json and the four detection-* diagram specs. 3-do.md and 4-say.md print 'Nothing here yet.' because both tasks and both spoken items are still status candidate, so task steps and spoken answers were reviewed in tasks.json and speak.json. Every fact link was checked against its quote in facts/*.md. Refutation attempts that held (no finding): GuardDuty 90-day finding retention not adjustable; 1 detector per account per Region; GuardDuty Regional service and separate detector IDs; no need to enable flow logs or a trail, data discarded after analysis; another DNS resolver means no DNS data; account-compromise examples (unusual geolocation, deactivating CloudTrail logging); Security Hub CSPM 90 days after last update; CSPM needs AWS Config in each Region and account; aggregation does not enable CSPM in linked Regions; unified Security Hub GA December 2, 2025 and CSPM rename; Config default retention 7 years (2557 days); proactive rules do not prevent deployment; Config rules do not prevent changes; Macie 90-day results and audio/video not analyzed; Macie unsupported classes; Inspector Classic end of support May 20, 2026; Detective without GuardDuty since February 2, 2024; Detective up to a year of data (Q1 premise); GuardDuty Custom Detection Rules September 1, 2026 marked not examinable; Artifact free of charge and BAA; SMEJ more than 300 accounts; task t02 feature names FLOW_LOGS/CLOUD_TRAIL/DNS_LOGS (guardduty-feature-object-api-changes-march2023) and cross-account export bucket (Q8, guardduty_exportfindings). Config does send rule evaluations to Security Hub CSPM (securityhub-internal-providers), so the Config arrow in detection-hero holds.",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "09-detection/1-fast.md",
+   "section": "check",
+   "quote": "**Check 1.** A company enables the new AWS Security Hub. Will it show card numbers that Macie finds? ... No. Amazon Macie [is not automatically enabled](../facts/security-hub.md#security-hub-enables-cspm-not-macie).",
+   "type": "wrong-answer",
+   "severity": "blocking",
+   "evidence": "The question presupposes that Macie runs and finds the card numbers; the linked fact only says enabling Security Hub does not turn Macie on. When Macie does run, Security Hub uses its signals: security-hub-renamed-cspm quotes \"Security Hub now automatically correlates security signals across multiple capabilities including ... sensitive data discovery (Amazon Macie).\" For CSPM, docs/securityhub/latest/userguide/securityhub-internal-providers: \"After you enable Security Hub CSPM, Macie automatically starts sending policy findings to Security Hub CSPM. You can configure the integration to also send sensitive data findings to Security Hub CSPM.\" So the answer 'No' to 'will it show what Macie finds' is wrong or at best ambiguous, and Security Hub shows findings, not card numbers. Ask instead: 'A company enables only the new AWS Security Hub. Is Amazon Macie turned on too?' (answer No, same link), or answer 'Only after you enable Macie'.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Check 1 now asks: \"A company turns on the new AWS Security Hub alone. Does Macie start looking for card numbers?\" Answer: No, Macie [is not automatically enabled] (same fact); turn it on and set it to [also send sensitive data findings] (security-hub-cspm-macie-policy-findings-default)."
+  },
+  {
+   "id": "claims-02",
+   "file": "09-detection/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "5. AWS Security Hub receives the findings of these services in one place.",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "Same claim in diagrams/src/detection-hero.json ('Arrows carry their findings to AWS Security Hub'), detection-after.json (Macie 'findings' edge into Security Hub), card detection-c010 and speak detection-s01 kp5. Macie sends only policy findings by default; the card-number (sensitive data) findings that Callvale's bank asks about need a setting. docs/securityhub/latest/userguide/securityhub-internal-providers: \"After you enable Security Hub CSPM, Macie automatically starts sending policy findings to Security Hub CSPM. You can configure the integration to also send sensitive data findings to Security Hub CSPM.\" Fact macie-findings-auto-to-eventbridge also says publishing to Security Hub CSPM is something you configure: \"you can configure Macie to also publish policy and sensitive data findings to AWS Security Hub CSPM\". Add one Go deeper line in the Macie or Security Hub subsection of 2-deep.md, linked to macie-findings-auto-to-eventbridge.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): The Security Hub Go deeper in 2-deep.md now says: for card numbers, you configure Macie to [also send sensitive data findings] (security-hub-cspm-macie-policy-findings-default); fast Check 1 says the same. The hero and after diagram texts are spec-bound (L702, L703) and unchanged; card c010 and s01 kp5 stay true for policy findings."
+  },
+  {
+   "id": "claims-03",
+   "file": "09-detection/2-deep.md",
+   "section": "inspector-rescans-a-workload-when-a-new-vulnerability-is-published",
+   "quote": "| EC2 instance | A changed package or a new CVE |",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "True only for agent-based scans. The same subsection teaches agentless scanning from EBS snapshots, and hybrid scanning is the default (inspector-ec2-hybrid-default: \"When you activate Amazon Inspector for the first time, your account is automatically enrolled in hybrid scanning, which uses both scan methods.\"). www/inspector/faqs: \"For SSM agent-based scans, rescans are started when a new software package is installed or uninstalled on an instance, when a new CVE is published, and after a vulnerable package is updated ... For agentless scans, scans are performed every 24 hours.\" Change the cell to 'With the SSM Agent: a changed package or a new CVE. Agentless: every 24 hours' and add a fact for the 24-hour cycle. FAQ 2 ('Does Inspector need an agent on EC2? No.') should also say agentless covers eligible EBS-backed instances only (same fact: 'agentless method for eligible EBS-backed instances').",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): EC2 row: \"Agent: a changed package or a new CVE. Agentless: [every 24 hours]\" (inspector-hybrid-agentless-every-24-hours). FAQ 2: agentless scanning \"for eligible EBS-backed instances\". The H3 heading is fixed by brief.json (L905; question and task section anchors) and stays."
+  },
+  {
+   "id": "claims-04",
+   "file": "09-detection/2-deep.md",
+   "section": "inspector-rescans-a-workload-when-a-new-vulnerability-is-published",
+   "quote": "| ECR container image | A push or a new CVE |",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "CVE rescans of an image stop after the configured rescan duration (14 days by default). www/inspector/faqs: \"If the push date of an image is less than the configured 'Push date rescan duration' and image last in use date is within the configured 'last in use rescan duration', the container image will continue to be monitored and automated rescans are started when a new CVE affecting an image is published. Available re-scan duration configurations for image last in use date are 14 days (by default), 30 days, 60 days, 90 days, or 180 days.\" The row, and the heading 'Inspector rescans a workload when a new vulnerability is published', imply that every image is rescanned forever. Add 'within the rescan duration' with a fact, or put it in a Go deeper block.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): ECR row: \"A push, or a new CVE within the rescan duration (new accounts: [14 days])\" (inspector-ecr-rescan-default-14-days-new-accounts)."
+  },
+  {
+   "id": "claims-05",
+   "file": "09-detection/2-deep.md",
+   "section": "config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+   "quote": "Why does AWS work this way? AWS Config reads configurations by [invoking the Describe or the List API call](../facts/config.md#config-guide-tracks-non-api-changes), so it judges a configuration that already exists.",
+   "type": "contradiction",
+   "severity": "should",
+   "evidence": "Proactive evaluation does the opposite, and 1-fast.md Check 2 teaches it ('A proactive Config rule checks a template before deployment'). docs/config/latest/developerguide/config-concepts: \"Proactive | Use proactive evaluation to evaluate resources before they have been deployed.\"; fact config-guide-proactive-vs-detective: \"There are two evaluation modes for AWS Config rules.\" The linked fact (Describe/List calls) explains how changes are tracked; it does not show that Config can judge only an existing configuration. The heading and card detection-c007 back ('The rule evaluates the change after it is recorded.') carry the same absolute claim. Say 'A detective rule judges ...' and keep the true point: no rule, detective or proactive, prevents the change.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Why now: \"so a detective rule judges a configuration that already exists\". New sentence after the trigger table: a proactive rule checks before deployment, but [proactive rules do not remediate resources] or block it (config-guide-proactive-vs-detective). Card c007 back: \"No. A rule reports noncompliance but does not block the change.\" The brief-fixed heading stays."
+  },
+  {
+   "id": "claims-06",
+   "file": "09-detection/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "| [6 hours](../facts/guardduty.md#guardduty-eventbridge-subsequent-occurrences-default-6-hours) | Default event interval for repeated GuardDuty findings | Faster needs [15 minutes](../facts/guardduty.md#guardduty-eventbridge-subsequent-occurrences-default-6-hours) |",
+   "type": "link-says-more-than-sentence",
+   "severity": "should",
+   "evidence": "The fact gives two faster choices, not one: \"Possible values are 15 minutes, 1 hour, or the default 6 hours.\" (guardduty-eventbridge-subsequent-occurrences-default-6-hours, docs guardduty_findings_eventbridge). 'Faster needs 15 minutes' teaches a false rule; write 'You can set 1 hour or 15 minutes'.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): A-list cell now: \"Repeats: [15 minutes] or [1 hour] possible. New findings: [near real-time]\" (both values of the fact; guardduty-eventbridge-new-findings-near-real-time added)."
+  },
+  {
+   "id": "claims-07",
+   "file": "09-detection/5-quiz.md",
+   "section": "detection-q010",
+   "quote": "The delegated administrator exports for the organization, so one setting covers every member account.",
+   "type": "unsupported-claim",
+   "severity": "should",
+   "evidence": "No fact link, and too broad. Export is set per Region and only covers member findings from that Region, and archived findings are not exported. docs/guardduty/latest/ug/guardduty_exportfindings: \"Export settings are regional – You need to configure export options in each Region where you use GuardDuty.\"; \"When you configure export findings in an administrator account, all the findings from the associated member accounts that are generated in the same Region are also exported to the same location\"; \"Archived findings are not exported – The default behavior is that the archived findings, including new instances of suppressed findings, are not exported.\" The stem asks to retain 'every GuardDuty finding'. The key stays correct. Fix the Why: 'one setting in each Region covers the member accounts of that Region', grounded in a new fact from guardduty_exportfindings.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): q010 explanation (explanation only; stem, options and key unchanged): the reference architecture exports findings [to a central S3 bucket in the Log Archive account] to [retain the findings beyond 90 days]; [GuardDuty is a Regional service] and its findings stay in their Region, so the administrator sets the export in each Region. The old sentence is gone. q010 is no longer shipped (exam-04)."
+  },
+  {
+   "id": "claims-08",
+   "file": "09-detection/2-deep.md",
+   "section": "in-the-real-world",
+   "quote": "**Sony Music Entertainment Japan, 2018.** Its SMEJ Guardrail framework rests on AWS Security Hub. ... > \"By performing centralized management and visualization using AWS Security Hub, we were able to standardize our security levels.\"",
+   "type": "misleading-date",
+   "severity": "should",
+   "evidence": "www/solutions/case-studies/sony-music-entertainment-japan-case-study: \"After its parent company issued new cloud governance guidelines in 2018, SMEJ built a scalable, cost-effective solution on AWS.\" 2018 is the year of the parent company's guidelines, not of the Security Hub build, so the heading dates the project wrongly. The quote is also cut and closed with a period as if verbatim; the source sentence continues: \"...standardize our security levels, which had varied for each AWS account,\". Mark the cut with an ellipsis. The case's 'AWS Security Hub' is the posture service ('As a cloud security posture management solution, AWS Security Hub performs these best practice checks automatically'), which this chapter calls Security Hub CSPM; say so once so the reader does not map it to the new unified Security Hub.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Case box year is now 2024, the date of the AWS case study in the corpus case index (2024-02-26); 2018 was the year of the parent company guidelines. The service is named \"AWS Security Hub, which [is now available as Security Hub CSPM]\". The ellipsis part is not applied: the saved page holds the quoted sentence ending at \"levels.\" (fact security-hub-case-smej-standardized-levels, M3 match; L306 passes)."
+  },
+  {
+   "id": "claims-09",
+   "file": "09-detection/2-services.md",
+   "section": "aws-config",
+   "quote": "To deploy rules to many accounts, use conformance packs or AWS CloudFormation StackSets.",
+   "type": "unsupported-claim",
+   "severity": "should",
+   "evidence": "No fact link. The linked page for the sentence before it (docs/config/latest/developerguide/config-concepts) only says \"you cannot deploy rules through an aggregator\". There is no StackSets fact in the canon. Conformance packs across an organization are grounded: config-guide-conformance-pack: \"deployed as a single entity in an account and a Region or across an organization in AWS Organizations\". Link that fact and drop StackSets, or add a verified fact for it.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Now: a conformance pack can be [deployed across an entire organization] (config-faq-conformance-pack-org-wide-immutable), or you [use AWS CloudFormation StackSets] (config-faq-aggregation-reporting-only-use-stacksets)."
+  },
+  {
+   "id": "claims-10",
+   "file": "09-detection/3-do.md",
+   "section": "do-it",
+   "quote": "Nothing here yet.",
+   "type": "generated-file-empty",
+   "severity": "should",
+   "evidence": "2-deep.md says '> **Try it:** Turn on GuardDuty without creating any logs. See [3-do.md](3-do.md).' and the Look first task region in 1-fast.md (detection-t01) is empty, but 3-do.md and 4-say.md print nothing. TOOLS-items.md: \"Only items with `status: ready` are printed\". detection-t01, detection-t02, detection-s01 and detection-s02 are still status candidate in data/09-detection/{tasks,speak}.json. The reviewer must set them ready (tasks set-status, speak set-status) before fix, or the reader gets empty pointers.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Tasks t01 and t02, speak s01 and s02 and all 12 cards set to ready after a clean --ship item lint; sync wrote 3-do.md, 4-say.md and the Look first task region."
+  },
+  {
+   "id": "claims-11",
+   "file": "09-detection/2-services.md",
+   "section": "amazon-macie",
+   "quote": "Objects in S3 Intelligent-Tiering and S3 One Zone-IA are analyzed.",
+   "type": "missing-link",
+   "severity": "note",
+   "evidence": "Hard claim with no fact link. Fact macie-unsupported-storage-classes lists the supported classes and could carry the link. The sentence also leaves out the file-format condition. docs/macie/latest/user/discovery-supported-storage: \"Macie analyzes only those objects that use a supported storage class and a supported file or storage format.\"",
+   "status": "removed",
+   "resolution": "fix-09 (2026-10-13): The unlinked sentence about S3 Intelligent-Tiering and S3 One Zone-IA was removed. The card keeps the linked storage-class sentence and adds a linked managed data identifiers sentence."
+  },
+  {
+   "id": "claims-12",
+   "file": "09-detection/2-services.md",
+   "section": "aws-artifact",
+   "quote": "An agreement such as a BAA can cover one account or every account in your organization.",
+   "type": "missing-link",
+   "severity": "note",
+   "evidence": "No fact link, but fact artifact-faq-account-vs-organization-agreements supports it and adds the exam-relevant condition: \"Only the management account in an organization can accept agreements in AWS Artifact Organization Agreements.\" Link it and name the management account.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Added: \"[Only the management account in an organization] can accept an organization agreement.\" (artifact-faq-account-vs-organization-agreements)."
+  },
+  {
+   "id": "claims-13",
+   "file": "09-detection/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "3. Amazon Macie discovers sensitive data in Amazon S3.\n4. AWS Config records how each resource is configured over time.\n5. AWS Security Hub receives the findings of these services in one place.\n6. Findings go on to Amazon EventBridge, and Amazon Detective helps you find the root cause of one finding.",
+   "type": "missing-link",
+   "severity": "note",
+   "evidence": "The notes of diagrams/src/detection-hero.json say 'Step facts (linked in the Markdown steps): ... macie-dg-discovers-sensitive-data, config-guide-definition-history-relationships, security-hub-cspm-receives-service-findings, security-hub-cspm-eventbridge-all-findings, detective-dg-root-cause'. Steps 1 and 2 are linked, but steps 3 to 6 are not. Link them as the spec says.",
+   "status": "rejected",
+   "resolution": "fix-09 (2026-10-13): The step sentences must equal the say lines of the detection-hero spec (L703). No display of the named facts stands in steps 3 to 6, so a link needs a spec and brief change in the diagrams stage (orchestrator). The steps hold no number and no absolute word."
+  },
+  {
+   "id": "claims-14",
+   "file": "09-detection/2-deep.md",
+   "section": "decision-record",
+   "quote": "<!-- deep-09: the detection-before embed waits here. Its spec claim starts \"At month 19,\" which fails L705 ... then embed the image with the caption \"Seven accounts run without detection services, and the bank's questions about threats and evidence stay unanswered.\" -->",
+   "type": "leftover-work-note",
+   "severity": "note",
+   "evidence": "A builder note is left in a reader file, and the story pair is incomplete: detection-after is embedded, detection-before is not (RULINGS: 'the before and after pair of a chapter uses the diagram ids <slug>-before and <slug>-after'). diagrams/src/detection-before.json still has the claim \"At month 19, seven accounts run without detection services...\". Apply the fix the note describes and remove the comment.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Partial: the builder comment is removed from 2-deep.md. The detection-before embed needs its spec claim changed (drop \"At month 19, \") and the diagram text in brief.json, which belong to the diagrams stage: left for the orchestrator."
+  },
+  {
+   "id": "claims-15",
+   "file": "09-detection/2-services.md",
+   "section": "amazon-detective",
+   "quote": "**One fact.** From [February 2, 2024](../facts/detective.md#detective-guardduty-requirement-removed), you can enable Detective without GuardDuty. Older questions can still assume that GuardDuty comes first.",
+   "type": "rule-broken",
+   "severity": "note",
+   "evidence": "RULINGS hard rule 7: 'Where a fact changed since mid-2022, add a \"Changed recently\" note with old value, new value, date, and what older exam questions may assume.' The Detective change (old: \"The requirement to have GuardDuty enabled in your account for 48 hours before enabling Detective\") and the Inspector Classic end of support (2-services.md amazon-inspector, inspector-classic-full-shutdown-2026-05) are told in prose without the Changed recently form. Neither is in 1-fast.md Changed recently either.",
+   "status": "rejected",
+   "resolution": "fix-09 (2026-10-13): The Detective change is told in the 2-services.md card with date, old rule and what older questions assume. A Changed recently entry was written in 1-fast.md and then in the B-list, and removed both times: 1-fast.md is at its 1,000-word limit and the deep file is at its 2,400-word limit (L201) and at most 3 Go deeper blocks (L106). Inspector Classic stays in its card, as exam-09 allows."
+  },
+  {
+   "id": "claims-16",
+   "file": "09-detection/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "GuardDuty reads [AWS CloudTrail data events for Amazon S3](../facts/guardduty.md#guardduty-s3-protection-data-events) to find threats.",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "This is S3 Protection, a protection plan, not a foundational source. It is on by default only in some cases. Fact guardduty-faq-s3-protection-on-by-default-new-accounts: \"Any new accounts that enable GuardDuty through the console or API will also have S3 Protection turned on by default. New GuardDuty accounts created using the AWS Organizations auto-enable feature will not have S3 Protection turned on unless the auto-enable for S3 option is turned on.\" Write 'GuardDuty S3 Protection reads ...' as Q3 and Q9 already do.",
+   "status": "fixed",
+   "resolution": "fix-09 (2026-10-13): Trap now: \"GuardDuty S3 Protection reads [AWS CloudTrail data events for Amazon S3].\""
+  }
+ ]
+}

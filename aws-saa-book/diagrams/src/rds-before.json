@@ -1,0 +1,130 @@
+{
+  "id": "rds-before",
+  "kind": "arch",
+  "size": "m",
+  "chapter": "26",
+  "title": "Callvale before: PostgreSQL on one instance",
+  "claim": "PostgreSQL runs on one database instance in one zone, and a failure stops the application until Ben restores a snapshot.",
+  "alt": "Before: the web instance, the worker and the database instance with its data volume run in AZ 1, the database in a private subnet. Daily snapshots go to Amazon S3, and AZ 2 is empty.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "groups": [
+    {
+      "id": "vpc",
+      "type": "vpc",
+      "label": "VPC",
+      "cells": "A1:B3"
+    },
+    {
+      "id": "az1",
+      "type": "az",
+      "label": "AZ 1",
+      "in": "vpc",
+      "cells": "A1:A3"
+    },
+    {
+      "id": "pub1",
+      "type": "subnet-public",
+      "label": "Public subnet",
+      "in": "az1",
+      "cells": "A1"
+    },
+    {
+      "id": "app1",
+      "type": "subnet-private",
+      "label": "Private subnet",
+      "in": "az1",
+      "cells": "A2"
+    },
+    {
+      "id": "data1",
+      "type": "subnet-private",
+      "label": "Private subnet",
+      "in": "az1",
+      "cells": "A3"
+    },
+    {
+      "id": "az2",
+      "type": "az",
+      "label": "AZ 2: empty subnets",
+      "in": "vpc",
+      "cells": "B1:B3"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "web",
+      "icon": "instance",
+      "label": "Web instance",
+      "at": "A1"
+    },
+    {
+      "id": "worker",
+      "icon": "instance",
+      "label": "Worker instance",
+      "at": "A2"
+    },
+    {
+      "id": "db",
+      "icon": "instance",
+      "label": "Database instance\ngp3 volume",
+      "at": "A3",
+      "emph": true
+    },
+    {
+      "id": "ben",
+      "icon": "user",
+      "label": "Ben",
+      "at": "A5"
+    },
+    {
+      "id": "s3",
+      "icon": "s3",
+      "label": "Amazon S3",
+      "at": "B5"
+    }
+  ],
+  "edges": [
+    {
+      "from": "web",
+      "to": "db",
+      "step": 1,
+      "fromSide": "left",
+      "toSide": "left",
+      "say": "The web instance and the worker use PostgreSQL on one instance."
+    },
+    {
+      "from": "worker",
+      "to": "db",
+      "step": 1
+    },
+    {
+      "from": "ben",
+      "to": "db",
+      "label": "patches",
+      "step": 2,
+      "dashed": true,
+      "say": "Ben patches the operating system and PostgreSQL by hand."
+    },
+    {
+      "from": "db",
+      "to": "s3",
+      "label": "daily snapshot",
+      "step": 3,
+      "fromSide": "right",
+      "toSide": "left",
+      "say": "A daily snapshot of the data volume goes to Amazon S3."
+    },
+    {
+      "from": "s3",
+      "to": "ben",
+      "label": "restore by hand",
+      "step": 4,
+      "dashed": true,
+      "emph": true,
+      "say": "A failure stops the application until Ben restores a snapshot."
+    }
+  ],
+  "notes": "Brief 26 story pair, before (2-deep.md#decision-record, after Context). Title, claim, alt, steps from brief.json. Same cells as rds-after: web A1, worker A2, database A3, Ben A5, Amazon S3 B5 (row 4 is empty so the snapshot label sits outside the VPC); AZ 1 is column A and AZ 2 is column B (one column per Availability Zone), so the standby of rds-after lands in B3. Steps are story, not AWS rules: no fact link, no number, no absolute word. The data volume is a label on the database node, not a new node. Two columns only (three do not fit a phone)."
+}

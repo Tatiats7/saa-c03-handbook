@@ -1,0 +1,60 @@
+Skip to Main Content
+## AWS News Blog
+# Build the highest resilience apps with multi-Region strong consistency in Amazon DynamoDB global tables
+While tens of thousands of customers are successfully using Amazon DynamoDB global tables with eventual consistency, we’re seeing emerging needs for even stronger resilience. Many organizations find that the DynamoDB multi-Availability Zone architecture and eventually consistent global tables meet their requirements, but critical applications like payment processing systems and financial services demand more.
+For these applications, customers require a zero Recovery Point Objective (RPO) during rare Region-wide events, meaning you can direct your app to read the latest data from any Region. Your multi-Region applications always need to access the same data regardless of location.
+Starting today, you can use a new Amazon DynamoDB global tables capability that provides multi-Region strong consistency (MRSC), enabling zero RPO. This capability, first announced as a preview at AWS re:Invent 2024, simplifies building highly resilient global applications.
+Here’s how you can enable MRSC starting with an existing empty DynamoDB table:
+With MRSC, DynamoDB now offers you the highest level of resilience for your applications. If application processing is interrupted in a Region, you can redirect traffic to another Region containing a MRSC replica and know that you’ll be processing the latest data.
+Getting started
+Let me walk you through how you can use this new capability.
+To start using MRSC, I need to create a global table from an existing DynamoDB table that doesn’t contain any data. I navigate to my existing table, select the Global tables tab and select Create replica.
+The MRSC availability architecture requires three AWS Regions. I can configure MRSC with either three full replicas or with two replicas and a witness. A witness contains only replicated change data to provide the required availability without maintaining a full copy of my table data.
+The following screenshot shows how I configure MRSC with two replicas and a witness. To configure MRSC with three full replicas instead, I can clear Configure Region 2 as Witness.
+If I need to update my existing table programmatically, I can use the Amazon Q CLI to generate the required command with the following prompt:
+> Hey Q! Update my existing DynamoDB table called "demo-mrsc" in us-east-1 with multi-Region strong consistency across us-east-2 with witness in us-west-2 Regions
+Shortly after, Q CLI will respond back with following command:
+> To update your DynamoDB table with multi-Region strong consistency, you'll need to use the update-table command with the appropriate parameters. Here's how you would do it:
+aws dynamodb update-table \
+    --table-name demo-mrsc \
+    --replica-updates '[{"Create": {"RegionName": "us-east-2"}}]' \
+    --global-table-witness-updates '[{"Create": {"RegionName": "us-west-2"}}]' \
+    --multi-region-consistency STRONG \
+    --region us-east-1
+After it’s finished processing, I can check the status of my MRSC global table. I can see I have a witness configured for my DynamoDB global table. A witness reduces costs while still providing the resilience benefits of multi-Region strong consistency.
+Then, in my application, I can use ConsistentRead to read data with strong consistency. Here’s a Python example:
+import boto3
+# Configure the DynamoDB client for your region
+dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
+table = dynamodb.Table('demo-mrsc')
+pk_id = "demo#test123"
+# Read with strong consistency across regions
+response = table.get_item(
+    Key={
+        'PK': pk_id
+    },
+    ConsistentRead=True
+)
+print(response)
+For operations that require the strongest resilience, I can use ConsistentRead=True. For less critical operations where eventual consistency is acceptable, I can omit this parameter to improve performance and reduce costs.
+Additional things to know
+Here are a couple of things to note:
+- Availability – The Amazon DynamoDB multi-Region strong consistency capability is available in following AWS Regions: US East (Ohio, N. Virginia), US West (Oregon), Asia Pacific (Osaka, Seoul, Tokyo), and Europe (Frankfurt, Ireland, London, Paris)
+- Pricing – Multi-Region strong consistency pricing follows the existing global tables pricing structure. DynamoDB recently reduced global tables pricing by up to 67 percent, making this highly resilient architecture more affordable than ever. Visit Amazon DynamoDB lowers pricing for on-demand throughput and global tables in the AWS Database Blog to learn more.
+Learn more about how you can achieve the highest level of application resilience, enable your applications to be always available and always read the latest data regardless of the Region by visiting Amazon DynamoDB global tables.
+Happy building!
+— Donnie
+### Resources
+- Getting Started
+- What's New
+- Top Posts
+- Official AWS Podcast
+- Case Studies
+- AWS re:Post
+### Follow
+- Twitter
+- Facebook
+- LinkedIn
+- Twitch
+- RSS Feed
+- Email Updates

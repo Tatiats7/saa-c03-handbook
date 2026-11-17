@@ -1,0 +1,51 @@
+{
+ "pack": "lambda-r1-ambiguity",
+ "lens": "ambiguity",
+ "solver": "solve-18-ambiguity-r1",
+ "answers": [
+  {
+   "id": "lambda-q017",
+   "answer": ["A", "B"],
+   "flag": null,
+   "stem_only": null,
+   "citations": null,
+   "case": {
+    "label": "C",
+    "text": "Caching in /tmp is the most common pattern for a file that changes weekly, needs only a few hours of freshness, and fits the 300 MB size. It is a small code change, and it fixes every request after the first in each environment. A reader could pair it with provisioned concurrency and say the pairing works. It fails only on the last constraint: the handler still runs the download on the first invocation of each environment, even when that environment is pre-initialized, so the first request stays slow. Moving the download to initialization code (B) is what lets provisioned concurrency prepare the file before any request arrives. The stem's wording 'about 20 concurrent' could also lead a candidate to doubt that a value of exactly 20 covers peaks, but no option offers a different value, so it does not create a second correct set."
+   }
+  },
+  {
+   "id": "lambda-q006",
+   "answer": ["B"],
+   "flag": null,
+   "stem_only": null,
+   "citations": null,
+   "case": {
+    "label": "D",
+    "text": "An SQS queue with maximum concurrency 50 on the event source mapping is the textbook way to cap concurrent function copies and protect a database. A candidate who stops reading at 'never run more than 50 copies' could pick it. It fails because the clients must receive the result of each order in the API response, which needs a synchronous invocation; a queue makes the call asynchronous and the response cannot carry the order result. The line 'clients already retry any request that fails' is the hint that throttled calls (reserved concurrency) are acceptable. Option C looks similar but provisioned concurrency does not cap the function, so extra copies still run on demand."
+   }
+  },
+  {
+   "id": "lambda-q008",
+   "answer": ["A", "E"],
+   "flag": "A second pair, A and B (retries off, plus code in the function that writes the failed event to the S3 bucket at the first failure), is defensible because the stem does not say that failures include timeouts or runtime crashes that the function code cannot catch, so B is not clearly excluded and only the phrase 'details about the failed invocation' plus 'least operational overhead' separates it from E.",
+   "stem_only": null,
+   "citations": null,
+   "case": {
+    "label": "B",
+    "text": "Error handling code in the function writes each failed event and its error message to the separate S3 bucket on the first failure, so the record exists as soon as possible, with no dependence on the retry schedule. Combined with maximum retry attempts of 0 (A), the pair also stops duplicate records. A careful candidate can argue it meets every requirement as written: the malformed uploads fail inside the handler, so the code can catch the error and write the object. It loses to E only on 'least operational overhead' (it needs new code to write, test and maintain) and on the missing 'details about the failed invocation' (a destination record carries request and response details and the error, including for timeouts and crashes that code inside the function cannot catch). The stem never states that those failure kinds occur, so the exclusion rests on inference. Option C (SQS dead-letter queue) delivers to a queue, not an S3 object. Option D names an SNS FIFO topic, which is not a valid destination."
+   }
+  },
+  {
+   "id": "lambda-q018",
+   "answer": ["A"],
+   "flag": "Option C is also defensible: the Lambda documentation says the on-failure record for a stream source does not include the actual records (only batch metadata, to be used to read them back from the stream), so A may not 'keep the full content of each failed record' as the stem demands, while C stores the full record in S3 and returns success.",
+   "stem_only": null,
+   "citations": null,
+   "case": {
+    "label": "C",
+    "text": "The stem asks to 'keep the full content of each failed record for later analysis'. The Lambda documentation for stream event sources says the on-failure destination record holds metadata about the failed batch (shard, sequence numbers) and that the actual records are not included, so they must be read back from the stream before the stream retention period ends. Option A therefore keeps pointers, not the content. Option C catches the parse error, writes the whole malformed record to S3 and returns success, so the shard keeps moving and the full content is retained, with no retry loop and no dependence on stream retention. It costs a small code change, but that is less operational overhead than running a separate job to recover records from the stream. Option B fails because a function dead-letter queue applies to asynchronous invocation, not to stream event source mappings. Option D fails because a higher parallelization factor does not skip a poison record."
+   }
+  }
+ ]
+}

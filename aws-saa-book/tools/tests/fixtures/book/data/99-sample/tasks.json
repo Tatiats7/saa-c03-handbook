@@ -1,0 +1,69 @@
+{
+ "v": 1,
+ "chapter": "sample",
+ "items": [
+  {
+   "id": "sample-t01",
+   "chapter": "sample",
+   "type": "look",
+   "title": "Find the Region of a shelf",
+   "kills": "\"A shelf is global, so every Region sees it.\"",
+   "trap": "sample-trap-shelf-global",
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 3,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": ["widget:ListShelves"],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {"text": "Open the Amazon Widget Store console and find the list of shelves.", "command": null, "expect": "A list of shelves, or an empty list.", "break_it": false, "predict": null},
+    {"text": "Read the Region column of one shelf.", "command": "aws widget list-shelves --query \"Shelves[].[Name,Region]\"", "expect": "Each shelf shows exactly one Region.", "break_it": false, "predict": null},
+    {"text": "Change the Region of the console and look at the list again.", "command": null, "expect": "The shelf from the first Region is not in the list.", "break_it": false, "predict": null}
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-04",
+   "facts": ["widget-shelf-scope"],
+   "sources": [{"title": "Amazon Widget Store limits", "url": "https://docs.aws.amazon.com/widget-store/latest/userguide/limits.html"}],
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "sample-t02",
+   "chapter": "sample",
+   "type": "try",
+   "title": "Try to move a shelf to another Region",
+   "kills": "\"You can move a shelf when your team moves.\"",
+   "trap": "sample-trap-shelf-move",
+   "section": "2-deep.md#a-shelf-belongs-to-one-region-for-its-whole-life",
+   "pass_route": true,
+   "minutes": 10,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": ["widget:CreateShelf", "widget:CopyShelf", "widget:DeleteShelf", "widget:ListShelves"],
+   "read_only_alternative": "Do the Look task again in two Regions, and read the sentence about moving a shelf on the limits page.",
+   "steps": [
+    {"text": "Create a shelf with the name saa-sample-shelf in your current Region.", "command": "aws widget create-shelf --name saa-sample-shelf --tags book=saa,task=sample-t02", "expect": "The output shows the shelf name and your Region.", "break_it": false, "predict": null},
+    {"text": "Try to move the shelf to another Region.", "command": "aws widget move-shelf --name saa-sample-shelf --target-region eu-west-1", "expect": "An error message.", "break_it": true, "predict": "What will the service answer when you ask it to move the shelf?", "explain": "You [cannot move a shelf](../facts/widget.md#widget-shelf-move) to another Region."},
+    {"text": "Copy the shelf to the other Region instead.", "command": "aws widget copy-shelf --name saa-sample-shelf --target-region eu-west-1 --tags Key=book,Value=saa Key=task,Value=sample-t02", "expect": "A second shelf exists in eu-west-1.", "break_it": false, "predict": null}
+   ],
+   "cleanup": [
+    {"text": "Delete the copy in the other Region.", "command": "aws widget delete-shelf --name saa-sample-shelf --region eu-west-1"},
+    {"text": "Delete the first shelf.", "command": "aws widget delete-shelf --name saa-sample-shelf"}
+   ],
+   "verify": {"command": "aws widget list-shelves --all-regions --tag book=saa", "expect": "An empty list."},
+   "still_costs": ["A shelf that you did not delete, in either Region."],
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-04",
+   "facts": ["widget-shelf-move"],
+   "sources": [{"title": "Amazon Widget Store limits", "url": "https://docs.aws.amazon.com/widget-store/latest/userguide/limits.html"}],
+   "status": "ready",
+   "rev": 1
+  }
+ ]
+}

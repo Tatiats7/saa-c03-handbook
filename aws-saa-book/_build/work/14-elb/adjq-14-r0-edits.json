@@ -1,0 +1,104 @@
+[
+ {
+  "id": "elb-q007",
+  "section": "2-deep.md#targets-can-stay-private-and-accept-traffic-only-from-the-load-balancer",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.K10"
+  ],
+  "topics": [
+   "security",
+   "networking"
+  ],
+  "services": [
+   "elb",
+   "waf"
+  ],
+  "concept": "targets-only-via-lb",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a web application on Amazon EC2 instances behind an internet-facing Application Load Balancer that has its own security group. A security audit finds that the instances are in public subnets with public IP addresses. Their security group allows HTTP on port 80 from 0.0.0.0/0. The company must remove every network path from the internet to the instances. The instances must accept HTTP requests from the load balancer and from no other source. Which combination of steps will meet these requirements in the MOST secure way? (Select TWO.)",
+  "keywords": [
+   "public subnets with public IP addresses",
+   "remove every network path from the internet to the instances",
+   "from the load balancer and from no other source",
+   "MOST secure"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a network ACL for the instance subnets that allows inbound HTTP only from the current IP addresses of the load balancer, found with a DNS lookup.",
+    "correct": false,
+    "why": "Elastic Load Balancing updates its DNS entry so that [IP addresses can be remapped quickly](../facts/elb.md#elb-dns-ttl-60-seconds-remap), so today's address list stops matching.",
+    "concept": "nacl-with-lb-addresses",
+    "trap": "elb-trap-alb-static-ip",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Move the instances to private subnets, launch them without public IP addresses, and keep them registered in the target group of the load balancer.",
+    "correct": true,
+    "why": "Load balancers reach targets [using private IP addresses](../facts/elb.md#elb-targets-need-no-public-ip), so the instances need no public address, and the internet has no path to them.",
+    "concept": "private-subnet-targets",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Associate an AWS WAF web ACL with each EC2 instance, and add a rule that blocks every request that does not come from the load balancer.",
+    "correct": false,
+    "why": "A web ACL protects resources such as [Amazon CloudFront, Amazon API Gateway, Application Load Balancer](../facts/waf.md#waf-protected-resource-types), and an EC2 instance is not one of them.",
+    "concept": "waf-on-instance",
+    "trap": "edge-protection-trap-waf-on-any-resource",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Keep the instances in public subnets with public IP addresses, and allow HTTP in their security group only from the CIDR block of the VPC.",
+    "correct": false,
+    "why": "The public addresses stay, and every resource in the VPC can still reach the instances, so they accept requests from more than the load balancer; targets [do not need public IP addresses](../facts/elb.md#elb-targets-need-no-public-ip).",
+    "concept": "vpc-cidr-rule",
+    "trap": "elb-trap-targets-need-public-ip",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Change the security group of the instances so that it allows HTTP only from the security group of the load balancer, and remove the 0.0.0.0/0 rule.",
+    "correct": true,
+    "why": "With [the load balancer's security group as the source](../facts/elb.md#elb-target-sg-reference-lb-sg), the instances accept requests from the load balancer and from nothing else.",
+    "concept": "sg-reference",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Two controls work together. Load balancers send requests to targets [using private IP addresses](../facts/elb.md#elb-targets-need-no-public-ip), so the instances can sit in private subnets. A rule with [the load balancer's security group as the source](../facts/elb.md#elb-target-sg-reference-lb-sg) admits the load balancer and nothing else, even when its node addresses change.",
+  "takeaway": "Targets belong in private subnets, with a security group rule that names the load balancer's security group.",
+  "twin": "If the stem said \"the application serves employees on the corporate network through AWS Direct Connect\" instead: an internal load balancer, because its nodes [have only private IP addresses](../facts/elb.md#elb-internal-nodes-private-ips-only).",
+  "say": "Put the instances in private subnets, and let their security group trust the load balancer's security group, not an address range.",
+  "facts": [
+   "elb-dns-ttl-60-seconds-remap",
+   "elb-targets-need-no-public-ip",
+   "waf-protected-resource-types",
+   "elb-target-sg-reference-lb-sg",
+   "elb-internal-nodes-private-ips-only"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-secure",
+   "ee-select-two",
+   "ee-internet-facing",
+   "ee-must"
+  ],
+  "twin_of": null
+ }
+]

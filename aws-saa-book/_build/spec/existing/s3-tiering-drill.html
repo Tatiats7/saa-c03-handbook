@@ -1,0 +1,725 @@
+<title>S3 Tiering Drill</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#F2F4F8; --surface:#FFFFFF; --ink:#141C2B; --muted:#5A667A; --line:#D6DCE6;
+  --accent:#2A3EB1; --accent-soft:#E4E8FA; --on-accent:#FFFFFF;
+  --good:#1B7A4B; --good-soft:#DDF1E6; --warn:#8F5800; --warn-soft:#FBEFD5; --bad:#B3261E; --bad-soft:#FADFDD;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F131B; --surface:#171D28; --ink:#E7EBF3; --muted:#98A4B8; --line:#2A3342;
+    --accent:#93A1FF; --accent-soft:#222B55; --on-accent:#0F131B;
+    --good:#5FD09A; --good-soft:#143425; --warn:#F0B95B; --warn-soft:#3A2C10; --bad:#FF8A80; --bad-soft:#41201E;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F131B; --surface:#171D28; --ink:#E7EBF3; --muted:#98A4B8; --line:#2A3342;
+  --accent:#93A1FF; --accent-soft:#222B55; --on-accent:#0F131B;
+  --good:#5FD09A; --good-soft:#143425; --warn:#F0B95B; --warn-soft:#3A2C10; --bad:#FF8A80; --bad-soft:#41201E;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+button{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1,h2,h3{font-family:var(--display);font-stretch:112%;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:40px;font-weight:800;letter-spacing:-0.01em}
+h2{font-size:21px;font-weight:700}
+h3{font-size:17px;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--muted);max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:16px}
+.stack-lg{display:flex;flex-direction:column;gap:32px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:9px 16px;font-weight:600;font-size:15px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.big{padding:13px 26px;font-size:17px}
+.btn:focus-visible,.cell:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:default}
+
+/* tables */
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:500;padding:8px 12px 8px 0;border-bottom:1px solid var(--line)}
+td{padding:10px 12px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* intro */
+.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:66ch}
+.intro-head{display:flex;flex-direction:column;gap:12px}
+
+/* test bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:15px;margin-right:auto}
+.prog{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.timer{font-family:var(--mono);font-weight:600;font-size:17px;font-variant-numeric:tabular-nums;padding:4px 10px;border:1px solid var(--line);border-radius:4px;min-width:84px;text-align:center}
+.timer.over{color:var(--bad);border-color:var(--bad)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+.sheet{display:none}
+.sheet.open{display:block}
+@media (min-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr) 272px}
+  .sheet{display:block;position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
+  .sheet-toggle{display:none}
+}
+.qmeta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.qtype{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--warn-soft);color:var(--warn);padding:2px 8px;border-radius:3px}
+.qtext{font-size:18px;line-height:1.5;max-width:68ch}
+.opts{display:flex;flex-direction:column;gap:8px;border:0;padding:0;margin:0}
+.opt{position:relative;display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer}
+.opt:hover{border-color:var(--accent)}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.bubble{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted)}
+.multi .bubble{border-radius:7px}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.sel .bubble{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.unsure{display:inline-flex;gap:10px;align-items:center;font-size:15px;color:var(--muted);cursor:pointer}
+.unsure input{width:18px;height:18px;accent-color:var(--accent)}
+.qnav{display:flex;justify-content:space-between;gap:12px}
+.hint{font-size:13px;color:var(--muted)}
+.limit-note{font-size:14px;color:var(--warn)}
+
+/* answer sheet */
+.cells{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+@media (max-width:899px){.cells{grid-template-columns:repeat(auto-fill,minmax(40px,1fr))}}
+.cell{position:relative;aspect-ratio:1;border-radius:50%;border:1.5px solid var(--line);background:transparent;font-family:var(--mono);font-size:12px;cursor:pointer;color:var(--muted);padding:0}
+.cell.ans{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cell.uns::after{content:"?";position:absolute;top:-6px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--warn);color:var(--ground);font-size:11px;font-weight:600;display:grid;place-items:center}
+.cell.cur{box-shadow:0 0 0 2px var(--ground),0 0 0 4px var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.confirm{border-color:var(--warn);background:var(--warn-soft)}
+.confirm .row{display:flex;gap:10px;flex-wrap:wrap}
+
+/* results */
+.score-head{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:8px 32px;align-items:center}
+@media (max-width:640px){.score-head{grid-template-columns:minmax(0,1fr)}}
+.bigscore{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:72px;line-height:1;font-variant-numeric:tabular-nums}
+.bigscore small{font-size:28px;font-weight:700;color:var(--muted)}
+.facts{display:flex;flex-wrap:wrap;gap:4px 24px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.plain{background:var(--accent-soft);color:var(--accent)}
+.drow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:baseline}
+.drow .name{font-weight:600}
+.drow .sub{font-size:13px;color:var(--muted)}
+.track{grid-column:1/-1;position:relative;height:10px;background:var(--line);border-radius:2px}
+.fill{position:absolute;inset:0 auto 0 0;border-radius:2px}
+.fill.good{background:var(--good)}.fill.warn{background:var(--warn)}.fill.bad{background:var(--bad)}
+.passline{position:absolute;top:-4px;bottom:-4px;left:72%;width:2px;background:var(--ink)}
+.passnote{font-size:13px;color:var(--muted)}
+.savebox{display:flex;flex-direction:column;gap:10px}
+.savestate{font-weight:600}
+textarea.summary{width:100%;min-height:150px;font-family:var(--mono);font-size:12.5px;line-height:1.5;background:var(--ground);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:10px;resize:vertical}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.rev{display:flex;flex-direction:column;gap:12px;padding-block:20px;border-top:1px solid var(--line)}
+.rev-head{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.rev-q{max-width:70ch}
+.rev-opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rev-opts li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;padding:8px 10px;border-radius:4px;border:1px solid transparent;font-size:15px}
+.rev-opts li.right{background:var(--good-soft);border-color:var(--good)}
+.rev-opts li.wrongpick{background:var(--bad-soft);border-color:var(--bad)}
+.rev-opts .tag{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-top:2px}
+.rev-opts li.right .tag{color:var(--good)}
+.rev-opts li.wrongpick .tag{color:var(--bad)}
+.why{font-size:15px;max-width:70ch;border-left:2px solid var(--accent);padding-left:12px}
+.why b{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);display:block}
+.foot{font-size:13px;color:var(--muted);max-width:70ch}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .5s ease}}
+</style>
+
+<div id="app"></div>
+
+<script>
+const TOPICS = {
+  classes:{name:`Choosing a storage class`, study:`Match the access pattern to the class: frequent, unknown, monthly, quarterly, yearly, re-creatable, latency-critical`},
+  numbers:{name:`Durations, sizes & retrieval times`, study:`Minimum storage durations (30 / 90 / 180 days), the 128 KB minimum billable size, Glacier retrieval options and what a restore does`},
+  lifecycle:{name:`Lifecycle rules`, study:`The 30-day rule before IA, the one-way transition waterfall, noncurrent version expiry, incomplete multipart uploads, Storage Class Analysis`},
+  protect:{name:`Versioning & replication`, study:`Delete markers, suspending versioning, what replication does and does not copy, Batch Replication, Replication Time Control`},
+  security:{name:`Encryption & access control`, study:`Default SSE-S3, SSE-KMS and Bucket Keys, the aws:sourceVpce condition, Access Points`},
+  perf:{name:`Performance & features`, study:`Per-prefix request rates, website endpoints and HTTPS, event notification destinations`}
+};
+
+const Q = [
+/* ---------- choosing a class (8) ---------- */
+{id:1,t:`classes`,
+ q:`A media company stores user-uploaded videos. Each video is watched heavily for the first weeks. After that, access is unpredictable: some go viral again months later, most are never opened. The company wants the lowest cost with no operational work and no retrieval fees. Which storage class fits?`,
+ o:[`S3 Intelligent-Tiering`,`S3 Standard-IA`,`S3 Glacier Instant Retrieval`,`S3 One Zone-IA`],
+ a:[0],
+ e:`Intelligent-Tiering moves each object between tiers as its own access pattern changes, with no retrieval fees and no lifecycle rules to tune. Standard-IA and Glacier Instant Retrieval charge per GB retrieved, which hurts when a video goes viral again.`},
+{id:2,t:`classes`,
+ q:`Medical images are opened about once a quarter, but when a doctor opens one it must load in milliseconds. Images are kept for 10 years and must survive the loss of an Availability Zone. Which class is MOST cost-effective?`,
+ o:[`S3 Standard-IA`,`S3 Glacier Instant Retrieval`,`S3 Glacier Flexible Retrieval`,`S3 One Zone-IA`],
+ a:[1],
+ e:`Glacier Instant Retrieval is the cheapest class that still returns data in milliseconds, aimed at data read about once a quarter. Standard-IA costs more per GB stored, Flexible Retrieval takes minutes to hours, and One Zone-IA does not survive an AZ loss.`},
+{id:3,t:`classes`,
+ q:`A company keeps a second copy of its on-premises backups in S3. The primary copy stays on premises, so the S3 copy could be recreated. The data is rarely read but must be readable immediately when needed. Which of these is MOST cost-effective?`,
+ o:[`S3 Standard`,`S3 Standard-IA`,`S3 One Zone-IA`,`S3 Glacier Deep Archive`],
+ a:[2],
+ e:`One Zone-IA is about 20 percent cheaper than Standard-IA because it keeps data in a single AZ, which is acceptable for a copy that can be recreated. Deep Archive would take hours to read.`},
+{id:4,t:`classes`,
+ q:`Compliance archives must be kept for 10 years. They are read once or twice a year at most, and waiting up to 48 hours for a file is acceptable. Which storage class costs the least?`,
+ o:[`S3 Glacier Flexible Retrieval`,`S3 Glacier Instant Retrieval`,`S3 Standard-IA`,`S3 Glacier Deep Archive`],
+ a:[3],
+ e:`Deep Archive is the lowest-cost class. Its standard retrieval finishes within 12 hours and bulk retrieval within 48 hours, which fits the requirement.`},
+{id:5,t:`classes`,
+ q:`A research archive is read a few times a year. Usually a wait of 5 to 12 hours is fine and the retrieval should be free, but occasionally one file is needed within 5 minutes. Which class supports both?`,
+ o:[`S3 Glacier Deep Archive`,`S3 Glacier Flexible Retrieval`,`S3 One Zone-IA`,`S3 Intelligent-Tiering with the Deep Archive Access tier enabled`],
+ a:[1],
+ e:`Flexible Retrieval offers Expedited (1 to 5 minutes), Standard (3 to 5 hours) and free Bulk (5 to 12 hours) retrievals. Deep Archive has no expedited option; its fastest retrieval is within 12 hours.`},
+{id:6,t:`classes`,
+ q:`A machine learning training job reads millions of small objects over and over and is held back by storage latency. The data can be recreated, and keeping it in the same single Availability Zone as the compute is acceptable. Which class gives the lowest latency?`,
+ o:[`S3 Standard`,`S3 Express One Zone`,`S3 One Zone-IA`,`S3 Intelligent-Tiering`],
+ a:[1],
+ e:`S3 Express One Zone uses directory buckets in one AZ that you choose and gives consistent single-digit millisecond latency, up to 10 times faster than S3 Standard. One Zone-IA is a cost class, not a performance class.`},
+{id:7,t:`classes`,
+ q:`A production website reads the same data set all day, all year. A colleague suggests S3 Standard-IA because its per-GB storage price is lower than S3 Standard. Why is this likely to cost MORE?`,
+ o:[`Standard-IA charges a per-GB retrieval fee and higher request prices, which outweigh the storage saving for frequently read data`,
+    `Standard-IA stores data in one Availability Zone, so a second copy must be paid for`,
+    `Standard-IA has lower durability, so versioning must be enabled`,
+    `Standard-IA takes minutes to return an object, so a cache layer is needed`],
+ a:[0],
+ e:`Standard-IA has the same durability, the same multi-AZ placement and the same millisecond access as Standard. The catch is a per-GB retrieval fee and higher request prices, so it pays off only for data that is read rarely.`},
+{id:8,t:`classes`,
+ q:`Which statement about S3 Intelligent-Tiering is correct?`,
+ o:[`It charges a small monthly monitoring and automation fee per object, and no retrieval fees`,
+    `It moves objects into the Archive Access and Deep Archive Access tiers by default`,
+    `It has a 30-day minimum storage duration charge`,
+    `Objects smaller than 128 KB are monitored and tiered like any other object`],
+ a:[0],
+ e:`Intelligent-Tiering has a per-object monitoring fee, no retrieval fees and no minimum storage duration. The two asynchronous archive tiers are opt-in, and objects under 128 KB always stay in the Frequent Access tier.`},
+
+/* ---------- numbers (6) ---------- */
+{id:9,t:`numbers`,
+ q:`What is the minimum storage duration charge for S3 Standard-IA and S3 One Zone-IA?`,
+ o:[`There is none`,`30 days`,`90 days`,`180 days`],
+ a:[1],
+ e:`30 days for the two IA classes, 90 days for Glacier Instant Retrieval and Glacier Flexible Retrieval, 180 days for Glacier Deep Archive. Standard and Intelligent-Tiering have none.`},
+{id:10,t:`numbers`,
+ q:`An object is stored in S3 Glacier Deep Archive and deleted after 60 days. What is charged?`,
+ o:[`Storage for 60 days only`,
+    `Storage for 60 days plus a pro-rated early deletion charge for the remaining 120 days`,
+    `Storage for 60 days plus a pro-rated early deletion charge for the remaining 30 days`,
+    `Nothing extra, because S3 blocks the delete until day 180`],
+ a:[1],
+ e:`Deep Archive has a 180-day minimum. Deleting, overwriting or transitioning earlier is allowed, but the remaining days are billed as a pro-rated early deletion charge.`},
+{id:11,t:`numbers`,
+ q:`Which S3 storage classes have a 90-day minimum storage duration? (Select TWO.)`,
+ o:[`S3 Glacier Instant Retrieval`,`S3 Glacier Flexible Retrieval`,`S3 Standard-IA`,`S3 Glacier Deep Archive`,`S3 Intelligent-Tiering`],
+ a:[0,1],
+ e:`Both Glacier Instant Retrieval and Glacier Flexible Retrieval have a 90-day minimum. Standard-IA is 30 days, Deep Archive is 180 days, and Intelligent-Tiering has none.`},
+{id:12,t:`numbers`,
+ q:`An application stores millions of 20 KB objects in S3 Standard-IA. Why is this a poor fit?`,
+ o:[`Standard-IA rejects objects smaller than 128 KB`,
+    `Standard-IA bills every object as if it were at least 128 KB`,
+    `Standard-IA is limited to one million objects per bucket`,
+    `Small objects have lower durability in Standard-IA`],
+ a:[1],
+ e:`Standard-IA, One Zone-IA and Glacier Instant Retrieval have a 128 KB minimum billable object size, so 20 KB objects are charged for more than six times their real size. Small objects are accepted and are just as durable.`},
+{id:13,t:`numbers`,
+ q:`An auditor needs a file that is stored in S3 Glacier Deep Archive. What is the fastest retrieval that the class offers?`,
+ o:[`Expedited retrieval in 1 to 5 minutes`,
+    `Standard retrieval in 3 to 5 hours`,
+    `Standard retrieval within 12 hours`,
+    `Milliseconds, the same as S3 Standard`],
+ a:[2],
+ e:`Deep Archive offers Standard retrieval within 12 hours and Bulk retrieval within 48 hours. Expedited and the 3 to 5 hour option belong to Glacier Flexible Retrieval.`},
+{id:14,t:`numbers`,
+ q:`A restore request is made for an object in S3 Glacier Flexible Retrieval, asking for 7 days. After the restore completes, what is the state of the object?`,
+ o:[`It has moved permanently to S3 Standard`,
+    `A temporary copy is readable for 7 days, and the object itself stays in Glacier Flexible Retrieval`,
+    `It has moved to S3 Standard-IA for a minimum of 30 days`,
+    `It is downloaded automatically to the requester`],
+ a:[1],
+ e:`A restore creates a temporary readable copy for the number of days requested; you pay for that copy and for the archived object. To change the class for good, copy the restored object to a new storage class.`},
+
+/* ---------- lifecycle (5) ---------- */
+{id:15,t:`lifecycle`,
+ q:`A lifecycle rule is written to transition objects from S3 Standard to S3 Standard-IA 7 days after creation. What happens?`,
+ o:[`S3 rejects the rule, because objects must spend at least 30 days in S3 Standard before a transition to Standard-IA or One Zone-IA`,
+    `The rule works, and an early transition fee is charged`,
+    `The rule works only when versioning is enabled`,
+    `S3 silently moves the objects to Intelligent-Tiering`],
+ a:[0],
+ e:`Lifecycle transitions to Standard-IA and One Zone-IA need at least 30 days in S3 Standard first. The limit does not apply to Intelligent-Tiering or the Glacier classes, which can be transition targets from day 0.`},
+{id:16,t:`lifecycle`,
+ q:`Which lifecycle transition is NOT possible?`,
+ o:[`S3 Standard directly to S3 Glacier Deep Archive`,
+    `S3 Standard-IA to S3 One Zone-IA`,
+    `S3 Glacier Flexible Retrieval to S3 Standard-IA`,
+    `S3 One Zone-IA to S3 Glacier Flexible Retrieval`],
+ a:[2],
+ e:`Lifecycle transitions only go down the waterfall: Standard, Standard-IA, Intelligent-Tiering, One Zone-IA, Glacier Instant, Glacier Flexible, Deep Archive. Steps may be skipped, but nothing moves back up. To go up, restore and copy the object.`},
+{id:17,t:`lifecycle`,
+ q:`A versioned bucket's bill keeps growing, although the application only needs the latest copy of each file plus one week of history. Which lifecycle action fixes this?`,
+ o:[`Suspend versioning on the bucket`,
+    `Expire noncurrent versions 7 days after they become noncurrent`,
+    `Transition current versions to S3 Standard-IA after 30 days`,
+    `Enable Requester Pays`],
+ a:[1],
+ e:`Every overwrite keeps the old version, and old versions are billed like any object. A noncurrent version expiration action removes them on schedule. Suspending versioning stops new versions but deletes nothing.`},
+{id:18,t:`lifecycle`,
+ q:`A bucket used for very large uploads shows storage charges that are higher than the total size of the visible objects. Versioning is off. What is the MOST likely cause and fix?`,
+ o:[`Delete markers; remove them with a lifecycle rule`,
+    `Parts of incomplete multipart uploads; add a lifecycle rule that aborts incomplete multipart uploads after a few days`,
+    `S3 Inventory reports; disable S3 Inventory`,
+    `Replication metadata; turn off replication metrics`],
+ a:[1],
+ e:`Parts from multipart uploads that never completed are invisible in a normal listing but are billed until removed. The AbortIncompleteMultipartUpload lifecycle action cleans them up.`},
+{id:19,t:`lifecycle`,
+ q:`A team wants to know after how many days objects in S3 Standard stop being read, so they can choose the right day for a transition to Standard-IA. Which feature provides this with the LEAST effort?`,
+ o:[`S3 Storage Class Analysis`,
+    `S3 server access logs queried with Athena`,
+    `AWS Trusted Advisor`,
+    `S3 Inventory`],
+ a:[0],
+ e:`Storage Class Analysis observes access patterns and recommends when to move data from Standard to Standard-IA. Inventory lists objects and their metadata but says nothing about how often they are read.`},
+
+/* ---------- versioning & replication (4) ---------- */
+{id:20,t:`protect`,
+ q:`Versioning is enabled on a bucket. A user deletes an object without giving a version ID. What happens?`,
+ o:[`All versions of the object are removed permanently`,
+    `S3 adds a delete marker as the current version, and the earlier versions remain and can be recovered`,
+    `The request fails, because a version ID is required`,
+    `The newest version is removed and the previous one becomes current`],
+ a:[1],
+ e:`A simple delete only adds a delete marker. Removing the marker brings the object back. Permanent removal needs a delete that names the version ID.`},
+{id:21,t:`protect`,
+ q:`A company enables Cross-Region Replication on a bucket that already holds 2 million objects. What happens to the existing objects?`,
+ o:[`They are replicated in the background over the next 24 hours`,
+    `They are not replicated by the rule; S3 Batch Replication is needed to copy them`,
+    `They are replicated only if they are smaller than 5 GB`,
+    `They are replicated the next time someone reads them`],
+ a:[1],
+ e:`Replication rules apply to objects written after the rule is enabled. S3 Batch Replication copies existing objects, and also objects that failed to replicate earlier.`},
+{id:22,t:`protect`,
+ q:`Compliance requires that replicated objects arrive in the second Region within 15 minutes, backed by an SLA and replication metrics. What should be enabled?`,
+ o:[`S3 Transfer Acceleration`,`S3 Replication Time Control`,`S3 Multi-Region Access Points`,`S3 Batch Operations`],
+ a:[1],
+ e:`Replication Time Control replicates 99.99 percent of objects within 15 minutes under an SLA and turns on replication metrics and events. Plain replication is asynchronous with no time guarantee.`},
+{id:23,t:`protect`,
+ q:`Which statement about S3 Versioning is correct?`,
+ o:[`It can be enabled only when the bucket is created`,
+    `Once enabled it can be suspended, but the bucket can never go back to the unversioned state`,
+    `Suspending it deletes all noncurrent versions`,
+    `For replication it is required on the destination bucket only`],
+ a:[1],
+ e:`A bucket is unversioned, versioning-enabled or versioning-suspended, and there is no way back to unversioned. Suspending keeps all existing versions. Replication needs versioning on both source and destination.`},
+
+/* ---------- security (4) ---------- */
+{id:24,t:`security`,
+ q:`A bucket that uses SSE-KMS receives thousands of PUT requests per second. The application starts to see throttling errors from AWS KMS, and the KMS request charges are high. What is the simplest fix?`,
+ o:[`Enable S3 Bucket Keys`,
+    `Switch to customer-provided keys (SSE-C)`,
+    `Replace the key with a multi-Region KMS key`,
+    `Turn on S3 Transfer Acceleration`],
+ a:[0],
+ e:`With an S3 Bucket Key, S3 uses a short-lived bucket-level key instead of calling KMS for every object, which cuts KMS requests and cost by up to 99 percent.`},
+{id:25,t:`security`,
+ q:`A new bucket is created with all default settings, and an object is uploaded with no encryption headers. How is the object stored?`,
+ o:[`Unencrypted`,
+    `Encrypted with S3 managed keys (SSE-S3)`,
+    `Encrypted with the AWS managed KMS key aws/s3`,
+    `The upload is rejected until default encryption is configured`],
+ a:[1],
+ e:`Since January 2023 S3 applies SSE-S3 to every new object automatically, at no cost. SSE-KMS is used only when you configure or request it.`},
+{id:26,t:`security`,
+ q:`A company wants an S3 bucket to accept requests only when they come through its gateway VPC endpoint. Which bucket policy condition achieves this?`,
+ o:[`Deny unless aws:SourceIp matches the VPC's private CIDR range`,
+    `Deny unless aws:sourceVpce equals the endpoint ID`,
+    `Deny when aws:SecureTransport is false`,
+    `Deny unless s3:x-amz-acl equals private`],
+ a:[1],
+ e:`aws:sourceVpce (or aws:sourceVpc) identifies traffic arriving through a VPC endpoint. aws:SourceIp does not work here, because it cannot match private addresses of requests that arrive through an endpoint.`},
+{id:27,t:`security`,
+ q:`A shared data lake bucket is used by 40 applications, and its single bucket policy has become unmanageable. Which feature gives each application its own named entry point with its own access policy?`,
+ o:[`S3 Access Points`,`Bucket ACLs`,`S3 Object Lambda`,`Requester Pays`],
+ a:[0],
+ e:`Each access point has its own name, its own policy and optionally a VPC-only restriction, so permissions are managed per application and the bucket policy can simply delegate to them.`},
+
+/* ---------- performance & features (3) ---------- */
+{id:28,t:`perf`,
+ q:`An analytics job sends about 20,000 GET requests per second for objects that all share the prefix logs/ and receives 503 Slow Down responses. What should be done?`,
+ o:[`Spread the objects across several prefixes and read them in parallel`,
+    `Enable S3 Transfer Acceleration`,
+    `Enable versioning on the bucket`,
+    `Move the objects to S3 Standard-IA`],
+ a:[0],
+ e:`S3 supports at least 3,500 write and 5,500 read requests per second per prefix, and there is no limit on the number of prefixes, so spreading keys over more prefixes multiplies throughput.`},
+{id:29,t:`perf`,
+ q:`A static website hosted on an S3 website endpoint must be served over HTTPS on a custom domain. What is needed?`,
+ o:[`Upload the TLS certificate to the bucket and enable HTTPS in the bucket properties`,
+    `Put Amazon CloudFront in front of the bucket with an ACM certificate`,
+    `Enable S3 Transfer Acceleration`,
+    `Create the bucket in us-east-1`],
+ a:[1],
+ e:`S3 website endpoints serve HTTP only. CloudFront terminates HTTPS with a certificate from ACM and uses the bucket as its origin.`},
+{id:30,t:`perf`,
+ q:`Which of these is NOT a direct destination for S3 event notifications?`,
+ o:[`An Amazon SQS queue`,`An Amazon SNS topic`,`An AWS Lambda function`,`An AWS Step Functions state machine`],
+ a:[3],
+ e:`S3 can notify SQS, SNS, Lambda and Amazon EventBridge. To start a Step Functions execution, send the events to EventBridge and add a rule that targets the state machine.`}
+];
+
+const CLASS_TABLE = [
+  [`S3 Standard`,`3+`,`99.99%`,`none`,`none`,`milliseconds`,`Frequently read data`],
+  [`S3 Intelligent-Tiering`,`3+`,`99.9%`,`none`,`none; under 128 KB is never tiered`,`milliseconds; opt-in archive tiers take hours`,`Unknown or changing access. Monitoring fee, no retrieval fee`],
+  [`S3 Standard-IA`,`3+`,`99.9%`,`30 days`,`128 KB`,`milliseconds, per-GB fee`,`Read about monthly, must survive an AZ loss`],
+  [`S3 One Zone-IA`,`1`,`99.5%`,`30 days`,`128 KB`,`milliseconds, per-GB fee`,`Rarely read and re-creatable`],
+  [`S3 Glacier Instant Retrieval`,`3+`,`99.9%`,`90 days`,`128 KB`,`milliseconds, per-GB fee`,`Read about quarterly, still needs instant access`],
+  [`S3 Glacier Flexible Retrieval`,`3+`,`99.99%`,`90 days`,`none`,`Expedited 1-5 min, Standard 3-5 h, Bulk 5-12 h (free)`,`Archives read once or twice a year`],
+  [`S3 Glacier Deep Archive`,`3+`,`99.99%`,`180 days`,`none`,`Standard within 12 h, Bulk within 48 h`,`Long-term retention, cheapest`]
+];
+
+const QBY = {}; Q.forEach(q => QBY[q.id] = q);
+const TOTAL_SEC = 60*60;
+const LS_KEY = 's3-tiering-drill-v1';
+const LETTERS = ['A','B','C','D','E','F'];
+const app = document.getElementById('app');
+let S = null;
+let reviewFilter = 'wrong';
+let confirmOpen = false, sheetOpen = false, limitNote = false, resetArmed = false;
+
+function esc(s){return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function loadLS(){try{const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null;}catch(e){return null;}}
+function save(){try{localStorage.setItem(LS_KEY, JSON.stringify(S));}catch(e){}}
+function shuffle(a){a = a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a;}
+
+function newAttempt(){
+  S = {v:1, phase:'test', attemptId:'a-'+Date.now().toString(36), qOrder:shuffle(Q.map(q=>q.id)), oOrder:{}, answers:{}, unsure:{}, cur:0, elapsed:0, lastTick:Date.now(), saved:'no'};
+  Q.forEach(q => S.oOrder[q.id] = shuffle(q.o.map((_,i)=>i)));
+  save(); render(); window.scrollTo(0,0);
+}
+function curQ(){return QBY[S.qOrder[S.cur]];}
+function answeredCount(){return S.qOrder.filter(id => (S.answers[id]||[]).length).length;}
+function isCorrect(q){return (S.answers[q.id]||[]).slice().sort().join(',') === q.a.slice().sort().join(',');}
+function fmtClock(sec){const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+String(s).padStart(2,'0');}
+
+/* ---------- intro ---------- */
+function renderIntro(){
+  const counts = {}; Q.forEach(q => counts[q.t] = (counts[q.t]||0)+1);
+  app.innerHTML = `<div class="wrap"><div class="stack-lg">
+    <div class="intro-head">
+      <span class="eyebrow">SAA-C03 &middot; focused drill</span>
+      <h1>S3 Tiering Drill</h1>
+      <p class="lede">${Q.length} questions on Amazon S3, weighted toward storage classes, minimum durations, retrieval times and lifecycle rules: the details the exam uses to separate a confident answer from a guess. Take it after the S3 videos, from memory.</p>
+    </div>
+    <div class="panel stack">
+      <h2>What it covers</h2>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Area</th><th class="num">Questions</th></tr></thead>
+        <tbody>${Object.keys(TOPICS).map(t => `<tr><td>${esc(TOPICS[t].name)}</td><td class="num">${counts[t]||0}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+    <div class="stack">
+      <h2>How to take it</h2>
+      <ul class="rules">
+        <li><strong>No notes, no lookups.</strong> The point is to find which numbers have not stuck yet.</li>
+        <li><strong>Tick <em>I'm not sure about this one</em></strong> whenever you guess. The goal this time is fewer not-sure marks, not only a higher score.</li>
+        <li>60 minutes are allowed, the real exam's pace of two minutes per question. No feedback until you submit.</li>
+        <li>After submitting you get every explanation plus a storage class table to memorise.</li>
+      </ul>
+    </div>
+    <div><button class="btn primary big" id="startBtn">Start the drill</button></div>
+    <p class="foot">Questions are original and written for practice. They are not real exam questions.</p>
+  </div></div>`;
+  document.getElementById('startBtn').onclick = newAttempt;
+}
+
+/* ---------- test ---------- */
+function renderTest(){
+  app.innerHTML = `<header class="bar"><div class="bar-in">
+      <span class="brand">S3 Tiering Drill</span>
+      <span class="prog" id="prog"></span>
+      <span class="timer" id="timer" aria-label="Time remaining"></span>
+      <button class="btn sheet-toggle" id="sheetBtn" aria-expanded="false">Answer sheet</button>
+      <button class="btn primary" id="submitBtn">Submit</button>
+    </div></header>
+    <div class="wrap"><div class="layout">
+      <main class="stack" id="qpane"></main>
+      <aside class="sheet panel stack" id="sheet"></aside>
+    </div></div>`;
+  document.getElementById('sheetBtn').onclick = () => {sheetOpen = !sheetOpen; renderSheet();};
+  document.getElementById('submitBtn').onclick = () => {confirmOpen = true; renderQ(); window.scrollTo(0,0);};
+  renderQ(); renderSheet(); updateTimer();
+}
+function renderQ(focusId){
+  const q = curQ(), order = S.oOrder[q.id], picked = S.answers[q.id]||[], multi = q.a.length>1;
+  const unanswered = S.qOrder.length - answeredCount();
+  const unsureN = Object.keys(S.unsure).filter(k => S.unsure[k]).length;
+  const pane = document.getElementById('qpane');
+  pane.innerHTML = `${confirmOpen ? `<div class="panel confirm stack">
+      <h3>Submit and score the drill?</h3>
+      <p>${unanswered ? `<strong>${unanswered} unanswered</strong> ${unanswered===1?'question counts':'questions count'} as wrong. ` : `All ${S.qOrder.length} questions are answered. `}${unsureN ? `${unsureN} marked not sure.` : ``} You cannot change answers after submitting.</p>
+      <div class="row"><button class="btn primary" id="doSubmit">Submit and score</button><button class="btn" id="cancelSubmit">Keep working</button></div>
+    </div>` : ``}
+    <div class="qmeta"><span class="eyebrow">Question ${S.cur+1} of ${S.qOrder.length}</span>${multi ? `<span class="qtype">Select ${q.a.length===2?'two':q.a.length}</span>` : ``}</div>
+    <p class="qtext">${esc(q.q)}</p>
+    <fieldset class="opts ${multi?'multi':''}"><legend hidden>Answer options</legend>
+      ${order.map((oi,i) => `<label class="opt ${picked.includes(oi)?'sel':''}" for="opt-${i}">
+        <input type="${multi?'checkbox':'radio'}" name="opt" id="opt-${i}" value="${oi}" ${picked.includes(oi)?'checked':''}>
+        <span class="bubble" aria-hidden="true">${LETTERS[i]}</span><span>${esc(q.o[oi])}</span></label>`).join('')}
+    </fieldset>
+    ${limitNote ? `<p class="limit-note">This question takes ${q.a.length} answers. Untick one to change your selection.</p>` : ``}
+    <label class="unsure" for="unsure-box"><input type="checkbox" id="unsure-box" ${S.unsure[q.id]?'checked':''}> I'm not sure about this one</label>
+    <div class="qnav">
+      <button class="btn" id="prevBtn" ${S.cur===0?'disabled':''}>Previous</button>
+      <button class="btn ${S.cur===S.qOrder.length-1?'':'primary'}" id="nextBtn" ${S.cur===S.qOrder.length-1?'disabled':''}>Next</button>
+    </div>
+    <p class="hint">Keys: A&ndash;E pick an option, left and right arrows move between questions.</p>`;
+  pane.querySelectorAll('input[name="opt"]').forEach(inp => inp.onchange = () => pick(Number(inp.value), inp.id));
+  document.getElementById('unsure-box').onchange = e => {S.unsure[q.id] = e.target.checked; save(); renderSheet();};
+  document.getElementById('prevBtn').onclick = () => go(S.cur-1);
+  document.getElementById('nextBtn').onclick = () => go(S.cur+1);
+  if(confirmOpen){
+    document.getElementById('doSubmit').onclick = submit;
+    document.getElementById('cancelSubmit').onclick = () => {confirmOpen=false; renderQ();};
+  }
+  document.getElementById('prog').textContent = 'Answered '+answeredCount()+'/'+S.qOrder.length;
+  if(focusId){const el = document.getElementById(focusId); if(el) el.focus();}
+}
+function pick(oi, focusId){
+  const q = curQ(), multi = q.a.length>1; let cur = (S.answers[q.id]||[]).slice();
+  limitNote = false;
+  if(!multi) cur = [oi];
+  else if(cur.includes(oi)) cur = cur.filter(x => x!==oi);
+  else if(cur.length >= q.a.length) limitNote = true;
+  else cur.push(oi);
+  S.answers[q.id] = cur; save(); renderQ(focusId); renderSheet();
+}
+function go(i){
+  if(i<0 || i>=S.qOrder.length) return;
+  S.cur = i; limitNote = false; save(); renderQ(); renderSheet();
+  if(window.matchMedia('(max-width:899px)').matches){sheetOpen=false; renderSheet();}
+  window.scrollTo(0,0);
+}
+function renderSheet(){
+  const el = document.getElementById('sheet'); if(!el) return;
+  el.classList.toggle('open', sheetOpen);
+  const b = document.getElementById('sheetBtn'); if(b) b.setAttribute('aria-expanded', String(sheetOpen));
+  el.innerHTML = `<h3>Answer sheet</h3>
+    <div class="cells">${S.qOrder.map((id,i) => `<button class="cell ${(S.answers[id]||[]).length?'ans':''} ${S.unsure[id]?'uns':''} ${i===S.cur?'cur':''}" data-i="${i}" aria-label="Question ${i+1}${(S.answers[id]||[]).length?', answered':', unanswered'}${S.unsure[id]?', not sure':''}">${i+1}</button>`).join('')}</div>
+    <div class="legend"><span>Filled = answered</span><span>? = not sure</span><span>Ring = current</span></div>`;
+  el.querySelectorAll('.cell').forEach(c => c.onclick = () => go(Number(c.dataset.i)));
+}
+function updateTimer(){
+  const t = document.getElementById('timer'); if(!t || !S) return;
+  const left = TOTAL_SEC - Math.floor(S.elapsed/1000);
+  if(left >= 0){t.textContent = fmtClock(left); t.classList.remove('over');}
+  else {t.textContent = '+'+fmtClock(-left); t.classList.add('over'); t.title = 'Over the 60-minute limit';}
+}
+let tickN = 0;
+setInterval(() => {
+  if(!S || S.phase!=='test') return;
+  const now = Date.now(), d = now - (S.lastTick||now); S.lastTick = now;
+  if(d>0 && d<90000) S.elapsed += d;
+  updateTimer(); if(++tickN % 10 === 0) save();
+}, 1000);
+document.addEventListener('keydown', e => {
+  if(!S || S.phase!=='test' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = e.target && e.target.tagName;
+  if(tag==='TEXTAREA') return;
+  if(e.key==='ArrowRight' && tag!=='INPUT'){go(S.cur+1);}
+  else if(e.key==='ArrowLeft' && tag!=='INPUT'){go(S.cur-1);}
+  else if(/^[a-fA-F]$/.test(e.key)){
+    const i = e.key.toLowerCase().charCodeAt(0)-97, order = S.oOrder[curQ().id];
+    if(i < order.length){e.preventDefault(); pick(order[i], 'opt-'+i);}
+  }
+});
+
+/* ---------- scoring ---------- */
+function compute(){
+  const R = {correct:0, total:Q.length, confident:0, topics:{}, wrong:[], unsure:[], unanswered:[]};
+  Object.keys(TOPICS).forEach(t => R.topics[t] = {correct:0,total:0});
+  S.qOrder.forEach((id,pos) => {
+    const q = QBY[id], ok = isCorrect(q), blank = !(S.answers[id]||[]).length;
+    R.topics[q.t].total++;
+    if(ok){R.correct++; R.topics[q.t].correct++; if(!S.unsure[id]) R.confident++;}
+    else if(blank) R.unanswered.push({pos:pos+1,id}); else R.wrong.push({pos:pos+1,id});
+    if(S.unsure[id]) R.unsure.push({pos:pos+1,id,ok});
+  });
+  R.pct = Math.round(100*R.correct/R.total);
+  R.surePct = Math.round(100*R.confident/R.total);
+  return R;
+}
+function pct(o){return o.total ? Math.round(100*o.correct/o.total) : 0;}
+function band(R){
+  if(R.surePct>=80) return {k:'good', h:`S3 is exam-ready`, t:`You answered most of this correctly and with confidence. Read the explanations for anything you missed and move on to the security sections.`};
+  if(R.pct>=80) return {k:'warn', h:`Right, but not yet sure`, t:`The knowledge is there but still shaky. Memorise the table below, then retake in two or three days and aim for fewer not-sure marks.`};
+  if(R.pct>=60) return {k:'warn', h:`Partly there`, t:`Go through every explanation, memorise the table below, and retake in two or three days.`};
+  return {k:'bad', h:`Rewatch the storage class and lifecycle sections`, t:`Then memorise the table below before retaking. These are learnable facts; one more pass usually fixes it.`};
+}
+function summaryDoc(R){
+  const doc = {attemptId:S.attemptId, submittedAt:S.submittedAt, minutesUsed:Math.round(S.elapsed/60000),
+    overall:{correct:R.correct,total:R.total,pct:R.pct,confidentCorrect:R.confident}, topics:{},
+    wrongIds:R.wrong.map(x=>x.id), unansweredIds:R.unanswered.map(x=>x.id), unsureIds:R.unsure.map(x=>x.id),
+    qOrder:S.qOrder, answers:{}};
+  Object.keys(TOPICS).forEach(t => doc.topics[t] = {name:TOPICS[t].name, correct:R.topics[t].correct, total:R.topics[t].total, pct:pct(R.topics[t])});
+  S.qOrder.forEach(id => doc.answers['q'+id] = S.answers[id]||[]);
+  return doc;
+}
+function summaryText(R){
+  const L = [];
+  L.push('S3 tiering drill, attempt '+S.attemptId);
+  L.push('Overall: '+R.correct+'/'+R.total+' ('+R.pct+'%), correct and sure: '+R.confident+', time: '+Math.round(S.elapsed/60000)+' min');
+  L.push('Topics: '+Object.keys(TOPICS).map(t => t+' '+R.topics[t].correct+'/'+R.topics[t].total).join('; '));
+  L.push('Wrong (id): '+(R.wrong.map(x=>'Q'+x.id).join(', ')||'none'));
+  L.push('Unanswered (id): '+(R.unanswered.map(x=>'Q'+x.id).join(', ')||'none'));
+  L.push('Not sure (id, * = still correct): '+(R.unsure.map(x=>'Q'+x.id+(x.ok?'*':'')).join(', ')||'none'));
+  return L.join('\n');
+}
+function submit(){
+  S.phase='done'; S.submittedAt = new Date().toISOString(); confirmOpen=false; save();
+  render(); window.scrollTo(0,0); persistResults();
+}
+async function persistResults(){
+  S.saved='saving'; renderSaveState();
+  try{
+    const db = (window.claude && window.claude.use) ? await window.claude.use('db') : null;
+    if(!db) throw new Error('no db');
+    await db.doc('attempts/'+S.attemptId).set(summaryDoc(compute()));
+    S.saved='yes';
+  }catch(e){S.saved='failed';}
+  save(); renderSaveState();
+}
+function renderSaveState(){
+  const el = document.getElementById('savestate'); if(!el) return;
+  if(S.saved==='yes') el.innerHTML = `<span class="savestate">Results saved.</span> Go back to Claude and say you're done. It can read these numbers directly.`;
+  else if(S.saved==='saving') el.innerHTML = `<span class="savestate">Saving results&hellip;</span>`;
+  else el.innerHTML = `<span class="savestate">Results are not saved online.</span> Copy the summary below and paste it to Claude. <button class="btn" id="retrySave">Try saving again</button>`;
+  const r = document.getElementById('retrySave'); if(r) r.onclick = persistResults;
+}
+
+/* ---------- results ---------- */
+function renderResults(){
+  const R = compute(), B = band(R), over = S.elapsed/1000 > TOTAL_SEC;
+  const topicRows = Object.keys(TOPICS).map(t => ({t, p:pct(R.topics[t]), o:R.topics[t]})).sort((a,b) => a.p-b.p);
+  const verdict = p => p>=80 ? ['good','Solid'] : p>=55 ? ['warn','Review'] : ['bad','Relearn'];
+  app.innerHTML = `<div class="wrap"><div class="stack-lg">
+    <div class="stack">
+      <span class="eyebrow">S3 Tiering Drill &middot; result</span>
+      <div class="score-head">
+        <div class="bigscore">${R.pct}<small>%</small></div>
+        <div class="stack" style="gap:8px">
+          <h2><span class="pill ${B.k}">${esc(B.h)}</span></h2>
+          <p style="max-width:60ch">${esc(B.t)}</p>
+          <div class="facts"><span>${R.correct} of ${R.total} correct</span><span>${R.confident} correct and sure (${R.surePct}%)</span><span>${Math.round(S.elapsed/60000)} min used${over?' (over the limit)':''}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel savebox">
+      <h3>Send the numbers back</h3>
+      <p id="savestate"></p>
+      <textarea class="summary" id="summary" readonly aria-label="Result summary">${esc(summaryText(R))}</textarea>
+      <div><button class="btn" id="copyBtn">Copy summary</button> <span class="hint" id="copyNote"></span></div>
+    </div>
+
+    <div class="stack">
+      <h2>By area, weakest first</h2>
+      <div class="panel"><div class="tblwrap"><table>
+        <thead><tr><th>Area</th><th class="num">Score</th><th>Status</th><th>What to revisit</th></tr></thead>
+        <tbody>${topicRows.map(r => {const v=verdict(r.p); return `<tr><td><strong>${esc(TOPICS[r.t].name)}</strong></td><td class="num">${r.o.correct}/${r.o.total} &middot; ${r.p}%</td><td><span class="pill ${v[0]}">${v[1]}</span></td><td>${esc(TOPICS[r.t].study)}</td></tr>`;}).join('')}</tbody>
+      </table></div></div>
+    </div>
+
+    <div class="stack">
+      <h2>Storage classes to memorise</h2>
+      <div class="panel"><div class="tblwrap"><table style="min-width:760px">
+        <thead><tr><th>Class</th><th class="num">AZs</th><th class="num">Availability</th><th>Min duration</th><th>Min billable size</th><th>Retrieval</th><th>Use when</th></tr></thead>
+        <tbody>${CLASS_TABLE.map(r => `<tr><td><strong>${esc(r[0])}</strong></td><td class="num">${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td><td>${esc(r[5])}</td><td>${esc(r[6])}</td></tr>`).join('')}</tbody>
+      </table></div></div>
+      <ul class="rules">
+        <li>Durability is 11 nines for every class. One Zone classes lose data only if that AZ is destroyed.</li>
+        <li>Minimum durations go <strong>30, 30, 90, 90, 180</strong> days down the list. Leaving early is allowed and bills the remaining days.</li>
+        <li>Lifecycle: 30 days in Standard before a move to either IA class. Transitions only go down the list, never back up.</li>
+        <li>A Glacier restore makes a temporary copy. The object stays archived.</li>
+        <li>S3 Express One Zone is the performance class: one AZ, directory buckets, single-digit millisecond latency.</li>
+      </ul>
+    </div>
+
+    <div class="stack">
+      <h2>Review</h2>
+      <div class="chips" role="group" aria-label="Filter questions">
+        <button class="chip" data-f="wrong">Wrong and unanswered (${R.wrong.length+R.unanswered.length})</button>
+        <button class="chip" data-f="unsure">Not sure (${R.unsure.length})</button>
+        <button class="chip" data-f="all">All ${R.total}</button>
+      </div>
+      <div id="review"></div>
+    </div>
+
+    <div class="stack">
+      <div><button class="btn" id="resetBtn">${resetArmed ? 'Confirm: erase this attempt and start again' : 'Start a new attempt'}</button></div>
+      <p class="foot">Wait two or three days before a retake, so it tests memory and not recognition. The questions are the same, in a new order.</p>
+    </div>
+  </div></div>`;
+  renderSaveState(); renderReview();
+  app.querySelectorAll('.chip').forEach(c => c.onclick = () => {reviewFilter = c.dataset.f; renderReview();});
+  document.getElementById('copyBtn').onclick = copySummary;
+  document.getElementById('resetBtn').onclick = () => {
+    if(!resetArmed){resetArmed = true; renderResults(); return;}
+    resetArmed = false; S = null; try{localStorage.removeItem(LS_KEY);}catch(e){} render(); window.scrollTo(0,0);
+  };
+}
+function renderReview(){
+  app.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.f===reviewFilter)));
+  const items = S.qOrder.map((id,pos) => ({q:QBY[id], pos:pos+1})).filter(x => {
+    if(reviewFilter==='all') return true;
+    if(reviewFilter==='unsure') return !!S.unsure[x.q.id];
+    return !isCorrect(x.q);
+  });
+  const box = document.getElementById('review');
+  if(!items.length){box.innerHTML = `<p class="foot" style="padding-block:16px">Nothing in this filter.</p>`; return;}
+  box.innerHTML = items.map(x => {
+    const q = x.q, picked = S.answers[q.id]||[], ok = isCorrect(q), blank = !picked.length;
+    return `<article class="rev">
+      <div class="rev-head"><span>Question ${x.pos}</span><span>&middot; ${esc(TOPICS[q.t].name)}</span>
+        <span class="pill ${ok?'good':blank?'warn':'bad'}">${ok?'Correct':blank?'Unanswered':'Wrong'}</span>${S.unsure[q.id]?`<span class="pill plain">Not sure</span>`:``}</div>
+      <p class="rev-q">${esc(q.q)}</p>
+      <ul class="rev-opts">${S.oOrder[q.id].map((oi,i) => {
+        const right = q.a.includes(oi), mine = picked.includes(oi);
+        const tag = right && mine ? 'Correct, your answer' : right ? 'Correct answer' : mine ? 'Your answer' : '';
+        return `<li class="${right?'right':mine?'wrongpick':''}"><span class="mono">${LETTERS[i]}</span><span>${esc(q.o[oi])}${tag?`<span class="tag">${tag}</span>`:``}</span></li>`;}).join('')}</ul>
+      <p class="why"><b>Why</b>${esc(q.e)}</p>
+    </article>`;}).join('');
+}
+async function copySummary(){
+  const ta = document.getElementById('summary'), note = document.getElementById('copyNote');
+  let ok = false;
+  try{await navigator.clipboard.writeText(ta.value); ok = true;}catch(e){
+    try{ta.focus(); ta.select(); ok = document.execCommand('copy');}catch(e2){}
+  }
+  note.textContent = ok ? 'Copied.' : 'Copy is blocked here. The text is selected; press Ctrl or Cmd + C.';
+  if(!ok){try{ta.focus(); ta.select();}catch(e){}}
+}
+
+/* ---------- boot ---------- */
+function render(){
+  if(!S || !S.phase) return renderIntro();
+  if(S.phase==='test') return renderTest();
+  return renderResults();
+}
+function start(data){
+  S = (data && data.S) || loadLS();
+  if(S && (!S.qOrder || S.qOrder.length !== Q.length)) S = null;
+  if(S){S.lastTick = Date.now(); if(S.saved==='saving') S.saved='failed';}
+  render();
+}
+const hot = window.claude && window.claude.hot;
+try{if(hot && hot.snapshot) hot.snapshot(() => ({S}));}catch(e){}
+if(hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+</script>

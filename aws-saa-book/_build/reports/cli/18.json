@@ -1,0 +1,224 @@
+{
+ "chapter": "18",
+ "awscli": "1.46.1",
+ "checked": "2026-10-14",
+ "commands_sha256": "3706dd62576af506446b1059544f60d2a937d0d2f8c1bffcdcc5b903a6361912",
+ "ok": true,
+ "commands": [
+  {
+   "command": "aws lambda get-account-settings --query \"AccountLimit.{Quota:ConcurrentExecutions,Unreserved:UnreservedConcurrentExecutions}\"",
+   "service": "lambda",
+   "operation": "get-account-settings",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda get-account-settings --region <OTHER_REGION> --query \"AccountLimit.{Quota:ConcurrentExecutions,Unreserved:UnreservedConcurrentExecutions}\"",
+   "service": "lambda",
+   "operation": "get-account-settings",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws service-quotas list-aws-default-service-quotas --service-code lambda --query \"Quotas[].[QuotaName,Value,Adjustable]\" --output table",
+   "service": "service-quotas",
+   "operation": "list-aws-default-service-quotas",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws cloudformation create-stack --stack-name saa-lambda-t02 --capabilities CAPABILITY_IAM --tags Key=book,Value=saa Key=task,Value=lambda-t02 --template-body '{\"Resources\":{\"FnRole\":{\"Type\":\"AWS::IAM::Role\",\"Properties\":{\"AssumeRolePolicyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]},\"ManagedPolicyArns\":[\"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"]}},\"Fn\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"FunctionName\":\"saa-lambda-t02\",\"Runtime\":\"python3.13\",\"Handler\":\"index.handler\",\"Role\":{\"Fn::GetAtt\":[\"FnRole\",\"Arn\"]},\"Code\":{\"ZipFile\":\"def handler(event, context): return dict(ok=True)\"}}}}}'",
+   "service": "cloudformation",
+   "operation": "create-stack",
+   "ok": true,
+   "errors": [],
+   "tag_options": [
+    "--tags"
+   ]
+  },
+  {
+   "command": "aws cloudformation wait stack-create-complete --stack-name saa-lambda-t02",
+   "service": "cloudformation",
+   "operation": "wait stack-create-complete",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda invoke --function-name saa-lambda-t02 response.json",
+   "service": "lambda",
+   "operation": "invoke",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda put-function-concurrency --function-name saa-lambda-t02 --reserved-concurrent-executions 0",
+   "service": "lambda",
+   "operation": "put-function-concurrency",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda delete-function-concurrency --function-name saa-lambda-t02",
+   "service": "lambda",
+   "operation": "delete-function-concurrency",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws logs delete-log-group --log-group-name /aws/lambda/saa-lambda-t02",
+   "service": "logs",
+   "operation": "delete-log-group",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws cloudformation delete-stack --stack-name saa-lambda-t02",
+   "service": "cloudformation",
+   "operation": "delete-stack",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws cloudformation wait stack-delete-complete --stack-name saa-lambda-t02",
+   "service": "cloudformation",
+   "operation": "wait stack-delete-complete",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda get-function --function-name saa-lambda-t02",
+   "service": "lambda",
+   "operation": "get-function",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws sqs create-queue --queue-name saa-lambda-t03-failed --tags book=saa,task=lambda-t03",
+   "service": "sqs",
+   "operation": "create-queue",
+   "ok": true,
+   "errors": [],
+   "tag_options": [
+    "--tags"
+   ]
+  },
+  {
+   "command": "aws sqs get-queue-attributes --queue-url $QUEUE_URL --attribute-names QueueArn",
+   "service": "sqs",
+   "operation": "get-queue-attributes",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws cloudformation create-stack --stack-name saa-lambda-t03 --capabilities CAPABILITY_IAM --parameters ParameterKey=QueueArn,ParameterValue=$QUEUE_ARN --tags Key=book,Value=saa Key=task,Value=lambda-t03 --template-body '{\"Parameters\":{\"QueueArn\":{\"Type\":\"String\"}},\"Resources\":{\"FnRole\":{\"Type\":\"AWS::IAM::Role\",\"Properties\":{\"AssumeRolePolicyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]},\"ManagedPolicyArns\":[\"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"],\"Policies\":[{\"PolicyName\":\"saa-send-to-failed-queue\",\"PolicyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sqs:SendMessage\",\"Resource\":{\"Ref\":\"QueueArn\"}}]}}]}},\"Fn\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"FunctionName\":\"saa-lambda-t03\",\"Runtime\":\"python3.13\",\"Handler\":\"index.handler\",\"Role\":{\"Fn::GetAtt\":[\"FnRole\",\"Arn\"]},\"Code\":{\"ZipFile\":\"def handler(event, context): raise RuntimeError(context.function_name)\"}}}}}'",
+   "service": "cloudformation",
+   "operation": "create-stack",
+   "ok": true,
+   "errors": [],
+   "tag_options": [
+    "--tags"
+   ]
+  },
+  {
+   "command": "aws cloudformation wait stack-create-complete --stack-name saa-lambda-t03",
+   "service": "cloudformation",
+   "operation": "wait stack-create-complete",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda put-function-event-invoke-config --function-name saa-lambda-t03 --maximum-retry-attempts 0 --destination-config OnFailure={Destination=$QUEUE_ARN}",
+   "service": "lambda",
+   "operation": "put-function-event-invoke-config",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda invoke --function-name saa-lambda-t03 response.json",
+   "service": "lambda",
+   "operation": "invoke",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda invoke --function-name saa-lambda-t03 --invocation-type Event response.json",
+   "service": "lambda",
+   "operation": "invoke",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20 --query \"Messages[].Body\"",
+   "service": "sqs",
+   "operation": "receive-message",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws lambda delete-function-event-invoke-config --function-name saa-lambda-t03",
+   "service": "lambda",
+   "operation": "delete-function-event-invoke-config",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws logs delete-log-group --log-group-name /aws/lambda/saa-lambda-t03",
+   "service": "logs",
+   "operation": "delete-log-group",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws cloudformation delete-stack --stack-name saa-lambda-t03",
+   "service": "cloudformation",
+   "operation": "delete-stack",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws cloudformation wait stack-delete-complete --stack-name saa-lambda-t03",
+   "service": "cloudformation",
+   "operation": "wait stack-delete-complete",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws sqs delete-queue --queue-url $QUEUE_URL",
+   "service": "sqs",
+   "operation": "delete-queue",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  },
+  {
+   "command": "aws sqs get-queue-url --queue-name saa-lambda-t03-failed",
+   "service": "sqs",
+   "operation": "get-queue-url",
+   "ok": true,
+   "errors": [],
+   "tag_options": []
+  }
+ ],
+ "warnings": []
+}

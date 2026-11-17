@@ -1,0 +1,266 @@
+[
+ {
+  "id": "messaging-q001",
+  "section": "2-deep.md#sqs-stores-each-message-in-several-availability-zones-before-the-sender-moves-on",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.S1",
+   "3.2.K3"
+  ],
+  "topics": [
+   "integration",
+   "resilience"
+  ],
+  "services": [
+   "sqs",
+   "sns"
+  ],
+  "concept": "sqs-buffer-for-overloaded-database",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an order API on Amazon EC2 instances. The API sends each order directly to the order service, which writes the order to a relational database. During sales, the database cannot keep up, requests time out, and orders are lost. Only the company's order service processes the orders. The order service must process every order, even after it has been offline for a few hours. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "Only the company's order service processes the orders",
+   "even after it has been offline for a few hours",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Have the API send each order to one Amazon SQS queue, and have each service that processes orders poll that queue and process the orders it receives.",
+    "correct": true,
+    "why": "One queue holds every order until the order service processes it, and the order service writes to the database at its own pace.",
+    "concept": "sqs-buffer",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Have the API publish each order to an Amazon SNS topic, subscribe one Amazon SQS queue for each service that processes orders, and have each service poll its queue.",
+    "correct": false,
+    "why": "It works, but SNS is for [fanout notifications](../facts/sns.md#sns-decision-typical-use), and with one consumer the topic is an extra part with nothing to fan out to.",
+    "concept": "sns-sqs-fanout",
+    "trap": null,
+    "misconception": "adds a topic in front of the queue when only one service consumes the orders",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Have the API publish each order to an Amazon SNS topic, and subscribe the HTTPS endpoint of each service that processes orders so that each service receives every order.",
+    "correct": false,
+    "why": "In SNS, [messages are not persisted](../facts/sns.md#sns-decision-no-persistence), and HTTPS retries end within [3,600 seconds](../facts/sns.md#sns-retry-http-total-retry-time-max), so an outage of a few hours loses orders.",
+    "concept": "sns-https-push",
+    "trap": "messaging-trap-topic-stores-messages",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Move the database to a larger instance class, and add a read replica so that the database can take more of the load during sales.",
+    "correct": false,
+    "why": "A larger database still takes every write at the moment of the peak, and it holds no order while the order service is offline.",
+    "concept": "scale-up-database",
+    "trap": null,
+    "misconception": "a larger database removes the need for a buffer between the API and the database",
+    "distractor_type": "different-problem"
+   }
+  ],
+  "explanation": "One service consumes the orders, so one queue is enough. SQS is built for [buffering requests](../facts/sqs.md#sqs-decision-typical-use): the database receives orders at the pace of the order service. Each order stays in the queue [until successfully processed or expired](../facts/sqs.md#sqs-decision-keeps-until-processed), and the default retention of [4 days](../facts/sqs.md#sqs-message-retention-default) covers an outage of a few hours.",
+  "takeaway": "One consumer and a database that falls behind: put one SQS queue in front of the database.",
+  "twin": "If the stem said \"The order service, the shipping service and the analytics service must each process every order\" instead: an SNS topic with one SQS queue for each service, because each queue keeps its own copy.",
+  "say": "One consumer, so one queue: SQS buffers the orders, and the order service writes them at its own pace.",
+  "facts": [
+   "sqs-decision-typical-use",
+   "sqs-decision-keeps-until-processed",
+   "sqs-message-retention-default",
+   "sns-decision-typical-use",
+   "sns-decision-no-persistence",
+   "sns-retry-http-total-retry-time-max"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q005",
+  "section": "2-deep.md#an-sns-topic-pushes-each-published-message-to-all-its-subscribers",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": [
+   "3.2.K3"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "sns",
+   "sqs",
+   "eventbridge"
+  ],
+  "concept": "pub-sub-topic-basics",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company is splitting an application into microservices. When a customer places an order, the order service creates an order event. The billing, shipping and email microservices must each receive every order event at the same time, and each microservice handles the event in its own way. The order service must not wait for the other microservices or know their addresses. Which AWS service provides this publish/subscribe model?",
+  "keywords": [
+   "must each receive every order event at the same time",
+   "publish/subscribe model"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "An Amazon SNS topic that the order service publishes each event to, with one subscription for each microservice",
+    "correct": true,
+    "why": "A published message goes to [all applicable subscribers](../facts/sns.md#sns-faq-publish-triggers-delivery-to-all-subscribers) of the topic, so each microservice gets its own copy of every event.",
+    "concept": "sns-topic",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "One Amazon SQS standard queue that the order service sends each event to, polled by all three microservices",
+    "correct": false,
+    "why": "A queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss): the three microservices split the events between them, and none of them receives every event.",
+    "concept": "shared-queue",
+    "trap": "messaging-trap-queue-broadcasts",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "One Amazon SQS FIFO queue that the order service sends each event to, with one message group ID per microservice",
+    "correct": false,
+    "why": "A message group ID orders messages inside one queue; each message still goes to one consumer, so the order service would have to send three copies itself.",
+    "concept": "fifo-message-groups",
+    "trap": null,
+    "misconception": "message group IDs give each consumer its own copy of every message",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Amazon EventBridge Scheduler, with one schedule for each microservice that passes on the new order events",
+    "correct": false,
+    "why": "EventBridge Scheduler runs [rate-based, cron-based, and one-time schedules](../facts/eventbridge.md#eventbridge-scheduler-three-schedule-types): a schedule starts at a set time, not when an order event appears.",
+    "concept": "eventbridge-scheduler",
+    "trap": null,
+    "misconception": "a scheduler forwards events as they happen",
+    "distractor_type": "keyword-bait"
+   }
+  ],
+  "explanation": "Publish/subscribe is the job of SNS: it is built for [pub/sub messaging](../facts/sns.md#sns-decision-typical-use). When the order service publishes an event to the topic, SNS delivers it to [all applicable subscribers](../facts/sns.md#sns-faq-publish-triggers-delivery-to-all-subscribers) at once. The order service knows the topic, not the microservices, and each microservice has its own subscription.",
+  "takeaway": "Every consumer needs every message: publish to an SNS topic, not to one shared queue.",
+  "twin": "If the stem said \"each order event must be handled by one of three identical workers\" instead: one SQS queue, because a queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss).",
+  "say": "Every service needs every event, so I publish to an SNS topic and give each service a subscription.",
+  "facts": [
+   "sns-decision-typical-use",
+   "sns-faq-publish-triggers-delivery-to-all-subscribers",
+   "sqs-typically-single-subscriber-order-and-loss",
+   "eventbridge-scheduler-three-schedule-types"
+  ],
+  "sources": [],
+  "exam_english": [],
+  "twin_of": null
+ },
+ {
+  "id": "messaging-q018",
+  "section": "2-deep.md#an-sns-topic-pushes-each-published-message-to-all-its-subscribers",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": [
+   "2.1.S1",
+   "2.1.S3"
+  ],
+  "topics": [
+   "integration"
+  ],
+  "services": [
+   "sns",
+   "eventbridge",
+   "sqs"
+  ],
+  "concept": "eventbridge-vs-sns-routing",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company is building an event-driven platform for its online store. Services that several teams own must react to events, and each service needs only some of the events. The teams do not want to write or run routing code. All events come from the company's own order application. Every event must also reach the mobile phones of thousands of field agents by SMS within seconds. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "All events come from the company's own order application",
+   "mobile phones of thousands of field agents by SMS",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Send the events to an Amazon EventBridge event bus, and create one rule for each service with an event pattern that matches the events it needs.",
+    "correct": false,
+    "why": "It works for the services, but the SMS messages still need an SNS topic as a rule target: two services where SNS alone covers both needs.",
+    "concept": "eventbridge-rules",
+    "trap": null,
+    "misconception": "an event bus is the better router even when every event comes from one application",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Publish the events to an Amazon SNS topic, and subscribe each service to the topic with a filter policy that matches the events it needs.",
+    "correct": true,
+    "why": "Each service filters with [subscription filter policies](../facts/sns.md#sns-decision-filter-policies), and the agents' phone numbers subscribe to the same topic without a filter.",
+    "concept": "sns-filter-policies",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Send the events to one Amazon SQS queue, and have every service poll the queue and discard the events that it does not need.",
+    "correct": false,
+    "why": "A queue serves [a single subscriber typically](../facts/sqs.md#sqs-typically-single-subscriber-order-and-loss): services that poll one queue split the events, and a queue sends no SMS.",
+    "concept": "shared-queue",
+    "trap": "messaging-trap-queue-broadcasts",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Write the events to an Amazon Kinesis data stream, and have every service read all records of the stream and discard the events that it does not need.",
+    "correct": false,
+    "why": "A stream is built for [real-time processing of streaming big data](../facts/sqs.md#sqs-faq-kinesis-streams-realtime-and-replay); each service needs its own filter code, and the SMS messages still need another service.",
+    "concept": "kinesis-stream",
+    "trap": null,
+    "misconception": "a data stream is the managed way to route events to many services",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "One service covers both needs. An SNS topic delivers to [mobile applications, mobile phone numbers, and email addresses](../facts/sns.md#sns-a2p-subscriber-types) as well as to services, and SNS is recommended for [thousands or millions of endpoints](../facts/sns.md#sns-faq-sns-recommended-for-high-fan-out-thousands-or-millions). Each service picks its events with a filter policy, and the field agents' phones receive every event.",
+  "takeaway": "Events from your own application that also go to many phones: an SNS topic with filter policies.",
+  "twin": "If the stem said \"The events come from AWS services, from the company's own applications, and from a SaaS partner's application\" instead: an EventBridge event bus, because it integrates directly with [third-party SaaS partners](../facts/eventbridge.md#eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners).",
+  "say": "One source and thousands of phones by SMS: an SNS topic, with filter policies for the services.",
+  "facts": [
+   "sns-a2p-subscriber-types",
+   "sns-faq-sns-recommended-for-high-fan-out-thousands-or-millions",
+   "sns-decision-filter-policies",
+   "sqs-typically-single-subscriber-order-and-loss",
+   "sqs-faq-kinesis-streams-realtime-and-replay",
+   "eventbridge-faq-eventbridge-only-service-integrating-directly-with-saas-partners"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": "messaging-q013"
+ }
+]

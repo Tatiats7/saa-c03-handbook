@@ -1,0 +1,253 @@
+[
+ {
+  "id": "containers-s01",
+  "chapter": "containers",
+  "kind": "compare",
+  "prompt": "ECS or EKS? My one Kubernetes engineer says that EKS is the standard.",
+  "persona": "Ben, CTO of Callvale",
+  "ten_second": "Both run your containers, and both work with Fargate. EKS fits teams that already run Kubernetes. ECS is less for you to operate.",
+  "sixty_second": [
+   "Both run your containers, and both can run them on Fargate, with no servers to manage.",
+   "The difference is who you need on the team.",
+   "It works like this. Amazon ECS is the AWS orchestrator, with no extra charge for ECS itself.",
+   "You describe each service in a task definition, and AWS runs it.",
+   "Amazon EKS runs open-source Kubernetes, so your existing Kubernetes tools and plug-ins work.",
+   "AWS runs the Kubernetes control plane for you, and each cluster has an hourly fee.",
+   "The thing to watch is the upgrades.",
+   "Kubernetes clusters need frequent upgrades, and someone on your team has to run them.",
+   "In your case, you plan six services and you have one Kubernetes engineer.",
+   "I'd start on ECS with Fargate, and keep EKS for when the team grows.",
+   "Who would run the cluster upgrades if your Kubernetes engineer is away?"
+  ],
+  "skeleton": [
+   "both run on Fargate",
+   "ECS: no extra charge",
+   "EKS: open-source Kubernetes, hourly fee",
+   "upgrades need Kubernetes skills"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "Both Amazon ECS and Amazon EKS can run their containers on AWS Fargate.",
+    "accept": ["both work with Fargate", "Fargate runs tasks for ECS and pods for EKS"],
+    "facts": ["fargate-whitepaper-own-kernel-for-ecs-and-eks"]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "EKS runs open-source Kubernetes, so existing Kubernetes plug-ins and tooling work.",
+    "accept": ["EKS is standard Kubernetes", "your Kubernetes tools keep working"],
+    "facts": ["eks-faq-runs-open-source-kubernetes-compatible"]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "Every EKS cluster has a per cluster per hour fee; Amazon ECS itself has no additional charge.",
+    "accept": ["EKS charges per cluster per hour", "ECS has no extra charge"],
+    "facts": ["eks-pricing-per-cluster-per-hour-fee", "ecs-faq-no-additional-charge"]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "The skills of the organization are a major factor: teams that run Kubernetes handle frequent cluster upgrades.",
+    "accept": ["it depends on Kubernetes skills", "someone must run the cluster upgrades"],
+    "facts": ["eks-decision-guide-kubernetes-skills-sre-teams"]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "A Kubernetes version gets 14 months of standard support in EKS; extended support has an additional cost per cluster hour.",
+    "accept": ["old versions cost extra", "extended support costs more"],
+    "facts": ["eks-standard-support-14-months", "eks-pricing-extended-support-additional-cost-per-cluster-hour"]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "AWS manages the EKS control plane and makes it available across Availability Zones.",
+    "accept": ["AWS runs the control plane", "the control plane is managed"],
+    "facts": ["eks-managed-control-plane-across-azs"]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "ECS is not for production; EKS is the standard on AWS.",
+    "correct": "Amazon ECS is a fully managed container orchestration service to deploy, manage and scale containerized applications.",
+    "fact": "ecs-fully-managed-orchestration"
+   },
+   {
+    "error": "With EKS we would run the Kubernetes control plane ourselves.",
+    "correct": "AWS manages the EKS control plane for you and makes it available across Availability Zones.",
+    "fact": "eks-managed-control-plane-across-azs"
+   },
+   {
+    "error": "EKS costs nothing extra, the same as ECS.",
+    "correct": "All Amazon EKS clusters have a per cluster per hour fee.",
+    "fact": "eks-pricing-per-cluster-per-hour-fee"
+   }
+  ],
+  "terms": [
+   {"say": "container orchestration service", "avoid": ["container manager"]},
+   {"say": "control plane", "avoid": ["master server"]}
+  ],
+  "follow_ups": [
+   {
+    "question": "Can we move from ECS to EKS later?",
+    "answer": "Yes. Amazon ECR works with both Amazon ECS and Amazon EKS, so the same images stay. You rewrite the task definitions as Kubernetes manifests.",
+    "facts": ["ecr-faq-integrated-with-ecs-eks-lambda"]
+   },
+   {
+    "question": "Can EKS use Fargate Spot to save money?",
+    "answer": "No. Amazon EKS doesn't support Fargate Spot. For Spot capacity on EKS, use a managed node group with the Spot capacity type.",
+    "facts": ["eks-fargate-no-spot", "eks-managed-node-group-on-demand-or-spot"]
+   }
+  ],
+  "facts": [
+   "fargate-whitepaper-own-kernel-for-ecs-and-eks",
+   "eks-faq-runs-open-source-kubernetes-compatible",
+   "eks-pricing-per-cluster-per-hour-fee",
+   "ecs-faq-no-additional-charge",
+   "eks-decision-guide-kubernetes-skills-sre-teams",
+   "eks-standard-support-14-months",
+   "eks-pricing-extended-support-additional-cost-per-cluster-hour",
+   "eks-managed-control-plane-across-azs",
+   "ecs-fully-managed-orchestration",
+   "ecr-faq-integrated-with-ecs-eks-lambda",
+   "eks-fargate-no-spot",
+   "eks-managed-node-group-on-demand-or-spot",
+   "fargate-no-provision-vm-clusters"
+  ],
+  "section": "2-deep.md#eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false,
+  "status": "candidate",
+  "rev": 1
+ },
+ {
+  "id": "containers-s02",
+  "chapter": "containers",
+  "kind": "decide",
+  "prompt": "Should we run our containers on Fargate or on EC2 instances? We want low cost and little operations work.",
+  "persona": "a startup founder in office hours",
+  "ten_second": "Start on Fargate: no instances to manage, and you pay per second for each task's size. Use EC2 for GPUs or large, price-optimized fleets.",
+  "sixty_second": [
+   "The short answer is: start on Fargate, and move to EC2 when a workload needs it.",
+   "It works like this. On Fargate, you don't choose, patch or scale any instances.",
+   "Each task asks for vCPU and memory, and you pay for that, per second.",
+   "You pay for what you provision, even when the task is idle.",
+   "On EC2, you manage the instances, but you get root access and GPUs.",
+   "AWS also points large workloads that must be price optimized to EC2 capacity.",
+   "The thing to watch is how you lower the Fargate bill.",
+   "Fargate Spot gives a large discount for tasks that can be interrupted.",
+   "Compute Savings Plans also apply to Fargate usage.",
+   "In your case, with little time for operations, I'd put every service on Fargate first.",
+   "Do any of your containers need a GPU or access to the host?"
+  ],
+  "skeleton": [
+   "Fargate first, EC2 when needed",
+   "pay per second for size",
+   "EC2: control, GPUs, large fleets",
+   "Spot and Savings Plans lower bill"
+  ],
+  "key_points": [
+   {
+    "id": "kp1",
+    "kind": "must",
+    "point": "With Fargate you no longer provision, configure, or scale clusters of virtual machines to run containers.",
+    "accept": ["no instances to manage", "AWS runs the servers"],
+    "facts": ["fargate-no-provision-vm-clusters"]
+   },
+   {
+    "id": "kp2",
+    "kind": "must",
+    "point": "Fargate bills the vCPU and memory that a task requests, from the image pull until the task stops, rounded up to the nearest second.",
+    "accept": ["you pay per second for the task size", "you pay for what the task asks for"],
+    "facts": ["ecs-faq-fargate-billing-granularity"]
+   },
+   {
+    "id": "kp3",
+    "kind": "must",
+    "point": "EC2 capacity fits large workloads that must be price optimized, and GPU workloads, which Fargate does not support today.",
+    "accept": ["EC2 for GPUs", "EC2 for big steady fleets"],
+    "facts": ["ecs-ec2-capacity-large-workloads-price-optimized", "fargate-faq-gpu-not-supported"]
+   },
+   {
+    "id": "kp4",
+    "kind": "must",
+    "point": "Fargate Spot gives a discount for interruption-tolerant tasks, and Compute Savings Plans apply to Fargate usage.",
+    "accept": ["Spot and Savings Plans cut the Fargate bill"],
+    "facts": ["fargate-faq-spot-up-to-70-percent-discount", "fargate-compute-savings-plans-cover-fargate-lambda"]
+   },
+   {
+    "id": "kp5",
+    "kind": "nice",
+    "point": "On Fargate you pay for what you provision, whether or not the application is processing requests.",
+    "accept": ["an idle task still costs money"],
+    "facts": ["fargate-guide-pricing-per-second-pay-for-what-you-provision"]
+   },
+   {
+    "id": "kp6",
+    "kind": "nice",
+    "point": "With ECS on EC2 you have root access to the operating system of your container instances.",
+    "accept": ["EC2 gives you the host"],
+    "facts": ["ecs-faq-ec2-root-access-to-os"]
+   }
+  ],
+  "must_not_say": [
+   {
+    "error": "Fargate always costs more than EC2.",
+    "correct": "No AWS page says that. On Fargate you pay for what you provision, so compare the real task sizes with well-used instances.",
+    "fact": "fargate-guide-pricing-per-second-pay-for-what-you-provision"
+   },
+   {
+    "error": "Fargate can run our GPU jobs too.",
+    "correct": "GPU workloads are not supported on AWS Fargate today. Run them on Amazon EC2.",
+    "fact": "fargate-faq-gpu-not-supported"
+   },
+   {
+    "error": "When Spot capacity runs out, Fargate Spot starts the tasks on regular Fargate.",
+    "correct": "Fargate doesn't replace Spot capacity with on-demand capacity. Give the FARGATE capacity provider a base for the tasks that must keep running.",
+    "fact": "fargate-spot-no-on-demand-replacement"
+   }
+  ],
+  "terms": [
+   {"say": "provision vCPU and memory for a task", "avoid": ["rent a server"]},
+   {"say": "Compute Savings Plans", "avoid": ["Fargate reservation"]}
+  ],
+  "follow_ups": [
+   {
+    "question": "What happens when AWS takes a Fargate Spot task back?",
+    "answer": "The task gets a two-minute warning, sent as a SIGTERM signal to the task and as an event to Amazon EventBridge. The container must handle SIGTERM and save its work, or data can be lost.",
+    "facts": ["fargate-spot-two-minute-interruption-warning", "fargate-spot-warning-delivery-sigterm-eventbridge", "fargate-spot-container-must-handle-sigterm"]
+   },
+   {
+    "question": "Does a Savings Plan cover Fargate?",
+    "answer": "Compute Savings Plans do: they also apply to Fargate and Lambda usage. EC2 Instance Savings Plans apply to one instance family in one Region.",
+    "facts": ["fargate-compute-savings-plans-cover-fargate-lambda", "ec2-savings-plans-two-ec2-types-flexibility"]
+   }
+  ],
+  "facts": [
+   "fargate-no-provision-vm-clusters",
+   "ecs-faq-fargate-billing-granularity",
+   "ecs-ec2-capacity-large-workloads-price-optimized",
+   "fargate-faq-gpu-not-supported",
+   "fargate-faq-spot-up-to-70-percent-discount",
+   "fargate-compute-savings-plans-cover-fargate-lambda",
+   "fargate-guide-pricing-per-second-pay-for-what-you-provision",
+   "ecs-faq-ec2-root-access-to-os",
+   "fargate-spot-no-on-demand-replacement",
+   "fargate-spot-two-minute-interruption-warning",
+   "fargate-spot-warning-delivery-sigterm-eventbridge",
+   "fargate-spot-container-must-handle-sigterm",
+   "ec2-savings-plans-two-ec2-types-flexibility",
+   "fargate-task-retirement-aws-maintains-infrastructure"
+  ],
+  "section": "2-deep.md#fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false,
+  "status": "candidate",
+  "rev": 1
+ }
+]

@@ -1,0 +1,1147 @@
+{
+  "chapter": "07",
+  "angle": "follow the request, then the certificate: the application asks for its password at run time, AWS checks the policies and the KMS key, rotation changes the value behind the call; Parameter Store is the sibling for configuration; then a certificate is requested, validated, renewed and attached where TLS ends",
+  "brief_by": "brief-07",
+  "written_at": "2026-10-12",
+  "template": "medium",
+  "style": "STYLE.md 1.0, SPEC.json 1.0, exemplar in _build/style/exemplar/ (README: the ten things to imitate and the ten common mistakes)",
+  "budgets": {
+    "rule": "lint.word_count counts every word of a file: reveals, Go deeper blocks, prompts, callouts, table cells and image alt text (link targets, comments and fenced code are not counted). Plan to the targets below; the SPEC limits are hard.",
+    "1-fast.md": {"max": 1000, "target": 980, "per_section_target": {"predict": 60, "in-one-breath": 190, "words-that-go-together": 90, "choose-it-or-not": 200, "signals-and-traps": 220, "changed-recently": 100, "check": 70, "recap-from-memory": 60}},
+    "2-deep.md": {"min": 1800, "max": 2400, "target": 2300},
+    "how_it_works": {"min": 1300, "max": 1800, "target": 1760, "per_subsection": "see words_all_in in each subsection; the body without Go deeper, prompts and reveals stays between 150 and 400 words (subsection_words)"},
+    "numbers": {"max": 180, "target": 170},
+    "decision_record": {"max": 150, "target": 130},
+    "faq": {"max": 250, "target": 235},
+    "realworld": "not planned (see notes_for_orchestrator)",
+    "go_deeper_file": "2 planned (max 3), each at most 100 words",
+    "spot_the_bug_file": "exactly 1 (in cross-account-access-to-a-secret-needs-a-customer-managed-kms-key)",
+    "callouts_2_deep": "5 counted of 8: Exam trap x4 and Try it x1; Exam signal and Say it do not count",
+    "callouts_1_fast": "1 counted of 4: Startup example"
+  },
+  "sections": [
+    {
+      "file": "1-fast.md",
+      "section": "predict",
+      "heading": "Predict",
+      "bullets": [],
+      "facts": [],
+      "minutes": 1,
+      "status": "write",
+      "plan": {
+        "lead": "One plain line: guess first, the answers are in the Check section.",
+        "predict_1": "Your Application Load Balancer and its ACM certificate are in US West (Oregon). You add a CloudFront distribution for the same domain name. Can CloudFront use the Oregon certificate? <!-- gist-trap -->",
+        "predict_2": "A team keeps its database password as a SecureString parameter in Parameter Store. Can Parameter Store rotate the password every 30 days by itself?",
+        "note": "No Look first section in this chapter: it is optional in a medium template, and the 12-minute fast budget has no room for it."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "in-one-breath",
+      "heading": "In one breath",
+      "bullets": ["1.2.K1", "2.1.K2"],
+      "facts": [
+        "secrets-manager-what-it-manages",
+        "parameter-store-what-it-is",
+        "acm-what-it-does",
+        "secrets-manager-wa-anti-patterns",
+        "acm-wa-cert-anti-patterns",
+        "secrets-manager-rotation-without-redeploy",
+        "secrets-manager-runtime-call-replaces-hardcoded",
+        "secrets-manager-envelope-encryption-data-key",
+        "secrets-manager-encrypts-at-rest-tls-in-transit",
+        "secrets-manager-faq-managed-rotation-whole-process"
+      ],
+      "minutes": 2,
+      "status": "write",
+      "diagram": "secrets-certificates-hero",
+      "plan": {
+        "say_it": "At most 25 words, no absolute word: Secrets Manager stores and rotates secrets, Parameter Store holds configuration, and ACM issues and renews TLS certificates for AWS services.",
+        "problem_it_solves": "One or two sentences: a password in a file never changes and travels with every copy; a certificate renewed by hand expires on the day someone forgets. Link [credentials in source code or configuration files](secrets-manager-wa-anti-patterns) and [manual steps during the certificate deployment or renewal](acm-wa-cert-anti-patterns).",
+        "predict_the_picture": "Does the application keep its own copy of the password, or ask for it when it needs it?",
+        "hero": "secrets-certificates-hero inside <details><summary>Show the picture</summary>: alt, caption and the four steps exactly as in diagrams[0].",
+        "startup_example": "Copy the STARTUP.md problem word for word (44 words): Callvale stores the database password in a configuration file on each instance. The password has never changed. The bank requires rotation every 30 days with no downtime and no new deployment. Callvale also wants TLS certificates that renew without manual work."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "words-that-go-together",
+      "heading": "Words that go together",
+      "bullets": [],
+      "facts": [],
+      "minutes": 1,
+      "status": "write",
+      "plan": {
+        "rows": [
+          "secret | **rotate** a secret | A stored credential that an application reads at run time | KMS key, which encrypts the secret",
+          "parameter | **put** a parameter, **get** a parameter with decryption | A named configuration value in Parameter Store | secret, which can rotate",
+          "TLS certificate | **attach** a certificate to a listener | Proves that a server owns a domain name and starts encryption in transit | KMS key",
+          "domain validation | **validate** a domain with DNS | Proof that you control the domain name | CAA record, which only names allowed issuers"
+        ],
+        "note": "secret is in data/terms.json; parameter, TLS certificate and domain validation are term_requests (L503 is a warning in draft). No respelling needed for these words."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "choose-it-or-not",
+      "heading": "Choose it or not",
+      "bullets": ["1.2.K1", "2.1.K2", "1.3.S3"],
+      "facts": [
+        "parameter-store-vs-secrets-manager-rotation-row",
+        "parameter-store-vs-secrets-manager-cost-row",
+        "parameter-store-vs-secrets-manager-encryption-row",
+        "parameter-store-sharing-advanced-ram",
+        "secrets-manager-resource-policy-who-and-what",
+        "parameter-store-securestring-not-for-secrets",
+        "acm-faq-public-vs-private-trust",
+        "acm-option-renewal-row",
+        "acm-faq-imported-no-managed-renewal",
+        "acm-faq-private-renewal-ca-active",
+        "acm-import-reasons",
+        "acm-faq-public-internet-private-networks"
+      ],
+      "minutes": 2,
+      "status": "write",
+      "compare_tables": ["Secrets Manager or Parameter Store", "Public, imported or private certificate"]
+    },
+    {
+      "file": "1-fast.md",
+      "section": "signals-and-traps",
+      "heading": "Signals and traps",
+      "bullets": ["1.2.S3", "1.3.S3", "1.3.S7"],
+      "facts": [
+        "parameter-store-vs-secrets-manager-rotation-row",
+        "secrets-manager-move-hardcoded-then-rotate",
+        "secrets-manager-wa-db-credentials-rotate",
+        "secrets-manager-cross-account-no-aws-managed-key",
+        "acm-cloudfront-us-east-1",
+        "acm-cloudfront-origin-certificate-any-region",
+        "acm-dns-validation-recommended",
+        "acm-faq-public-vs-private-trust",
+        "parameter-store-no-automatic-rotation",
+        "acm-faq-imported-no-managed-renewal",
+        "acm-email-validation-needs-owner-action"
+      ],
+      "minutes": 3,
+      "status": "write",
+      "traps_listed_here": [
+        "secrets-certificates-trap-parameter-store-rotates",
+        "secrets-certificates-trap-cloudfront-certificate-any-region",
+        "secrets-certificates-trap-acm-renews-everything"
+      ]
+    },
+    {
+      "file": "1-fast.md",
+      "section": "changed-recently",
+      "heading": "Changed recently",
+      "bullets": [],
+      "facts": [
+        "acm-change-exportable-public-certificates-2025",
+        "acm-exportable-use-anywhere",
+        "acm-public-certificate-validity"
+      ],
+      "minutes": 1,
+      "status": "write",
+      "plan": "Two examinable entries (see changed_recently.fast), each at most 48 words. The not-examinable entry goes under the B-list in 2-deep.md."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "check",
+      "heading": "Check",
+      "bullets": [],
+      "facts": ["acm-cloudfront-us-east-1", "parameter-store-vs-secrets-manager-rotation-row", "secrets-manager-faq-kinds-of-secrets"],
+      "minutes": 1,
+      "status": "write",
+      "plan": {
+        "check_1": "A team in Europe (Ireland) puts CloudFront in front of its API and requests the certificate in Ireland. Can the distribution use that certificate?",
+        "answer_1": "No. CloudFront needs the certificate in [US East (N. Virginia)](acm-cloudfront-us-east-1). Then a paragraph: **Predict 1:** No, for the same reason: the Oregon certificate is in the wrong Region for CloudFront.",
+        "check_2": "A team stores a third-party API key as a SecureString parameter and must change it automatically every 90 days. Which service can rotate it?",
+        "answer_2": "Secrets Manager. Credential rotation in Parameter Store is [None](parameter-store-vs-secrets-manager-rotation-row); Secrets Manager can manage [third-party API keys](secrets-manager-faq-kinds-of-secrets). Then: **Predict 2:** No: Parameter Store stores the password but does not rotate it."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "recap-from-memory",
+      "heading": "Recap from memory",
+      "bullets": [],
+      "facts": ["acm-cloudfront-us-east-1", "parameter-store-vs-secrets-manager-rotation-row", "acm-faq-imported-no-managed-renewal"],
+      "minutes": 1,
+      "status": "write",
+      "plan": {
+        "recap_1": "Which Region must hold the certificate of a CloudFront distribution? (answer from the signals row and trap)",
+        "recap_2": "Secrets Manager or Parameter Store: which one rotates a database password? (answer from the compare table)",
+        "recap_3": "Who renews a certificate that you imported into ACM? (answer from the traps list)",
+        "rule": "Each Recap asks only for what 1-fast.md states (U4)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "how-it-works",
+      "heading": "How it works",
+      "bullets": [],
+      "facts": [],
+      "minutes": 23,
+      "status": "write",
+      "plan": "Six subsections in this causal order: the read path of a secret (1), what protects that read (2), what changes the value behind it (3), the sibling store for configuration (4), then the certificate: issue and renew (5), attach where TLS ends (6). The H2 time box is the sum of the six H3 time boxes."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+      "heading": "Secrets Manager replaces a stored password with a call at run time",
+      "bullets": ["1.2.K1", "1.2.S3", "2.1.K2"],
+      "facts": [
+        "secrets-manager-wa-anti-patterns",
+        "secrets-manager-move-hardcoded-then-rotate",
+        "secrets-manager-json-key-value-recommended",
+        "secrets-manager-faq-iam-policy-before-retrieval",
+        "iam-compute-services-receive-role-credentials-no-keys-needed",
+        "secrets-manager-runtime-call-replaces-hardcoded",
+        "secrets-manager-awscurrent-returned-by-default",
+        "secrets-manager-encrypts-at-rest-tls-in-transit",
+        "secrets-manager-cache-cost-latency",
+        "secrets-manager-rotation-without-redeploy",
+        "secrets-manager-deletion-not-immediate",
+        "secrets-manager-recovery-window-range",
+        "secrets-manager-recover-during-window",
+        "secrets-manager-wa-db-credentials-rotate"
+      ],
+      "minutes": 4,
+      "route": "pass",
+      "words_all_in": 300,
+      "status": "write",
+      "diagrams": ["secrets-certificates-before", "secrets-certificates-after"],
+      "plan": {
+        "problem": "A password in a file is the same on every instance, does not change, and leaks with every copy of the file. AWS lists [credentials in source code or configuration files](secrets-manager-wa-anti-patterns) as an anti-pattern.",
+        "embed_1": "secrets-certificates-before, directly after the problem (alt and caption from diagrams[1]; no steps).",
+        "trace": [
+          "**Move.** The team stores the password in a secret, as JSON key-value pairs ([JSON text string with key-value pairs](secrets-manager-json-key-value-recommended)), and AWS recommends to [then rotate them immediately](secrets-manager-move-hardcoded-then-rotate), which retires the old password.",
+          "**Allow.** An IAM policy lets the application's role read that one secret: you [must write an AWS Identity and Access Management](secrets-manager-faq-iam-policy-before-retrieval) policy first. The instance gets the role's temporary credentials, so no access key sits on it ([AWS delivers the temporary credentials of an IAM role to that compute resource](iam-compute-services-receive-role-credentials-no-keys-needed)).",
+          "**Read.** At run time the application calls GetSecretValue, a [runtime call to the Secrets Manager service](secrets-manager-runtime-call-replaces-hardcoded). Secrets Manager [returns that version by default](secrets-manager-awscurrent-returned-by-default), the one labeled AWSCURRENT, and [transmits it securely over TLS](secrets-manager-encrypts-at-rest-tls-in-transit). A client-side cache makes reads faster, and [using a cache can reduce your costs](secrets-manager-cache-cost-latency).",
+          "**Delete.** Deletion is not instant: Secrets Manager [immediately makes the secrets inaccessible](secrets-manager-deletion-not-immediate) and waits a recovery window of [from 7 to 30](secrets-manager-recovery-window-range) days; [until the recovery window ends](secrets-manager-recover-during-window) you can restore the secret."
+        ],
+        "embed_2": "secrets-certificates-after, after the trace (alt and caption from diagrams[2], with its four steps). It replaces the compressing table: this subsection has one case.",
+        "why": "Why a call and not a copy? A copy cannot change by itself. Because the credentials are [no longer stored with the application](secrets-manager-rotation-without-redeploy), a new password reaches the application on its next read.",
+        "exam_signal": "\"hard-coded credentials\" or \"a password in a configuration file\" points to Secrets Manager: move the credentials, then rotate them (secrets-manager-move-hardcoded-then-rotate). If the hard-coded value is an AWS secret access key, the answer is [a temporary credential using IAM roles](secrets-manager-wa-db-credentials-rotate) instead.",
+        "say_it": "The short answer is: the application asks Secrets Manager for the password when it needs it. The thing to watch is the IAM permission for that secret.",
+        "stop_and_answer": "A second application runs on another instance with its own IAM role. The role has no policy that mentions Secrets Manager. The application calls GetSecretValue for the same secret. What happens?",
+        "answer": "The call fails with an access denied error. An application can read a secret only after an IAM policy permits it to [access specific secrets](secrets-manager-faq-iam-policy-before-retrieval)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "cross-account-access-to-a-secret-needs-a-customer-managed-kms-key",
+      "heading": "Cross-account access to a secret needs a customer managed KMS key",
+      "bullets": ["1.2.S3", "1.2.K1"],
+      "facts": [
+        "secrets-manager-envelope-encryption-data-key",
+        "secrets-manager-unique-data-key-per-secret",
+        "secrets-manager-metadata-not-encrypted",
+        "secrets-manager-resource-policy-who-and-what",
+        "secrets-manager-read-needs-kms-decrypt",
+        "secrets-manager-aws-managed-key-vs-customer-key",
+        "secrets-manager-cross-account-needs-both-policies",
+        "secrets-manager-cross-account-no-aws-managed-key",
+        "secrets-manager-aws-managed-key-policy-fixed",
+        "secrets-manager-change-kms-key-reencrypts-labeled",
+        "iam-kms-cross-account-key-policy-and-iam-policy",
+        "secrets-manager-ip-condition-breaks-rotation",
+        "secrets-manager-source-vpce-condition"
+      ],
+      "minutes": 4,
+      "route": "full",
+      "words_all_in": 290,
+      "status": "write",
+      "plan": {
+        "problem": "A secret is as safe as the key that encrypts it and the policies that let someone use that key. The question gets harder when a workload in a second AWS account must read the secret.",
+        "trace": [
+          "**Encrypt.** When a value is stored, Secrets Manager does not use the KMS key on the value itself: it gets a data key from AWS KMS and encrypts the value with it, and [requests a new data key from AWS KMS](secrets-manager-envelope-encryption-data-key) when the value changes. The secret's name, description and tags are not encrypted ([does not encrypt the following](secrets-manager-metadata-not-encrypted)).",
+          "**Check the caller.** AWS evaluates the caller's identity-based policy and the secret's resource-based policy, in which [you specify who can access the secret](secrets-manager-resource-policy-who-and-what).",
+          "**Decrypt.** Secrets Manager decrypts the data key with the KMS key; with a customer managed key, [the principal needs `kms:Decrypt`](secrets-manager-read-needs-kms-decrypt) on that key.",
+          "**Return.** The value goes back over TLS (subsection 1)."
+        ],
+        "table": "Truth table on the policies only (the key type belongs to the Exam trap, not to the table). Header: | Reader | Identity-based policy | Resource policy on the secret | Key policy of the KMS key | Result |. Row 1: Same account | Allows | Not needed | Default key policy works | Reads. Row 2: Other account | Allows | Allows the reader | Allows the reader's account | Reads. Row 3: Other account | Allows | Silent | Allows | Fails. Ground rows 2 and 3 with [a resource policy and in an identity policy](secrets-manager-cross-account-needs-both-policies) in the sentence under the table. Five columns is the 2-deep.md maximum.",
+        "why": "Why can another account not use the default key? The key policy of aws/secretsmanager [does not allow any user to use](secrets-manager-aws-managed-key-policy-fixed) the key directly, and nobody can edit that key policy. Only a key policy that you write can name the other account.",
+        "exam_signal": "\"a Lambda function in another AWS account must read the secret\" points to three changes: a resource policy on the secret, an allow in the other account, and [a KMS key that you create](secrets-manager-cross-account-no-aws-managed-key) whose key policy allows that account.",
+        "exam_trap": "secrets-certificates-trap-resource-policy-enough-cross-account. New case beyond the table: the secret already uses aws/secretsmanager, and the fix is not a new secret: you can [change the encryption key for your secret](secrets-manager-change-kms-key-reencrypts-labeled), and Secrets Manager re-encrypts the labeled versions. At most 60 words; ends with <!-- trap: secrets-certificates-trap-resource-policy-enough-cross-account -->.",
+        "spot_the_bug": "Prompt: **Spot the bug.** A team adds this resource policy to a secret so that only the office network can read it. From the next day, every scheduled rotation fails. What is wrong? Then a json code block of at most 12 lines: a Deny on secretsmanager:* for Principal * with a NotIpAddress condition on aws:SourceIp 203.0.113.0/24 (documentation range; no account id needed). Reveal: the Lambda rotation function calls Secrets Manager [from an AWS-internal address space](secrets-manager-ip-condition-breaks-rotation), so the IP condition denies it; filter on a VPC endpoint with [aws:SourceVpce](secrets-manager-source-vpce-condition) instead.",
+        "say_it": "The short answer is: both accounts and the key policy must allow the read. The thing to watch is the default key aws/secretsmanager.",
+        "stop_and_answer": "A secret uses a customer managed key. The secret's resource policy and the reader's IAM policy in account B both allow GetSecretValue and kms:Decrypt, but the key policy names only account A. Does the read from account B succeed?",
+        "answer": "No. Across accounts the key needs two allows as well: the key policy must allow account B, and account B's IAM policy must allow the key use (iam-kms-cross-account-key-policy-and-iam-policy; pick its display that names the key policy)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment",
+      "heading": "Automatic rotation changes the password on a schedule without a new deployment",
+      "bullets": ["1.3.S7", "1.2.S3"],
+      "facts": [
+        "secrets-manager-not-changed-more-likely-compromised",
+        "secrets-manager-rotation-shortest-and-longest",
+        "secrets-manager-rotation-window-minimum",
+        "secrets-manager-rotation-schedule-utc-and-year",
+        "secrets-manager-managed-rotation-no-lambda",
+        "secrets-manager-managed-rotation-rds-master-user",
+        "secrets-manager-rds-generates-master-password",
+        "secrets-manager-faq-managed-rotation-whole-process",
+        "secrets-manager-rotation-function-called-per-step",
+        "secrets-manager-rotation-templates-ready-lambda",
+        "secrets-manager-faq-custom-rotation-lambda",
+        "secrets-manager-no-linear-version-history",
+        "secrets-manager-rotation-retries-in-window",
+        "secrets-manager-rotation-without-redeploy",
+        "secrets-manager-faq-rotation-open-connections",
+        "secrets-manager-ecs-redeploy-for-new-value",
+        "secrets-manager-single-user-strategy-for-most-cases",
+        "secrets-manager-single-user-short-deny-risk",
+        "secrets-manager-alternating-users-high-availability",
+        "secrets-manager-alternating-users-needs-superuser",
+        "secrets-manager-rotation-private-vpc-use-endpoint",
+        "secrets-manager-rotation-nat-gateway-more-risk",
+        "secrets-manager-replication-for-dr",
+        "secrets-manager-rotation-propagates-to-replicas",
+        "secrets-manager-promote-replica-for-dr"
+      ],
+      "minutes": 4,
+      "route": "full",
+      "words_all_in": 320,
+      "status": "write",
+      "pending": "fr-0033: what each of the four steps does and which step moves AWSCURRENT. Until it is filled, name the four steps only as the fact quotes them, in that list, and write no sentence on what one step does or on when the label moves.",
+      "plan": {
+        "problem": "A password that never changes stays useful to everyone who ever copied it. Secrets that stay the same [become more likely to be compromised](secrets-manager-not-changed-more-likely-compromised).",
+        "trace": [
+          "**Schedule.** You set a schedule, as often as [every four hours](secrets-manager-rotation-shortest-and-longest), with a rotation window of at least [one hour](secrets-manager-rotation-window-minimum); schedules [use UTC time zone](secrets-manager-rotation-schedule-utc-and-year).",
+          "**Rotate.** With managed rotation the managing service, such as Amazon RDS for its master user, rotates the secret ([With managed rotation](secrets-manager-managed-rotation-no-lambda), no Lambda function is used). Otherwise Secrets Manager [calls the same function several times](secrets-manager-rotation-function-called-per-step), once for each step: create_secret, set_secret, test_secret and finish_secret.",
+          "**Version.** Each rotation creates a new version of the secret; Secrets Manager keeps [three specific versions by labeling them](secrets-manager-no-linear-version-history): AWSCURRENT, AWSPREVIOUS and AWSPENDING.",
+          "**Read again.** The application keeps calling GetSecretValue, so rotation [no longer requires updating your applications](secrets-manager-rotation-without-redeploy)."
+        ],
+        "table": "| Rotation type | Who changes the password | Lambda function | Example |: Managed rotation | the managing service | not used | [Amazon RDS](secrets-manager-managed-rotation-rds-master-user) master user |; Rotation by Lambda function | your rotation function, from [ready-to-use Lambda functions](secrets-manager-rotation-templates-ready-lambda) | yes | an Oracle database on EC2 ([Oracle databases hosted on EC2](secrets-manager-faq-custom-rotation-lambda)) |.",
+        "why": "Why one function that is called four times? Each call does one step, and if a step fails, Secrets Manager [retries the entire rotation process multiple times](secrets-manager-rotation-retries-in-window) during the window.",
+        "exam_signal": "\"rotate the Amazon RDS master user password automatically with the LEAST operational overhead\" points to managed rotation: [RDS generates the password](secrets-manager-rds-generates-master-password) and rotates it, and you write no Lambda function.",
+        "exam_trap": "secrets-certificates-trap-rotation-needs-redeploy. New case: open connections and the ECS exception. A rotation does not mean a redeploy: [the open database connection is not re-authenticated](secrets-manager-faq-rotation-open-connections). The exception is a secret that Amazon ECS injects when a task starts: then [you must force a new deployment](secrets-manager-ecs-redeploy-for-new-value) or launch a new task. At most 60 words; ends with <!-- trap: secrets-certificates-trap-rotation-needs-redeploy -->.",
+        "go_deeper": "Go deeper: two strategies, private networks and replicas (at most 100 words). Single-user rotation is [appropriate for most use cases](secrets-manager-single-user-strategy-for-most-cases), with a [low risk of the database denying calls](secrets-manager-single-user-short-deny-risk) for a short time; alternating users suits [applications that require high availability](secrets-manager-alternating-users-high-availability) and needs [credentials for a `superuser` in another secret](secrets-manager-alternating-users-needs-superuser). In a VPC without internet access, use [Secrets Manager service private endpoints within your VPC](secrets-manager-rotation-private-vpc-use-endpoint); a NAT gateway [exposes your VPC to more risk](secrets-manager-rotation-nat-gateway-more-risk). A secret can be replicated to other Regions, and the rotated value [propagates to all of the associated replica secrets](secrets-manager-rotation-propagates-to-replicas); in a disaster you promote the replica (secrets-manager-promote-replica-for-dr).",
+        "say_it": "The short answer is: rotation changes the password on a schedule. The thing to watch is how the application reconnects.",
+        "stop_and_answer": "Amazon RDS manages the master user password of a database in Secrets Manager. The team's rotation Lambda function from last year is still deployed in the account. When the secret rotates, does Secrets Manager call that function?",
+        "answer": "No. [With managed rotation](secrets-manager-managed-rotation-no-lambda), the managing service rotates the secret, and no Lambda function is used. (Do not link the display that holds a contraction: L803.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+      "heading": "Parameter Store stores configuration and encrypted values but does not rotate them",
+      "bullets": ["1.2.K1", "2.1.K2"],
+      "facts": [
+        "parameter-store-what-it-is",
+        "parameter-store-hierarchy-forward-slashes",
+        "parameter-store-three-parameter-types",
+        "parameter-store-no-sensitive-in-string",
+        "parameter-store-securestring-kms-keys",
+        "parameter-store-with-decryption",
+        "parameter-store-securestring-needs-kms-decrypt",
+        "parameter-store-throughput-get-default",
+        "parameter-store-high-throughput-extra-cost",
+        "parameter-store-price-advanced-parameter",
+        "parameter-store-tier-max-value-size",
+        "parameter-store-tier-max-parameters",
+        "parameter-store-standard-upgradeable-not-downgradeable",
+        "parameter-store-standard-free-with-restrictions",
+        "parameter-store-vs-secrets-manager-rotation-row",
+        "parameter-store-reference-secrets-manager-prefix",
+        "parameter-store-policies-advanced-only",
+        "parameter-store-policy-types",
+        "parameter-store-sharing-advanced-ram",
+        "parameter-store-change-cross-account-sharing-2024"
+      ],
+      "minutes": 4,
+      "route": "pass",
+      "words_all_in": 300,
+      "status": "write",
+      "task": "secrets-certificates-t01",
+      "plan": {
+        "problem": "Not every value is a secret. An AMI ID, an endpoint or a feature flag changes rarely and many readers need it. Parameter Store is [a centralized configuration data store](parameter-store-what-it-is) for [named values called parameters](parameter-store-what-it-is).",
+        "trace": [
+          "**Name.** A name can hold a path that you [define by using forward slashes](parameter-store-hierarchy-forward-slashes), such as /prod/db/host, so one call can read a whole branch.",
+          "**Type.** There are [three types of parameters](parameter-store-three-parameter-types): String, StringList and SecureString; a sensitive value goes only into a SecureString (parameter-store-no-sensitive-in-string).",
+          "**Encrypt.** A SecureString value is encrypted with a KMS key, by default the [AWS managed key that Systems Manager automatically creates](parameter-store-securestring-kms-keys), aws/ssm.",
+          "**Read.** GetParameter returns the value encrypted unless the reader sets WithDecryption ([set the `WithDecryption` parameter of `GetParameter` to `true`](parameter-store-with-decryption)), and the reader also needs kms:Decrypt on the key (parameter-store-securestring-needs-kms-decrypt). Reads share [40 TPS](parameter-store-throughput-get-default) by default; more needs higher throughput, [for an additional cost](parameter-store-high-throughput-extra-cost)."
+        ],
+        "table": "| Question | Standard parameter | Advanced parameter |: Storage charge | [No additional charge](parameter-store-price-advanced-parameter) | [$0.05 per advanced parameter per month](parameter-store-price-advanced-parameter) |; Largest value | [4 KB](parameter-store-tier-max-value-size) | [8 KB](parameter-store-tier-max-value-size) |; Parameters per account and Region | [10,000](parameter-store-tier-max-parameters) | [100,000](parameter-store-tier-max-parameters) |; Change the tier later | Can become advanced | [Not downgradeable](parameter-store-standard-upgradeable-not-downgradeable) |. Do not put policies or sharing in the table: they are the Exam trap.",
+        "why": "Why two tiers? Most configuration is small and costs nothing to keep; the advanced tier offers [higher limits and extra features, at a cost](parameter-store-standard-free-with-restrictions).",
+        "exam_signal": "\"store configuration data such as AMI IDs at the LOWEST cost\" points to standard parameters. If the same stem says \"rotate\", the answer moves to Secrets Manager: rotation in Parameter Store is [None](parameter-store-vs-secrets-manager-rotation-row). A parameter can still point to a secret through the path [/aws/reference/secretsmanager/](parameter-store-reference-secrets-manager-prefix).",
+        "exam_trap": "secrets-certificates-trap-standard-tier-has-policies. A standard parameter cannot expire, warn or be shared: parameter policies such as Expiration and NoChangeNotification need you to [use the advanced parameters tier](parameter-store-policies-advanced-only), and to share a parameter through AWS RAM [it must be in the advanced parameter tier](parameter-store-sharing-advanced-ram). At most 60 words; ends with <!-- trap: secrets-certificates-trap-standard-tier-has-policies -->.",
+        "try_it": "> **Try it:** Store a SecureString parameter and read it with and without decryption. See [3-do.md](3-do.md). <!-- task: secrets-certificates-t01 -->",
+        "say_it": "The short answer is: Parameter Store keeps configuration, and SecureString encrypts a value. The thing to watch is that it does not rotate anything.",
+        "stop_and_answer": "A team stores a 6 KB JSON document of feature flags as a standard parameter, and PutParameter fails. What is the cheapest change that works?",
+        "answer": "Store it as an advanced parameter: a standard value can be at most [4 KB](parameter-store-tier-max-value-size) and an advanced value [8 KB](parameter-store-tier-max-value-size), for [$0.05 per advanced parameter per month](parameter-store-price-advanced-parameter)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains",
+      "heading": "ACM renews a DNS-validated certificate while it is in use and its record remains",
+      "bullets": ["1.3.S7", "1.3.S3"],
+      "facts": [
+        "acm-wa-cert-anti-patterns",
+        "acm-three-validation-methods",
+        "acm-dns-validation-recommended",
+        "acm-dns-cname-records",
+        "acm-http-validation-cloudfront-only",
+        "acm-dns-renewal-criteria",
+        "acm-renewal-keeps-arn-per-region",
+        "acm-faq-renewal-existing-connections-unaffected",
+        "acm-renewal-uses-same-method",
+        "acm-email-validation-needs-owner-action",
+        "acm-faq-private-renewal-ca-active",
+        "acm-faq-imported-no-managed-renewal",
+        "acm-reimport-keeps-arn",
+        "acm-approaching-expiration-event",
+        "acm-config-rule-expiration-check",
+        "acm-faq-remove-cname-stops-renewal"
+      ],
+      "minutes": 3,
+      "route": "pass",
+      "words_all_in": 250,
+      "status": "write",
+      "plan": {
+        "problem": "A certificate proves that a server owns a domain name, and every certificate expires. AWS lists [manual steps during the certificate deployment or renewal](acm-wa-cert-anti-patterns) as an anti-pattern.",
+        "trace": [
+          "**Request.** You ask ACM for a public certificate, and ACM must check that you [own or control all of the domain names](acm-three-validation-methods).",
+          "**Validate.** AWS says [We recommend using DNS validation over email validation](acm-dns-validation-recommended): you add a CNAME record [added to your DNS database only once](acm-dns-cname-records). HTTP validation is [only available through the CloudFront Distribution Tenants feature](acm-http-validation-cloudfront-only).",
+          "**Renew.** Renewal is automatic for a DNS-validated certificate when it is [currently in use by an AWS service](acm-dns-renewal-criteria) and its records are [present and accessible via public DNS](acm-dns-renewal-criteria). The [Amazon Resource Name (ARN) remains the same](acm-renewal-keeps-arn-per-region), and [existing connections are not affected](acm-faq-renewal-existing-connections-unaffected).",
+          "**Watch.** ACM sends [daily expiration events](acm-approaching-expiration-event), and the AWS Config rule acm-certificate-expiration-check finds certificates [marked for expiration](acm-config-rule-expiration-check)."
+        ],
+        "table": "| Certificate | Who renews it | What must stay true |: ACM public, DNS validation | ACM | in use, CNAME record in place |; ACM public, email validation | ACM, after the owner acts | the owner answers: certificates [require an action by the domain owner](acm-email-validation-needs-owner-action) |; ACM private | ACM | the CA [remains in the Active state](acm-faq-private-renewal-ca-active) |; Imported | You, by reimport | ACM [does not manage the renewal process](acm-faq-imported-no-managed-renewal) |.",
+        "why": "Why must the record stay? At each renewal ACM checks ownership again with [the same method that you chose earlier](acm-renewal-uses-same-method).",
+        "exam_signal": "\"renew certificates automatically\" points to an ACM-issued certificate with DNS validation. \"a certificate from a third-party certificate authority\" points to an imported certificate: you renew it and reimport it, which keeps the ARN ([This action preserves the certificate's association](acm-reimport-keeps-arn)).",
+        "say_it": "The short answer is: ACM renews the certificates it issues. The thing to watch is the DNS validation record.",
+        "stop_and_answer": "A team cleans up its DNS zone and deletes the CNAME records that ACM created two years ago. The certificate is on a load balancer. What happens at the next renewal?",
+        "answer": "ACM [cannot issue or renew certificates](acm-faq-remove-cname-stops-renewal) for the domain with DNS validation [if you remove the CNAME record](acm-faq-remove-cname-stops-renewal); add the record back before the certificate expires."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1",
+      "heading": "ACM certificates are Regional and CloudFront reads them only from us-east-1",
+      "bullets": ["1.3.S3"],
+      "facts": [
+        "acm-certificates-regional",
+        "acm-faq-certificate-same-region-as-resource",
+        "acm-cloudfront-us-east-1",
+        "acm-cloudfront-origin-certificate-any-region",
+        "acm-elb-deploys-on-load-balancer",
+        "acm-alb-https-listener-default-certificate",
+        "acm-api-gateway-custom-domain",
+        "acm-cname-works-any-region",
+        "acm-ec2-needs-nitro-enclave",
+        "acm-exportable-charged",
+        "acm-exportable-use-anywhere",
+        "acm-exportable-you-deploy",
+        "acm-private-needs-existing-private-ca",
+        "acm-private-ca-not-public",
+        "acm-faq-private-ca-monthly-fee",
+        "acm-faq-free-with-integrated-services"
+      ],
+      "minutes": 4,
+      "route": "pass",
+      "words_all_in": 300,
+      "status": "write",
+      "pending": "fr-0034: the Region of an ACM certificate for an API Gateway edge-optimized and a Regional custom domain name. Until it is filled, the API Gateway row says only that a custom domain name needs a certificate that [You can use ACM to generate or import](acm-api-gateway-custom-domain), with no Region claim.",
+      "plan": {
+        "problem": "A certificate is useful only where a TLS connection ends, and [Certificates in ACM are regional resources](acm-certificates-regional). So the question is always: where does TLS end, and in which Region?",
+        "trace": [
+          "**Viewer to CloudFront.** The certificate must be requested or imported in [US East (N. Virginia)](acm-cloudfront-us-east-1); ACM then has it [distributed to all the geographic locations](acm-cloudfront-us-east-1) of the distribution.",
+          "**CloudFront to the load balancer.** The origin's certificate stays in the load balancer's Region: you can [import the certificate in any AWS Region](acm-cloudfront-origin-certificate-any-region) for the origin. An HTTPS listener needs one default certificate ([you must specify exactly one certificate](acm-alb-https-listener-default-certificate)), and more names are served through SNI.",
+          "**Custom API domain.** API Gateway needs a certificate for a custom domain name, and [You can use ACM to generate or import](acm-api-gateway-custom-domain) it (Region: pending fr-0034).",
+          "**Many Regions.** Two load balancers in two Regions need two certificates: [You cannot copy a certificate between regions](acm-certificates-regional), but the [CNAME validation token works for any AWS Region](acm-cname-works-any-region)."
+        ],
+        "table": "| Where TLS ends | Region of the certificate |: CloudFront distribution | [US East (N. Virginia)](acm-cloudfront-us-east-1) |; Application Load Balancer or CloudFront origin | the Region of the load balancer ([must be in the same Region](acm-faq-certificate-same-region-as-resource)) |; API Gateway custom domain | pending fr-0034: leave the row out until it is filled |. Do not add an EC2 row: EC2 is the Exam trap.",
+        "why": "Why is CloudFront different? CloudFront is one global service, so it reads certificates from one Region: [The only exception is Amazon CloudFront](acm-faq-certificate-same-region-as-resource).",
+        "exam_signal": "\"HTTPS for a CloudFront distribution with the company's domain name\" points to an ACM certificate in US East (N. Virginia), whatever the Region of the origin (acm-cloudfront-us-east-1).",
+        "exam_trap": "secrets-certificates-trap-free-certificate-on-instance. The free ACM public certificate does not go onto the web server of an EC2 instance: associating it directly with an instance [requires a Nitro Enclave](acm-ec2-needs-nitro-enclave). End TLS on a load balancer, or pay for an exportable certificate ([You are subject to an additional charge](acm-exportable-charged)). At most 60 words; ends with <!-- trap: secrets-certificates-trap-free-certificate-on-instance -->.",
+        "go_deeper": "Go deeper: exportable and private certificates (at most 100 words). An exportable public certificate can be deployed [beyond integrated AWS services](acm-exportable-use-anywhere), on EC2 instances, containers or on-premises hosts; ACM [manages renewals and sends notifications](acm-exportable-you-deploy), but [You must manage the deployment process](acm-exportable-you-deploy). A private certificate comes from [an existing private CA](acm-private-needs-existing-private-ca) in AWS Private CA; it is [not publicly trusted](acm-private-ca-not-public), and the CA has [a monthly fee](acm-faq-private-ca-monthly-fee). Certificates used with integrated services through ACM [are free](acm-faq-free-with-integrated-services).",
+        "say_it": "The short answer is: put the certificate where TLS ends, in that Region. The thing to watch is CloudFront, which uses us-east-1.",
+        "stop_and_answer": "A company serves its site from an Application Load Balancer in US West (Oregon) behind CloudFront, with HTTPS on both connections. How many ACM certificates does it need, and in which Regions?",
+        "answer": "Two: one in [US East (N. Virginia)](acm-cloudfront-us-east-1) for CloudFront, and one in US West (Oregon) for the load balancer, because you can [import the certificate in any AWS Region](acm-cloudfront-origin-certificate-any-region) for the origin."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "numbers-that-decide-answers",
+      "heading": "Numbers that decide answers",
+      "bullets": [],
+      "facts": [
+        "secrets-manager-recovery-window-range",
+        "secrets-manager-rotation-shortest-and-longest",
+        "parameter-store-tier-max-value-size",
+        "parameter-store-tier-max-parameters",
+        "parameter-store-throughput-get-default",
+        "secrets-manager-quota-secret-value-size",
+        "secrets-manager-rds-managed-rotation-default",
+        "acm-public-certificate-validity",
+        "acm-public-certificate-renewal-window",
+        "acm-change-email-to-dns-switch-2026"
+      ],
+      "minutes": 2,
+      "status": "write",
+      "plan": "A-list and B-list from numbers below; then the one not-examinable Changed recently entry directly under the B-list (changed_recently.deep_under_b_list)."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "decision-record",
+      "heading": "Decision record",
+      "bullets": ["1.2.K1", "1.3.S7"],
+      "facts": [
+        "secrets-manager-pay-per-secret-and-call",
+        "parameter-store-vs-secrets-manager-rotation-row",
+        "secrets-manager-rotation-without-redeploy",
+        "secrets-manager-faq-rotation-open-connections"
+      ],
+      "minutes": 2,
+      "status": "write",
+      "plan": "See decision_record. The before and after diagrams sit in the first How-it-works subsection, not here: the medium Decision record holds at most 150 words, and two embeds would not fit."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "faq-quick-fire",
+      "heading": "FAQ quick-fire",
+      "bullets": ["1.3.S7", "1.3.S3"],
+      "facts": [
+        "secrets-manager-faq-rotate-schedule-or-on-demand",
+        "secrets-manager-faq-custom-rotation-lambda",
+        "acm-faq-free-with-integrated-services",
+        "acm-faq-public-cert-internal-load-balancer",
+        "acm-faq-www-and-apex-need-both-names"
+      ],
+      "minutes": 4,
+      "status": "write",
+      "plan": "Five items from faq below."
+    }
+  ],
+  "traps": [
+    {
+      "id": "secrets-certificates-trap-parameter-store-rotates",
+      "belief": "A SecureString parameter in Parameter Store can rotate a database password automatically.",
+      "truth": "Parameter Store does not rotate stored secrets; credential rotation is None in Parameter Store and automatic in Secrets Manager.",
+      "facts": ["parameter-store-no-automatic-rotation", "parameter-store-vs-secrets-manager-rotation-row"],
+      "where": "1-fast.md#signals-and-traps (Traps list)"
+    },
+    {
+      "id": "secrets-certificates-trap-cloudfront-certificate-any-region",
+      "belief": "CloudFront can use an ACM certificate from the Region of its origin or load balancer.",
+      "truth": "A certificate for CloudFront must be requested or imported in US East (N. Virginia); ACM certificates are Regional and cannot be copied between Regions.",
+      "facts": ["acm-cloudfront-us-east-1", "acm-certificates-regional"],
+      "where": "1-fast.md#signals-and-traps (Traps list)"
+    },
+    {
+      "id": "secrets-certificates-trap-acm-renews-everything",
+      "belief": "ACM renews every certificate it holds by itself, imported certificates too.",
+      "truth": "ACM does not manage the renewal of imported certificates, and an email-validated certificate needs an action by the domain owner.",
+      "facts": ["acm-faq-imported-no-managed-renewal", "acm-email-validation-needs-owner-action", "acm-renewal-eligibility"],
+      "where": "1-fast.md#signals-and-traps (Traps list)"
+    },
+    {
+      "id": "secrets-certificates-trap-resource-policy-enough-cross-account",
+      "belief": "A resource policy on the secret is enough to let another AWS account read it.",
+      "truth": "Cross-account reads need an allow in a resource policy and in an identity policy, and the secret must use a KMS key that you create, because the AWS managed key cannot be used across accounts.",
+      "facts": ["secrets-manager-cross-account-needs-both-policies", "secrets-manager-cross-account-no-aws-managed-key"],
+      "where": "2-deep.md#cross-account-access-to-a-secret-needs-a-customer-managed-kms-key (Exam trap)"
+    },
+    {
+      "id": "secrets-certificates-trap-rotation-needs-redeploy",
+      "belief": "When a database password rotates, every application that uses it must be updated and redeployed, and open connections drop.",
+      "truth": "An application that reads the secret at run time needs no update, and an open database connection is not re-authenticated; only values injected at start, as in Amazon ECS, need a new deployment.",
+      "facts": ["secrets-manager-rotation-without-redeploy", "secrets-manager-faq-rotation-open-connections", "secrets-manager-ecs-redeploy-for-new-value"],
+      "where": "2-deep.md#automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment (Exam trap)"
+    },
+    {
+      "id": "secrets-certificates-trap-free-certificate-on-instance",
+      "belief": "The free ACM public certificate can be installed on the web server of an EC2 instance.",
+      "truth": "Associating an ACM certificate directly with an instance requires a Nitro Enclave; end TLS on an integrated service such as a load balancer, or use an exportable certificate, which has an additional charge.",
+      "facts": ["acm-ec2-needs-nitro-enclave", "acm-elb-deploys-on-load-balancer", "acm-exportable-charged"],
+      "where": "2-deep.md#acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1 (Exam trap)"
+    },
+    {
+      "id": "secrets-certificates-trap-standard-tier-has-policies",
+      "belief": "A standard parameter can have an expiration policy or be shared with another account.",
+      "truth": "Parameter policies and sharing through AWS RAM need the advanced tier, and an advanced parameter cannot go back to standard.",
+      "facts": ["parameter-store-policies-advanced-only", "parameter-store-sharing-advanced-ram", "parameter-store-standard-upgradeable-not-downgradeable"],
+      "where": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them (Exam trap)"
+    }
+  ],
+  "foreign_traps": {
+    "note": "Trap ids of chapter 03 that question writers may cite when the belief fits exactly (lint.traps() is global).",
+    "ids": ["iam-trap-cross-account-one-policy", "iam-trap-keys-on-instance"]
+  },
+  "compare_tables": [
+    {
+      "title": "Secrets Manager or Parameter Store",
+      "section": "1-fast.md#choose-it-or-not",
+      "neighbours": ["AWS Secrets Manager", "Parameter Store"],
+      "rows": [
+        "Does it rotate credentials? | [Automatic, with native database integrations](parameter-store-vs-secrets-manager-rotation-row) | [None](parameter-store-vs-secrets-manager-rotation-row)",
+        "What does it cost? | [Billed per secret per month](parameter-store-vs-secrets-manager-cost-row) and per API call | [Standard tier free](parameter-store-vs-secrets-manager-cost-row); advanced tier billed",
+        "Is the value encrypted? | [AWS KMS encryption at rest](parameter-store-vs-secrets-manager-encryption-row) | [Optional with `SecureString` and AWS KMS](parameter-store-vs-secrets-manager-encryption-row)",
+        "Can another account read it? | Yes, through a resource policy ([users or roles in other AWS accounts](secrets-manager-resource-policy-who-and-what)) | Advanced tier only, through AWS RAM ([it must be in the advanced parameter tier](parameter-store-sharing-advanced-ram))"
+      ],
+      "column_order": "Question | Secrets Manager | Parameter Store",
+      "deciding_question": "Must the value change automatically, or is it configuration that a person changes?"
+    },
+    {
+      "title": "Public, imported or private certificate",
+      "section": "1-fast.md#choose-it-or-not",
+      "neighbours": ["ACM public certificate", "imported certificate", "ACM private certificate"],
+      "rows": [
+        "Who trusts it? | Browsers: they [trust public certificates automatically by default](acm-faq-public-vs-private-trust) | Whoever trusts its third-party issuer | Only clients that you configure: you [must explicitly configure applications to trust](acm-faq-public-vs-private-trust) it",
+        "Who renews it? | ACM: [ACM managed renewal (automatic)](acm-option-renewal-row) | You: ACM [does not manage the renewal process](acm-faq-imported-no-managed-renewal) | ACM, while the CA [remains in the Active state](acm-faq-private-renewal-ca-active)",
+        "When do you choose it? | Names on the public internet ([resources on the public Internet](acm-faq-public-internet-private-networks)) | A certificate [from a third-party certificate authority (CA)](acm-import-reasons) | Names on private networks ([do the same for private networks](acm-faq-public-internet-private-networks))"
+      ],
+      "column_order": "Question | ACM public | Imported | ACM private",
+      "deciding_question": "Who must trust the certificate, and who will renew it?"
+    }
+  ],
+  "signals": [
+    {
+      "stem": "rotate the database password automatically",
+      "think": "AWS Secrets Manager with rotation",
+      "because": "rotation is [Automatic, with native database integrations](parameter-store-vs-secrets-manager-rotation-row)",
+      "fact": "parameter-store-vs-secrets-manager-rotation-row",
+      "but_not_if": "the value is plain configuration that people change by hand: a Parameter Store standard parameter"
+    },
+    {
+      "stem": "hard-coded database credentials in the application",
+      "think": "move them to Secrets Manager, then rotate",
+      "because": "AWS says to move them and [then rotate them immediately](secrets-manager-move-hardcoded-then-rotate)",
+      "fact": "secrets-manager-move-hardcoded-then-rotate",
+      "but_not_if": "the hard-coded value is an AWS access key: an IAM role for the workload"
+    },
+    {
+      "stem": "a function in another AWS account must read the secret",
+      "think": "resource policy plus a customer managed KMS key",
+      "because": "the secret must use [a KMS key that you create](secrets-manager-cross-account-no-aws-managed-key)",
+      "fact": "secrets-manager-cross-account-no-aws-managed-key",
+      "but_not_if": "the reader is in the same account: an identity-based policy is enough"
+    },
+    {
+      "stem": "HTTPS for a CloudFront distribution with the company's domain name",
+      "think": "ACM certificate in US East (N. Virginia)",
+      "because": "CloudFront uses certificates in [US East (N. Virginia)](acm-cloudfront-us-east-1)",
+      "fact": "acm-cloudfront-us-east-1",
+      "but_not_if": "the certificate is for the load balancer origin: request it in the load balancer's Region"
+    },
+    {
+      "stem": "certificates must renew without manual work",
+      "think": "ACM certificate with DNS validation",
+      "because": "ACM [automatically renews DNS-validated certificates](acm-dns-validation-recommended)",
+      "fact": "acm-dns-validation-recommended",
+      "but_not_if": "a third-party certificate authority must issue it: import it and reimport each renewal"
+    },
+    {
+      "stem": "TLS between internal services that only the company's clients trust",
+      "think": "ACM private certificate from AWS Private CA",
+      "because": "for a private certificate you [must explicitly configure applications to trust](acm-faq-public-vs-private-trust) it",
+      "fact": "acm-faq-public-vs-private-trust",
+      "but_not_if": "browsers on the public internet connect: an ACM public certificate"
+    }
+  ],
+  "words_table": ["secret", "parameter", "TLS certificate", "domain validation"],
+  "numbers": {
+    "a_list": [
+      {"display": "from 7 to 30", "fact": "secrets-manager-recovery-window-range", "what": "Days in the recovery window of a deleted secret", "why": "A deleted secret can be restored until the window ends", "card": "secrets-certificates-c003", "note": "Keep the unit word in column 2 so that no number with a unit stands outside the link."},
+      {"display": "every four hours", "fact": "secrets-manager-rotation-shortest-and-longest", "what": "Shortest rotation interval of a secret", "why": "Rotation cannot run more often than this", "card": "secrets-certificates-c005"},
+      {"display": "4 KB", "fact": "parameter-store-tier-max-value-size", "what": "Largest value of a standard parameter", "why": "A larger value needs the advanced tier, up to [8 KB]", "card": "secrets-certificates-c006"},
+      {"display": "10,000", "fact": "parameter-store-tier-max-parameters", "what": "Standard parameters per account and Region", "why": "More parameters need the advanced tier", "card": "secrets-certificates-c007"},
+      {"display": "40 TPS", "fact": "parameter-store-throughput-get-default", "what": "Default shared throughput of the Get parameter calls", "why": "Throttled reads need higher throughput, which costs extra", "card": "secrets-certificates-c008"}
+    ],
+    "b_list": [
+      {"display": "65,536 Bytes", "fact": "secrets-manager-quota-secret-value-size", "what": "Largest secret value"},
+      {"display": "every seven days", "fact": "secrets-manager-rds-managed-rotation-default", "what": "Default rotation of a master password that RDS manages"},
+      {"display": "198 days", "fact": "acm-public-certificate-validity", "what": "Validity of an ACM public certificate (changed 2026-02-18)"},
+      {"display": "45 days before expiration", "fact": "acm-public-certificate-renewal-window", "what": "When ACM starts to renew a public certificate (changed 2026-02-18)"}
+    ],
+    "rule": "No row may decide a question key if its fact changed after 2024-10 (198 days, 45 days before expiration): those two stay B-list only."
+  },
+  "changed_recently": {
+    "fast": [
+      {
+        "date": "2025-06-17",
+        "what": "ACM public certificates outside integrated services",
+        "old": "[could only be used with integrated AWS services](acm-change-exportable-public-certificates-2025)",
+        "now": "you can [issue public certificates that you can export](acm-change-exportable-public-certificates-2025) and use them on EC2 instances, containers or on-premises hosts. Link the change fact first, so that the date check reads 2025-06-17. Pending fr-0035 for that display; fallback until it is filled: 'Since [2025-06-17](acm-change-exportable-public-certificates-2025), ACM issues exportable public certificates for use [beyond integrated AWS services](acm-exportable-use-anywhere).'",
+        "exam_expects": "older questions assume that an ACM public certificate cannot leave AWS services; prefer the load balancer answer, which is right under both.",
+        "fact_now": "acm-change-exportable-public-certificates-2025",
+        "status": "examinable"
+      },
+      {
+        "date": "2026-02-18",
+        "what": "Validity of ACM public certificates",
+        "old": "[395 days](acm-public-certificate-validity)",
+        "now": "[198 days](acm-public-certificate-validity)",
+        "exam_expects": "older questions can say 13 months; no answer should depend on the number.",
+        "fact_now": "acm-public-certificate-validity",
+        "status": "examinable"
+      }
+    ],
+    "deep_under_b_list": [
+      {
+        "date": "2026-08-13",
+        "what": "Switching an existing certificate from email to DNS validation",
+        "old": "[you cannot switch to validating it with DNS](acm-change-email-to-dns-switch-2026)",
+        "now": "an existing certificate can switch, with [up to 72 hours](acm-change-email-to-dns-switch-2026) to add the DNS records, and keeps its ARN",
+        "exam_expects": "an email-validated certificate cannot switch. Do not let this number decide an answer.",
+        "fact_now": "acm-change-email-to-dns-switch-2026",
+        "status": "not examinable yet"
+      }
+    ],
+    "considered_not_used": [
+      {"fact": "parameter-store-change-cross-account-sharing-2024", "why": "examinable and important (older questions say parameters cannot be shared), but the fact has no changed.date, so a Changed recently entry fails L107; the Exam trap and the compare table teach sharing as current truth"},
+      {"fact": "acm-change-validity-198-days-2026", "why": "the entry links acm-public-certificate-validity, which holds both values and the same date"},
+      {"fact": "acm-public-certificate-renewal-window", "why": "B-list row; the fast section has room for two entries"},
+      {"fact": "secrets-manager-change-sla-2023", "why": "no exam answer depends on the SLA percentage"},
+      {"fact": "acm-change-ecdsa-2022", "why": "key algorithms decide no SAA answer"},
+      {"fact": "acm-change-http-validation-cloudfront-2025", "why": "taught as current truth in the renewal subsection (HTTP validation through CloudFront)"},
+      {"fact": "acm-change-ct-logging-optout-removed-2026", "why": "low exam weight"},
+      {"fact": "acm-change-acme-2026", "why": "low exam weight; ACME certificates cannot be bound to integrated services"},
+      {"fact": "secrets-manager-change-managed-external-secrets-2025", "why": "low exam weight"},
+      {"fact": "secrets-manager-change-update-notifications-2026", "why": "not examinable yet; the Numbers section has room for one entry under the B-list"},
+      {"fact": "secrets-manager-change-describesecret-rate-2025", "why": "no exam answer depends on the DescribeSecret rate"},
+      {"fact": "secrets-manager-change-cost-allocation-tags-2025", "why": "low exam weight"}
+    ]
+  },
+  "faq": [
+    {"n": 1, "q": "Can you rotate a secret on demand, not only on a schedule?", "answer": "Yes", "fact": "secrets-manager-faq-rotate-schedule-or-on-demand", "quote": "You can rotate passwords, on a schedule or on demand, for supported database types hosted on AWS, without a risk of impacting applications.", "url": "https://aws.amazon.com/secrets-manager/faqs/"},
+    {"n": 2, "q": "Can Secrets Manager rotate the password of an Oracle database on Amazon EC2?", "answer": "Yes, with a modified sample Lambda function", "fact": "secrets-manager-faq-custom-rotation-lambda", "quote": "You can extend Secrets Manager to rotate other secrets, such as credentials for Oracle databases hosted on EC2 or custom applications generating tokens, by modifying sample AWS Lambda functions available in the Secrets Manager documentation.", "url": "https://aws.amazon.com/secrets-manager/faqs/"},
+    {"n": 3, "q": "Do you pay for an ACM public certificate that you use on a load balancer?", "answer": "No", "fact": "acm-faq-free-with-integrated-services", "quote": "Public and private certificates provisioned through AWS Certificate Manager for use with ACM-integrated services, such as Elastic Load Balancing, Amazon CloudFront, and Amazon API Gateway services are free.", "url": "https://aws.amazon.com/certificate-manager/faqs/"},
+    {"n": 4, "q": "Can an internal load balancer with no internet access use a public ACM certificate?", "answer": "Yes", "fact": "acm-faq-public-cert-internal-load-balancer", "quote": "Yes, but you can also consider using AWS Private CA to issue private certificates that ACM can renew without validation.", "url": "https://aws.amazon.com/certificate-manager/faqs/"},
+    {"n": 5, "q": "Does a certificate for www.example.com also work for example.com?", "answer": "No", "fact": "acm-faq-www-and-apex-need-both-names", "quote": "If you want your site to be referenced by both domain names (www.example.com and example.com), you must request a certificate that includes both names.", "url": "https://aws.amazon.com/certificate-manager/faqs/"}
+  ],
+  "story": {
+    "stage": 3,
+    "month": 18,
+    "trigger": "The questionnaire asks how often database passwords change. The honest answer is never: one password has been in a configuration file from stage 1.",
+    "problem": "Callvale stores the database password in a configuration file on each instance. The password has never changed. The bank requires rotation every 30 days with no downtime and no new deployment. Callvale also wants TLS certificates that renew without manual work.",
+    "state_before": "Stage 3 starts from the end of stage 2: web instances in an Auto Scaling group behind an Application Load Balancer, workers, Amazon RDS for PostgreSQL with Multi-AZ, CloudFront. ACM certificates are already on the load balancer and CloudFront (chapters 14 and 15). Aurora and Fargate arrive later (month 20): do not show them.",
+    "uses_numbers": ["secret_rotation_days"],
+    "rules": "Question stems never name Callvale. The story never teaches a fact. In Startup example callouts and the Decision record, the only number is 30 (secret_rotation_days): write no month or stage digit there (W903). Chen exists at stage 3 but has no line in this chapter."
+  },
+  "decision_record": {
+    "context": "The bank's questionnaire asks how often database passwords change. The honest answer is never: one password has sat in a configuration file on each instance since the first customers arrived.",
+    "requirement": "The database password must rotate every 30 days with no downtime and no new deployment, with the LEAST operational overhead.",
+    "options": ["An encrypted file in Amazon S3.", "Parameter Store for everything.", "Secrets Manager for database credentials, Parameter Store for plain configuration."],
+    "decision": "Secrets Manager with automatic rotation for database credentials. Parameter Store for plain configuration.",
+    "tradeoff": "Secrets Manager adds a cost for each secret: you pay for the [number of secrets stored and API calls made](secrets-manager-pay-per-secret-and-call). The application must read the secret at run time and reconnect after a rotation.",
+    "words_target": 130,
+    "diagrams": "secrets-certificates-before and secrets-certificates-after sit in 2-deep.md#secrets-manager-replaces-a-stored-password-with-a-call-at-run-time"
+  },
+  "devices": {
+    "exam_trap_callouts_2_deep": {
+      "cross-account-access-to-a-secret-needs-a-customer-managed-kms-key": "secrets-certificates-trap-resource-policy-enough-cross-account",
+      "automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment": "secrets-certificates-trap-rotation-needs-redeploy",
+      "parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them": "secrets-certificates-trap-standard-tier-has-policies",
+      "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1": "secrets-certificates-trap-free-certificate-on-instance"
+    },
+    "exam_trap_form": "> **Exam trap:** <wrong belief in plain words>. <truth with its fact link>. <!-- trap: <id> -->  Each one adds a new case and never restates the table above it.",
+    "go_deeper": [
+      "automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment: two strategies, private networks and replicas",
+      "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1: exportable and private certificates"
+    ],
+    "spot_the_bug": ["cross-account-access-to-a-secret-needs-a-customer-managed-kms-key: an aws:SourceIp Deny in the secret's resource policy that breaks rotation"],
+    "try_it": ["parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them: secrets-certificates-t01"],
+    "pass_route_h3": [
+      "secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+      "parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+      "acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains",
+      "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1"
+    ],
+    "xref_markers": [
+      "06 KMS key policies and key rotation (cross-account subsection; say once that KMS key rotation is a different thing from secret rotation)",
+      "11 interface endpoints and PrivateLink (rotation Go deeper)",
+      "14 HTTPS listener and SNI (Region subsection)",
+      "15 CloudFront custom domain names (Region subsection)",
+      "26 RDS master user password (rotation subsection)",
+      "33 API Gateway custom domain names (Region subsection)",
+      "38 Systems Manager (Parameter Store subsection: Parameter Store is a capability of Systems Manager)"
+    ],
+    "display_rule": "Never link a display that holds a contraction (doesn't, don't, can't, aren't, won't): L803 reads link text as prose. Use the other display of the fact, or write the sentence without an absolute word. Known cases: parameter-store-no-automatic-rotation (use the rotation-row [None]), secrets-manager-cross-account-no-aws-managed-key (use [a KMS key that you create]), secrets-manager-managed-rotation-no-lambda (use [With managed rotation]), parameter-store-only-value-encrypted (no clean display: describe it without 'only')."
+  },
+  "question_slots": [
+    {
+      "slot": 1,
+      "plan_id": "secrets-certificates-q001",
+      "bullet": "2.1.K2",
+      "concept": "secrets-manager-vs-parameter-store",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "qualifier": "MOST cost-effective",
+      "exam_english": ["ee-rotate", "ee-most-cost-effective", "ee-mandates"],
+      "section": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+      "twin": "strict twin A of slot 6: the stems differ in one phrase, the four option texts are identical, the key moves",
+      "changed_phrase": "a database password that company policy requires to change automatically every 30 days",
+      "key": "Store the value as a secret in AWS Secrets Manager and turn on automatic rotation.",
+      "distractors": [
+        {"text_idea": "Store the value as a standard String parameter in Parameter Store.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-parameter-store-rotates"},
+        {"text_idea": "Store the value as an advanced SecureString parameter in Parameter Store with a parameter policy.", "type": "sibling-confusion", "trap": "secrets-certificates-trap-parameter-store-rotates"},
+        {"text_idea": "Store the value in an encrypted object in Amazon S3 that the application downloads at startup.", "type": "different-problem", "misconception": "An encrypted file is the same as a managed secret."}
+      ],
+      "facts": ["parameter-store-vs-secrets-manager-rotation-row", "parameter-store-no-automatic-rotation", "parameter-store-vs-secrets-manager-cost-row"],
+      "on_trap": true
+    },
+    {
+      "slot": 2,
+      "plan_id": "secrets-certificates-q002",
+      "bullet": "1.3.S3",
+      "concept": "cloudfront-certificate-region",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "qualifier": "LEAST operational overhead",
+      "exam_english": ["ee-users-around-the-world", "ee-in-transit", "ee-least-operational-overhead"],
+      "section": "2-deep.md#acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1",
+      "scenario": "An Application Load Balancer in eu-west-1 has an ACM certificate; the company adds CloudFront with its own domain name and HTTPS for viewers.",
+      "key": "Request a public certificate in ACM in US East (N. Virginia) and associate it with the distribution.",
+      "distractors": [
+        {"text_idea": "Select the load balancer's certificate from eu-west-1 in the distribution settings.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-cloudfront-certificate-any-region"},
+        {"text_idea": "Copy the eu-west-1 certificate to US East (N. Virginia) with ACM.", "type": "impossible-feature", "trap": "secrets-certificates-trap-cloudfront-certificate-any-region"},
+        {"text_idea": "Buy a certificate from a third-party CA and upload it to IAM for CloudFront.", "type": "violates-qualifier", "trap": "secrets-certificates-trap-acm-renews-everything"}
+      ],
+      "facts": ["acm-cloudfront-us-east-1", "acm-certificates-regional", "acm-faq-imported-no-managed-renewal", "acm-faq-free-with-integrated-services"],
+      "on_trap": true
+    },
+    {
+      "slot": 3,
+      "plan_id": "secrets-certificates-q003",
+      "bullet": "1.2.K1",
+      "concept": "runtime-retrieval-no-redeploy",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "qualifier": "LEAST operational overhead",
+      "exam_english": ["ee-minimal-code-changes", "ee-least-operational-overhead", "ee-rotate"],
+      "section": "2-deep.md#secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+      "worked": "the one think-aloud of this chapter (worked.steps, six steps; wrong_path false)",
+      "scenario": "An application on EC2 instances reads the database password from a file; a new rule says the password must rotate every 30 days without redeploying the application.",
+      "key": "Store the password in Secrets Manager, turn on rotation, and change the application to read the secret at run time with a cache.",
+      "distractors": [
+        {"text_idea": "Use Systems Manager Run Command each month to write a new password into the file on every instance and restart the application.", "type": "violates-qualifier", "trap": "secrets-certificates-trap-rotation-needs-redeploy"},
+        {"text_idea": "Store the password as a SecureString parameter and turn on automatic rotation for the parameter.", "type": "impossible-feature", "trap": "secrets-certificates-trap-parameter-store-rotates"},
+        {"text_idea": "Redeploy the application with a new password in its configuration every 30 days through a deployment pipeline.", "type": "violates-qualifier", "trap": "secrets-certificates-trap-rotation-needs-redeploy"}
+      ],
+      "facts": ["secrets-manager-runtime-call-replaces-hardcoded", "secrets-manager-rotation-without-redeploy", "secrets-manager-cache-cost-latency", "parameter-store-no-automatic-rotation"],
+      "on_trap": true
+    },
+    {
+      "slot": 4,
+      "plan_id": "secrets-certificates-q004",
+      "bullet": "1.2.K1",
+      "concept": "parameter-store-advanced-policies",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "qualifier": "LEAST operational overhead",
+      "exam_english": ["ee-least-operational-overhead", "ee-monitor"],
+      "section": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+      "scenario": "A team keeps an approved AMI ID in Parameter Store and must be notified when nobody has updated it for a set period.",
+      "key": "Use an advanced parameter with a NoChangeNotification policy and an EventBridge rule.",
+      "distractors": [
+        {"text_idea": "Attach a NoChangeNotification policy to the existing standard parameter.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-standard-tier-has-policies"},
+        {"text_idea": "Attach an Expiration policy to the existing standard parameter.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-standard-tier-has-policies"},
+        {"text_idea": "Run a scheduled Lambda function that reads the parameter history and sends a notification.", "type": "violates-qualifier", "misconception": "A notification on an unchanged value needs custom code."}
+      ],
+      "facts": ["parameter-store-nochange-notification", "parameter-store-policies-advanced-only", "parameter-store-policy-types", "parameter-store-eventbridge-change-events"],
+      "on_trap": true
+    },
+    {
+      "slot": 5,
+      "plan_id": "secrets-certificates-q005",
+      "bullet": "1.3.S7",
+      "concept": "imported-certificate-renewal",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "qualifier": "LEAST operational overhead",
+      "exam_english": ["ee-least-operational-overhead", "ee-currently"],
+      "section": "2-deep.md#acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains",
+      "scenario": "A load balancer uses a certificate from a third-party CA that the company imported into ACM; the certificate expires next month and the company must keep the same certificate provider.",
+      "key": "Get the renewed certificate from the CA and reimport it into the same ACM certificate ARN.",
+      "distractors": [
+        {"text_idea": "Wait for ACM managed renewal of the certificate.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-acm-renews-everything"},
+        {"text_idea": "Change the certificate's validation method to DNS so that ACM renews it.", "type": "impossible-feature", "trap": "secrets-certificates-trap-acm-renews-everything"},
+        {"text_idea": "Upload the renewed certificate to IAM and change every listener to use it.", "type": "violates-qualifier", "misconception": "IAM is the place to keep load balancer certificates."}
+      ],
+      "facts": ["acm-faq-imported-no-managed-renewal", "acm-reimport-keeps-arn", "acm-no-validation-private-or-imported", "acm-alb-certificate-from-acm-or-iam"],
+      "on_trap": true
+    },
+    {
+      "slot": 6,
+      "plan_id": "secrets-certificates-q006",
+      "bullet": "1.2.K1",
+      "concept": "secrets-manager-vs-parameter-store",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "qualifier": "MOST cost-effective",
+      "exam_english": ["ee-most-cost-effective", "ee-currently"],
+      "section": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+      "twin": "strict twin B of slot 1 (twin_of slot 1; at least three questions between them)",
+      "changed_phrase": "an application endpoint URL that the team updates by hand a few times each year",
+      "key": "Store the value as a standard String parameter in Parameter Store.",
+      "distractors": [
+        {"text_idea": "(same text as slot 1 key) Secrets Manager with automatic rotation.", "type": "violates-qualifier", "misconception": "Every value that an application reads at run time belongs in Secrets Manager."},
+        {"text_idea": "(same text as slot 1) advanced SecureString parameter with a parameter policy.", "type": "violates-qualifier", "misconception": "Production configuration needs the advanced tier."},
+        {"text_idea": "(same text as slot 1) encrypted object in Amazon S3.", "type": "different-problem", "misconception": "A file in S3 is the cheapest configuration store."}
+      ],
+      "facts": ["parameter-store-price-advanced-parameter", "parameter-store-vs-secrets-manager-cost-row", "parameter-store-what-it-is"],
+      "on_trap": false
+    },
+    {
+      "slot": 7,
+      "plan_id": "secrets-certificates-q007",
+      "bullet": "1.2.S3",
+      "concept": "cross-account-secret-kms",
+      "difficulty": 3,
+      "type": "multi",
+      "select": 2,
+      "layer": "extended",
+      "qualifier": "MOST secure",
+      "exam_english": ["ee-which-combination", "ee-select-two", "ee-most-secure"],
+      "section": "2-deep.md#cross-account-access-to-a-secret-needs-a-customer-managed-kms-key",
+      "scenario": "A Lambda function in account B must read a secret in account A that uses the AWS managed key aws/secretsmanager. State the side that is not tested: the function's role in account B already allows secretsmanager:GetSecretValue and kms:Decrypt on the secret and on any key in account A.",
+      "keys": ["Encrypt the secret with a customer managed key whose key policy allows the role in account B.", "Attach a resource policy to the secret that allows the role in account B to call GetSecretValue."],
+      "distractors": [
+        {"text_idea": "Add account B to the key policy of the AWS managed key aws/secretsmanager.", "type": "impossible-feature", "trap": "secrets-certificates-trap-resource-policy-enough-cross-account"},
+        {"text_idea": "Attach a resource policy that allows all of account B and keep the AWS managed key.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-resource-policy-enough-cross-account"},
+        {"text_idea": "Replicate the secret to account B.", "type": "sibling-confusion", "misconception": "Replication copies a secret to another account; it copies to other Regions."}
+      ],
+      "facts": ["secrets-manager-cross-account-no-aws-managed-key", "secrets-manager-cross-account-needs-both-policies", "secrets-manager-aws-managed-key-policy-fixed", "secrets-manager-replication-for-dr"],
+      "on_trap": true
+    },
+    {
+      "slot": 8,
+      "plan_id": "secrets-certificates-q008",
+      "bullet": "1.3.S3",
+      "concept": "tls-termination-acm-on-alb",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "qualifier": "LEAST operational overhead",
+      "exam_english": ["ee-internet-facing", "ee-in-transit", "ee-least-operational-overhead"],
+      "section": "2-deep.md#acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1",
+      "scenario": "An internet-facing web application runs on EC2 instances behind an Application Load Balancer; clients must use HTTPS, and certificates must renew automatically.",
+      "key": "Request an ACM public certificate and add it to an HTTPS listener on the load balancer.",
+      "distractors": [
+        {"text_idea": "Request an ACM public certificate and install it on the web server of each instance.", "type": "impossible-feature", "trap": "secrets-certificates-trap-free-certificate-on-instance"},
+        {"text_idea": "Issue an exportable ACM public certificate and install it on each instance with a script.", "type": "violates-qualifier", "trap": "secrets-certificates-trap-free-certificate-on-instance"},
+        {"text_idea": "Use a Network Load Balancer with TCP pass-through and self-signed certificates on the instances.", "type": "different-problem", "misconception": "Self-signed certificates are acceptable for public clients."}
+      ],
+      "facts": ["acm-elb-deploys-on-load-balancer", "acm-ec2-needs-nitro-enclave", "acm-exportable-charged", "acm-exportable-you-deploy", "acm-wa-cert-anti-patterns"],
+      "on_trap": true
+    },
+    {
+      "slot": 9,
+      "plan_id": "secrets-certificates-q009",
+      "bullet": "1.3.S7",
+      "concept": "acm-dns-validation-renewal",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "qualifier": "none",
+      "exam_english": ["ee-automate"],
+      "section": "2-deep.md#acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains",
+      "scenario": "A company hosts its domain in Route 53 and wants an ACM public certificate for its load balancer that renews automatically.",
+      "key": "Request the certificate with DNS validation and add the CNAME record that ACM provides.",
+      "distractors": [
+        {"text_idea": "Request the certificate with email validation.", "type": "wrong-configuration", "trap": "secrets-certificates-trap-acm-renews-everything"},
+        {"text_idea": "Request the certificate with HTTP validation.", "type": "keyword-bait", "misconception": "HTTP validation works for any service."},
+        {"text_idea": "Import a certificate from a third-party CA into ACM.", "type": "different-problem", "trap": "secrets-certificates-trap-acm-renews-everything"}
+      ],
+      "facts": ["acm-dns-validation-recommended", "acm-dns-cname-records", "acm-email-validation-needs-owner-action", "acm-http-validation-cloudfront-only", "acm-faq-imported-no-managed-renewal"],
+      "on_trap": true
+    },
+    {
+      "slot": 10,
+      "plan_id": "secrets-certificates-q010",
+      "bullet": "1.3.S7",
+      "concept": "rotation-network-access",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "qualifier": "MOST secure",
+      "exam_english": ["ee-privately", "ee-most-secure"],
+      "section": "2-deep.md#automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment",
+      "scenario": "A rotation Lambda function runs in private subnets of a VPC without internet access, next to the database; every rotation fails because the function cannot reach Secrets Manager; traffic must not traverse the internet.",
+      "key": "Create an interface VPC endpoint for Secrets Manager in the VPC.",
+      "distractors": [
+        {"text_idea": "Add a NAT gateway and a route to it from the function's subnets.", "type": "violates-qualifier", "misconception": "A NAT gateway is as private as an endpoint."},
+        {"text_idea": "Create a gateway VPC endpoint for Secrets Manager.", "type": "sibling-confusion", "misconception": "Gateway endpoints exist for every AWS service."},
+        {"text_idea": "Run the function outside the VPC so that it reaches the public endpoint.", "type": "wrong-configuration", "misconception": "The function needs no network path to the database."}
+      ],
+      "facts": ["secrets-manager-rotation-private-vpc-use-endpoint", "secrets-manager-rotation-nat-gateway-more-risk", "secrets-manager-rotation-function-same-vpc", "secrets-manager-interface-endpoint-privatelink", "vpc-blog-gateway-endpoints-no-transfer-interface-charged"],
+      "on_trap": false
+    },
+    {
+      "slot": 11,
+      "plan_id": "secrets-certificates-q011",
+      "bullet": "2.1.K2",
+      "concept": "secret-deletion-recovery",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "qualifier": "none",
+      "exam_english": ["ee-as-soon-as-possible"],
+      "section": "2-deep.md#secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+      "scenario": "An administrator deleted a secret yesterday with the default settings; the application now fails to connect.",
+      "key": "Restore the secret, because it is still in its recovery window.",
+      "distractors": [
+        {"text_idea": "Create a new secret with the same name and value.", "type": "wrong-configuration", "misconception": "A new secret with the same name keeps the old permissions."},
+        {"text_idea": "Restore the secret from an AWS Backup recovery point.", "type": "sibling-confusion", "misconception": "Secrets are restored from backups."},
+        {"text_idea": "Open an AWS Support case to recover the deleted secret.", "type": "different-problem", "misconception": "A deleted secret is gone at once."}
+      ],
+      "facts": ["secrets-manager-deletion-not-immediate", "secrets-manager-recover-during-window", "secrets-manager-recovery-window-default", "secrets-manager-recreated-secret-new-arn"],
+      "on_trap": false
+    },
+    {
+      "slot": 12,
+      "plan_id": "secrets-certificates-q012",
+      "bullet": "1.2.S3",
+      "concept": "secret-replication-dr",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "qualifier": "LEAST operational overhead",
+      "exam_english": ["ee-cross-region", "ee-least-operational-overhead", "ee-most-resilient"],
+      "section": "2-deep.md#automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment",
+      "scenario": "An application runs in a primary Region and a standby Region; the database password must be readable in the standby Region if the primary Region fails, and rotation must be managed in one place.",
+      "key": "Replicate the secret to the standby Region and promote the replica during a disaster.",
+      "distractors": [
+        {"text_idea": "Create a separate secret in each Region with its own rotation schedule.", "type": "violates-qualifier", "misconception": "Each Region needs its own rotation."},
+        {"text_idea": "Have the standby Region read the secret from the primary Region's endpoint.", "type": "wrong-configuration", "misconception": "A cross-Region read survives a Region failure."},
+        {"text_idea": "Store the password as an advanced parameter and share it through AWS RAM.", "type": "sibling-confusion", "misconception": "AWS RAM shares resources across Regions."}
+      ],
+      "facts": ["secrets-manager-replication-for-dr", "secrets-manager-rotation-propagates-to-replicas", "secrets-manager-promote-replica-for-dr", "secrets-manager-use-secret-cross-region-without-replication", "parameter-store-sharing-advanced-ram"],
+      "on_trap": false
+    }
+  ],
+  "question_plan": {
+    "write": 12,
+    "ship": "10 (5 core, 5 extended): cut the weakest core and the weakest extended question, never a twin or the worked question",
+    "difficulty": {"1": 2, "2": 7, "3": 3},
+    "layer": {"core": 6, "extended": 6},
+    "multi": 1,
+    "twin_pairs": ["slot 1 / slot 6, strict: 'a database password that company policy requires to change automatically every 30 days' against 'an application endpoint URL that the team updates by hand a few times each year'; identical neutral options ('Store the value as ...'); qualifier MOST cost-effective in both"],
+    "worked": ["slot 3"],
+    "slots_on_a_trap": 8,
+    "wrong_options_with_trap": "18 of 36 planned (Q205 needs at least half): keep at least these trap ids when you write the options",
+    "rule": "At most 2 questions per concept; a unique (concept, trap) pair per question. No key may depend on 198 days, 45 days before expiration or another fact changed after 2024-10. Stems say 'A company' and never name Callvale."
+  },
+  "terms": ["secret", "encryption-in-transit"],
+  "term_requests": ["parameter", "SecureString parameter", "staging label", "rotation function", "TLS certificate", "certificate authority", "domain validation", "managed renewal"],
+  "tasks": [
+    {
+      "id": "secrets-certificates-t01",
+      "type": "try",
+      "title": "Store a SecureString parameter and read it with and without decryption",
+      "section": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+      "kills": "\"A SecureString parameter returns its plain value to anyone who calls GetParameter.\"",
+      "trap": null,
+      "pass_route": true,
+      "minutes": 10,
+      "status": "write",
+      "plan": "In AWS CloudShell: put a String parameter /saa/t01/db-host and a SecureString parameter /saa/t01/db-password (default key aws/ssm), each with --tags Key=book,Value=saa Key=task,Value=secrets-certificates-t01. Break it: predict 'do you see the password?', run get-parameter on the SecureString without --with-decryption, expect an encrypted value, explain with [its value is encrypted](parameter-store-with-decryption). Fix: get-parameter with --with-decryption. Then get-parameters-by-path --path /saa/t01 to read the branch (parameter-store-hierarchy-forward-slashes). Cleanup: delete-parameters with both names. Verify: describe-parameters filtered by the tag task=secrets-certificates-t01 returns nothing. Cost: $0 (standard parameters have [No additional charge](parameter-store-price-advanced-parameter); Parameter Store does not charge for SecureString, and the few AWS KMS requests stay inside the [20,000 requests/month](kms-free-tier-20000-requests) free tier). Read-only alternative: get-parameters-by-path on the public path /aws/service/ami-amazon-linux-latest (parameter-store-public-ami-parameter-latest). No IAM user, no access key. Commands from an official CLI or Parameter Store tutorial page in the corpus.",
+      "facts": ["parameter-store-with-decryption", "parameter-store-securestring-kms-keys", "parameter-store-hierarchy-forward-slashes", "parameter-store-price-advanced-parameter", "parameter-store-securestring-no-charge-kms-may", "kms-free-tier-20000-requests", "parameter-store-public-ami-parameter-latest"]
+    }
+  ],
+  "tasks_not_planned": "No Look task (optional in medium; no fast-file time). No Secrets Manager Try: the per-secret price is not in the canon (secrets-manager-price-per-secret-month was rejected), so no cost line can be grounded.",
+  "speak": [
+    {
+      "id": "secrets-certificates-s01",
+      "kind": "compare",
+      "persona": "Ben, CTO of Callvale",
+      "prompt": "Parameter Store or Secrets Manager? I want one place for configuration. Which one, and why?",
+      "section": "1-fast.md#choose-it-or-not",
+      "pass_route": true,
+      "layer": "core",
+      "facts": ["secrets-manager-ecs-compare-parameter-store", "parameter-store-vs-secrets-manager-rotation-row", "parameter-store-vs-secrets-manager-cost-row", "parameter-store-reference-secrets-manager-prefix", "parameter-store-reference-honors-secret-iam", "secrets-manager-pay-per-secret-and-call", "parameter-store-lambda-extension-cache"],
+      "note": "Both store values and encrypt them with AWS KMS. The difference is rotation: Secrets Manager rotates credentials, Parameter Store does not. In your case: the database password goes into Secrets Manager, plain configuration into Parameter Store, and the application can still read both through Parameter Store with the /aws/reference/secretsmanager/ path, which answers 'one place'. Watch: a cost for each secret. Must not say: 'SecureString rotates the password'; 'Parameter Store cannot hold sensitive values'. Follow-ups: 'Can a Lambda function read both without an SDK call each time?' (the Parameters and Secrets Lambda Extension caches them); 'Can our other account read a parameter?' (advanced tier through AWS RAM, read-only; a secret needs a resource policy and a customer managed key)."
+    },
+    {
+      "id": "secrets-certificates-s02",
+      "kind": "explain",
+      "persona": "a startup CTO you advise",
+      "prompt": "Our TLS certificate expired once and took the site down. How does ACM keep that from happening again?",
+      "section": "2-deep.md#acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains",
+      "pass_route": false,
+      "layer": "extended",
+      "facts": ["acm-dns-validation-recommended", "acm-dns-renewal-criteria", "acm-renewal-keeps-arn-per-region", "acm-faq-renewal-existing-connections-unaffected", "acm-faq-imported-no-managed-renewal", "acm-approaching-expiration-event"],
+      "note": "Short answer: ACM renews the certificates it issues, if you use DNS validation and keep the record. How: one CNAME record, renewal while the certificate is in use, same ARN, open connections unaffected. Watch: imported certificates are yours to renew, and deleting the CNAME record stops renewal. In your case: put the certificate on the load balancer and CloudFront, and set an alarm on the expiration events. Must not say: 'ACM renews every certificate in the account'; 'renewal drops connections'. Avoid the number of days before expiration (changed 2026-02-18)."
+    }
+  ],
+  "cards": [
+    {"id": "secrets-certificates-c001", "type": "decide", "deck": "core", "section": "1-fast.md#signals-and-traps", "facts": ["parameter-store-vs-secrets-manager-rotation-row"], "trap": "secrets-certificates-trap-parameter-store-rotates", "front": "A database password must change automatically every 30 days with the LEAST operational overhead. Which service?", "back": "AWS Secrets Manager, with automatic rotation."},
+    {"id": "secrets-certificates-c002", "type": "cannot", "deck": "core", "section": "1-fast.md#signals-and-traps", "facts": ["acm-cloudfront-us-east-1"], "trap": "secrets-certificates-trap-cloudfront-certificate-any-region", "front": "In ACM, can a CloudFront distribution use a certificate that you requested in US West (Oregon)?", "back": "No. CloudFront uses certificates in US East (N. Virginia)."},
+    {"id": "secrets-certificates-c003", "type": "number", "deck": "core", "section": "2-deep.md#numbers-that-decide-answers", "facts": ["secrets-manager-recovery-window-range"], "front": "In Secrets Manager, a deleted secret waits a recovery window of {{c1::from 7 to 30}} days."},
+    {"id": "secrets-certificates-c004", "type": "differ", "deck": "core", "section": "2-deep.md#parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them", "facts": ["parameter-store-policies-advanced-only"], "trap": "secrets-certificates-trap-standard-tier-has-policies", "front": "In Parameter Store, standard or advanced tier: which one supports parameter policies?", "back": "The advanced tier."},
+    {"id": "secrets-certificates-c005", "type": "number", "deck": "extended", "section": "2-deep.md#numbers-that-decide-answers", "facts": ["secrets-manager-rotation-shortest-and-longest"], "front": "In Secrets Manager, a secret can rotate as often as {{c1::every four hours}}."},
+    {"id": "secrets-certificates-c006", "type": "number", "deck": "extended", "section": "2-deep.md#numbers-that-decide-answers", "facts": ["parameter-store-tier-max-value-size"], "front": "In Parameter Store, a standard parameter value can be at most {{c1::4 KB}}."},
+    {"id": "secrets-certificates-c007", "type": "number", "deck": "extended", "section": "2-deep.md#numbers-that-decide-answers", "facts": ["parameter-store-tier-max-parameters"], "front": "In Parameter Store, one account can have up to {{c1::10,000}} standard parameters in each Region."},
+    {"id": "secrets-certificates-c008", "type": "number", "deck": "extended", "section": "2-deep.md#numbers-that-decide-answers", "facts": ["parameter-store-throughput-get-default"], "front": "In Parameter Store, the Get parameter calls share {{c1::40 TPS}} with default throughput."},
+    {"id": "secrets-certificates-c009", "type": "cannot", "deck": "extended", "section": "2-deep.md#acm-renews-a-dns-validated-certificate-while-it-is-in-use-and-its-record-remains", "facts": ["acm-faq-imported-no-managed-renewal", "acm-reimport-keeps-arn"], "trap": "secrets-certificates-trap-acm-renews-everything", "front": "In ACM, does ACM renew a certificate that you imported?", "back": "No. You renew it and reimport it."},
+    {"id": "secrets-certificates-c010", "type": "cannot", "deck": "extended", "section": "2-deep.md#cross-account-access-to-a-secret-needs-a-customer-managed-kms-key", "facts": ["secrets-manager-cross-account-no-aws-managed-key"], "trap": "secrets-certificates-trap-resource-policy-enough-cross-account", "front": "In Secrets Manager, can another account read a secret that the AWS managed key aws/secretsmanager encrypts?", "back": "No. Use a customer managed key."},
+    {"id": "secrets-certificates-c011", "type": "decide", "deck": "extended", "section": "2-deep.md#acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1", "facts": ["acm-elb-deploys-on-load-balancer", "acm-ec2-needs-nitro-enclave", "acm-faq-free-with-integrated-services"], "trap": "secrets-certificates-trap-free-certificate-on-instance", "front": "A web application on EC2 instances behind an Application Load Balancer needs HTTPS with certificates that renew automatically. Where does the ACM certificate go?", "back": "On the load balancer's HTTPS listener."},
+    {"id": "secrets-certificates-c012", "type": "differ", "deck": "extended", "section": "2-deep.md#automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment", "facts": ["secrets-manager-alternating-users-high-availability"], "front": "In Secrets Manager, single-user or alternating-users rotation: which one suits applications that need high availability?", "back": "Alternating-users rotation."}
+  ],
+  "card_plan": {"core": 4, "extended": 8, "number_cards_equal_a_list_rows": 5, "rule": "One fact per card; an answer of at most 12 words; a number with a unit uses a display of a fact in facts; fronts above are drafts for the card writer."},
+  "diagrams": [
+    {
+      "id": "secrets-certificates-hero",
+      "kind": "sequence",
+      "placement": "1-fast.md#in-one-breath (inside Show the picture, after Predict the picture)",
+      "title": "Read the secret at run time",
+      "claim": "The application reads the password from Secrets Manager at run time, so rotation no longer requires updating your applications.",
+      "claim_link": "In the Markdown caption, link 'no longer requires updating your applications' to secrets-manager-rotation-without-redeploy.",
+      "alt": "A sequence with four participants: an application, AWS Secrets Manager, AWS KMS and a database. The application asks for the secret, Secrets Manager decrypts it with AWS KMS and returns it, and rotation later changes the password.",
+      "say": [
+        "The application calls Secrets Manager with its IAM role.",
+        "Secrets Manager decrypts the secret value with AWS KMS.",
+        "Secrets Manager returns the AWSCURRENT version over TLS.",
+        "Rotation changes the password in the secret and in the database."
+      ],
+      "facts_for_steps": ["iam-compute-services-receive-role-credentials-no-keys-needed", "secrets-manager-envelope-encryption-data-key", "secrets-manager-awscurrent-returned-by-default", "secrets-manager-encrypts-at-rest-tls-in-transit", "secrets-manager-faq-managed-rotation-whole-process"],
+      "note": "Participants: application (on an EC2 instance), AWS Secrets Manager, AWS KMS, database (Amazon RDS). The IAM role is a label on the application, not an actor that sends anything. Keep the alt at about 40 words: it counts toward the 1,000-word fast file. No step states a number or an absolute word."
+    },
+    {
+      "id": "secrets-certificates-before",
+      "kind": "arch",
+      "placement": "2-deep.md#secrets-manager-replaces-a-stored-password-with-a-call-at-run-time (after the problem)",
+      "title": "Callvale before: one password in every file",
+      "claim": "Before: every instance keeps the same database password in a configuration file.",
+      "alt": "Before: web instances behind an Application Load Balancer and the worker instances each hold a configuration file with the same database password, and all of them connect to one Amazon RDS for PostgreSQL database.",
+      "say": [],
+      "note": "Story picture: no AWS limit, default or can-rule in labels or caption. Show the CloudFront distribution and the load balancer with their ACM certificates already in place (stage 2), in the same grid cells as in the after picture. No Aurora, no Fargate (month 20)."
+    },
+    {
+      "id": "secrets-certificates-after",
+      "kind": "arch",
+      "placement": "2-deep.md#secrets-manager-replaces-a-stored-password-with-a-call-at-run-time (after the trace)",
+      "title": "Callvale after: a rotated secret",
+      "claim": "After: the application's IAM role reads a rotated secret, and ACM certificates sit on the load balancer and CloudFront.",
+      "alt": "After: the instances read the database password from Secrets Manager with their IAM role, Secrets Manager rotates the password in the secret and in the database, plain configuration sits in Parameter Store, and ACM certificates sit on the load balancer and on CloudFront.",
+      "say": [],
+      "note": "No steps (word budget of the subsection). Every component keeps its grid cell from the before picture; Secrets Manager and Parameter Store are new nodes. A role sends nothing: draw the read from the instances to Secrets Manager."
+    }
+  ],
+  "fact_requests": [
+    {"id": "fr-0033", "service": "secrets-manager", "where": "2-deep.md#automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment", "question": "What each of the four rotation steps (create_secret, set_secret, test_secret, finish_secret) does, and which step moves the AWSCURRENT staging label to the new version (AWSPENDING during rotation)", "effect": "until filled: no sentence on what a step does or when the label moves; the trace names the steps only. Source to fetch: docs/secretsmanager/latest/userguide/rotate-secrets_lambda-functions (not saved yet)."},
+    {"id": "fr-0034", "service": "acm", "where": "2-deep.md#acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1", "question": "The Region of the ACM certificate for an API Gateway custom domain name: edge-optimized endpoint and Regional endpoint", "effect": "until filled: the API Gateway row of the Region table is left out and the trace makes no Region claim for API Gateway"},
+    {"id": "fr-0035", "service": "acm", "where": "1-fast.md#changed-recently", "question": "display: issue public certificates that you can export (acm-change-exportable-public-certificates-2025)", "effect": "the Now line of the 2025-06-17 entry; a fallback wording is in changed_recently.fast[0]"}
+  ],
+  "notes_for_orchestrator": [
+    "Real-world box not planned: the deep file must stay at or under 2,400 words with six full subsections, two diagram embeds and two Go deeper blocks, and the Trainline case page gives no case year that a fact grounds (D13 needs Company, year). Facts acm-case-trainline-manual-certificates-before, acm-case-trainline-issue-certificates-acm and secrets-manager-case-sony-retrieve-rotate remain for chapter 15 or a synthesis chapter.",
+    "Before and after diagrams sit in the first How-it-works subsection, not in the Decision record: the medium Decision record holds at most 150 words, and the two embeds alone take about 90.",
+    "Traps are capped at 7 (brief_traps_max). Wildcard and apex names (acm-wildcard-one-level-not-apex, acm-faq-www-and-apex-need-both-names) and deletion with a recovery window are taught as an FAQ item, an A-list row and a question with a misconception sentence instead of trap ids.",
+    "The planned questions carry trap ids on 18 of 36 wrong options, exactly the Q205 minimum: the question writer must not drop any of them.",
+    "The secret per-month price (secrets-manager-price-per-secret-month) is rejected, so no prose, card or task states a Secrets Manager price; the cost-row and pay-per-secret-and-call facts carry the cost argument.",
+    "Parameter Store cross-account sharing (2024-02-21) is examinable and changes older answers, but parameter-store-change-cross-account-sharing-2024 has no changed.date, so it cannot be a Changed recently entry (L107). If the registrar sets changed (was: not available), the fast section can take it as a third entry within 130 words.",
+    "Open fact requests fr-0033, fr-0034, fr-0035 must be filled or closed before finalize (B09).",
+    "term_requests: parameter, SecureString parameter, staging label, rotation function, TLS certificate, certificate authority, domain validation, managed renewal are not in data/terms.json; until they are added the words table rows parameter, TLS certificate and domain validation are L503 warnings in draft.",
+    "Bullet 1.3.S7 is shared with chapter 06: this chapter teaches secret rotation and certificate renewal, and points to 06 for KMS key rotation (xref marker), which rotates key material and does not re-encrypt data (kms-rotation-no-reencrypt-of-data)."
+  ]
+}

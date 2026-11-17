@@ -1,0 +1,237 @@
+{
+ "lens": "claims",
+ "chapter": "08",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "decision-record",
+   "quote": "- **AWS WAF with managed rules and a rate-based rule.** ... 1. The web ACL on CloudFront blocks addresses that send too many sign-in requests and requests that match common attacks.",
+   "type": "technical: contradicts the chapter's own teaching",
+   "severity": "blocking",
+   "evidence": "The story attack is 60,000 attempts in 1 hour from 1,400 IP addresses, about 43 per address per hour, about 3.6 per address in the default 5-minute window. waf-rate-based-default-key-ip: \"By default, a rate-based rule aggregates and rate limits requests based on the request IP address.\" waf-rate-limit-minimum: \"The lowest limit setting allowed is 10.\" So no per-IP rate-based rule can catch these addresses, even at its lowest limit. The chapter says so itself in the rate-based Stop and answer (\"No. Each address is counted on its own and stays under the limit. Add the ATP managed rule group.\"), and so do quiz q004 and spoken item s01. The decision record still chooses \"managed rules and a rate-based rule\" and says the CloudFront web ACL stops the flood; the ATP group is missing. The same text is in diagram spec edge-protection-after (say, step 1) and in the after caption. Fix: add the account takeover prevention managed rule group to the chosen option, the Decision and after-figure step 1 (link waf-atp-inspects-login-attempts), and put its fee in the Trade-off (waf-managed-paid-groups-bot-atp-acfp).",
+   "status": "fixed",
+   "resolution": "fix-08: Decision record: chosen option now names managed rules, a rate-based rule and the ATP rule group; after-figure step 1 (and diagram spec say) says the CloudFront web ACL blocks fast addresses, common attacks and sign-ins found [against its stolen credential database] (waf-atp-inspects-login-attempts); Trade-off says the ATP rule group costs extra (fee grounded in the rate-based subsection, waf-managed-paid-groups-bot-atp-acfp)."
+  },
+  {
+   "id": "claims-02",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "decision-record",
+   "quote": "2. Requests that pass go to the Application Load Balancer, which has its own web ACL from the same Firewall Manager policy.",
+   "type": "technical: wrong",
+   "severity": "blocking",
+   "evidence": "firewall-manager-waf-policy-global-for-cloudfront: \"To protect Amazon CloudFront distributions, choose **Global**.\" and \"To protect resources in multiple Regions (other than CloudFront distributions), you must create separate Firewall Manager policies for each Region.\" firewall-manager-policies-region-specific: \"Each Firewall Manager policy can only include resources available in that specified AWS Region.\" waf-cloudfront-web-acl-not-other-types: \"You cannot associate a protection pack (web ACL) that you have associated with a CloudFront distribution with any other AWS resource type.\" So one policy cannot give web ACLs to both the distribution and the load balancer. The same claim is in diagram spec edge-protection-after (say, step 2) and its alt text (\"Firewall Manager applies one policy to all accounts.\"). It also contradicts the chapter's own Say it line \"The thing to watch is one policy per Region.\" Fix: \"... from a second Firewall Manager policy in US East (N. Virginia); the CloudFront policy uses Global\", in the prose, the diagram say text and the alt text.",
+   "status": "fixed",
+   "resolution": "fix-08: Step 2 and spec say: the load balancer's web ACL comes from a second policy, because Firewall Manager needs [separate Firewall Manager policies for each Region] (firewall-manager-waf-policy-global-for-cloudfront). Alt text no longer says one policy; the spec edges are labelled Global policy and Regional policy. The Firewall Manager subsection gained a Region step."
+  },
+  {
+   "id": "claims-03",
+   "file": "08-edge-protection/3-do.md",
+   "section": "do-it",
+   "quote": "Nothing here yet.",
+   "type": "technical: generated file empty; links lead nowhere",
+   "severity": "blocking",
+   "evidence": "TOOLS-items.md sync rule: \"Only items with `status: ready` are printed ... A file with no item still gets its H1 and the line `Nothing here yet.`\" Both tasks in data/08-edge-protection/tasks.json (t01, t02) and both speak items in speak.json (s01, s02) have \"status\": \"candidate\", so 3-do.md and 4-say.md print \"Nothing here yet.\" (sync 08 after this review: written=0 unchanged=10). 2-deep.md sends the reader there twice (\"> **Try it:** Build an IP set ... See [3-do.md](3-do.md).\" and \"> **Try it:** Create a domain allow list ... See [3-do.md](3-do.md).\"), and the spoken answers this reader must practise are not visible. The cards in cards.json are also all candidate. Fix in the fix stage: after the item fixes below, run tasks/speak/cards set-status --status ready (TOOLS-rules.md R5), then sync 08, and check that 3-do.md and 4-say.md hold two items each.",
+   "status": "fixed",
+   "resolution": "fix-08: Item lint clean; tasks t01 t02, speak s01 s02 and all 12 cards set to ready (R5); sync 08 wrote 3-do.md and 4-say.md with two items each."
+  },
+  {
+   "id": "claims-04",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Which layer? | [Application layer (L7)] | [Network, transport, and application layers (L3/L4/L7)] | ... | How is it turned on? | A web ACL on a resource | [Shield Standard protection included for all customer accounts]",
+   "type": "claims: link text right, sentence says more",
+   "severity": "blocking",
+   "evidence": "The L3/L4/L7 cell quotes the decision guide's column for AWS Shield as a whole (waf-vs-shield-layer), but the row below it says Shield is turned on as Shield Standard for every account. A one-glance reader takes away \"free Shield Standard covers layer 7\", which is wrong. shield-faq-standard-layer-3-4-all-customers: Shield Standard covers \"infrastructure (layer 3 and 4) events like SYN/UDP floods\". shield-faq-advanced-layers-srt-cost-protection: \"AWS Shield Advanced includes DDoS protection for layers 3, 4, and 7\". shield-no-http-content-inspection: \"It does not inspect the contents of application layer traffic (HTTP/S)\". Recap 1 repeats the same L3/L4/L7 answer for \"AWS Shield\". Fix: split the cell (\"Standard: [layer 3 and 4]; Advanced: [layers 3, 4, and 7]\"), and change Recap 1 the same way.",
+   "status": "fixed",
+   "resolution": "fix-08: Shield cell split into Standard: [layer 3 and 4] (shield-faq-standard-layer-3-4-all-customers) and Advanced: [layers 3, 4, and 7] (shield-faq-advanced-layers-srt-cost-protection); Recap 1 answer changed the same way."
+  },
+  {
+   "id": "claims-05",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "shield-standard-protects-every-account-free-but-shield-advanced-adds-paid-response",
+   "quote": "4. **Help and credits.** It adds [24/7 support from the Shield Response Team](../facts/shield.md#shield-faq-advanced-layers-srt-cost-protection)",
+   "type": "technical: condition dropped from a fact",
+   "severity": "should",
+   "evidence": "shield-srt-needs-business-or-enterprise-support: \"To use the services of the SRT, you must also be subscribed to the Business Support plan or the Enterprise Support plan.\" (source docs/waf/latest/developerguide/ddos-advanced-summary-capabilities; also ddos-srt-support line 15). The condition is missing everywhere the SRT appears outside q007: 1-fast Shield table (\"24/7 support from the Shield Response Team\"; the Shield Standard cell \"No response team\" has no fact link), 2-deep step 4, spoken item s02 (sixty_second \"Shield Advanced adds a response team that you can reach at any hour.\" and key point kp3), and card c010. A startup founder on a lower support plan would be told something incomplete. Fix: add \"with a Business or Enterprise Support plan\" linked to shield-srt-needs-business-or-enterprise-support in 2-deep and s02 kp3; note that AWS Support plan names are changing (shield-faq-srt-needs-business-or-enterprise).",
+   "status": "fixed",
+   "resolution": "fix-08: Business Support plan condition linked (shield-srt-needs-business-or-enterprise-support) in the 1-fast Shield table, 2-deep step 4, s02 sixty_second line and kp3, and card c010 extra. The plan-rename note was not added (file word limits)."
+  },
+  {
+   "id": "claims-06",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "in-one-breath",
+   "quote": "4. A request from the application to the internet passes a Network Firewall endpoint before the NAT gateway.",
+   "type": "technical: architecture differs from the AWS reference",
+   "severity": "should",
+   "evidence": "AWS's documented pattern puts the firewall downstream of the NAT gateway (workload subnet, then NAT gateway subnet, then firewall subnet, then internet gateway). Source docs/network-firewall/latest/developerguide/asymmetric-routing: \"**NAT gateway** - If Network Firewall is downstream of your Network address translation (NAT) Gateway, make sure that the NAT gateway's subnet routes traffic through the Network Firewall endpoint.\" The page links \"Architecture with an internet gateway and a NAT gateway using AWS Network Firewall\" (arch-igw-ngw), whose figure shows a firewall subnet, a NAT gateway subnet and customer workload subnets. The chapter shows the opposite order three times: 1-fast hero step 4, diagram specs edge-protection-hero and edge-protection-after (say texts and alt), and 2-deep after-figure step 3 (\"goes to a Network Firewall endpoint in its own zone, which passes approved domains to the NAT gateway\"). \"In its own zone\" is unclear: the endpoint sits in its own subnet, in the same Availability Zone. The rejected order can work, but the reader should learn the documented one. Fix: \"... passes the NAT gateway, then a Network Firewall endpoint, then the internet gateway\", and \"an endpoint in a firewall subnet of the same Availability Zone\".",
+   "status": "fixed",
+   "resolution": "fix-08: Hero and after diagrams reordered to application, NAT gateway, firewall endpoint, internet gateway (the documented pattern: asymmetric-routing says the NAT gateway's subnet routes through the endpoint when the firewall is downstream; arch-igw-ngw shows firewall, NAT gateway and workload subnets). 1-fast step 4, 2-deep after step 3, alt texts and specs updated; 'in its own zone' removed. SVGs rebuilt."
+  },
+  {
+   "id": "claims-07",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "Yes. It supports [deep packet inspection for encrypted traffic](../facts/network-firewall.md#network-firewall-faq-inspects-encrypted-traffic).",
+   "type": "technical: condition dropped",
+   "severity": "should",
+   "evidence": "The FAQ answer reads as if inspection of encrypted traffic is automatic. network-firewall-tls-needs-acm-new-policy: \"To use TLS inspection with your firewall, you must import or provision certificates to AWS Certificate Manager, create a TLS inspection configuration, add that configuration to a new firewall policy, and then associate that policy with your firewall.\" It is also a post-2022 change (fact for 2023-03-30: \"Network Firewall now supports TLS inspection configurations\"), so older exam questions may assume Network Firewall cannot decrypt traffic. Fix: \"Yes, with a TLS inspection configuration and certificates in AWS Certificate Manager\", linked to network-firewall-tls-needs-acm-new-policy, and a Changed recently line (see claims-11).",
+   "status": "fixed",
+   "resolution": "fix-08: FAQ 5 now: yes, with TLS inspection, added on [March 30, 2023] (network-firewall-change-tls-inspection-2023); you first [import or provision certificates to AWS Certificate Manager] (network-firewall-tls-needs-acm-new-policy)."
+  },
+  {
+   "id": "claims-08",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "shield-standard-protects-every-account-free-but-shield-advanced-adds-paid-response",
+   "quote": "| Scaling charges | You pay | A service credit |",
+   "type": "technical: oversimplified table row",
+   "severity": "should",
+   "evidence": "A credit has conditions. shield-credit-prereqs-before-attack: \"Protected resources added during an attack are not eligible for cost protection.\" and \"For applicable CloudFront and Application Load Balancer protected resources, you must have associated an AWS WAF web ACL and implemented a rate-based rule in the web ACL in Block mode.\" shield-credit-request-15-days: the request must be submitted \"within the 15 day period immediately following the billing month\". The 2-deep prose gives only the first condition (in the Stop and answer). Spoken item s02 says \"It also gives service credits when an attack makes your protected resources scale out.\", which reads as automatic. Fix: in the table write \"A credit you request, if conditions are met\", add the Block-mode rate-based rule condition to step 4, and in s02 say \"you can request a service credit\".",
+   "status": "fixed",
+   "resolution": "fix-08: Table header 'During an attack', row 'A credit you request, if conditions are met'; step 4 adds the Block-mode rate-based rule condition (shield-credit-prereqs-before-attack); s02 says 'You can request service credits'."
+  },
+  {
+   "id": "claims-09",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| What does it cost? | [At no additional charge] | [$3,000 per month], with a [1-year subscription commitment] |",
+   "type": "claims: fact narrowed",
+   "severity": "should",
+   "evidence": "The row is titled \"What does it cost?\" but leaves out the usage fee that the same fact quotes. shield-advanced-monthly-fee: \"you pay a monthly fee of $3,000 per month per organization. In addition, you also pay for AWS Shield Advanced Data Transfer usage fees for AWS resources enabled for advanced protection.\" Card c004 includes \"plus data transfer usage fees\"; the table and the A-list in 2-deep do not. Fix: add \"plus data transfer usage fees\" to the cell, and to the A-list row \"Shield Advanced fee for one organization\".",
+   "status": "fixed",
+   "resolution": "fix-08: 'plus usage fees' added to the 1-fast cost cell and the A-list row (shield-advanced-monthly-fee quotes the usage fees)."
+  },
+  {
+   "id": "claims-10",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "a-web-acl-checks-each-http-request-against-its-rules-in-priority-order",
+   "quote": "Most sites set the [default action to Allow](../facts/waf.md#waf-default-allow-add-block-rules) and add rules that block.",
+   "type": "claims: sentence says more than the link",
+   "severity": "should",
+   "evidence": "The link supports a condition, not a claim about most sites. waf-default-allow-add-block-rules: \"For example, if you want to *allow* most requests, you would set the protection pack (web ACL) default action to Allow, and then add rules that identify web requests that you want to *block*\". No fact in the canon says what most sites do. Fix: \"To allow most requests, set the [default action to Allow] and add rules that block.\"",
+   "status": "fixed",
+   "resolution": "fix-08: Now 'To allow most requests, set the [default action to Allow] and add rules that block.'"
+  },
+  {
+   "id": "claims-11",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "changed-recently",
+   "quote": "> **Changed recently:** (2024-08-30) Lowest request limit of a rate-based rule.",
+   "type": "claims: missing Changed recently notes (RULINGS hard rule 7)",
+   "severity": "should",
+   "evidence": "RULINGS rule 7: \"Where a fact changed since mid-2022, add a 'Changed recently' note with old value, new value, date\". The chapter uses three more facts that changed after mid-2022 and has no note for them. (1) waf-rate-window-options: \"You can now configure the time window that rate-based rules use to count requests, to 1, 2, 5, or 10 minutes. The default is 5, which was the only option before this release. | February 28, 2024\". The chapter uses it in 2-deep step 2 and the B-list (\"5 minutes | Default window\"), and older questions assume a fixed 5-minute window. (2) network-firewall TLS inspection configurations, 2023-03-30 (FAQ 5). (3) waf-change-protection-pack-console-2025, June 17, 2025: the console name \"protection pack (web ACL)\", used in 2-deep. Fix: add a note for the window (old: 5 minutes only; now: 1, 2, 5 or 10 minutes, default 5) and for TLS inspection. The console rename can be one line in the existing section.",
+   "status": "fixed",
+   "resolution": "fix-08: Rate-window Changed recently entry added (2024-02-28; Old fixed 5 minutes; Now 1 minute to 10 minutes; waf-rate-window-options). TLS inspection: its change fact has no changed field, so L107 allows no entry; the date stands in FAQ 5. Console rename stays one line in 2-deep; 1-fast is at its callout maximum of 4."
+  },
+  {
+   "id": "claims-12",
+   "file": "data/08-edge-protection/tasks.json",
+   "section": "edge-protection-t01",
+   "quote": "\"verify\": {\"command\": \"aws wafv2 get-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID\", \"expect\": \"An error: AWS WAF cannot find the IP set.\"",
+   "type": "technical: verify step that cannot fail",
+   "severity": "should",
+   "evidence": "The verify expects an error, so it passes even when the set still exists. still_costs itself names the case: \"If the CloudShell session ended before the cleanup, the variables are empty.\" With an empty $IPSET_ID, get-ip-set fails with a parameter error, and the reader sees \"an error\" whether or not the set was deleted. A failed delete (for example WAFOptimisticLockException, which the cleanup text mentions) followed by a verify in a new session would also look like success. Fix: verify by name, which does not need the variables: aws wafv2 list-ip-sets --scope REGIONAL --query \"IPSets[?Name=='saa-edge-protection-t01'].Id\", expect: an empty list.",
+   "status": "fixed",
+   "resolution": "fix-08: Verify command kept (a list-ip-sets verify fails T108 and a new command needs a new CLI check); the expect now covers the empty IPSET_ID case and tells the reader to confirm with list-ip-sets that saa-edge-protection-t01 is gone."
+  },
+  {
+   "id": "claims-13",
+   "file": "data/08-edge-protection/tasks.json",
+   "section": "edge-protection-t02",
+   "quote": "\"verify\": {\"command\": \"aws ec2 describe-security-groups --filters Name=tag:task,Values=edge-protection-t02 --query \\\"SecurityGroups[].GroupId\\\"\", \"expect\": \"An empty list.\"}",
+   "type": "technical: verify does not cover the cleanup",
+   "severity": "should",
+   "evidence": "The task creates two resources, the security group and the Network Firewall rule group saa-edge-protection-t02, but the verify checks only the security group. The rule group's removal is only a suggestion in still_costs (\"Check that the rule group is gone with aws network-firewall list-rule-groups\"). delete-rule-group answers with status DELETING, so the deletion is asynchronous and needs checking. STYLE/RULINGS rule 9 asks for a verify step that proves the cleanup. Fix: make the verify command aws network-firewall list-rule-groups --query \"RuleGroups[?Name=='saa-edge-protection-t02']\" (expect an empty list; wait one minute if DELETING), and keep the security group check as a second line.",
+   "status": "fixed",
+   "resolution": "fix-08: Verify keeps the task-tag filter required by STYLE 8 rule 5 (commands unchanged, CLI report still valid); still_costs now gives the describe-rule-group check by name, the expected not-found error and the DELETING wait."
+  },
+  {
+   "id": "claims-14",
+   "file": "data/08-edge-protection/tasks.json",
+   "section": "edge-protection-t01",
+   "quote": "\"cost\": \"$0. The task creates no web ACL. AWS WAF charges are based on the number of web ACLs, the rules per web ACL and the web requests received.\", \"cost_if_forgotten\": \"$0 a day. An IP set that no web ACL uses adds no charge.\", \"cost_facts\": []",
+   "type": "claims: pricing claims without fact links",
+   "severity": "should",
+   "evidence": "Both tasks state pricing as fact with an empty cost_facts, although the facts are verified and already listed in each task's facts array: waf-pricing-dimensions (\"AWS WAF charges are based on the number of web access control lists (web ACLs) that you create, the number of rules that you add per web ACL, and the number of web requests that you receive.\"), network-firewall-faq-pricing-dimensions, and vpc-sg-no-charge (\"There is no additional charge for using security groups.\"). \"An IP set that no web ACL uses adds no charge\" is an inference: the pricing quote does not name IP sets. Fix: set cost_facts to these ids and write the cost lines with fact links, for example \"$0: AWS WAF charges are based on the [number of web access control lists (web ACLs)](../facts/waf.md#waf-pricing-dimensions), and this task creates none\"; drop the IP-set sentence or ground it.",
+   "status": "fixed",
+   "resolution": "fix-08: cost_facts set (t01 waf-pricing-dimensions; t02 vpc-sg-no-charge, network-firewall-faq-pricing-dimensions); the ungrounded IP-set and rule-group no-charge sentences removed."
+  },
+  {
+   "id": "claims-15",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "firewall-manager-applies-the-same-protections-to-every-account-in-an-organization",
+   "quote": "1. **Prepare.** [Your organization must be enabled for all features](../facts/firewall-manager.md#firewall-manager-needs-org-all-features), and [you must enable AWS Config](../facts/firewall-manager.md#firewall-manager-requires-aws-config).",
+   "type": "technical: prerequisite missing",
+   "severity": "should",
+   "evidence": "The Prepare step lists two prerequisites and leaves out the third. firewall-manager-faq-prereq-administrator-account: \"Set the AWS Firewall Manager Administrator Account - Firewall Manager must be associated with the management account of your AWS organization or associated with a member account that has the appropriate permissions.\" The after diagram shows an \"Administrator account\" box, but the prose never explains it. Exam stems often ask which account creates the policies. Fix: add \"and you set a [Firewall Manager administrator account]\" to step 1.",
+   "status": "fixed",
+   "resolution": "fix-08: Prepare step names [the Firewall Manager administrator account] (firewall-manager-faq-prereq-administrator-account)."
+  },
+  {
+   "id": "claims-16",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "check",
+   "quote": "**Predict 2:** No: a network ACL holds too few rules.",
+   "type": "technical: weaker reason given, stronger one missing",
+   "severity": "note",
+   "evidence": "Behind CloudFront, a network ACL on the load balancer subnets never sees the attackers' addresses. waf-forwarded-ip-default-origin-ip: \"if a web request goes through one or more proxies or load balancers, the web request origin will contain the address of the last proxy, and not the originating address of the client.\" So deny rules for attacker addresses would not match at all, whatever the rule count. The same gap is in the decision record option \"Block the attacking IP addresses in network ACLs\" and in q003's Why not. Also, the default of 20 is adjustable up to 40 (vpc-quota-rules-per-network-acl). Optional fix: add one clause: \"and behind CloudFront the subnet sees CloudFront's addresses, not the attackers'\".",
+   "status": "rejected",
+   "resolution": "fix-08: 1-fast is at its 1,000-word limit (L201, error); the forwarded-IP point is now taught in the 2-deep Go deeper block ('a per-IP rule there counts CloudFront's addresses'). Predict 2 answer stays short and correct."
+  },
+  {
+   "id": "claims-17",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "network-firewall-inspects-vpc-traffic-only-when-route-tables-send-it-there",
+   "quote": "| Stateful | The flow and domain names | A security group, but [the stateful rules engine allows traffic to pass](../facts/network-firewall.md#network-firewall-stateful-like-sg-default-pass) by default |",
+   "type": "technical: scope dropped",
+   "severity": "note",
+   "evidence": "The fact's scope is \"default action order; strict order has its own default actions\". The chapter's own domain allow list changes this behavior: network-firewall-domain-allow-denies-others says that with Allow, the firewall denies non-matching traffic of that protocol, and \"This denial applies only when the firewall policy uses default action order.\" A reader who learns \"stateful passes by default\" may think an allow list lets other HTTPS domains through. Optional fix: add one sentence after the table: \"A domain allow list denies other HTTP and TLS domains.\", linked to network-firewall-domain-allow-denies-others.",
+   "status": "fixed",
+   "resolution": "fix-08: Sentence after the engine table: a domain allow list denies other domains of its protocol, [when the firewall policy uses default action order] (network-firewall-domain-allow-denies-others)."
+  },
+  {
+   "id": "claims-18",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "Yes. Manual remediation [does not enforce the rules on the resources](../facts/firewall-manager.md#firewall-manager-faq-auto-or-manual-remediation).",
+   "type": "claims: closer fact exists",
+   "severity": "note",
+   "evidence": "Manual remediation is not a pure report: per the same quote it \"creates a new policy and the associated rules/protections in each account\". The question asks about reporting without change, and a closer fact answers it. firewall-manager-audit-or-auto-remediate: \"You can choose to view the accounts and resources that are out of compliance without taking corrective action or to automatically remediate noncompliant resources.\" Optional fix: answer with that fact and keep the FAQ quote as support.",
+   "status": "fixed",
+   "resolution": "fix-08: FAQ 4 answers with firewall-manager-audit-or-auto-remediate ('without taking corrective action'); the FAQ quote stays as support."
+  },
+  {
+   "id": "claims-19",
+   "file": "08-edge-protection/2-deep.md",
+   "section": "a-rate-based-rule-limits-each-key-that-sends-requests-too-fast",
+   "quote": "3. **Act.** An address over the limit is blocked until [the request rate falls below the configured threshold](../facts/waf.md#waf-rate-based-ip-blocked-until-rate-falls).",
+   "type": "claims: scope dropped",
+   "severity": "note",
+   "evidence": "The fact's scope is \"rule action Block, IP aggregation\". A rate-based rule can also use Count, CAPTCHA or Challenge, and the chapter recommends count mode first (spoken item s01, waf-test-in-count-mode-before-production). Optional fix: \"With the Block action, an address over the limit is blocked until ...\".",
+   "status": "fixed",
+   "resolution": "fix-08: Step 3 now starts 'With the Block action'."
+  },
+  {
+   "id": "claims-20",
+   "file": "data/08-edge-protection/tasks.json",
+   "section": "edge-protection-t01",
+   "quote": "The quotes around $IPSET_ARN let the shell insert the ARN.",
+   "type": "technical: inaccurate step text",
+   "severity": "note",
+   "evidence": "The command is '[{...\"ARN\":\"'$IPSET_ARN'\"}...]'. The single quotes are closed before $IPSET_ARN and opened again after it, so the variable stands outside the single quotes, unquoted, and the shell expands it there. A reader who \"puts quotes around\" the variable in their own command, inside the single-quoted string, gets the literal text $IPSET_ARN and a WAFInvalidParameterException. Optional fix: \"The single quotes stop before $IPSET_ARN and start again after it, so the shell inserts the ARN.\"",
+   "status": "fixed",
+   "resolution": "fix-08: Step text: 'The single quotes stop before $IPSET_ARN and start again after it, so the shell inserts the ARN.'"
+  },
+  {
+   "id": "claims-21",
+   "file": "08-edge-protection/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "| \"workloads must reach only approved domains\" | Network Firewall domain list | ... | only DNS lookups: Route 53 Resolver DNS Firewall |",
+   "type": "claims: unlinked capability claim",
+   "severity": "note",
+   "evidence": "The \"but not if\" cell says what Route 53 Resolver DNS Firewall does without a fact link. well-architected-sec05-finer-control-services names \"Amazon Route 53 Resolver DNS Firewall\" but not what it filters. The row is in a signals table, where every other Because cell carries a link. Optional fix: link a DNS Firewall fact from chapter 10 or 37 if one is verified; otherwise leave it as a cross-reference with the xref marker.",
+   "status": "rejected",
+   "resolution": "fix-08: The But-not-if column is exempt heuristic text (TOOLS-rules R2, exemption 5) and names the alternative service, not a capability value; no verified DNS Firewall fact exists in the canon to link."
+  }
+ ]
+}

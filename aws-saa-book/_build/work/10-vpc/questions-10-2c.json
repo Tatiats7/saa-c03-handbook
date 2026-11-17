@@ -1,0 +1,180 @@
+[
+ {
+  "id": "vpc-q002",
+  "section": "2-deep.md#security-groups-remember-connections-but-network-acls-check-every-packet",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": [
+   "1.2.K3"
+  ],
+  "topics": [
+   "networking",
+   "security"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "nacl-ephemeral-reply",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a public website on Amazon EC2 instances in a public subnet. Customers connect over HTTPS from many different devices and operating systems. The security team replaced the default network ACL of the subnet with a custom network ACL. The custom network ACL allows inbound TCP 443 from 0.0.0.0/0 and outbound TCP 443 to 0.0.0.0/0. The security group of the instances allows inbound TCP 443 from 0.0.0.0/0. Since the change, every customer connection times out. The company must restore access for all customers. Which change will meet these requirements in the MOST secure way?",
+  "keywords": [
+   "custom network ACL",
+   "outbound TCP 443 to 0.0.0.0/0",
+   "many different devices and operating systems",
+   "MOST secure"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an outbound rule to the security group of the instances that allows TCP ports 1024-65535 to 0.0.0.0/0 for the replies to the customers.",
+    "correct": false,
+    "why": "Because [security groups are stateful](../facts/vpc.md#vpc-sg-connection-tracking-stateful), the replies already pass the security group; the network ACL still drops them.",
+    "concept": "sg-outbound-reply-rule",
+    "trap": "vpc-trap-nacl-reply",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Add an outbound rule to the custom network ACL that allows TCP ports 1024-65535 to 0.0.0.0/0 for the replies to the customers.",
+    "correct": true,
+    "why": "The replies leave the subnet toward each customer's ephemeral port, and AWS suggests you [open ephemeral ports 1024-65535](../facts/vpc.md#vpc-nacl-ephemeral-open-1024-65535) to cover every client type.",
+    "concept": "nacl-outbound-ephemeral-rule",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Replace the rules of the custom network ACL with one inbound rule and one outbound rule that allow all traffic to and from 0.0.0.0/0.",
+    "correct": false,
+    "why": "It works, but it opens every port in both directions, which is far less secure than one outbound rule for the reply ports.",
+    "concept": "nacl-allow-all",
+    "trap": null,
+    "misconception": "opening the whole network ACL is an acceptable fix for one blocked reply",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add an inbound rule to the custom network ACL that allows TCP ports 1024-65535 from 0.0.0.0/0 for the replies to the customers.",
+    "correct": false,
+    "why": "The replies go out of the subnet, so an inbound rule does not let them pass, and it opens more inbound ports.",
+    "concept": "nacl-inbound-ephemeral-rule",
+    "trap": null,
+    "misconception": "the reply to a customer enters the subnet on the ephemeral port",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "[Network ACLs are stateless](../facts/vpc.md#vpc-nacl-stateless-needs-response-rule), so the reply to each request needs an outbound rule of its own. The reply goes to the ephemeral port that the customer's device chose, not to port 443, so the current outbound rule does not match it. The customers use many operating systems, so the outbound rule covers the full range of [ports 1024-65535](../facts/vpc.md#vpc-nacl-ephemeral-natgw-elb-lambda-1024-65535).",
+  "takeaway": "A custom network ACL needs an outbound rule for the reply ports, because it does not remember connections.",
+  "twin": "If the stem said \"the clients are Amazon Linux instances in another subnet\" instead: an outbound rule for [ports 32768-61000](../facts/vpc.md#vpc-nacl-ephemeral-linux-32768-61000), because the client's operating system chooses the ephemeral range.",
+  "say": "A network ACL is stateless, so I'd add an outbound rule for the ephemeral ports.",
+  "facts": [
+   "vpc-nacl-ephemeral-open-1024-65535",
+   "vpc-sg-connection-tracking-stateful",
+   "vpc-nacl-stateless-needs-response-rule",
+   "vpc-nacl-ephemeral-natgw-elb-lambda-1024-65535",
+   "vpc-nacl-ephemeral-linux-32768-61000"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-these-requirements",
+   "ee-most-secure"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q008",
+  "section": "2-deep.md#a-vpc-cidr-block-cannot-be-resized-so-plan-it-for-growth",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.S2"
+  ],
+  "topics": [
+   "networking",
+   "performance"
+  ],
+  "services": [
+   "vpc",
+   "ec2-auto-scaling"
+  ],
+  "concept": "cidr-secondary-block",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company created a VPC with the CIDR block 10.0.0.0/24 for a pilot project. The project grew, and the VPC now runs an application on Amazon EC2 instances in an Auto Scaling group across two subnets. New instances fail to launch because the two subnets have no free IP addresses. The network design must be scalable for the next stage of growth. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "10.0.0.0/24",
+   "no free IP addresses",
+   "scalable",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Associate a non-overlapping secondary IPv4 CIDR block with the VPC, create new subnets in it, and add them to the Auto Scaling group.",
+    "correct": true,
+    "why": "A secondary block adds addresses to the same VPC, and [a route is automatically added to your VPC route tables to enable routing within the VPC](../facts/vpc.md#vpc-secondary-cidr-adds-local-route).",
+    "concept": "secondary-cidr",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Change the CIDR block of the VPC from 10.0.0.0/24 to 10.0.0.0/16, and then enlarge the two existing subnets into the new space.",
+    "correct": false,
+    "why": "You [cannot increase or decrease the size of an existing CIDR block](../facts/vpc.md#vpc-cidr-cannot-resize), so the VPC block stays a /24.",
+    "concept": "resize-vpc-cidr",
+    "trap": "vpc-trap-resize-cidr",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Create a new VPC with the CIDR block 10.1.0.0/16, migrate the application into new subnets there, and delete the old VPC afterward.",
+    "correct": false,
+    "why": "It works, but a new VPC and a migration of the whole application is far more work than adding a block to the current VPC.",
+    "concept": "new-vpc-migration",
+    "trap": null,
+    "misconception": "a VPC that runs out of addresses has to be rebuilt",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Associate a secondary IPv4 CIDR block of 10.0.0.0/23 that contains the current block, and launch the new instances in the added addresses.",
+    "correct": false,
+    "why": "A secondary block [must not overlap with any existing CIDR block that's associated with the VPC](../facts/vpc.md#vpc-cidr-cannot-resize), and a /23 that contains 10.0.0.0/24 overlaps it.",
+    "concept": "overlapping-secondary-cidr",
+    "trap": "vpc-trap-resize-cidr",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The fix adds address space to the same VPC instead of rebuilding it. You [cannot increase or decrease the size of an existing CIDR block](../facts/vpc.md#vpc-cidr-cannot-resize), so you associate a secondary block that does not overlap the first one. New subnets in that block can route at once, because [a route is automatically added to your VPC route tables to enable routing within the VPC](../facts/vpc.md#vpc-secondary-cidr-adds-local-route).",
+  "takeaway": "A full VPC gets a secondary, non-overlapping CIDR block instead of a larger first block.",
+  "twin": "If the stem said \"the company is still designing the VPC for a product that will grow\" instead: choose a large CIDR block now, because Well-Architected warns against [CIDR blocks that are too small and requiring reconfiguration, potentially causing downtime](../facts/vpc.md#vpc-wa-rel02-bp03-subnet-anti-patterns).",
+  "say": "You can't resize a VPC block, so I'd add a secondary CIDR block and new subnets.",
+  "facts": [
+   "vpc-secondary-cidr-adds-local-route",
+   "vpc-cidr-cannot-resize",
+   "vpc-wa-rel02-bp03-subnet-anti-patterns"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-scalable"
+  ],
+  "twin_of": null
+ }
+]

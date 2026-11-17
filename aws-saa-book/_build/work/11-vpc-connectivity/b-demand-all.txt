@@ -1,0 +1,552 @@
+{
+ "chapter": "11",
+ "slug": "vpc-connectivity",
+ "title": "Connecting VPCs: peering, Transit Gateway, endpoints and PrivateLink",
+ "template": "medium",
+ "written_by": "plan-11",
+ "written_at": "2026-10-13",
+ "sources_fetched": 129,
+ "fetch_failures": [
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/11/aws-privatelink-across-region-connectivity",
+   "reason": "robots.txt of aws.amazon.com disallows this path (exit 4); use the PrivateLink doc-history row 'Cross-Region access' (November 26, 2024) and privatelink-share-your-services#Cross-Region access"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/12/access-vpc-resources-aws-privatelink/",
+   "reason": "robots.txt disallows (exit 4); use the PrivateLink doc-history row 'Access resources and service networks' (December 1, 2024) and privatelink-access-resources"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/03/amazon-dynamodb-aws-privatelink/",
+   "reason": "robots.txt disallows (exit 4); the canon already holds dynamodb-change-privatelink-interface-endpoints-2024-03; use vpc-endpoints-ddb"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/10/aws-udp-privatelink-dual-stack-network-load-balancers",
+   "reason": "robots.txt disallows (exit 4); look for UDP and IP address types in privatelink-share-your-services and create-endpoint-service; otherwise report not-found"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2024/09/general-availability-security-group-referencing-aws-transit-gateway",
+   "reason": "robots.txt disallows (exit 4); use the TGW doc-history row 'Security group referencing support' (September 25, 2024) and tgw-vpc-attachments"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2023/08/aws-privatelink-user-defined-ip-vpc-endpoints/",
+   "reason": "robots.txt disallows (exit 4); use the PrivateLink doc-history row 'Designated IP addresses' (August 17, 2023)"
+  },
+  {
+   "url": "https://aws.amazon.com/about-aws/whats-new/2021/05/amazon-vpc-announces-pricing-change-for-vpc-peering/",
+   "reason": "robots.txt disallows (exit 4); use the multi-VPC whitepaper vpc-peering page ('stays within an Availability Zone is free') and the VPC pricing page"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/gracenote-case-study/",
+   "reason": "page now serves the generic case-study index (title 'Customer Success Stories'); no Gracenote text; unusable"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/textnow-privatelink-case-study/",
+   "reason": "page now serves the generic case-study index; no TextNow text; unusable"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/goldman-sachs-security-case-study/",
+   "reason": "page now serves the generic case-study index; no Goldman Sachs text; unusable"
+  },
+  {
+   "url": "https://aws.amazon.com/solutions/case-studies/SGX-case-study/",
+   "reason": "page now serves the generic case-study index; no SGX text; unusable"
+  }
+ ],
+ "notes": {
+  "not_examinable_yet": [
+   "Transit Gateway Policy-Based Routing GA 2026-07-28/30 (after 2026-07-15)",
+   "PrivateLink tunnel endpoints 2026-09-18"
+  ],
+  "examinable_recent": [
+   "Transit Gateway Client VPN attachments 2026-04-20",
+   "PrivateLink cross-Region for AWS services 2025-11-19",
+   "Transit Gateway flexible cost allocation and encryption support 2025-11-20",
+   "Network Firewall native Transit Gateway attachment 2025-06-16",
+   "Security group referencing on Transit Gateway 2024-09-25",
+   "PrivateLink cross-Region endpoint services 2024-11-26; resource and service-network endpoints 2024-12-01"
+  ],
+  "corpus_inputs": [
+   "aws-saa-book/_build/work/11-vpc-connectivity/faq-tgw.txt, faq-privatelink.txt, faq-vpc.txt (parsed FAQ lists)",
+   "aws-saa-book/_build/work/11-vpc-connectivity/changes-tgw.txt, changes-privatelink.txt, changes-endpoints.txt, changes-peering.txt (0 items since 2022; peering history newest row 2020-07-20)",
+   "aws-saa-book/_build/work/11-vpc-connectivity/cases-tgw.txt, cases-privatelink.txt"
+  ],
+  "existing_canon": "privatelink.jsonl and vpc-peering.jsonl hold facts moved from chapter 10 at status mech-pass (reuse them; they are registered in this chapter's register stage). vpc.jsonl, ram.jsonl, network-firewall.jsonl, dynamodb.jsonl and s3.jsonl hold verified facts named in reuse_candidates.",
+  "story": "STARTUP.md chapter 11: decision peering / shared transit gateway / PrivateLink endpoint service (chosen); both VPCs 10.20.0.0/16; the bank reaches only the API; Callvale's workloads call AWS services privately; question stems never name Callvale.",
+  "frequency": "FREQUENCY.md rank 27 (moderate). Pairs: peering vs Transit Gateway vs PrivateLink; gateway vs interface vs GWLB endpoint; endpoint vs NAT gateway for cost. Stem signals: privately, without traversing the internet, hundreds of VPCs, overlapping CIDR, expose a service to other accounts, reduce data transfer charges."
+ },
+ "registered_by": "register-11",
+ "registered_at": "2026-10-14"
+}
+
+d11-001 [filled] 4.4.K6 vpc-peering capability
+   Q: What is a VPC peering connection: a networking connection between two VPCs that routes traffic with private IPv4 or IPv6 addresses, so instances communicate as if in the same network? Quote the definition sentence in full.
+   facts: ['vpc-peering-def-private-ipv4-ipv6']
+   note: 
+d11-002 [filled] 4.4.K6 vpc-peering capability
+   Q: Can a VPC peering connection join VPCs in different AWS accounts and in different Regions (inter-Region peering)? Quote the guide sentence; the FAQ facts exist already.
+   facts: ['vpc-peering-accounts-and-regions']
+   note: 
+d11-003 [filled] 4.4.K6 vpc-peering behavior
+   Q: What are the steps of the peering lifecycle: the requester VPC owner sends a request, the accepter VPC owner accepts it, and then each owner must manually add routes to their route tables (and may update security groups)? Quote each step.
+   facts: ['vpc-peering-step-request', 'vpc-peering-step-accept', 'vpc-peering-step-routes-manual', 'vpc-peering-step-security-groups', 'vpc-peering-dns-default-public-resolution', 'vpc-peering-pending-acceptance-expires']
+   note: 
+d11-004 [filled] 4.4.K6 vpc-peering restriction
+   Q: Can you peer VPCs whose IPv4 or IPv6 CIDR blocks match or overlap? Include the clause that it fails even when a VPC has several CIDR blocks and you intend to use only the non-overlapping ones or only IPv6, and the statement that the status goes to failed.
+   facts: ['vpc-peering-no-overlap-ipv4-ipv6', 'vpc-peering-no-overlap-even-if-unused-cidr', 'vpc-peering-overlap-status-failed']
+   note: 
+d11-005 [filled] 4.4.K6 vpc-peering restriction
+   Q: Does VPC peering support transitive peering (A-B and A-C does not give B-C)? Quote the limitation and the example; reuse the FAQ fact.
+   facts: ['vpc-peering-no-transitive-example', 'vpc-peering-one-to-one-relationship']
+   note: 
+d11-006 [filled] 4.4.K6 vpc-peering restriction
+   Q: Edge-to-edge routing: can a peered VPC use the other VPC's internet gateway, NAT gateway, Site-to-Site VPN or Direct Connect connection, or gateway endpoint? Quote the limitation with each listed case (one fact per case if the page lists them).
+   facts: ['vpc-peering-edge-no-igw', 'vpc-peering-edge-no-nat', 'vpc-peering-edge-no-vpn', 'vpc-peering-edge-no-direct-connect', 'vpc-peering-edge-no-gateway-endpoint']
+   note: 
+d11-007 [filled] 4.4.K6 vpc-peering restriction
+   Q: How many VPC peering connections can exist between the same two VPCs (only one)? Any other listed limitation in 'VPC peering limitations' (for example, unicast reverse path forwarding, tags, inter-Region constraints)?
+   facts: ['vpc-peering-one-connection-between-two-vpcs', 'vpc-peering-tags-local-only', 'vpc-peering-no-reverse-path-forwarding', 'vpc-peering-no-query-peer-dns-server', 'vpc-peering-shared-vpc-owner-only', 'vpc-peering-ipv6-requirements']
+   note: 
+d11-008 [filled] 4.4.K6 vpc-peering number
+   Q: Quotas: active VPC peering connections per VPC (default and the adjustable maximum), outstanding peering requests, expiry time of an unaccepted request. Quote each table row with its header.
+   facts: ['vpc-peering-quota-active-connections-per-vpc', 'vpc-peering-quota-outstanding-requests', 'vpc-peering-quota-request-expiry', 'vpc-peering-whitepaper-max-125-active-connections']
+   note: Default 50, adjustable up to 125; 25 outstanding requests; 1 week (168 hours) expiry. The peering basics page says a pending request expires after 7 days (existing fact vpc-peering-pending-acceptance-expires).
+d11-009 [filled] 4.4.K6 vpc-peering restriction
+   Q: Inter-Region peering specifics: can security groups be referenced across Regions; is IPv6 supported; what MTU applies; is DNS hostname resolution supported? Quote each from the limitations list or the FAQ.
+   facts: ['vpc-peering-sg-reference-no-cross-region', 'vpc-peering-mtu-inter-region-8500', 'vpc-peering-faq-inter-region-dns-public', 'vpc-faq-inter-region-peering-ipv6']
+   note: adjudicate-11: vpc-peering-inter-region-dns-support-required was rejected (its inter-Region scope stands only in a bold label); DNS is answered by the verified FAQ fact vpc-peering-faq-inter-region-dns-public, IPv6 by vpc-faq-inter-region-peering-ipv6.
+d11-010 [filled] 4.4.K6 vpc-peering capability
+   Q: Security groups across a same-Region peering connection: can an inbound or outbound rule reference a security group in the peer VPC; what is a stale security group rule?
+   facts: ['vpc-peering-sg-reference-same-region', 'vpc-peering-sg-reference-needs-active', 'vpc-peering-sg-reference-other-account']
+   note: 
+d11-011 [filled] 4.4.K6 vpc-peering behavior
+   Q: DNS resolution over peering: what does enabling DNS resolution support do (a public DNS hostname of a peer instance resolves to its private IP address), and what must be true of the VPCs (DNS hostnames and DNS resolution enabled)?
+   facts: ['vpc-peering-dns-default-public-resolution', 'vpc-peering-dns-enabled-private-resolution', 'vpc-peering-dns-requires-vpc-attributes', 'vpc-peering-dns-needs-active-not-at-creation', 'vpc-peering-dns-each-owner-modifies-own-side', 'vpc-peering-dns-non-rfc1918-needs-resolution-support']
+   note: 
+d11-012 [filled] 3.4.S1 vpc-peering behavior
+   Q: Peering configurations: routing to a whole peer CIDR block versus routing to specific addresses; a central VPC peered with VPCs that have overlapping CIDR blocks using specific routes; longest prefix match for response traffic. Quote the configuration overview sentences.
+   facts: ['vpc-peering-config-entire-vpc-route', 'vpc-peering-config-specific-routes', 'vpc-peering-specific-routes-longest-prefix', 'vpc-peering-spokes-may-overlap-each-other', 'vpc-peering-route-target-and-destination', 'vpc-peering-route-pending-blackhole', 'vpc-peering-no-reverse-path-forwarding', 'vpc-peering-scenario-central-vpc-spokes-isolated', 'vpc-peering-scenario-active-directory-central-vpc']
+   note: The 'Routing for response traffic' section is not in the saved peering-configurations-partial-access snapshot; the no-reverse-path-forwarding sentences stand in its place.
+d11-013 [filled] 4.4.K6 vpc-peering behavior
+   Q: Is a peering connection a single point of failure or a bandwidth bottleneck (it is neither a gateway nor a VPN connection and uses the existing VPC infrastructure)? Quote the guide sentence; FAQ facts exist.
+   facts: ['vpc-peering-guide-existing-infrastructure-no-spof']
+   note: 
+d11-014 [filled] 4.4.S3 vpc-peering pricing
+   Q: Pricing dimensions for VPC peering: no charge to create; data transfer within one Availability Zone; data transfer across Availability Zones in the same Region (per direction); inter-Region transfer. Quote the VPC pricing rows, the FAQ answer and the whitepaper sentence 'All data transfer over a VPC peering connection that stays within an Availability Zone is free.' Dimensions first; record a dollar value only as the page states it.
+   facts: ['vpc-peering-wp-data-transfer-free-in-az']
+   note: No dollar value for inter-Region peering is printed on the VPC pricing page; the whitepaper says standard inter-Region data transfer charges apply.
+d11-015 [filled] 4.4.S5 vpc-peering change
+   Q: Change, April 11, 2025: same-Region cross-AZ VPC peering usage gets its own usage type (Region_Name-VpcPeering-In/Out-Bytes) with no price change. Confirm the existing fact; add the 'no changes to the pricing' sentence if missing.
+   facts: ['vpc-peering-billing-usage-type-2025']
+   note: Existing fact already carries the 'no changes to the pricing' sentence; not duplicated. | register-11: the existing change fact carries the 'no changes to the pricing' sentence.
+d11-016 [filled] 4.4.K6 vpc-peering change
+   Q: Hypothesis (FRESHNESS.md): VPC peering has no document-history entries since 2020 (newest row July 20, 2020, 'Tag on create'). Quote the newest row so the writer can say 'unchanged since 2020'.
+   facts: ['vpc-peering-change-newest-history-row-2020']
+   note: Hypothesis confirmed: newest peering history row is Tag on create, July 20, 2020; the change feed has 0 items since 2022-07-01.
+d11-017 [filled] 4.4.K6 vpc-peering behavior
+   Q: Encryption of peering traffic: what does the FAQ say for intra-Region peering and for inter-Region peering (AEAD, AWS-managed keys)? Facts exist; confirm and reuse.
+   facts: ['vpc-peering-guide-inter-region-encrypted-backbone']
+   note: 
+d11-018 [filled] 4.4.K6 vpc-peering behavior
+   Q: Who can delete a peering connection and what happens to traffic afterwards; can the requester cancel a pending request; what states does a peering connection go through (pending-acceptance, active, rejected, expired, failed, deleted)?
+   facts: ['vpc-peering-pending-acceptance-expires', 'vpc-peering-active-delete-not-reject', 'vpc-peering-active-status-despite-regional-event', 'vpc-peering-failed-state', 'vpc-peering-delete-by-either-owner', 'vpc-peering-accept-not-own-request', 'vpc-peering-accept-only-trusted-accounts', 'vpc-peering-inter-region-request-region', 'vpc-peering-rejected-request-visibility', 'vpc-peering-expired-request-visible-2-days', 'vpc-peering-deleted-connection-visibility']
+   note: Rejected and expired visibility windows are not facts: their sentences follow a bold state label, so a sentence-start quote is not possible; the states are in vpc-peering-basics. | register-11: the visibility windows exist as numbers-lens facts.
+d11-019 [filled] 4.4.S5 vpc-peering behavior
+   Q: Troubleshooting: what does the guide tell you to check when peered instances cannot communicate (routes in both route tables, security groups, network ACLs, overlapping CIDRs, status)?
+   facts: ['vpc-peering-troubleshoot-routes', 'vpc-peering-troubleshoot-security-groups', 'vpc-peering-troubleshoot-nacls-and-reachability']
+   note: The guide page names routes, security groups, network ACLs and Reachability Analyzer; overlapping CIDRs and status are covered by the overlap and lifecycle facts.
+d11-020 [filled] 4.4.S5 vpc-peering restriction
+   Q: Hypothesis: MTU mismatch when migrating from VPC peering to a transit gateway can drop asymmetric jumbo packets; what does the TGW quotas page advise? Also the MTU of intra-Region peering if the peering guide states it.
+   facts: ['transit-gateway-mtu-mismatch-peering-migration', 'vpc-peering-mtu-same-region-9001', 'vpc-peering-mtu-inter-region-8500']
+   note: Hypothesis confirmed by the TGW quotas and best-practice pages: an MTU mismatch can drop asymmetric packets; update both VPCs at the same time.
+d11-021 [filled] 4.4.S3 vpc-peering behavior
+   Q: Whitepaper guidance: peering is best for fewer than 10 VPCs, offers the lowest overall cost and highest aggregate performance, needs a full mesh n(n-1)/2 at scale (100 VPCs = 4,950 connections), and on-premises connectivity must be made to each VPC. Quote each sentence.
+   facts: ['vpc-peering-wp-best-for-few-controlled-vpcs', 'vpc-peering-wp-lowest-cost-highest-performance', 'vpc-peering-wp-full-mesh-4950-connections', 'vpc-peering-wp-onprem-link-to-each-vpc', 'vpc-peering-wp-full-bidirectional-point-to-point']
+   note: 
+d11-022 [filled] 4.4.K6 transit-gateway capability
+   Q: What is a transit gateway: a network transit hub (Regional virtual router) that interconnects VPCs and on-premises networks? Quote the what-is definition.
+   facts: ['transit-gateway-def-network-transit-hub', 'transit-gateway-elastic-layer-3-router', 'transit-gateway-regional-resource-thousands-of-vpcs', 'transit-gateway-hub-and-spoke-managed']
+   note: 
+d11-023 [partial] 4.4.K6 transit-gateway capability
+   Q: Which attachment types can a transit gateway have (VPC, Site-to-Site VPN, Direct Connect gateway, Connect for SD-WAN appliances, peering (intra-Region, inter-Region, Cloud WAN), network function, Client VPN, VPN Concentrator)? Quote the list.
+   facts: ['transit-gateway-route-table-association-supported-attachments', 'transit-gateway-vpc-attachment-eni-one-subnet-per-az', 'transit-gateway-network-function-attachment-firewall', 'transit-gateway-client-vpn-attachment-automatic', 'transit-gateway-peering-intra-and-inter-region-ipv4-ipv6', 'transit-gateway-vpn-attachment-dynamic-static-ipv4-ipv6', 'transit-gateway-dcg-single-connection-many-vpcs']
+   note: The what-is attachment list is bullet lines of fewer than 8 words each, so it cannot be quoted as one fact; the route-table sentence lists seven attachment types.
+d11-024 [filled] 4.4.K6 transit-gateway behavior
+   Q: Transitive routing through the hub: how does a transit gateway route between attachments (hub-and-spoke), unlike peering? Quote the whitepaper and FAQ 'How does routing work'.
+   facts: ['transit-gateway-wp-consolidate-routing-hub-and-spoke', 'transit-gateway-wp-simplifies-management-lower-ops-cost', 'transit-gateway-vs-peering-wp-hub-and-spoke-thousands-of-vpcs-one-gateway', 'transit-gateway-centralized-router-scenario']
+   note: 
+d11-025 [filled] 4.4.K6 transit-gateway behavior
+   Q: Route tables: default route table, association (each attachment associated with exactly one route table), propagation, static routes, blackhole routes; route evaluation order (static over propagated, longest prefix). Quote each rule.
+   facts: ['transit-gateway-default-route-table-association-propagation', 'transit-gateway-no-default-table-if-both-disabled', 'transit-gateway-attachment-one-route-table-association', 'transit-gateway-propagate-to-multiple-route-tables', 'transit-gateway-static-route-beats-propagated', 'transit-gateway-blackhole-route-drops', 'transit-gateway-shows-only-preferred-route', 'transit-gateway-peering-static-routes-only', 'transit-gateway-vpc-propagation-cidr-blocks', 'transit-gateway-route-evaluation-most-specific-first']
+   note: The longest-prefix first rule of route evaluation is a list line under a lead sentence, so it is not a stand-alone fact; static over propagated is. | register-11: added the longest-prefix rule as a heading-scoped list line (Route evaluation order).
+d11-026 [filled] 3.4.S1 transit-gateway behavior
+   Q: Segmentation: how do you stop some attached VPCs from talking to each other (several route tables, isolated VPCs, shared services VPC examples)? Quote the FAQ 'How do I control which VPCs can communicate with each other?' and the example scenario sentences.
+   facts: ['transit-gateway-isolated-vpcs-scenario', 'transit-gateway-isolated-vpcs-blocked-no-route', 'transit-gateway-isolated-shared-services-scenario', 'transit-gateway-wp-segment-routing-domains']
+   note: 
+d11-027 [filled] 4.4.K6 transit-gateway restriction
+   Q: Can a transit gateway connect VPCs with identical or overlapping CIDRs? Quote the FAQ answer and the ECMP sentence 'VPC does not support ECMP since CIDR blocks cannot overlap', with its example. Mark whether route propagation fails for overlapping CIDRs.
+   facts: ['transit-gateway-no-routing-identical-or-overlapping-cidr', 'transit-gateway-ecmp-vpc-not-supported']
+   note: Route propagation fails for the newly attached VPC with an identical or overlapping CIDR (the guide states it).
+d11-028 [filled] 4.4.K6 transit-gateway behavior
+   Q: VPC attachment and Availability Zones: you select one subnet per Availability Zone; traffic reaches resources only in Availability Zones that have an attachment subnet; best practice of a separate small subnet (/28) per attachment. Quote each.
+   facts: ['transit-gateway-vpc-attachment-eni-one-subnet-per-az', 'transit-gateway-az-without-attachment-cannot-reach', 'transit-gateway-separate-small-subnet-per-attachment', 'transit-gateway-enable-multiple-azs', 'transit-gateway-cross-az-internal-routing-no-extra-charge', 'transit-gateway-attachment-subnets-are-entry-and-exit', 'transit-gateway-vpc-attachment-one-subnet-per-az-entry-exit']
+   note: 
+d11-029 [filled] 4.4.K6 transit-gateway behavior
+   Q: Appliance mode: what it does (keeps both directions of a flow in the same Availability Zone for a stateful appliance), when to enable it, that it is supported only for VPC attachments, and what happens without it (traffic stays in the originating AZ).
+   facts: ['transit-gateway-appliance-mode-same-az-for-flow', 'transit-gateway-appliance-mode-flow-hash-symmetric', 'transit-gateway-appliance-mode-vpc-attachments-only', 'transit-gateway-appliance-mode-flow-source-any-attachment', 'transit-gateway-appliance-mode-off-stays-in-az', 'transit-gateway-appliance-mode-exactly-one-tgw', 'transit-gateway-appliance-mode-needs-route-propagation']
+   note: 
+d11-030 [filled] 4.4.K6 transit-gateway behavior
+   Q: ECMP: which attachments support Equal Cost Multipath (VPN with dynamic routing, Connect, Direct Connect gateway) and which do not (VPC, peering, VPN Concentrator, static VPN, across attachment types); how ECMP raises VPN bandwidth. One fact per rule.
+   facts: ['transit-gateway-ecmp-vpc-not-supported', 'transit-gateway-ecmp-connect-automatic', 'transit-gateway-ecmp-dx-gateway-same-prefix', 'transit-gateway-ecmp-peering-not-supported', 'transit-gateway-ecmp-vpn-concentrator-not-supported', 'transit-gateway-ecmp-vpn-optional', 'transit-gateway-ecmp-not-across-attachment-types', 'transit-gateway-bgp-multipath-as-path-relax-not-supported']
+   note: transit-gateway-ecmp-vpn-dynamic-routing-only was added by the numbers lens (same sentence); my duplicate was rejected as an existing id.
+d11-031 [filled] 3.4.K4 transit-gateway capability
+   Q: Transit gateway peering: intra-Region and inter-Region peering attachments; static routes only (no dynamic routing); inter-Region traffic encrypted (AES-256) and kept on the AWS global network. Quote each.
+   facts: ['transit-gateway-peering-intra-and-inter-region-ipv4-ipv6', 'transit-gateway-peering-accepter-and-static-route', 'transit-gateway-peering-static-routes-only', 'transit-gateway-peering-aes-256-double-encrypted', 'transit-gateway-peering-same-infrastructure-as-vpc-peering']
+   note: 
+d11-032 [filled] 3.4.S1 transit-gateway behavior
+   Q: Global networks: design best practices (unique ASN per transit gateway, inter-Region peering, route propagation for DX and BGP VPN, fewer route tables). Quote each listed practice.
+   facts: ['transit-gateway-unique-asn-per-gateway', 'transit-gateway-ha-by-design-single-per-region', 'transit-gateway-enable-propagation-for-dx-and-bgp-vpn', 'transit-gateway-limit-route-tables', 'transit-gateway-peering-intra-and-inter-region-ipv4-ipv6', 'transit-gateway-one-per-region-isolate-with-route-tables']
+   note: 
+d11-033 [filled] 3.4.K4 transit-gateway capability
+   Q: Direct Connect gateway attachment: a transit VIF to a Direct Connect gateway associated with the transit gateway lets one Direct Connect connection serve many VPCs; quotas: Direct Connect gateways per transit gateway and transit gateways per Direct Connect gateway.
+   facts: ['transit-gateway-dcg-single-connection-many-vpcs', 'transit-gateway-wp-table-dx-plus-tgw-use-case', 'transit-gateway-hybrid-dx-regional-routers']
+   note: 
+d11-034 [filled] 3.4.K4 transit-gateway capability
+   Q: Site-to-Site VPN attachment: a VPN connection terminates on the transit gateway; ECMP across tunnels for more bandwidth; whitepaper 'AWS Transit Gateway + Site-to-Site VPN'. Quote the key sentences.
+   facts: ['transit-gateway-vpn-attachment-dynamic-static-ipv4-ipv6', 'transit-gateway-vpn-attachment-same-account-as-tgw', 'transit-gateway-hybrid-vpn-managed-endpoint-many-vpcs', 'transit-gateway-wp-table-vpn-plus-tgw-use-case', 'transit-gateway-ecmp-vpn-optional']
+   note: 
+d11-035 [filled] 4.4.K6 transit-gateway capability
+   Q: Sharing a transit gateway across accounts with AWS RAM: share with accounts or the organization; the receiving account accepts the share; who creates attachments; RAM facts exist (reuse) - add the TGW-guide sentences.
+   facts: ['transit-gateway-share-with-ram-accounts-or-org', 'transit-gateway-share-accept-in-ram', 'transit-gateway-create-auto-accept-shared-attachments', 'transit-gateway-vpn-attachment-same-account-as-tgw', 'transit-gateway-network-services-account-ram']
+   note: 
+d11-036 [filled] 4.4.K6 transit-gateway number
+   Q: Quotas: transit gateways per account; attachments per transit gateway; transit gateways per VPC; one VPC attachment per VPC per transit gateway; route tables per transit gateway; total combined routes; peering attachments per transit gateway; one peering attachment between two transit gateways. One fact per row, quoted with the header.
+   facts: ['transit-gateway-quota-gateways-per-account', 'transit-gateway-quota-attachments-per-gateway', 'transit-gateway-quota-gateways-per-vpc', 'transit-gateway-one-vpc-attachment-per-vpc', 'transit-gateway-quota-route-tables-per-gateway', 'transit-gateway-quota-total-routes', 'transit-gateway-quota-peering-attachments', 'transit-gateway-quota-pending-peering-attachments', 'transit-gateway-quota-peering-between-two-gateways', 'transit-gateway-quotas-are-region-specific']
+   note: 
+d11-037 [filled] 4.4.K6 transit-gateway number
+   Q: Bandwidth quotas: per VPC attachment per Availability Zone (up to 100 Gbps each direction), packets per second per VPC attachment per AZ, Direct Connect gateway or peered transit gateway connection per AZ, Connect peer (up to 5 Gbps). One fact per row.
+   facts: ['transit-gateway-quota-vpc-attachment-bandwidth', 'transit-gateway-quota-vpc-attachment-pps', 'transit-gateway-quota-dx-peering-bandwidth', 'transit-gateway-quota-dx-peering-pps', 'transit-gateway-quota-connect-peer-bandwidth', 'transit-gateway-quota-connect-peer-pps', 'transit-gateway-connect-peers-20-gbps', 'transit-gateway-bandwidth-beyond-default-attempt']
+   note: 
+d11-038 [filled] 4.4.K6 transit-gateway number
+   Q: MTU: 8500 bytes between VPCs, Direct Connect, Connect and peering attachments; 1500 bytes over VPN; Path MTU Discovery support. Quote the MTU bullets.
+   facts: ['transit-gateway-mtu-8500-bytes', 'transit-gateway-mtu-vpn-1500-bytes', 'transit-gateway-pmtud-vpc-and-connect', 'transit-gateway-no-pmtud-vpn-dx-peering', 'transit-gateway-mtu-mismatch-peering-migration', 'transit-gateway-mss-clamping-all-packets']
+   note: 
+d11-039 [filled] 4.4.K6 transit-gateway change
+   Q: Hypothesis (FRESHNESS.md, date unknown): bandwidth per VPC attachment rose from 50 Gbps to up to 100 Gbps per AZ. Look for the TGW document-history row of August 14, 2023 ('AWS Transit Gateway Quotas', bandwidth quotas) and quote it; if no page states the old value, record only the date and current value.
+   facts: ['transit-gateway-change-bandwidth-limits-added-2023', 'transit-gateway-quota-vpc-attachment-bandwidth']
+   note: HYPOTHESIS NOT SUPPORTED. The document-history row of August 14, 2023 says 'Bandwidth limits were added.' No saved AWS page (quotas page, history, FAQ, whitepaper) states an older value of 50 Gbps. Record only: date 2023-08-14, current value up to 100 Gbps per VPC attachment per Availability Zone. Searched: tgw doc-history, transit-gateway-quotas, tgw FAQ, whitepapers.
+d11-040 [filled] 4.4.S3 transit-gateway pricing
+   Q: Pricing dimensions: an hourly charge per attachment, a per-GB data processing charge, which account is billed for each attachment type, no data processing for data sent from a peering attachment, and standard data transfer charges in addition. Quote the pricing page and the 'Pricing' section of the what-is page. Record the inter-Region example amounts only as the page states them.
+   facts: ['transit-gateway-pricing-hourly-attachment-and-data-processing', 'transit-gateway-pricing-vpc-attachment-owner-billed', 'transit-gateway-pricing-vpn-attachment-owner-billed', 'transit-gateway-pricing-dx-attachment-owner-billed', 'transit-gateway-pricing-connect-attachment-owner-billed', 'transit-gateway-pricing-peering-attachment-each-owner-billed', 'transit-gateway-pricing-network-function-owner-billed', 'transit-gateway-pricing-partial-hour-billed-as-full', 'transit-gateway-pricing-data-processing-per-gb-sent-to-gateway', 'transit-gateway-pricing-no-processing-from-peering-attachment', 'transit-gateway-pricing-standard-data-transfer-in-addition', 'transit-gateway-pricing-default-allocation-source-attachment-owner', 'transit-gateway-pricing-processing-charged-to-sending-vpc-owner', 'transit-gateway-blog-cost-elements-hourly-and-processing', 'transit-gateway-peering-sender-pays-model']
+   note: The pricing page example prints 'the rate is $0.1 per hour ($0.05 per VPC attachment)' for US East (Ohio); not stored as a fact because the setup sentence is on another line and the demand did not ask for it.
+d11-041 [filled] 4.4.S3 transit-gateway change
+   Q: Change, November 20, 2025: Flexible Cost Allocation (metering policies) lets you allocate data processing charges to the source, destination or transit gateway owner account; what is the default allocation? Quote the doc-history row, the What's New and the metering-policy page.
+   facts: ['transit-gateway-change-fca-sender-pay-to-flexible-2025', 'transit-gateway-fca-allocation-options-default-source', 'transit-gateway-change-flexible-cost-allocation-history-2025', 'transit-gateway-fca-no-additional-charge', 'transit-gateway-metering-policy-max-50-entries', 'transit-gateway-metering-policy-max-10-middlebox', 'transit-gateway-metering-policy-one-per-gateway']
+   note: Default is the source attachment owner. Old value (sender-pay only) quoted from the What's New post. History row says November 20, 2025; What's New says Nov 21, 2025.
+d11-042 [filled] 4.4.K6 transit-gateway change
+   Q: Change, September 25, 2024: security group referencing across VPCs attached to the same transit gateway; inbound rules only; not across transit gateway peering; must be enabled on both the transit gateway and the attachment; no additional cost. Quote the doc-history row and each limitation.
+   facts: ['transit-gateway-change-security-group-referencing-2024', 'transit-gateway-sg-reference-inbound-only', 'transit-gateway-sg-reference-enable-both-sides', 'transit-gateway-sg-reference-not-across-peering', 'transit-gateway-sg-reference-not-privatelink-endpoints', 'transit-gateway-sg-referencing-not-in-use1-az3']
+   note: 
+d11-043 [filled] 4.4.K6 transit-gateway change
+   Q: Change, June 16, 2025: network function attachments connect AWS Network Firewall directly to a transit gateway (no inspection VPC to manage), appliance mode enabled automatically, static routing only. Quote the doc-history row, the What's New and the how-it-works section.
+   facts: ['transit-gateway-change-network-function-attachments-2025', 'transit-gateway-change-network-firewall-direct-attachment-2025', 'transit-gateway-network-function-appliance-mode-automatic', 'transit-gateway-network-function-static-routing-only']
+   note: 
+d11-044 [filled] 4.4.K6 transit-gateway change
+   Q: Change, November 20, 2025: encryption support for transit gateways (with VPC Encryption Controls); what it does and how it is charged. Quote the doc-history row and the encryption-support page.
+   facts: ['transit-gateway-change-encryption-support-2025', 'transit-gateway-encryption-support-enforces-in-transit', 'transit-gateway-encryption-support-unsupported-features', 'transit-gateway-encryption-enabling-up-to-14-days', 'transit-gateway-encryption-only-on-existing-gateway']
+   note: Charges: reuse the verified fact; no new charge fact added.
+d11-045 [filled] 3.4.K4 transit-gateway change
+   Q: Change, April 20, 2026: Client VPN attachments to a transit gateway (Client VPN endpoint attached natively). Examinable (GA before 2026-07-15). Quote the doc-history row, the What's New and one capability sentence.
+   facts: ['transit-gateway-change-client-vpn-attachments-2026', 'transit-gateway-change-client-vpn-native-integration-2026', 'transit-gateway-client-vpn-attachment-automatic', 'transit-gateway-client-vpn-attachment-needs-cidr-block', 'transit-gateway-client-vpn-route-propagation-required', 'transit-gateway-client-vpn-native-integration-no-extra-charge']
+   note: History row April 20, 2026; What's New April 23, 2026. Examinable (before 2026-07-15).
+d11-046 [filled] 4.4.K6 transit-gateway change
+   Q: Change, July 28-30, 2026: Policy-Based Routing (policy tables) GA - GA after 2026-07-15, so not examinable yet. Quote the doc-history row and the What's New with their dates; note that 'Transit gateway policy tables' first appeared July 13, 2022 in the history.
+   facts: ['transit-gateway-change-pbr-2026', 'transit-gateway-change-pbr-ga-2026', 'transit-gateway-pbr-policy-table-or-route-table-not-both', 'transit-gateway-pbr-no-additional-charge', 'transit-gateway-change-policy-tables-2022']
+   note: NOT EXAMINABLE YET (history July 28, 2026; What's New Jul 30, 2026). The 2022 row 'Transit gateway policy tables' (July 13, 2022) describes dynamic routing with peered transit gateways, a different use of the term.
+d11-047 [filled] 4.4.S5 transit-gateway capability
+   Q: Monitoring to review network use: Transit Gateway Flow Logs (destinations), CloudWatch metrics (BytesIn, BytesOut, PacketDropCount... per transit gateway and per attachment). Quote the flow-logs definition and the metric names.
+   facts: ['transit-gateway-flow-logs-destinations', 'transit-gateway-flow-logs-no-performance-impact', 'transit-gateway-cloudwatch-publishes-tgw-and-attachment', 'transit-gateway-metric-bytesin-sum', 'transit-gateway-metric-packetdropcountnoroute', 'transit-gateway-metric-packetdropcountblackhole']
+   note: 
+d11-048 [filled] 4.4.K6 transit-gateway capability
+   Q: Multicast: a transit gateway supports multicast routing between attached VPCs (IGMP or static members). Quote the overview sentence and the FAQ on which attachment types route multicast.
+   facts: ['transit-gateway-multicast-overview', 'transit-gateway-multicast-igmpv2-and-static']
+   note: 
+d11-049 [filled] 4.4.K6 transit-gateway capability
+   Q: Transit Gateway Connect: what it is (GRE tunnel plus BGP to SD-WAN or third-party appliances). Quote the FAQ answer.
+   facts: ['transit-gateway-faq-connect-sdwan', 'transit-gateway-faq-connect-no-static-routes']
+   note: Covered by the FAQ lens facts; no guide fact added. | register-11: FAQ facts named.
+d11-050 [filled] 4.4.S3 transit-gateway behavior
+   Q: Centralized egress: spoke VPCs route internet traffic through a transit gateway to NAT gateways in an egress VPC; it saves NAT gateway hours but adds transit gateway data processing. Facts exist; confirm and reuse.
+   facts: ['vpc-centralized-egress-reduces-natgw-cost', 'vpc-centralized-egress-tgw-processing-tradeoff', 'transit-gateway-wp-centralize-shared-services']
+   note: Confirmed in canon; also transit-gateway-wp-centralize-shared-services. | register-11: chapter 10 facts reused.
+d11-051 [filled] 3.4.S1 transit-gateway behavior
+   Q: Centralized inspection: Gateway Load Balancer (or Network Firewall) in an inspection VPC behind a transit gateway inspects VPC-to-VPC and on-premises traffic; appliance mode required. Quote the whitepaper sentences.
+   facts: ['transit-gateway-inspection-be-selective-zones', 'transit-gateway-inspection-appliance-mode-stateful-firewall', 'transit-gateway-inspection-gwlb-appliance-mode-east-west', 'transit-gateway-inspection-gwlb-az-affinity-default', 'transit-gateway-inspection-local-region-inspection-vpcs', 'transit-gateway-nfw-subnets-only-endpoints', 'transit-gateway-network-function-static-routing-only']
+   note: 
+d11-052 [partial] 4.4.K6 transit-gateway behavior
+   Q: Network ACLs on transit gateway attachment subnets: which NACL rules apply to traffic entering and leaving the transit gateway? Quote the main rule.
+   facts: ['transit-gateway-nacl-same-subnet-one-acl', 'transit-gateway-keep-attachment-subnet-nacl-open']
+   note: Only the same-subnet rule and the keep-open practice are stand-alone sentences; the different-subnet rules are list lines under a lead sentence.
+d11-053 [filled] 1.2.K2 vpc-endpoints capability
+   Q: What is a VPC endpoint: private connectivity from a VPC to supported AWS services and endpoint services without an internet gateway, NAT device, VPN or Direct Connect, and without public IP addresses? Reuse FAQ facts; add the PrivateLink-guide concept sentence.
+   facts: ['privatelink-concepts-private-ip-as-if-hosted', 'privatelink-guide-private-connect-no-igw-nat']
+   note: 
+d11-054 [filled] 1.2.K2 vpc-endpoints capability
+   Q: Endpoint types: interface, gateway, Gateway Load Balancer, resource, service-network (and the new tunnel endpoint). Quote the concepts list, one sentence per type.
+   facts: ['vpc-endpoints-gateway-not-privatelink-concepts', 'vpc-endpoints-gwlb-fleet-of-appliances-service', 'vpc-endpoints-resource-endpoint-private-access', 'vpc-endpoints-service-network-endpoint-one-network', 'vpc-endpoints-interface-traffic-resolves-to-endpoint-eni', 'privatelink-interface-endpoint-sends-tcp-or-udp', 'vpc-endpoints-faq-five-types']
+   note: The concepts list is bullets that start with a type label, so no sentence-start quote exists for interface or tunnel. The tunnel endpoint (GA 2026-09-18) is not examinable yet and was left out on purpose. | register-11: the interface type is covered by the concepts line fact; tunnel endpoints (2026-09-18) are not examinable yet and stay out.
+d11-055 [filled] 1.2.K2 vpc-endpoints restriction
+   Q: Gateway endpoints: which services (S3 and DynamoDB only); a route table target that uses an AWS-managed prefix list; they do not use PrivateLink. Quote each.
+   facts: ['vpc-endpoints-gateway-not-privatelink-concepts', 'vpc-endpoints-wp-gateway-endpoint-no-additional-charge']
+   note: 
+d11-056 [filled] 1.2.K2 vpc-endpoints restriction
+   Q: Gateway endpoint limits: same Region only; not reachable from on-premises, from peered VPCs or through a transit gateway; one endpoint route per service per route table; IPv4 or IPv6 support. One fact per restriction, from the 'Considerations' list.
+   facts: ['vpc-endpoints-gateway-region-only', 'vpc-endpoints-gateway-not-extended-past-vpc', 'vpc-endpoints-gateway-dns-attributes', 'vpc-endpoints-gateway-security-groups-must-allow', 'vpc-endpoints-gateway-nacl-no-prefix-list']
+   note: Source conflict: the DynamoDB gateway page says gateway endpoints support only IPv4 traffic, the generic gateway-endpoints page describes IPv6 prefix lists (all subnets IPv6-only). No IPv4/IPv6 fact was added. close-facts-11: vpc-endpoints-gateway-switch-drops-open-connections was rejected at finalize (a repaired fact disputed again); removed from facts. Do not write that switching to a gateway endpoint drops open connections. Five verified restriction facts remain, so the demand stays filled.
+d11-057 [filled] 4.4.S3 vpc-endpoints pricing
+   Q: Gateway endpoints cost: 'There is no additional charge for using gateway endpoints.' Quote it from the gateway-endpoints page.
+   facts: ['vpc-gateway-endpoint-no-hourly-or-processing-charge', 'vpc-endpoints-wp-gateway-endpoint-no-additional-charge']
+   note: Existing verified fact carries 'There is no additional charge for using gateway endpoints.' from the gateway endpoints page. | register-11: the chapter 10 fact quotes the gateway-endpoints sentence.
+d11-058 [filled] 1.2.K2 vpc-endpoints behavior
+   Q: Interface endpoints: an endpoint network interface with a private IP address in each subnet you choose (one subnet per Availability Zone); security groups control traffic to the endpoint; the interfaces are requester-managed. Quote each.
+   facts: ['vpc-endpoints-interface-one-subnet-per-az', 'vpc-endpoints-interface-eni-ip-stable', 'vpc-endpoints-interface-two-azs-for-production', 'vpc-endpoints-interface-single-az-impairment', 'vpc-endpoints-interface-multi-az-round-robin', 'vpc-endpoints-interface-traffic-resolves-to-endpoint-eni']
+   note: 
+d11-059 [filled] 1.2.K2 vpc-endpoints behavior
+   Q: Private DNS for interface endpoints: when enabled, the service's default Regional DNS name resolves to the endpoint's private IP addresses, so applications need no change; it needs the VPC attributes enableDnsHostnames and enableDnsSupport. Quote each condition.
+   facts: ['vpc-endpoints-interface-private-dns-hidden-zone', 'vpc-endpoints-interface-private-dns-no-app-change', 'vpc-endpoints-interface-private-dns-recommended', 'vpc-endpoints-interface-dns-records-public-ips-private']
+   note: 
+d11-060 [filled] 1.2.K2 vpc-endpoints capability
+   Q: Can interface endpoints be reached from on-premises (Direct Connect or Site-to-Site VPN), from peered VPCs and through a transit gateway? Quote the PrivateLink FAQ and guide; reuse S3 and DynamoDB facts.
+   facts: ['privatelink-wp-endpoints-reachable-over-peering-tgw-dx', 'vpc-endpoints-wp-interface-endpoints-reachable-from-onprem', 'vpc-endpoints-gateway-not-extended-past-vpc']
+   note: 
+d11-061 [filled] 1.2.K2 vpc-endpoints comparison
+   Q: S3 gateway endpoint versus S3 interface endpoint: when AWS recommends each (on-premises or another Region needs an interface endpoint), whether both can exist in one VPC, and the cost difference. Reuse S3 facts; add the vpc-endpoints-s3 page sentences.
+   facts: ['vpc-endpoints-s3-private-dns-inbound-resolver-saves-cost', 'vpc-endpoints-s3-private-dns-default-pays-interface', 'vpc-endpoints-wa-cost08-gateway-free-interface-hourly']
+   note: 
+d11-062 [filled] 1.2.K2 vpc-endpoints change
+   Q: Change, March 19, 2024: DynamoDB supports interface endpoints (AWS PrivateLink) as well as gateway endpoints. Reuse the DynamoDB change fact; add the PrivateLink-guide sentence on DynamoDB endpoint choice.
+   facts: ['vpc-endpoints-ddb-gateway-vs-interface-choice', 'dynamodb-change-privatelink-interface-endpoints-2024-03']
+   note: adjudicate-11: vpc-endpoints-ddb-gateway-endpoints-ipv4-only was rejected as outdated (DynamoDB document history, October 3, 2025: IPv6 supported including with PrivateLink gateway and interface endpoints). Do not write that DynamoDB gateway endpoints are IPv4 only.
+d11-063 [filled] 1.2.K2 vpc-endpoints behavior
+   Q: Endpoint policies: a resource-based policy on the endpoint; the default policy allows full access; one policy per endpoint; it does not override or replace identity-based or resource policies; supported endpoint types. Reuse existing facts; add the 'does not override' sentence.
+   facts: ['vpc-endpoints-policy-json-iam-language-principal-required', 'vpc-endpoints-policy-single-policy-default-if-none', 'vpc-endpoints-policy-default-grants-full-access', 'vpc-endpoints-policy-default-allows-all-concepts', 'vpc-endpoints-policy-not-all-services-full-access-otherwise', 'vpc-endpoints-policy-other-endpoint-services-full-access', 'vpc-endpoints-policy-does-not-override-identity-or-resource-policies', 'vpc-endpoints-policy-gateway-principal-star-use-principalarn', 'vpc-endpoints-wp-one-policy-per-endpoint-no-override']
+   note: 
+d11-064 [filled] 1.2.K2 vpc-endpoints behavior
+   Q: Restricting an S3 bucket to one VPC endpoint with the aws:SourceVpce condition in a bucket policy. Reuse the S3 facts; add the vpc-endpoints-s3 sentence if it adds a condition (for example, policies with aws:SourceIp do not work through an endpoint).
+   facts: ['vpc-endpoints-gateway-s3-no-sourceip-use-vpcsourceip', 'vpc-endpoints-s3-bucket-policy-vpce-blocks-console']
+   note: 
+d11-065 [filled] 1.2.K2 vpc-endpoints number
+   Q: Quotas: interface plus Gateway Load Balancer endpoints per VPC; gateway endpoints per Region and per VPC; resource endpoints per VPC; service-network endpoints per VPC; characters per endpoint policy. One fact per row with its header and comment.
+   facts: ['vpc-endpoints-quota-interface-gwlb-per-vpc', 'vpc-endpoints-quota-gateway-endpoints', 'vpc-endpoints-quota-resource-endpoints-per-vpc', 'vpc-endpoints-quota-service-network-endpoints-per-vpc', 'vpc-endpoints-quota-policy-characters', 'vpc-endpoints-quotas-are-region-specific', 'vpc-endpoints-faq-100-endpoints-per-vpc']
+   note: SOURCE CONFLICT: the PrivateLink FAQ says up to 100 VPC endpoints per VPC; the quotas page lists a default of 50 interface and Gateway Load Balancer endpoints per VPC (adjustable) and 20 gateway endpoints per Region (up to 255 per VPC). Writers use the quotas page.
+d11-066 [filled] 1.2.K2 vpc-endpoints number
+   Q: Endpoint bandwidth and MTU: 10 Gbps per Availability Zone by default, scaling up to 100 Gbps; maximum is AZ count times 100 Gbps; MTU 8500 bytes, larger packets dropped; no Path MTU Discovery. Quote each bullet; also the FAQ 'How much bandwidth can I use through a VPC endpoint?'.
+   facts: ['vpc-endpoints-bandwidth-10-gbps-per-az-scales-to-100', 'vpc-endpoints-bandwidth-max-is-az-count-times-100', 'vpc-endpoints-mtu-8500-larger-packets-dropped', 'vpc-endpoints-no-path-mtu-discovery', 'vpc-endpoints-mss-clamping-all-packets', 'vpc-endpoints-gwlb-endpoint-bandwidth-10-gbps']
+   note: The FAQ answer 'How much bandwidth can I use through a VPC endpoint?' is the second evidence item of vpc-endpoints-bandwidth-10-gbps-per-az-scales-to-100.
+d11-067 [filled] 4.4.S3 vpc-endpoints pricing
+   Q: Interface endpoint pricing dimensions: billed per hour per Availability Zone while provisioned; per-GB data processing in tiers across the Region; partial hour billed as full; GWLB, resource and tunnel endpoint dimensions. Dimensions first; dollar values only as the page shows them with the tier header.
+   facts: ['vpc-endpoints-pricing-hourly-per-az-while-provisioned', 'vpc-endpoints-pricing-partial-hour-billed-as-full', 'vpc-endpoints-pricing-data-processing-per-gb-any-direction', 'vpc-endpoints-pricing-hourly-stops-on-delete', 'vpc-endpoints-pricing-interface-tiers-apply-region-total', 'vpc-endpoints-pricing-resource-tunnel-tiers-separate', 'vpc-endpoints-pricing-example-tier-rates-per-gb', 'privatelink-faq-billing-interface-gwlb-hourly-per-az', 'privatelink-faq-billing-resource-endpoint-hourly-any-az-count', 'privatelink-faq-billing-data-processing-per-gb', 'privatelink-resource-endpoint-billing-hourly-and-per-gb', 'privatelink-service-network-endpoint-billing']
+   note: The interface endpoint hourly rate per Availability Zone is not printed on the PrivateLink pricing page. The tier table (first 1 PB, next 4 PB, over 5 PB) is not a parsed Markdown table, so rows cannot be quoted as table rows; the per-GB tier rates are quoted from the page sentence in the resource endpoint example (vpc-endpoints-pricing-example-tier-rates-per-gb). The Gateway Load Balancer endpoint section of the pricing page has no billing sentence of its own; the FAQ covers interface and Gateway Load Balancer endpoints together.
+d11-068 [filled] 4.4.S3 vpc-endpoints comparison
+   Q: Endpoints instead of a NAT gateway: when most NAT traffic goes to AWS services, use gateway or interface endpoints; gateway endpoints remove NAT data processing for S3 and DynamoDB. Reuse existing facts and add the Well-Architected COST08 sentences on VPC endpoints.
+   facts: ['vpc-endpoints-wa-cost08-gateway-free-interface-hourly', 'vpc-endpoints-wa-cost08-nat-gateway-vs-endpoints', 'vpc-endpoints-wa-cost08-bp02-look-for-alternatives', 'vpc-endpoints-wa-cost08-bp03-review-where-costs-are']
+   note: 
+d11-069 [filled] 3.4.S1 vpc-endpoints behavior
+   Q: Centralized interface endpoints: one shared-services VPC hosts interface endpoints that spoke VPCs reach through a transit gateway, with Route 53 private hosted zones; the cost trade-off (fewer endpoint hours versus transit gateway processing). Quote the whitepaper.
+   facts: ['vpc-endpoints-wp-central-endpoints-cost-reason', 'vpc-endpoints-wp-central-endpoints-need-own-private-hosted-zone', 'vpc-endpoints-wp-central-endpoints-policy-tradeoff', 'vpc-endpoints-wp-cross-region-endpoint-transfer-charges']
+   note: 
+d11-070 [filled] 1.2.K2 vpc-endpoints change
+   Q: Change, November 2025: Amazon S3 supports IPv6 on gateway and interface VPC endpoints. Quote the What's New with its date.
+   facts: ['vpc-endpoints-change-s3-ipv6-2025']
+   note: What's New post dated Nov 10, 2025 (date in the fact note; the post has no old value). Contrast: the DynamoDB gateway endpoint page still says gateway endpoints support only IPv4 traffic.
+d11-071 [partial] 1.2.K2 vpc-endpoints restriction
+   Q: Not every AWS service supports interface endpoints, and a service may not be available in every Availability Zone: how do you check (the 'AWS services that integrate with AWS PrivateLink' list; choose subnets in supported AZs)? Quote the guide sentences.
+   facts: ['vpc-endpoints-aws-services-integrating-list', 'privatelink-consumer-endpoint-only-in-service-azs', 'privatelink-endpoint-service-az-names-differ-use-az-ids', 'vpc-endpoints-interface-one-subnet-per-az']
+   note: Not found: no saved AWS page states which Availability Zones an AWS service supports for its interface endpoint. Searched privatelink-access-aws-services, create-interface-endpoint, aws-services-privatelink-support, getting-started and a corpus search. The AZ rule is stated for endpoint services (consumer endpoints only in the service's zones). | register-11: one more search (corpus, 'available in all Availability Zones' and the PrivateLink guide's Availability Zone sentences) found no general statement for AWS-service interface endpoints; only service pages (for example Amazon Comprehend) say so. Teach the endpoint-service rule and the one-subnet-per-AZ rule.
+d11-072 [filled] 1.2.K2 vpc-endpoints capability
+   Q: Gateway Load Balancer endpoints: what they are (route traffic to a fleet of virtual appliances behind a Gateway Load Balancer), that they are a route table target, and the FAQ answer on private connectivity to appliances.
+   facts: ['vpc-endpoints-gwlb-fleet-of-appliances-service', 'vpc-endpoints-gwlb-routed-by-route-table', 'vpc-endpoints-gwlb-endpoint-one-az-cannot-change-subnet', 'vpc-endpoints-gwlb-endpoint-one-per-az-per-service', 'vpc-endpoints-gwlb-endpoint-returns-responses-only', 'vpc-endpoints-gwlb-endpoint-route-target-no-prefix-list', 'vpc-endpoints-gwlb-no-private-dns-names']
+   note: 
+d11-073 [filled] 3.4.K4 privatelink capability
+   Q: What is AWS PrivateLink: private connectivity between VPCs, supported services and resources, and on-premises networks, as if they were in your VPC, without an internet gateway, NAT, public IPs, Direct Connect or VPN? Quote the what-is definition.
+   facts: ['privatelink-guide-private-connect-no-igw-nat', 'privatelink-concepts-private-ip-as-if-hosted']
+   note: 
+d11-074 [filled] 3.4.K4 privatelink behavior
+   Q: Provider side: create an endpoint service in front of a Network Load Balancer (or Gateway Load Balancer); consumers create interface endpoints to it; only the consumer can initiate connections (unidirectional). Quote the share-your-services overview and the whitepaper.
+   facts: ['privatelink-wp-provider-nlb-consumer-endpoint-steps', 'privatelink-wp-only-consumer-initiates', 'privatelink-wp-unidirectional-overlapping-ips', 'privatelink-endpoint-service-needs-load-balancer']
+   note: 
+d11-075 [filled] 3.4.K4 privatelink behavior
+   Q: Access control for an endpoint service: allow principals (accounts, IAM roles or users) and the 'acceptance required' setting for connection requests. Quote each from configure-endpoint-service.
+   facts: ['privatelink-endpoint-service-not-available-by-default', 'privatelink-permissions-and-acceptance-control-access', 'privatelink-acceptance-required-manual', 'privatelink-allow-everyone-accept-all-is-public', 'privatelink-remove-permission-keeps-existing-connections']
+   note: 
+d11-076 [filled] 3.4.K4 privatelink capability
+   Q: Overlapping CIDR blocks: can the consumer and provider VPCs have overlapping IP address ranges with PrivateLink? Quote both whitepaper sentences.
+   facts: ['privatelink-wp-consumer-and-provider-may-overlap', 'privatelink-wp-unidirectional-overlapping-ips', 'privatelink-wp-good-solution-for-overlapping-ip']
+   note: 
+d11-077 [filled] 3.4.S1 privatelink comparison
+   Q: Peering versus Transit Gateway versus PrivateLink: what each whitepaper says about when to use each (full bidirectional vs hub-and-spoke vs unidirectional access to a specific service; scale; overlapping IPs). Quote the comparison sentences, including 'Use AWS PrivateLink when you have a client/server set up...'.
+   facts: ['privatelink-wp-unidirectional-overlapping-ips', 'privatelink-wp-mix-of-technologies', 'vpc-peering-wp-best-for-few-controlled-vpcs', 'vpc-peering-wp-use-tgw-or-cloud-wan-as-hub', 'transit-gateway-wp-table-architecture-comparison', 'transit-gateway-wp-table-segmentation-comparison', 'transit-gateway-wp-table-latency-comparison', 'transit-gateway-wp-table-scope-comparison', 'vpc-peering-wp-full-bidirectional-point-to-point']
+   note: The sentence 'Use AWS PrivateLink when you have a client/server set up...' starts after a bold label and an em dash, so the quote starts at its following sentence ('Only the clients ... can initiate a connection'). Source conflict: whitepaper Table 1 lists security group cross-referencing as 'Not supported' for Transit Gateway, but the TGW guide says it is supported (history row 2024-09-25); no fact was made from the table row.
+d11-078 [filled] 3.4.K4 privatelink behavior
+   Q: Private DNS names for an endpoint service: the provider verifies domain ownership (TXT record) before consumers can use the private DNS name. Quote the manage-dns-names rule.
+   facts: ['privatelink-provider-one-private-dns-name', 'privatelink-provider-dns-txt-record-verification', 'privatelink-provider-private-dns-same-as-public-name', 'privatelink-provider-no-private-dns-consumers-update-apps', 'vpc-endpoints-gwlb-no-private-dns-names']
+   note: 
+d11-079 [filled] 3.4.K4 privatelink behavior
+   Q: High availability of an endpoint service: Network Load Balancer targets in at least two Availability Zones; the consumer endpoint is available only in Availability Zones the service supports; zonal DNS names. Quote the guide and the whitepaper.
+   facts: ['privatelink-provider-enable-two-azs-for-ha', 'privatelink-provider-cross-zone-lb-tradeoff', 'privatelink-consumer-endpoint-only-in-service-azs', 'privatelink-regional-name-round-robin-across-azs']
+   note: Zonal DNS names: covered in privatelink-regional-name-round-robin-across-azs (consumer can use the zonal endpoints).
+d11-080 [filled] 3.4.K4 privatelink change
+   Q: Change, November 26, 2024: cross-Region access for endpoint services (a consumer in another Region creates an interface endpoint; the provider enables supported Regions). Quote the doc-history row and the share-your-services 'Cross-Region access' section, including any listed condition.
+   facts: ['privatelink-change-cross-region-access-2024', 'privatelink-cross-region-host-and-consumer-select', 'privatelink-cross-region-failover-not-managed', 'privatelink-cross-region-endpoint-service-unsupported-azs', 'privatelink-cross-region-only-privatelink-services', 'privatelink-cross-region-endpoint-service-iam-default-deny', 'privatelink-pricing-cross-region-no-premium', 'privatelink-pricing-cross-region-endpoint-owner-pays-both-directions', 'privatelink-pricing-cross-region-provider-hourly-per-active-region', 'privatelink-pricing-cross-region-provider-no-transfer-charge']
+   note: Other listed conditions (opt-in Regions, two Availability Zones for providers, TCP idle timeout and UDP fragmentation limits, prefer intra-Region) are left to the behavior miner.
+d11-081 [filled] 1.2.K2 privatelink change
+   Q: Change, November 19, 2025: cross-Region interface endpoints for some AWS services (which ones; how many Regions). Quote the What's New and the 'Cross-region enabled AWS services' page.
+   facts: ['privatelink-change-cross-region-aws-services-2025', 'privatelink-cross-region-aws-services-named-examples', 'privatelink-cross-region-aws-services-regional-dns-only', 'privatelink-cross-region-aws-services-iam-default-deny']
+   note: Services named on the guide page: Amazon S3, IAM, Amazon ECR, AWS KMS, Amazon ECS, AWS Lambda, Amazon Data Firehose, Amazon Managed Service for Apache Flink, Amazon Route 53. How many Regions: NOT FOUND. The What's New post only says 'select AWS services hosted in other Regions of the same AWS partition'. Looked in: the What's New post, aws-services-cross-region-privatelink-support, privatelink FAQ. The later What's New posts (14 Regions on 2024-12-19, 6 on 2025-03-18) are about endpoint-service cross-Region access and are not in the corpus (robots.txt).
+d11-082 [filled] 3.4.K4 privatelink change
+   Q: Change, December 1, 2024: resource endpoints and service-network endpoints (with VPC Lattice resource gateways and resource configurations) give access to a resource such as a database in another VPC without a Network Load Balancer. Quote the doc-history row and the overview sentences.
+   facts: ['privatelink-change-access-resources-and-service-networks-2024', 'privatelink-resource-endpoint-no-load-balancer-needed', 'privatelink-resource-endpoint-tcp-only', 'privatelink-resource-endpoint-connections-start-from-endpoint-vpc', 'privatelink-resource-endpoint-only-rds-arn-resources', 'privatelink-service-network-endpoint-concept', 'privatelink-resource-gateways-max-100-per-vpc', 'privatelink-resource-gateway-default-16-ipv4-per-eni']
+   note: 
+d11-083 [filled] 3.4.K4 privatelink change
+   Q: Change, September 18, 2026: tunnel endpoints for network segments (CIDR ranges). GA after 2026-07-15, so not examinable yet. Quote the What's New with its date and one overview sentence.
+   facts: ['privatelink-change-tunnel-endpoints-2026', 'privatelink-tunnel-endpoint-geneve-encapsulation']
+   note: NOT EXAMINABLE YET (Sep 18, 2026).
+d11-084 [filled] 3.4.K4 privatelink change
+   Q: Hypothesis: PrivateLink supports UDP and dual-stack Network Load Balancers (What's New of October 31, 2024 is blocked by robots.txt). Look for a guide sentence on supported protocols or IP address types for endpoint services; report not-found if none.
+   facts: ['privatelink-interface-endpoint-sends-tcp-or-udp', 'privatelink-ipv6-endpoint-service-needs-dualstack-nlb']
+   note: Hypothesis 'UDP support and dual-stack Network Load Balancers on 2024-10-31': the What's New post is blocked by robots.txt and no saved page states the date. The concepts page says an interface endpoint can send TCP or UDP traffic to an endpoint service; the endpoint service page says IPv6 needs dualstack Network Load Balancers. Looked in: concepts, privatelink-share-your-services, create-endpoint-service, doc-history (no UDP row).
+d11-085 [filled] 3.4.K4 privatelink capability
+   Q: Access SaaS products through PrivateLink (partner services, AWS Marketplace). Quote the overview sentence.
+   facts: ['privatelink-saas-access-private-as-if-in-vpc', 'privatelink-saas-provider-endpoint-service-consumer-interface-endpoint']
+   note: 
+d11-086 [filled] 3.4.K4 privatelink behavior
+   Q: Traffic path and security: PrivateLink traffic stays on the AWS network and does not traverse the internet; security groups on endpoint interfaces; the FAQ 'How secure is an AWS PrivateLink connection?'. Quote each.
+   facts: ['privatelink-wp-security-groups-manage-endpoint-access', 'vpc-endpoints-interface-aws-service-accepts-automatically', 'vpc-endpoints-interface-dns-records-public-ips-private', 'privatelink-wp-only-consumer-initiates']
+   note: 
+d11-087 [filled] 4.4.S3 privatelink pricing
+   Q: Who pays what with PrivateLink: the consumer's endpoint hours and data processing; the provider's Network Load Balancer; the FAQ 'How will I be charged and billed for my use of AWS PrivateLink?'. Quote the billing sentences.
+   facts: ['privatelink-faq-billing-interface-gwlb-hourly-per-az', 'privatelink-faq-billing-resource-endpoint-hourly-any-az-count', 'privatelink-faq-billing-data-processing-per-gb', 'privatelink-pricing-cross-region-no-premium', 'privatelink-pricing-cross-region-provider-hourly-per-active-region']
+   note: Consumer side found (endpoint hours per Availability Zone plus per-GB data processing). The provider's Network Load Balancer charge: NOT FOUND in any saved page (searched the PrivateLink FAQ, pricing page, share-your-services, access pages and the PrivateLink whitepaper for charge, billed, pay near provider). The writer must not state who pays for the Network Load Balancer in the Callvale decision record from these sources.
+d11-088 [filled] 4.4.S5 privatelink capability
+   Q: Monitoring endpoints and endpoint services: CloudWatch metrics and the built-in Contributor Insights rules. Quote the overview sentences.
+   facts: ['privatelink-metrics-published-for-which-endpoints', 'privatelink-contributor-insights-built-in-rules']
+   note: 
+d11-089 [filled] 3.4.S1 privatelink comparison
+   Q: Neighbours: Amazon VPC Lattice (application-layer service networks) versus PrivateLink; AWS Cloud WAN versus Transit Gateway (decision guide: Transit Gateway if you operate in multiple Regions and want to manage your own routing or automation). Quote the whitepaper and decision-guide sentences.
+   facts: ['privatelink-vs-lattice-wp-application-networking', 'privatelink-vs-lattice-guide-single-or-multiple-vpcs', 'transit-gateway-decision-guide-cloud-wan-when', 'transit-gateway-decision-guide-suited-for-connecting-vpcs', 'transit-gateway-wp-cloud-wan-segments-by-policy', 'transit-gateway-wp-cloud-wan-replaces-tgw-peering-vpn']
+   note: AWS App Mesh appears in the decision guide beside VPC Lattice; it is out of scope and not quoted.
+d11-090 [filled] 3.4.S1 vpc-peering comparison
+   Q: VPC sharing as an alternative to connecting many VPCs: share subnets with other accounts through AWS RAM. Quote the whitepaper and VPC guide sentences; reuse the shared-VPC billing fact.
+   facts: ['vpc-peering-sharing-wp-owner-shares-subnets-participants-manage-own', 'vpc-peering-sharing-wp-reduces-vpc-count-instead-of-connecting', 'vpc-peering-sharing-wp-benefits-no-transfer-charge-same-az', 'vpc-peering-sharing-wp-use-when-isolation-managed-by-accounts']
+   note: 
+d11-091 [partial] 3.4.S1 transit-gateway comparison
+   Q: Transit VPC (software VPN appliances in a hub VPC) as the older pattern that Transit Gateway replaces; what the whitepapers say about its management overhead. Quote them.
+   facts: ['transit-gateway-wp-transit-vpc-challenges', 'transit-gateway-wp-transit-vpc-vpn-overlay-hub']
+   note: No saved current page says Transit Gateway replaces a transit VPC; the whitepaper lists the transit VPC's own challenges. An old What's New feed summary (intra-Region peering) says it eliminates the need for transit VPCs but is not quotable as current truth. | register-11: one more search ('transit VPC' in saved pages) found no current page that says Transit Gateway replaces a transit VPC; only the 2019 What's New feed text. Teach the transit VPC challenges as stated.
+d11-092 [filled] 3.4.S1 transit-gateway behavior
+   Q: Well-Architected: REL02-BP04 prefer hub-and-spoke over many-to-many mesh; REL02-BP05 enforce non-overlapping private IP ranges. Quote the key sentences; reuse the hub-and-spoke fact.
+   facts: ['transit-gateway-wa-rel02-bp04-central-hub-simplifies', 'transit-gateway-wa-rel02-bp04-managed-hub-service', 'transit-gateway-wa-rel02-bp04-routes-only-where-needed', 'transit-gateway-wa-rel02-bp04-hub-in-network-services-account', 'vpc-peering-wa-rel02-bp05-no-overlap-when-connected', 'privatelink-wa-rel02-bp05-overlap-remedy', 'vpc-peering-wa-rel02-bp05-use-ipam']
+   note: 
+d11-093 [filled] 4.4.S3 transit-gateway comparison
+   Q: Data transfer cost of peering versus transit gateway for VPC-to-VPC traffic: peering has no processing charge (free within an AZ), a transit gateway adds per-GB processing; what the data-transfer blog and whitepapers say. Quote sentences, no computed totals.
+   facts: ['vpc-peering-blog-same-az-free-cross-az-charged', 'vpc-peering-wp-data-transfer-free-in-az', 'vpc-peering-guide-pricing-no-creation-charge-free-in-az', 'transit-gateway-blog-peered-gateways-one-side-charged', 'transit-gateway-blog-cross-region-extra-transfer']
+   note: 
+d11-094 [filled] 4.4.S3 transit-gateway pricing
+   Q: Inter-Region transit gateway peering: data processing on the sending transit gateway only, plus inter-Region data transfer out; inbound inter-Region transfer free. Quote the pricing example sentences as written.
+   facts: ['transit-gateway-pricing-inter-region-peering-example-total', 'transit-gateway-pricing-inter-region-receiving-side-no-charge', 'transit-gateway-pricing-no-processing-from-peering-attachment', 'transit-gateway-blog-peered-gateways-one-side-charged']
+   note: 
+d11-095 [partial] 4.4.S5 vpc-endpoints behavior
+   Q: Reviewing a workload for network optimizations: perform data transfer modeling, select components to optimize data transfer cost, and use usage types (VpcPeering-In/Out-Bytes, VpcEndpoint-Bytes, transit gateway bytes) in Cost Explorer. Quote the WA COST08 sentences; reuse billing-code facts.
+   facts: ['vpc-endpoints-wa-cost08-bp02-look-for-alternatives', 'vpc-endpoints-wa-cost08-bp03-review-where-costs-are', 'vpc-endpoints-wa-cost08-gateway-free-interface-hourly']
+   note: COST08 sentences that name data transfer modeling and Cost Explorer sit after bold labels (not sentence starts); the usage types come from the billing-code facts.
+d11-096 [filled] 3.4.K4 transit-gateway capability
+   Q: Hybrid hub: the whitepapers' network-to-VPC options that use a transit gateway (Direct Connect + Transit Gateway, Transit Gateway + Site-to-Site VPN) and their one-line 'use when'. Quote the table rows (chapter 12 owns VPN and Direct Connect themselves).
+   facts: ['transit-gateway-hybrid-dx-regional-routers', 'transit-gateway-hybrid-vpn-managed-endpoint-many-vpcs', 'transit-gateway-wp-table-dx-plus-tgw-use-case', 'transit-gateway-wp-table-vpn-plus-tgw-use-case']
+   note: 
+d11-097 [filled] 3.4.K4 privatelink example
+   Q: Callvale decision: the bank's VPC and Callvale's VPC both use 10.20.0.0/16. Which facts decide it? (a) peering fails for overlapping CIDRs, (b) whether a transit gateway can route between VPCs with identical CIDRs, (c) PrivateLink allows overlapping ranges. Point to the facts mined above (d11 items on overlap) and report any gap.
+   facts: ['vpc-peering-no-overlap-ipv4-ipv6', 'vpc-peering-no-overlap-even-if-unused-cidr', 'vpc-peering-overlap-status-failed', 'transit-gateway-no-routing-identical-or-overlapping-cidr', 'privatelink-wp-consumer-and-provider-may-overlap', 'privatelink-wp-unidirectional-overlapping-ips', 'privatelink-wa-rel02-bp05-overlap-remedy', 'vpc-peering-wa-rel02-bp05-no-overlap-when-connected']
+   note: No gap: (a) peering fails for overlapping CIDRs, (b) a transit gateway does not route between identical or overlapping CIDRs and does not propagate the new VPC's routes, (c) PrivateLink allows overlapping ranges; Well-Architected names PrivateLink as the technique for connecting overlapping ranges.
+d11-098 [partial] 3.4.K4 privatelink example
+   Q: Callvale, Chen's question 'How does PrivateLink limit the bank to the API?': which quoted sentences say the consumer reaches only the service behind the endpoint service's load balancer, and only the consumer can initiate connections? Point to facts or report not-found.
+   facts: ['privatelink-wp-only-consumer-initiates', 'privatelink-wp-unidirectional-overlapping-ips', 'privatelink-wp-provider-nlb-consumer-endpoint-steps', 'privatelink-endpoint-service-needs-load-balancer']
+   note: The sentences say only consumers initiate connections. No sentence says the consumer is limited to the service behind the load balancer other than the endpoint service/NLB design; the writer should state 'reaches the service behind the endpoint service' from privatelink-endpoint-service-needs-load-balancer and not claim stronger isolation.
+d11-099 [filled] 1.2.K2 vpc-endpoints example
+   Q: Callvale: its workloads must call AWS services privately - gateway endpoints for S3 and DynamoDB, interface endpoints for other services (STARTUP.md network). Which facts ground the choice and the cost note 'fixed cost for each endpoint'? Point to facts.
+   facts: ['vpc-endpoints-wa-cost08-gateway-free-interface-hourly', 'vpc-endpoints-gateway-not-privatelink-concepts', 'vpc-endpoints-wp-gateway-endpoint-no-additional-charge', 'vpc-endpoints-interface-traffic-resolves-to-endpoint-eni']
+   note: Interface endpoints have an hourly fee per AZ plus a per-GB fee (a fixed cost for each endpoint); gateway endpoints have no hourly charge.
+d11-100 [filled] 4.4.K6 transit-gateway example
+   Q: Callvale adds a transit gateway at stage 3 (shared across its seven accounts; Direct Connect and VPN attach to it in chapter 12). Which facts ground 'shared with RAM across accounts' and 'one hub for VPCs and on-premises'? Point to facts.
+   facts: ['transit-gateway-share-with-ram-accounts-or-org', 'transit-gateway-network-services-account-ram', 'transit-gateway-wp-many-vpcs-hub-and-spoke-no-mesh', 'transit-gateway-dcg-single-connection-many-vpcs', 'transit-gateway-def-network-transit-hub']
+   note: 
+d11-101 [filled] 3.4.K4 privatelink example
+   Q: Callvale accepts 'a fixed cost for each endpoint service': which quoted sentences say an endpoint is billed per hour per AZ while provisioned and that the provider runs a Network Load Balancer (an hourly-billed resource)? If the canon has no sentence for the provider's fixed cost, report not-found so the writer changes the stated reason.
+   facts: ['privatelink-provider-nlb-billed-hourly-full-hour']
+   note: The PrivateLink pricing and FAQ pages bill the consumer's endpoint per hour per AZ; the provider's fixed cost is the Network Load Balancer (ELB pricing page). The privatelink-pricing-cross-region-provider-hourly-per-active-region fact adds a provider hourly charge for cross-Region only.
+d11-102 [filled] 4.4.K6 transit-gateway example
+   Q: Real world: Carrier Global used Transit Gateway in a hub-and-spoke model (fact exists; reuse). Quote one more sentence on why it moved on (static routes across Regions) if the case says so.
+   facts: ['transit-gateway-case-carrier-static-routes-across-regions']
+   note: The case says the hub-and-spoke architecture required static routes across Regions with manual changes, then moved to AWS Cloud WAN.
+d11-103 [filled] 3.4.K4 privatelink example
+   Q: Real world: Resilience transfers lab data with DataSync over AWS PrivateLink 'without exposing data to the internet'. Quote one sentence from the case study.
+   facts: ['privatelink-case-resilience-datasync-no-internet']
+   note: 
+d11-104 [filled] 4.4.K6 transit-gateway faq
+   Q: TGW FAQ: 'How do I control which Amazon Virtual Private Clouds (VPCs) can communicate with each other?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['transit-gateway-faq-route-tables-segment', 'transit-gateway-faq-multiple-route-tables-optional']
+   note: 
+d11-105 [filled] 4.4.K6 transit-gateway faq
+   Q: TGW FAQ: 'How does routing work in AWS Transit Gateway?' and 'How are routes propagated into the AWS Transit Gateway?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['transit-gateway-faq-default-association', 'transit-gateway-faq-static-and-dynamic-routing', 'transit-gateway-faq-route-next-hop', 'transit-gateway-faq-onprem-routes-bgp', 'transit-gateway-faq-vpc-cidr-propagation-not-bgp', 'transit-gateway-faq-no-propagation-to-vpc-route-table', 'transit-gateway-faq-peering-attachment-static-routes']
+   note: 
+d11-106 [filled] 4.4.K6 transit-gateway faq
+   Q: TGW FAQ: 'Can I connect Amazon VPCs with identical CIDRs?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['transit-gateway-faq-identical-cidr-not-routed', 'transit-gateway-no-routing-identical-or-overlapping-cidr']
+   note: FAQ says identical CIDRs; the user guide (tgw-vpc-attachments) says identical or overlapping. Writers use the guide fact for the rule and the FAQ fact for the quick-fire quote.
+d11-107 [filled] 4.4.K6 transit-gateway faq
+   Q: TGW FAQ: 'What are the default limits or quotas for AWS Transit Gateway?' and 'Can I associate my AWS Transit Gateway with a Direct Connect gateway in a different account?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['transit-gateway-faq-limits-in-docs-support-case', 'transit-gateway-faq-dx-gateway-cross-account', 'transit-gateway-faq-dx-gateway-different-asn']
+   note: The TGW FAQ gives no limit values; it points to the documentation.
+d11-108 [filled] 3.4.K4 privatelink faq
+   Q: PrivateLink FAQ: 'What is AWS PrivateLink?', 'How can I use PrivateLink?', 'Is PrivateLink enabled by a specific type of endpoint?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['privatelink-faq-owners-register-nlb-or-share-resources', 'privatelink-faq-service-owner-nlb-allowlist', 'privatelink-faq-resource-owner-resource-configuration-ram', 'vpc-endpoints-faq-five-types', 'privatelink-faq-what', 'privatelink-faq-nlb-provider']
+   note: 
+d11-109 [filled] 3.4.K4 privatelink faq
+   Q: PrivateLink FAQ: 'What are the benefits of using a VPC endpoint with AWS PrivateLink?' and 'Can I privately access services and resources over AWS Direct Connect using AWS PrivateLink?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-endpoints-faq-benefit-no-other-gateways', 'vpc-endpoints-faq-benefit-restrict-users-actions-resources', 'vpc-endpoints-faq-benefit-limit-to-vpc-or-endpoint', 'vpc-endpoints-faq-onprem-dx-dns-returns-private-ip', 'privatelink-faq-over-direct-connect']
+   note: 
+d11-110 [filled] 1.2.K2 privatelink faq
+   Q: PrivateLink FAQ: 'How scalable is AWS PrivateLink?', 'How many VPC endpoints can I create in a single VPC?', 'How much bandwidth can I use through a VPC endpoint?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['privatelink-faq-peering-limit-125-vs-unlimited-scale', 'vpc-endpoints-faq-100-endpoints-per-vpc', 'privatelink-faq-endpoint-bandwidth-default-10-gbps-per-az', 'privatelink-faq-endpoint-bandwidth-max-100-gbps', 'vpc-endpoints-faq-horizontally-scalable-highly-available']
+   note: FAQ vs guide: FAQ says up to 100 endpoints per VPC; vpc-limits-endpoints says 50 interface and Gateway Load Balancer endpoints per VPC and 20 gateway endpoints per Region (up to 255 per VPC). Both sides are in the canon (vpc-endpoints-faq-guide-quota-*). FAQ says peering is limited to 125 connections; the peering quotas page says default 50, adjustable up to 125 (vpc-peering-faq-guide-quota-active-per-vpc). The conflict queue did not queue these pairs (different claim wording), so this note is the record. Writers teach the guide numbers and may quote the FAQ as the older, rounder statement.
+d11-111 [filled] 1.2.K2 privatelink faq
+   Q: PrivateLink FAQ: 'Can I connect multiple services or resources to a single VPC endpoint?', 'Since VPC endpoints have their own DNS names, do I need to update my code...?', 'Can I use a service's public endpoint (DNS name) to access my VPC endpoints?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-endpoints-faq-endpoint-per-service-or-resource', 'vpc-endpoints-faq-sdk-discovers-endpoints-latest', 'privatelink-faq-public-service-name-not-supported', 'vpc-endpoints-cmp-private-dns-public-name', 'privatelink-faq-endpoint-dns-resolves-to-local-ip']
+   note: FAQ vs guide: the FAQ says a service public endpoint name cannot be used to reach VPC endpoints (only private endpoint names); the guide says that with private DNS enabled on an interface endpoint for an AWS service, requests keep using the public service name. Teach the guide behavior; use the FAQ sentence only with that caveat.
+d11-112 [filled] 1.2.K2 privatelink faq
+   Q: PrivateLink FAQ: 'Can I access VPC endpoints from my on-premises network over Direct Connect?', 'How secure is an AWS PrivateLink connection?', 'Can I associate security groups with VPC endpoints?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-endpoints-faq-onprem-dx-dns-returns-private-ip', 'privatelink-faq-path-stays-within-aws', 'privatelink-faq-no-encryption-by-default', 'privatelink-faq-consumer-initiates-allowlisted-customers', 'vpc-endpoints-faq-security-groups-association']
+   note: The FAQ security-group answer does not name an endpoint type; do not teach it as applying to gateway endpoints.
+d11-113 [filled] 4.4.S3 privatelink faq
+   Q: PrivateLink FAQ: 'How will I be charged and billed for my use of AWS PrivateLink?' and 'Can Gateway Load Balancer endpoints provide private connectivity to virtual appliances fronted by a Gateway Load Balancer?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['privatelink-faq-billing-interface-gwlb-hourly-per-az', 'privatelink-faq-billing-resource-endpoint-hourly-any-az-count', 'privatelink-faq-billing-data-processing-per-gb', 'privatelink-faq-billing-partial-hour-full-hour', 'vpc-endpoints-faq-gwlb-endpoint-appliances']
+   note: On the saved PrivateLink FAQ page the answer under the question about Gateway Load Balancer endpoints repeats the resource and service-network endpoint text, so the GWLB sentence is quoted from the endpoint-types answer.
+d11-114 [filled] 1.2.K2 vpc-endpoints faq
+   Q: VPC FAQ: 'What are the different types of VPC endpoints available on Amazon VPC?' and the AWS PrivateLink section ('Which services are currently available on AWS PrivateLink?') Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-endpoints-faq-five-types', 'vpc-endpoints-faq-gateway-endpoint-s3-ddb-route', 'vpc-endpoints-faq-interface-endpoint-privatelink-services', 'vpc-endpoints-faq-resource-endpoint', 'vpc-endpoints-faq-service-network-endpoint', 'vpc-faq-endpoint-types-gateway-interface']
+   note: FAQ vs FAQ: the VPC FAQ says Amazon VPC offers two endpoint types (gateway and interface); the PrivateLink FAQ says five. Five is current; two is the older text. The VPC FAQ list of services on PrivateLink (EC2, ELB, Kinesis Streams, Service Catalog, EC2 Systems Manager, SNS, DataSync) is out of date and was not added; use the guide page aws-services-privatelink-support.
+d11-115 [filled] 4.4.K6 vpc-peering faq
+   Q: VPC FAQ peering section: 'Can I create a peering connection to a VPC in a different region?', 'How much do VPC peering connections cost?', 'Do I need an Internet Gateway to use peering connections?', 'If I peer VPC A to VPC B and I peer VPC B to VPC C, does that mean VPCs A and C are peered?' (many exist as facts already: reuse, add only the missing ones) Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-peering-faq-inter-region', 'vpc-peering-faq-cross-account-accept', 'vpc-peering-faq-no-creation-charge', 'vpc-peering-faq-no-internet-gateway', 'vpc-peering-faq-not-transitive', 'vpc-peering-faq-intra-region-private', 'vpc-peering-faq-either-side-terminates']
+   note: 
+d11-116 [filled] 4.4.K6 vpc-peering faq
+   Q: VPC FAQ peering section: 'What if my peering connection goes down?', 'Are there any bandwidth limitations for peering connections?', 'Can I reference security groups across an Inter-Region VPC Peering connection?', 'Does Inter-Region VPC Peering support IPv6?' (reuse existing facts) Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-peering-faq-no-single-point-of-failure', 'vpc-peering-faq-inter-region-no-internet-failover', 'vpc-peering-faq-bandwidth-same-as-vpc', 'vpc-peering-faq-inter-region-no-sg-reference', 'vpc-faq-inter-region-peering-ipv6', 'vpc-peering-faq-inter-region-encrypted']
+   note: 
+d11-117 [filled] 4.4.K6 transit-gateway faq
+   Q: VPC FAQ: 'How can I encrypt traffic between my VPCs in a region?', 'How do I enable encryption on a Transit Gateway?', 'Do VPC flow logs support AWS Transit Gateway?' (VPC Encryption Controls, 2025) Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['transit-gateway-faq-encryption-support-explicit', 'transit-gateway-faq-encryption-non-disruptive', 'transit-gateway-faq-encryption-enforce-vpcs-end-to-end', 'transit-gateway-faq-encryption-same-region', 'transit-gateway-faq-encryption-to-non-enforced-vpc', 'transit-gateway-faq-encryption-incremental-migration', 'transit-gateway-faq-encryption-enforce-peering-or-tgw', 'privatelink-faq-encryption-controls-aws-services-only', 'vpc-peering-faq-encryption-enforce-to-monitor-peering', 'vpc-faq-flow-logs-transit-gateway', 'vpc-encryption-controls-tgw-charges-attached-vpcs', 'vpc-faq-encryption-controls-what']
+   note: VPC Encryption Controls announced 2025-11 (before 2026-07-15, examinable); marked frequently-changing so a currency vote runs. The charge for TGW encryption is already in vpc-encryption-controls-tgw-charges-attached-vpcs.
+d11-118 [filled] 1.2.K2 vpc-endpoints faq
+   Q: VPC FAQ: 'Does traffic go over the internet when two instances communicate using public IP addresses, or when instances communicate with a public AWS service endpoint?' Record the question text exactly as printed and the verbatim answer (first one or two sentences that settle it).
+   facts: ['vpc-public-ip-traffic-stays-on-aws-network']
+   note: 

@@ -1,0 +1,513 @@
+[
+ {
+  "id": "elb-q005",
+  "section": "2-deep.md#encryption-to-the-targets-needs-a-second-tls-connection-or-a-pass-through",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": ["1.3.S3"],
+  "topics": ["security", "networking"],
+  "services": ["elb"],
+  "concept": "reencrypt-to-targets",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a web application on Amazon EC2 instances in two Availability Zones. Clients connect over HTTPS on port 443 through a new load balancer. The company wants to protect the data in transit on every network hop. The load balancer must route each request to a target group by its URL path. Which solution will meet these requirements in the MOST secure way?",
+  "keywords": ["protect the data in transit on every network hop", "route each request to a target group by its URL path", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Use an Application Load Balancer with an HTTPS listener that has an ACM certificate, and forward the requests to an HTTP target group of the instances on port 80.",
+    "correct": false,
+    "why": "The HTTPS listener uses its certificate to [terminate the front-end connection](../facts/elb.md#elb-alb-https-listener-terminates-and-decrypts), so the hop to the instances carries plain HTTP.",
+    "concept": "http-target-group",
+    "trap": "elb-trap-https-listener-end-to-end",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Use an Application Load Balancer with an HTTPS listener that has an ACM certificate, and forward the requests to an HTTPS target group of the instances, which hold certificates.",
+    "correct": true,
+    "why": "The listener decrypts to read the path, and the HTTPS target group opens a second TLS connection, so both network hops are encrypted.",
+    "concept": "https-target-group",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Use a Network Load Balancer with a TCP listener on port 443, and forward the connections to a TCP target group of the instances, which hold certificates.",
+    "correct": false,
+    "why": "A Network Load Balancer works at [Layer 4](../facts/elb.md#elb-compare-layer-per-type) and passes the encrypted bytes through, so it cannot read the URL path to choose a target group.",
+    "concept": "nlb-tcp-passthrough",
+    "trap": "elb-trap-nlb-routes-by-path",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Use a Network Load Balancer with a TLS listener that has an ACM certificate, and forward the connections to a TLS target group of the instances, which hold certificates.",
+    "correct": false,
+    "why": "A TLS listener decrypts, but a Network Load Balancer still works at [Layer 4](../facts/elb.md#elb-compare-layer-per-type) and does not read the URL path.",
+    "concept": "nlb-tls-listener",
+    "trap": null,
+    "misconception": "believes that a TLS listener lets a Network Load Balancer route requests by path",
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "The path rule needs a [Layer 7](../facts/elb.md#elb-compare-layer-per-type) load balancer, so the choice is an Application Load Balancer. Its HTTPS listener uses its certificate to [terminate the front-end connection](../facts/elb.md#elb-alb-https-listener-terminates-and-decrypts) and read the request. An HTTPS target group then opens a second TLS connection to each instance, so both hops are encrypted. [The load balancer does not validate these certificates](../facts/elb.md#elb-alb-target-https-no-cert-validation), so self-signed ones work.",
+  "takeaway": "Path routing needs an Application Load Balancer; an HTTPS target group encrypts the hop to the instances.",
+  "twin": "If the stem said \"Each instance must decrypt the client traffic with its own certificate and private key\" instead: the Network Load Balancer with a TCP listener on port 443, because it [passes encrypted traffic through to the targets](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp).",
+  "say": "Path rules need an ALB; give it an HTTPS target group, so the hop to the instances is encrypted too.",
+  "facts": [
+   "elb-compare-layer-per-type",
+   "elb-alb-https-listener-terminates-and-decrypts",
+   "elb-alb-target-https-no-cert-validation",
+   "elb-alb-https-decrypt-at-target-use-nlb-tcp"
+  ],
+  "sources": [],
+  "exam_english": ["ee-in-transit", "ee-must", "ee-most-secure"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q013",
+  "section": "2-deep.md#sticky-sessions-send-a-user-back-to-one-target-and-bypass-the-algorithm",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": ["3.4.S4"],
+  "topics": ["performance", "resilience"],
+  "services": ["elb", "elasticache"],
+  "concept": "sticky-sessions-no-code-change",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer. The application keeps each user's session data in the memory of the instance that served the user's first request. Users are signed out when a later request reaches a different instance. The company wants a fix as soon as possible, with minimal code changes. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["session data in the memory of the instance", "as soon as possible, with minimal code changes", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Turn on duration-based stickiness for the target group, so that the load balancer sends all requests of a user to the same instance.",
+    "correct": true,
+    "why": "Sticky sessions [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what) through a load balancer cookie, with no code change.",
+    "concept": "duration-stickiness",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Store the session data in an Amazon ElastiCache cluster that every instance reads and writes, and change the application to use the cluster.",
+    "correct": false,
+    "why": "It works and is the better long-term design, but it needs code changes and a new cluster, so it is not the fastest fix.",
+    "concept": "elasticache-session-store",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Replace the Application Load Balancer with a Network Load Balancer, and turn on source IP stickiness for the target group of the instances.",
+    "correct": false,
+    "why": "It replaces the load balancer, and source IP stickiness can cause [uneven distribution of connections and flows](../facts/elb.md#elb-sticky-uneven-load-nat) when many users share one NAT address.",
+    "concept": "nlb-source-ip-stickiness",
+    "trap": null,
+    "misconception": "believes that source IP stickiness of a Network Load Balancer is the same as cookie stickiness",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Run a session database on one new EC2 instance that every web instance reads and writes, and change the application to use that database.",
+    "correct": false,
+    "why": "It needs code changes, and the team patches and scales the database instance itself, which is more work than one target group setting.",
+    "concept": "self-managed-session-db",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Sticky sessions [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what), so each user returns to the instance that holds the session in memory. The target group offers [duration-based cookies and application-based cookies](../facts/elb.md#elb-alb-sticky-duration-vs-application-cookie); the duration-based cookie fits an application without its own session cookie. It is one setting on the target group, so the fix is live quickly and needs no code.",
+  "takeaway": "For a fast fix without code changes, turn on stickiness for the target group.",
+  "twin": "If the stem said \"Users must keep their sessions when an instance is terminated, so the web tier must become stateless and scalable\" instead: ElastiCache, because AWS calls a [centralized session management data store](../facts/elb.md#elb-session-store-centralized-not-on-servers) the ideal answer.",
+  "say": "Turn on duration-based stickiness on the target group; users return to their instance, and nobody changes code.",
+  "facts": [
+   "elb-alb-sticky-sessions-what",
+   "elb-alb-sticky-duration-vs-application-cookie",
+   "elb-sticky-uneven-load-nat",
+   "elb-session-store-centralized-not-on-servers"
+  ],
+  "sources": [],
+  "exam_english": ["ee-minimal-code-changes", "ee-as-soon-as-possible"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q015",
+  "section": "2-deep.md#listener-rules-are-checked-in-priority-order-and-the-default-rule-comes-last",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K9"],
+  "topics": ["networking", "security"],
+  "services": ["elb"],
+  "concept": "http-to-https-redirect",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company serves a website through an Application Load Balancer that has an HTTPS listener on port 443 with an AWS Certificate Manager (ACM) certificate. The load balancer has no other listener. Users who type http:// in front of the domain name receive an error. The company wants these users to reach the HTTPS site, so that all requests are encrypted in transit. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["The load balancer has no other listener", "receive an error", "reach the HTTPS site", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an HTTP listener on port 80 that forwards requests to the instances, and change the application code to return a redirect to HTTPS.",
+    "correct": false,
+    "why": "It works, but the team writes, tests and deploys code for a redirect that the load balancer can return by itself.",
+    "concept": "redirect-in-code",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Add an HTTP listener on port 80 whose default action returns a fixed response that asks users to type https:// in front of the name.",
+    "correct": false,
+    "why": "A fixed-response action [returns a custom HTTP response](../facts/elb.md#elb-alb-fixed-response-action) and drops the request, so users still have to retype the address.",
+    "concept": "fixed-response-message",
+    "trap": null,
+    "misconception": "believes that a fixed response can move the user to HTTPS",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Add an HTTP listener on port 80 whose default action redirects every request to HTTPS on port 443 with a permanent HTTP 301 response.",
+    "correct": true,
+    "why": "A redirect action can send [HTTP to HTTPS](../facts/elb.md#elb-alb-redirect-http-to-https) as a [permanent (HTTP 301)](../facts/elb.md#elb-alb-redirect-http-to-https) redirect, so the browser repeats the request over TLS.",
+    "concept": "redirect-action",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a second Application Load Balancer with an HTTP listener on port 80, and point a second DNS name for the website at that load balancer.",
+    "correct": false,
+    "why": "One load balancer can listen on [HTTP port 80](../facts/elb.md#elb-alb-faq-http-and-https-one-alb) and [HTTPS port 443](../facts/elb.md#elb-alb-faq-http-and-https-one-alb), and users would not type a second name anyway.",
+    "concept": "second-lb-for-http",
+    "trap": null,
+    "misconception": "believes that one load balancer cannot serve both HTTP and HTTPS",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "One Application Load Balancer can have listeners on [HTTP port 80](../facts/elb.md#elb-alb-faq-http-and-https-one-alb) and [HTTPS port 443](../facts/elb.md#elb-alb-faq-http-and-https-one-alb). A redirect action on the new port 80 listener sends [HTTP to HTTPS](../facts/elb.md#elb-alb-redirect-http-to-https), so the browser repeats the request over TLS. The load balancer does the work, and the application code stays unchanged.",
+  "takeaway": "An HTTP listener with a redirect action moves users to HTTPS without code changes.",
+  "twin": "If the stem said \"users of the HTTPS site must be sent to an old HTTP site\" instead: no redirect action fits, because [You cannot redirect HTTPS to HTTP](../facts/elb.md#elb-alb-redirect-http-to-https).",
+  "say": "Add a port 80 listener whose default action redirects to HTTPS; the load balancer does it, not the code.",
+  "facts": [
+   "elb-alb-faq-http-and-https-one-alb",
+   "elb-alb-redirect-http-to-https",
+   "elb-alb-fixed-response-action"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-in-transit"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q019",
+  "section": "2-deep.md#cross-zone-load-balancing-spreads-requests-over-the-targets-in-every-enabled-zone",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.S4"],
+  "topics": ["resilience", "networking"],
+  "services": ["elb"],
+  "concept": "zonal-shift",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances in three Availability Zones behind an Application Load Balancer. Cross-zone load balancing is on, and zonal shift is turned on for the load balancer. During an incident, responses from the instances in one Availability Zone become slow, but those instances still pass their health checks. The company must move traffic away from that Availability Zone as soon as possible. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["still pass their health checks", "move traffic away from that Availability Zone", "as soon as possible", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Start a zonal shift in Amazon Application Recovery Controller (ARC) for the load balancer, away from the Availability Zone with the slow instances.",
+    "correct": true,
+    "why": "With one action, zonal shift moves the load balancer's traffic [away from an impaired Availability Zone](../facts/elb.md#elb-zonal-shift-what) to the healthy zones.",
+    "concept": "start-zonal-shift",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Wait for the target group health checks to mark the slow instances as unhealthy, so that the load balancer stops routing requests to them.",
+    "correct": false,
+    "why": "The instances pass their checks, and the load balancer [routes traffic only to the healthy targets](../facts/elb.md#elb-routes-only-to-healthy-targets), so it keeps sending them requests.",
+    "concept": "wait-for-health-checks",
+    "trap": null,
+    "misconception": "believes that slow targets fail their health checks",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Deregister the instances in that Availability Zone from the target group one at a time, and register them again after the incident ends.",
+    "correct": false,
+    "why": "It works, but every target is a manual step, and by default the load balancer [waits 300 seconds](../facts/elb.md#elb-alb-deregistration-waits-for-in-flight) before it completes each deregistration.",
+    "concept": "manual-deregistration",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create a new Application Load Balancer in the two healthy Availability Zones, register their instances, and point the DNS record of the website at it.",
+    "correct": false,
+    "why": "It works in the end, but a new load balancer, its listeners and a DNS change take longer than one action on the current load balancer.",
+    "concept": "new-lb-and-dns",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Zonal shift, a capability of [Amazon Application Recovery Controller (ARC)](../facts/elb.md#elb-zonal-shift-what), moves traffic [away from an impaired Availability Zone](../facts/elb.md#elb-zonal-shift-what) with one action. [Zonal shift is disabled by default](../facts/elb.md#elb-alb-zonal-shift-off-by-default-one-az), and here it is already turned on. With cross-zone load balancing on, [all traffic to targets is blocked](../facts/elb.md#elb-alb-zonal-shift-cross-zone-enabled) in that zone, and [zonal IP addresses are removed from DNS](../facts/elb.md#elb-alb-zonal-shift-cross-zone-enabled). Health checks do not help, because the slow instances still pass them.",
+  "takeaway": "To drain one impaired Availability Zone fast, start a zonal shift on the load balancer.",
+  "twin": "If the stem said \"AWS should move the traffic when its own monitoring finds an impaired zone\" instead: zonal autoshift, because then [you authorize AWS to shift away resource traffic](../facts/elb.md#elb-zonal-autoshift-aws-shifts).",
+  "say": "Start a zonal shift on the load balancer; one action moves traffic out of the bad zone, even though health checks still pass.",
+  "facts": [
+   "elb-zonal-shift-what",
+   "elb-alb-zonal-shift-off-by-default-one-az",
+   "elb-alb-zonal-shift-cross-zone-enabled",
+   "elb-routes-only-to-healthy-targets",
+   "elb-alb-deregistration-waits-for-in-flight",
+   "elb-zonal-autoshift-aws-shifts"
+  ],
+  "sources": [],
+  "exam_english": ["ee-as-soon-as-possible", "ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q021",
+  "section": "2-deep.md#targets-can-stay-private-and-accept-traffic-only-from-the-load-balancer",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": ["3.4.K3"],
+  "topics": ["security", "networking"],
+  "services": ["elb"],
+  "concept": "nlb-security-group-at-creation",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs an application on Amazon EC2 instances in public subnets. The instances have public IP addresses and are registered as instance targets of an internet-facing Network Load Balancer with a TCP listener on port 443. The load balancer was created years ago without security groups. The instances' security group allows TCP port 443 from 0.0.0.0/0. The company must restrict access to the instances, and clients must keep reaching the application through a load balancer. Which solution will meet these requirements in the MOST secure way?",
+  "keywords": ["created years ago without security groups", "allows TCP port 443 from 0.0.0.0/0", "restrict access to the instances", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Associate a new security group with the existing Network Load Balancer, and allow port 443 on the instances only from that security group.",
+    "correct": false,
+    "why": "The load balancer was created without security groups, and for such a load balancer [you can't associate them](../facts/elb.md#elb-nlb-security-groups-only-at-creation) later.",
+    "concept": "add-sg-to-existing-nlb",
+    "trap": null,
+    "misconception": "believes that security groups can be added to any Network Load Balancer later",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Keep the rule that allows port 443 from 0.0.0.0/0, because a Network Load Balancer has no security group that a target rule can reference.",
+    "correct": false,
+    "why": "A Network Load Balancer can get security groups [when you create it](../facts/elb.md#elb-nlb-security-groups-only-at-creation), so targets can reference one; this option restricts nothing.",
+    "concept": "keep-open-rule",
+    "trap": "elb-trap-nlb-no-security-groups",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Move the instances to private subnets without public IP addresses, and keep the rule that allows port 443 from 0.0.0.0/0 on the instances.",
+    "correct": false,
+    "why": "It works, but any resource in the VPC can still reach port 443 on the instances, and a security group reference admits the load balancer alone.",
+    "concept": "private-subnets-open-rule",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create a new Network Load Balancer with a security group, allow port 443 on the instances only from that security group, and move clients to it.",
+    "correct": true,
+    "why": "Targets that allow the load balancer's security group accept clients [through your Network Load Balancer](../facts/elb.md#elb-nlb-sg-reference-blocks-direct-access) and refuse direct traffic.",
+    "concept": "new-nlb-with-sg",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "A Network Load Balancer gets security groups [when you create it](../facts/elb.md#elb-nlb-security-groups-only-at-creation); for one created without them, [you can't associate them](../facts/elb.md#elb-nlb-security-groups-only-at-creation) later. A new load balancer with a security group lets the instance rule name [the load balancer's security group as the source](../facts/elb.md#elb-target-sg-reference-lb-sg). Clients then reach the instances [through your Network Load Balancer](../facts/elb.md#elb-nlb-sg-reference-blocks-direct-access), and the rule [prevents them from sending traffic directly](../facts/elb.md#elb-nlb-sg-reference-blocks-direct-access).",
+  "takeaway": "A Network Load Balancer gets security groups at creation; to add them later, create a new load balancer.",
+  "twin": "If the stem said \"the load balancer was created with a security group\" instead: keep it and reference its security group in the instance rule, because you can [change the security groups](../facts/elb.md#elb-nlb-security-groups-only-at-creation) of such a load balancer.",
+  "say": "That old NLB can't get a security group now, so create a new one with a security group and let the instances trust only that group.",
+  "facts": [
+   "elb-nlb-security-groups-only-at-creation",
+   "elb-target-sg-reference-lb-sg",
+   "elb-nlb-sg-reference-blocks-direct-access"
+  ],
+  "sources": [],
+  "exam_english": ["ee-restrict", "ee-most-secure", "ee-internet-facing", "ee-must"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q009",
+  "section": "2-deep.md#encryption-to-the-targets-needs-a-second-tls-connection-or-a-pass-through",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.3",
+  "bullets": ["1.3.S3"],
+  "topics": ["security", "networking"],
+  "services": ["elb"],
+  "concept": "tls-passthrough-nlb",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a web application on Amazon EC2 instances in two Availability Zones. Clients connect over HTTPS on port 443 through a new load balancer. The company wants to protect the data in transit on every network hop. Each instance must decrypt the client traffic with its own certificate and private key. Which solution will meet these requirements in the MOST secure way?",
+  "keywords": ["protect the data in transit on every network hop", "decrypt the client traffic with its own certificate", "MOST secure"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Use an Application Load Balancer with an HTTPS listener that has an ACM certificate, and forward the requests to an HTTP target group of the instances on port 80.",
+    "correct": false,
+    "why": "The HTTPS listener uses its certificate to [terminate the front-end connection](../facts/elb.md#elb-alb-https-listener-terminates-and-decrypts), so the instances receive plain HTTP and decrypt nothing.",
+    "concept": "http-target-group",
+    "trap": "elb-trap-https-listener-end-to-end",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Use an Application Load Balancer with an HTTPS listener that has an ACM certificate, and forward the requests to an HTTPS target group of the instances, which hold certificates.",
+    "correct": false,
+    "why": "It works, but the listener has to [terminate the front-end connection](../facts/elb.md#elb-alb-https-listener-terminates-and-decrypts) first, so the data is plain text inside the load balancer.",
+    "concept": "https-target-group",
+    "trap": null,
+    "misconception": "believes that re-encryption keeps the data hidden from the load balancer",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Use a Network Load Balancer with a TCP listener on port 443, and forward the connections to a TCP target group of the instances, which hold certificates.",
+    "correct": true,
+    "why": "A TCP listener on port 443 [passes encrypted traffic through to the targets](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp), so each instance ends the client's TLS session with its own certificate.",
+    "concept": "nlb-tcp-passthrough",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Use a Network Load Balancer with a TLS listener that has an ACM certificate, and forward the connections to a TLS target group of the instances, which hold certificates.",
+    "correct": false,
+    "why": "It works, but a TLS listener decrypts at the load balancer; for decryption on the targets, AWS says to [create a TCP listener on port 443](../facts/elb.md#elb-nlb-tls-listener-terminate-tcp-passthrough).",
+    "concept": "nlb-tls-listener",
+    "trap": null,
+    "misconception": "believes that a TLS listener passes the encrypted traffic through",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The most secure design keeps the data hidden from the load balancer. When the targets have to decrypt, AWS points to [a Network Load Balancer with a TCP listener on port 443](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp), which [passes encrypted traffic through to the targets](../facts/elb.md#elb-alb-https-decrypt-at-target-use-nlb-tcp). Both Application Load Balancer options and the TLS listener decrypt at the load balancer first, even when they encrypt the next hop again.",
+  "takeaway": "For TLS that ends on the instances, use a TCP listener on port 443 of a Network Load Balancer.",
+  "twin": "If the stem said \"The load balancer must route each request to a target group by its URL path\" instead: the Application Load Balancer with an HTTPS target group, because a Network Load Balancer works at [Layer 4](../facts/elb.md#elb-compare-layer-per-type).",
+  "say": "If the instances must decrypt, use a Network Load Balancer with a TCP listener on 443; it passes TLS through untouched.",
+  "facts": [
+   "elb-alb-https-listener-terminates-and-decrypts",
+   "elb-alb-https-decrypt-at-target-use-nlb-tcp",
+   "elb-nlb-tls-listener-terminate-tcp-passthrough",
+   "elb-compare-layer-per-type"
+  ],
+  "sources": [],
+  "exam_english": ["ee-in-transit", "ee-most-secure", "ee-must"],
+  "twin_of": "elb-q005"
+ },
+ {
+  "id": "elb-q017",
+  "section": "2-deep.md#sticky-sessions-send-a-user-back-to-one-target-and-bypass-the-algorithm",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": ["3.4.S4"],
+  "topics": ["performance", "resilience"],
+  "services": ["elb", "elasticache"],
+  "concept": "central-session-store",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer. The application keeps each user's session data in the memory of the instance that served the user's first request. Users are signed out when a later request reaches a different instance. Users must keep their sessions when an instance is terminated, so the web tier must become stateless and scalable. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["session data in the memory of the instance", "keep their sessions when an instance is terminated", "stateless and scalable", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Turn on duration-based stickiness for the target group, so that the load balancer sends all requests of a user to the same instance.",
+    "correct": false,
+    "why": "Sticky sessions [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what), so the session is lost with that instance at scale-in.",
+    "concept": "duration-stickiness",
+    "trap": "elb-trap-sticky-sessions-keep-state",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "b",
+    "text": "Store the session data in an Amazon ElastiCache cluster that every instance reads and writes, and change the application to use the cluster.",
+    "correct": true,
+    "why": "A [centralized session management data store](../facts/elb.md#elb-session-store-centralized-not-on-servers) keeps sessions outside the instances, so any instance can serve any user after scale-in.",
+    "concept": "elasticache-session-store",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Replace the Application Load Balancer with a Network Load Balancer, and turn on source IP stickiness for the target group of the instances.",
+    "correct": false,
+    "why": "Source IP stickiness still keeps the session on one instance, and it can cause [uneven distribution of connections and flows](../facts/elb.md#elb-sticky-uneven-load-nat).",
+    "concept": "nlb-source-ip-stickiness",
+    "trap": null,
+    "misconception": "believes that source IP stickiness keeps sessions when an instance goes away",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Run a session database on one new EC2 instance that every web instance reads and writes, and change the application to use that database.",
+    "correct": false,
+    "why": "It works, but the team patches and scales one self-managed database instance, and that instance becomes a single point of failure for every session.",
+    "concept": "self-managed-session-db",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "To make a web tier stateless, AWS says to offload session data to a [database, cache, or external files](../facts/ec2-auto-scaling.md#ec2-auto-scaling-wa-offload-session-data). AWS calls a [centralized session management data store](../facts/elb.md#elb-session-store-centralized-not-on-servers) the ideal solution [when your fleet of web servers is elastic](../facts/elb.md#elb-session-store-centralized-not-on-servers). A managed ElastiCache cluster keeps the sessions when Auto Scaling terminates an instance, and the team runs no database instance of its own.",
+  "takeaway": "To keep sessions through scale-in, move them to a shared store such as ElastiCache; stickiness does not keep them.",
+  "twin": "If the stem said \"The company wants a fix as soon as possible, with minimal code changes\" instead: duration-based stickiness, because sticky sessions [bind a user's session to a specific target](../facts/elb.md#elb-alb-sticky-sessions-what) without code changes.",
+  "say": "Move the sessions to ElastiCache; then any instance can serve any user, and scale-in loses nothing.",
+  "facts": [
+   "elb-alb-sticky-sessions-what",
+   "elb-session-store-centralized-not-on-servers",
+   "elb-sticky-uneven-load-nat",
+   "ec2-auto-scaling-wa-offload-session-data"
+  ],
+  "sources": [],
+  "exam_english": ["ee-stateless", "ee-scalable", "ee-must"],
+  "twin_of": "elb-q013"
+ }
+]

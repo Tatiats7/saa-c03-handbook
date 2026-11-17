@@ -1,0 +1,76 @@
+[
+ {
+  "id": "lambda-q013",
+  "section": "2-deep.md#provisioned-concurrency-keeps-environments-initialized-and-you-pay-for-them-while-idle",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.2",
+  "bullets": ["3.2.K5"],
+  "topics": ["compute", "performance"],
+  "services": ["lambda", "api-gateway", "rds", "sqs", "fargate"],
+  "concept": "reserved-or-provisioned",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an order API on Amazon API Gateway. The API invokes an AWS Lambda function that writes each order to a small Amazon RDS for MySQL database. After quiet periods, the first requests take several seconds because new execution environments start. Traffic never needs more than 50 copies of the function, and the API must respond with low latency to every request. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["the first requests take several seconds", "respond with low latency to every request", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Set the reserved concurrency of the function to 50, and keep the API Gateway integration pointed at the function as it is today.",
+    "correct": false,
+    "why": "Reserved concurrency is a cap that you set to [reserve a subset of your account concurrency limit](../facts/lambda.md#lambda-faq-per-function-concurrency-control), and it prepares no environment before a request arrives.",
+    "concept": "reserved-concurrency-cap",
+    "trap": "lambda-trap-reserved-keeps-warm",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Configure provisioned concurrency of 50 on a published alias of the function, and point the API Gateway integration at that alias.",
+    "correct": true,
+    "why": "Provisioned concurrency keeps functions [ready to respond in double-digit milliseconds](../facts/lambda.md#lambda-snapstart-vs-pc-guide), and API Gateway uses those environments because it invokes the alias.",
+    "concept": "provisioned-concurrency-alias",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Place an Amazon SQS queue between API Gateway and the function, and set the maximum concurrency of the event source mapping to 50.",
+    "correct": false,
+    "why": "A queue starts no environment ahead of time, so the first messages after a quiet period still wait for new environments, and the API stops returning results.",
+    "concept": "queue-with-maximum-concurrency",
+    "trap": null,
+    "misconception": "believes that a queue in front of a function removes the start-up delay of new environments",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Move the code into containers on AWS Fargate behind an Application Load Balancer, with an Amazon ECS service whose tasks keep running between requests.",
+    "correct": false,
+    "why": "It works, because the tasks are already running when requests arrive, but moving the API to containers is far more work than one setting on an alias.",
+    "concept": "always-on-containers",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The slow first requests are cold starts: Lambda [downloads your code, starts the environment](../facts/lambda.md#lambda-cold-start-definition) before the handler runs. With provisioned concurrency, the function [does not exhibit cold start behavior](../facts/lambda.md#lambda-pc-not-latest-no-cold-start). API Gateway invokes the alias, so it [points to the correct function alias or version](../facts/lambda.md#lambda-pc-event-source-alias).",
+  "takeaway": "Cold starts on a synchronous API go away with provisioned concurrency on the alias that the caller invokes.",
+  "twin": "If the stem said \"The function must never run more than 50 copies at the same time\" instead: reserved concurrency of 50, because it can [cap traffic rates to downstream resources](../facts/lambda.md#lambda-faq-per-function-concurrency-control).",
+  "say": "Provisioned concurrency keeps fifty environments initialized on the alias, so no request waits for a cold start.",
+  "facts": [
+   "lambda-faq-per-function-concurrency-control",
+   "lambda-snapstart-vs-pc-guide",
+   "lambda-cold-start-definition",
+   "lambda-pc-not-latest-no-cold-start",
+   "lambda-pc-event-source-alias"
+  ],
+  "sources": [],
+  "exam_english": ["ee-must", "ee-lowest-latency", "ee-least-operational-overhead"],
+  "twin_of": "lambda-q006"
+ }
+]

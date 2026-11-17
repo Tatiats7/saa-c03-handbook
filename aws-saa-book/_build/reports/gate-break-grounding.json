@@ -1,0 +1,826 @@
+{
+ "attempts": [
+  {
+   "id": "A01",
+   "gate": "facts amend + finalize",
+   "did": "Amend of a verified hard fact: new false claim plus `hard: false` (the displays stay, so no dependent is reset).",
+   "answers": [
+    "facts amend -> exit 0: {\"fact\": \"widget-shelf-scope\", \"rev\": 2, \"status\": \"mech-pass\", \"replaced\": 0, \"broken_links\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-shelf-scope\"], \"disputed\": [], \"rejected\": [], \"pending\": []} [status verified]",
+    "lint 99 --draft names the fact: False"
+   ],
+   "through": true,
+   "note": "The amend empties the votes, but `hard: false` removes the need for any vote, so finalize verifies the new claim at once. `facts amend` has no --by, so the change is not attributed.",
+   "repro": "patch {\"claim\": \"A shelf is a Regional resource that copies its widgets to each other AWS Region.\", \"hard\": false}; facts amend widget-shelf-scope --file PATCH --reason wording; facts finalize widget-shelf-scope -> verified"
+  },
+  {
+   "id": "A02",
+   "gate": "facts amend",
+   "did": "Patch that tries to set `status`, `votes` and `rev` directly.",
+   "answers": [
+    "facts amend -> exit 1: error: a patch cannot change: status, votes, rev"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "A03",
+   "gate": "facts amend (M5)",
+   "did": "Amend that changes the number of a verified fact (50 to 500) without new evidence.",
+   "answers": [
+    "facts amend -> exit 1: M5 number 500 in claim appears in no quote; M5 number 500 in display '500 widgets' appears in no quote"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "A04",
+   "gate": "facts amend + finalize + lint",
+   "did": "Amend of the verified limit `50 widgets`: kind behavior, hard false, claim and display `50 thousand widgets`. The tool then rewrites the link text in the chapter by itself.",
+   "answers": [
+    "facts amend -> exit 0: {\"fact\": \"widget-crate-capacity\", \"rev\": 2, \"status\": \"mech-pass\", \"replaced\": 6, \"broken_links\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-crate-capacity\"], \"disputed\": [], \"rejected\": [], \"pending\": []} [status verified]",
+    "2-deep.md now holds `[50 thousand widgets](../facts/widget.md#widget-crate-capacity)`: True",
+    "lint 99 --draft -> exit 2, errors that name the fact or the new value: 0"
+   ],
+   "through": true,
+   "note": "Combines F08 with A01. One command changes the canon and the prose; the chapter is marked stale and the items are reset, but every gate passes again when the stages rerun, with no vote on the new value.",
+   "repro": "patch {claim: `A crate holds 50 thousand widgets.`, kind: behavior, hard: false, values: [{key: max, display: `50 thousand widgets`}]}; facts amend widget-crate-capacity --file PATCH --reason unit; facts finalize widget-crate-capacity"
+  },
+  {
+   "id": "F01",
+   "gate": "facts add (M3)",
+   "did": "Fabricated quote: the real sentence with 500 changed to 900.",
+   "answers": [
+    "facts add -> exit 1: M3 evidence 0: the quote is not in the snapshot text (verbatim text only): 'Each shelf can hold up to 900 widgets.'"
+   ],
+   "through": false,
+   "note": "control: must be rejected",
+   "repro": ""
+  },
+  {
+   "id": "F02",
+   "gate": "facts add (M3)",
+   "did": "Quote stitched from two real sentences that are not adjacent on the page (line 7 first half + line 8).",
+   "answers": [
+    "facts add -> exit 1: M3 evidence 0: the quote is not in the snapshot text (verbatim text only): 'A shelf is a Regional resource. Each shelf can hold up to 500 widgets.'"
+   ],
+   "through": false,
+   "note": "",
+   "repro": ""
+  },
+  {
+   "id": "F03",
+   "gate": "facts add (M4) + finalize",
+   "did": "Real quote cut so that the first two words `You cannot` are dropped; claim says the opposite (`You can move a shelf`); kind behavior, hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-move\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-move\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "A quote of 8 or more words may start in the middle of a sentence. `can` is no absolute word, so M11 accepts hard=false, and a fact that is not hard is verified without any vote.",
+   "repro": "facts add a fact with claim `You can move a shelf to another Region.`, display `move a shelf to another Region`, quote `move a shelf to another Region. To use another Region, copy the shelf.`, kind behavior, hard false; then facts finalize ID -> verified"
+  },
+  {
+   "id": "F04",
+   "gate": "facts add (M5)",
+   "did": "Real quote (50 widgets), claim and display carry another number (500 widgets).",
+   "answers": [
+    "facts add -> exit 1: M5 number 500 in claim appears in no quote; M5 number 500 in display '500 widgets' appears in no quote"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "F05",
+   "gate": "facts add (M5)",
+   "did": "Real quote (7 days), claim and display carry another unit (7 hours).",
+   "answers": [
+    "facts add -> exit 1: M5 unit mismatch: no quote has 7 followed by hours (claim); M5 unit mismatch: no quote has 7 followed by hours (display '7 hours')"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "F06",
+   "gate": "facts add (M5, M11) + finalize",
+   "did": "Same unit swap, with one adjective between number and unit (`7 full hours`), hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-unit2\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-unit2\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "M5 and M11 see a unit only directly after the number (one optional space or hyphen). `7 full hours` is a bare 7, which the quote has.",
+   "repro": "claim `Widget Store deletes an empty crate after 7 full hours.`, display `7 full hours`, quote `Widget Store deletes an empty crate after 7 days.`, kind behavior, hard false; facts add, facts finalize -> verified with no vote"
+  },
+  {
+   "id": "F07",
+   "gate": "facts add (M5, M11) + finalize",
+   "did": "Unit swap with two spaces between number and unit (`7  hours`), hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-unit3\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-unit3\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "The unit regex allows one space; a second space hides the unit.",
+   "repro": "as F06 with claim and display `7  hours` (two spaces)"
+  },
+  {
+   "id": "F08",
+   "gate": "facts add (M5, M11) + finalize",
+   "did": "Magnitude word after the real number (`50 thousand widgets` against a quote with 50), hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-mag\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-mag\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "The digit string 50 is in the quote; `thousand` is neither unit nor count noun.",
+   "repro": "claim `A crate holds 50 thousand widgets.`, display `50 thousand widgets`, quote `A crate can hold up to 50 widgets.`, hard false; add, finalize -> verified"
+  },
+  {
+   "id": "F09",
+   "gate": "facts add (M5, M11) + finalize",
+   "did": "Suffix on the number (`50K widgets` against a quote with 50), hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-k\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-k\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "The number regex has no check of the character after the digits.",
+   "repro": "as F08 with `50K widgets`"
+  },
+  {
+   "id": "F10",
+   "gate": "facts add (M5, M11) + finalize",
+   "did": "Number written in words (`nine hundred widgets`) against a quote with 500, hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-word\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-word\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "On the claim side a number word counts only directly before a unit or count noun, and only zero to twelve.",
+   "repro": "claim `A shelf holds nine hundred widgets.`, display `nine hundred widgets`, quote `Each shelf can hold up to 500 widgets.`, hard false; add, finalize -> verified"
+  },
+  {
+   "id": "F11",
+   "gate": "facts add (M7, M11) + finalize",
+   "did": "False claim without a number or a listed absolute word, with an unrelated real quote; display taken from the claim; hard false, no votes.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-false\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-false\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "M7 accepts a display that stands only in the claim. Nothing mechanical ties the claim to the quote, and a non-hard fact needs no vote.",
+   "repro": "claim `A shelf copies its widgets to every other Region automatically, and every user of the account reads it.`, display `copies its widgets to every other Region`, quote `A crate is a container for widgets that you ship between Regions.`, kind behavior, hard false; facts add, facts finalize -> verified"
+  },
+  {
+   "id": "F12",
+   "gate": "facts add + finalize",
+   "did": "Default against maximum: the quote states a maximum, the fact says default and adjustable (the quota table says No).",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-defmax\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 2: {\"verified\": [], \"disputed\": [], \"rejected\": [], \"pending\": [{\"id\": \"widget-x-defmax\", \"missing\": [\"entail\"]}]}"
+   ],
+   "through": false,
+   "note": "The mechanical checks pass (status mech-pass); the fact stays pending for an entail vote. Stopped only by the voter.",
+   "repro": ""
+  },
+  {
+   "id": "F13",
+   "gate": "facts vote + finalize",
+   "did": "The author of F12 (label miner-a) votes `support` on the own fact under a second label (miner-b).",
+   "answers": [
+    "facts vote --by miner-b (same agent, other label) -> exit 0: {\"appended\": 1, \"refused\": [], \"disputed\": [], \"verdicts\": [{\"fact\": \"widget-x-defmax\", \"lens\": \"entail\", \"verdict\": \"support\"}]}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-defmax\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "A label is free text. One agent with two labels is author and verifier.",
+   "repro": "facts add --by miner-a; facts vote --by miner-b with verdict support; facts finalize -> verified"
+  },
+  {
+   "id": "F14",
+   "gate": "facts vote",
+   "did": "Author label `miner-a`, vote under `Miner-A` (case changed).",
+   "answers": [
+    "facts vote --by Miner-A -> exit 0: {\"appended\": 1, \"refused\": [], \"disputed\": [], \"verdicts\": [{\"fact\": \"widget-x-defmax\", \"lens\": \"entail\", \"verdict\": \"support\"}]}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-defmax\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "The author test is an exact string comparison.",
+   "repro": "facts add --by miner-a; facts vote --by Miner-A; facts finalize -> verified"
+  },
+  {
+   "id": "F15",
+   "gate": "facts vote + finalize",
+   "did": "A verifier disputes the fact; the attacker reuses the verifier's label for a later `support` vote on the same rev.",
+   "answers": [
+    "honest vote not-supported --by verifier-b -> exit 0: {\"appended\": 1, \"refused\": [], \"disputed\": [], \"verdicts\": [{\"fact\": \"widget-x-defmax\", \"lens\": \"entail\", \"verdict\": \"not-supported\"}]}",
+    "facts finalize -> exit 1: {\"verified\": [], \"disputed\": [\"widget-x-defmax\"], \"rejected\": [], \"pending\": []} [status disputed]",
+    "second vote support, label verifier-b reused by the attacker -> exit 0: {\"appended\": 1, \"refused\": [], \"disputed\": [], \"verdicts\": [{\"fact\": \"widget-x-defmax\", \"lens\": \"entail\", \"verdict\": \"support\"}]}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-defmax\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "The last vote of a voter and lens counts, so a disputed fact becomes verified without an amend and without a new rev.",
+   "repro": "vote not-supported --by verifier-b; finalize (disputed); vote support --by verifier-b; finalize -> verified"
+  },
+  {
+   "id": "F16",
+   "gate": "facts add (M4, M8)",
+   "did": "Quote made of the table header and two table rows written without pipes (so no `table_header` is asked for); the claim pairs the 500 of one row with the name of another row.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-table\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 2: {\"verified\": [], \"disputed\": [], \"rejected\": [], \"pending\": [{\"id\": \"widget-x-table\", \"missing\": [\"entail\"]}]}"
+   ],
+   "through": true,
+   "note": "normalize_text removes pipes and rule lines, so flattened table text is `verbatim`. The M4 table rules apply only when the quote starts with `|`. The fact is mech-pass and waits for an entail vote.",
+   "repro": "quote `Resource Default Adjustable Shelves per Region 20 Yes Widgets per shelf 500 No`, claim `An account starts with 500 shelves in each Region.`, display `500 shelves`, kind quota -> mech-pass"
+  },
+  {
+   "id": "F17",
+   "gate": "facts add (M3, M8)",
+   "did": "Quote that runs across a section heading (`## Crates`) and starts and ends in the middle of sentences.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-head\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-head\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "Heading text is joined to the body text by the normaliser; only a quote that is exactly one heading line is page furniture.",
+   "repro": "quote `copy the shelf. Crates A crate is a container for widgets` -> accepted"
+  },
+  {
+   "id": "F18",
+   "gate": "facts add (M3, M7) + finalize",
+   "did": "Words smuggled into a real quote inside angle brackets. The stored `verbatim` quote reads `You <can now move a shelf, where before you> cannot move ...`; the display `can now move a shelf` is found in that quote.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-tag\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-tag\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "normalize_text drops anything of the form <...> (up to 400 characters) on both sides, so M3 matches (the display is accepted because it stands in the claim). The stored quote, which the fact sheet prints and the verifier packet shows, is not the page text.",
+   "repro": "quote `You <can now move a shelf, where before you> cannot move a shelf to another Region. To use another Region, copy the shelf.` -> M3 passes"
+  },
+  {
+   "id": "F19",
+   "gate": "facts add (M2)",
+   "did": "Snapshot written by hand into the corpus folder (a .txt and a three-key .meta.json with an allowed URL, never fetched), then a fact that quotes it and an honest entail vote.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-fake\"], \"rejected\": [], \"conflicts\": []}",
+    "facts vote --by verifier-b -> exit 0: {\"appended\": 1, \"refused\": [], \"disputed\": [], \"verdicts\": [{\"fact\": \"widget-x-fake\", \"lens\": \"entail\", \"verdict\": \"support\"}]}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-fake\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "M2 asks only that the .txt exists and that the meta `url` equals the evidence URL. There is no check that the fetch tool made the snapshot (no fetch log entry, no raw file, no `sha256` in the meta). An honest verifier sees a matching quote and supports.",
+   "repro": "write _build/corpus/snap/<any/id>.txt and .meta.json {source_id, url on an allowed host}; facts add a fact that quotes it -> mech-pass"
+  },
+  {
+   "id": "F20",
+   "gate": "facts add (M8)",
+   "did": "Quote taken from a navigation line of the page (breadcrumb and footer words), none of them in the BOILERPLATE list.",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-nav\"], \"rejected\": [], \"conflicts\": []}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-nav\"], \"disputed\": [], \"rejected\": [], \"pending\": []}"
+   ],
+   "through": true,
+   "note": "M8 knows ten fixed phrases. Navigation text without one of them is an accepted quote.",
+   "repro": "quote `AWS Documentation Amazon Widget Store User Guide Feedback Preferences Contact Us English Create an AWS Account` -> accepted"
+  },
+  {
+   "id": "F21",
+   "gate": "facts verify (M2)",
+   "did": "One sentence added by hand to the snapshot .txt that the seven verified fixture facts cite; meta untouched.",
+   "answers": [
+    "facts verify --service widget -> exit 1: M2 snapshot-changed: evidence 0: the text of docs/fixture/widget-store/limits has another SHA-256 now; M2 snapshot-changed: evidence 0: the text of docs/fixture/widget-store/limits has another SHA-256 now; M2 snapshot-changed: evidence 0: the text of docs/fixture/widget-store/limits has another SHA-256 now; M2 snapshot-changed: evidence 1: the text of docs/fixture/widget-store/limits has another SHA-256 now; M2 snaps..."
+   ],
+   "through": false,
+   "note": "control: the stored evidence hash no longer matches",
+   "repro": ""
+  },
+  {
+   "id": "F22",
+   "gate": "facts add (M2)",
+   "did": "Same hand edit of the snapshot .txt, then a NEW fact that quotes the added sentence (the meta still holds the old sha256).",
+   "answers": [
+    "facts add -> exit 0: {\"added\": [\"widget-x-tamper\"], \"rejected\": [], \"conflicts\": []}",
+    "facts vote --by verifier-b -> exit 0: {\"appended\": 1, \"refused\": [], \"disputed\": [], \"verdicts\": [{\"fact\": \"widget-x-tamper\", \"lens\": \"entail\", \"verdict\": \"support\"}]}",
+    "facts finalize -> exit 0: {\"verified\": [\"widget-x-tamper\"], \"disputed\": [], \"rejected\": [], \"pending\": []}",
+    "facts verify widget-x-tamper -> exit 0: {\"checked\": 1, \"ok\": 1, \"failed\": []}"
+   ],
+   "through": true,
+   "note": "`facts add` fills evidence.sha256 from the current .txt and never compares the .txt with the `sha256` of its own meta file. Only facts stored before the edit notice it (F21).",
+   "repro": "append a sentence to a snapshot .txt; facts add a fact that quotes it -> mech-pass; one support vote -> verified"
+  },
+  {
+   "id": "F23",
+   "gate": "facts-final gate (F04), facts verify",
+   "did": "Facts file edited by hand: status set to verified and a `votes` summary written into the fact; the vote log untouched.",
+   "answers": [
+    "gate 99 --gate facts-final -> exit 1: F04 status verified is not backed by the vote log at rev 1 (no counting vote for entail); the status was edited by hand",
+    "facts verify widget-x-hand -> exit 1: F04 status verified is not backed by the vote log at rev 1 (no counting vote for entail); the status was edited by hand [status now candidate]"
+   ],
+   "through": false,
+   "note": "control: F04 compares with the vote log",
+   "repro": ""
+  },
+  {
+   "id": "F24",
+   "gate": "facts-final gate (F04), facts verify",
+   "did": "As F23, plus one forged line appended by hand to the vote log `_build/facts/votes/widget.jsonl`.",
+   "answers": [
+    "gate 99 --gate facts-final -> exit 0: {\"result\": \"PASS\", \"chapter\": \"99\", \"gates\": [{\"gate\": \"facts-final\", \"ok\": true, \"errors\": 0, \"warnings\": 0, \"record\": \"_build/ledger/gates/99.facts-final.json\"}], \"errors\": []} [does not name widget-x-hand]",
+    "facts verify widget-x-hand -> exit 0: {\"checked\": 1, \"ok\": 1, \"failed\": []} [status verified]"
+   ],
+   "through": true,
+   "note": "The vote log is a plain file with no signature or chain; F04 trusts it.",
+   "repro": "set status verified in data/facts/<s>.jsonl and append one vote line to _build/facts/votes/<s>.jsonl"
+  },
+  {
+   "id": "F25",
+   "gate": "facts verify, facts-final gate",
+   "did": "Claim of a verified fact rewritten by hand to the opposite; rev, status, displays and votes untouched.",
+   "answers": [
+    "facts verify widget-shelf-move -> exit 0: {\"checked\": 1, \"ok\": 1, \"failed\": []}",
+    "gate 99 --gate facts-final -> exit 0: {\"result\": \"PASS\", \"chapter\": \"99\", \"gates\": [{\"gate\": \"facts-final\", \"ok\": true, \"errors\": 0, \"warnings\": 0, \"record\": \"_build/ledger/gates/99.facts-final.json\"}], \"errors\": []} [does not name the fact]",
+    "facts render -> sheet holds the false claim: True"
+   ],
+   "through": true,
+   "note": "A vote is bound to (fact id, rev) only, not to a hash of claim, values and evidence. A hand edit that keeps `rev` keeps the votes.",
+   "repro": "edit `claim` of a verified fact in data/facts/<s>.jsonl without touching `rev`; facts verify -> ok; the fact sheet prints the new claim"
+  },
+  {
+   "id": "L01",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Control: `Each crate always holds 50 widgets.` added as a new paragraph in `2-deep.md`, section How it works (role how, strict).",
+   "answers": [
+    "lint 99 -> exit 1; new errors against the unchanged fixture: 1; new warnings: 0",
+    "new error L304 99-sample/2-deep.md: number with a unit `50 widgets`, absolute word `always` without a fact link: Each crate always holds 50 widgets."
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "L02",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Bare number with a non-breaking space: `A crate holds 9000\\u00a0widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "The number regex allows a plain space or a hyphen only; the text unit is not normalised before matching.",
+   "repro": "`A crate holds 9000<NBSP>widgets.` in a strict section -> no L304"
+  },
+  {
+   "id": "L03",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Bare number written as a word: `A crate holds nine thousand widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Stated in TOOLS-rules R2 (number words are not matched). The reader still gets an ungrounded hard number.",
+   "repro": "`A crate holds nine thousand widgets.` -> no L304"
+  },
+  {
+   "id": "L04",
+   "gate": "lint (L303/L304/L306)",
+   "did": "One adjective between number and count noun: `A crate holds 9000 small widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Real cases of the same shape: `5 read replicas`, `1,000 concurrent executions`, `200 route tables`, `5 Elastic IP addresses`.",
+   "repro": "`A crate holds 9000 small widgets.` -> no L304"
+  },
+  {
+   "id": "L05",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Bold around the number or the noun: `A crate holds 9000 **widgets**.`",
+   "answers": [
+    "lint 99 -> exit 1; new errors against the unchanged fixture: 1; new warnings: 0",
+    "new error L304 99-sample/2-deep.md: number with a unit `9000 widgets` without a fact link: A crate holds 9000 widgets."
+   ],
+   "through": false,
+   "note": "",
+   "repro": ""
+  },
+  {
+   "id": "L06",
+   "gate": "lint (L303/L304/L306)",
+   "did": "HTML entity for the space: `A crate holds 9000&nbsp;widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Entities are not decoded before the number and absolute-word rules.",
+   "repro": "`A crate holds 9000&nbsp;widgets.` -> no L304"
+  },
+  {
+   "id": "L07",
+   "gate": "lint (L303/L304/L306)",
+   "did": "HTML entity inside an absolute word: `A shelf is alw&#97;ys private.` (renders as `always`)",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "",
+   "repro": "`A shelf is alw&#97;ys private.` -> no L304"
+  },
+  {
+   "id": "L08",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Zero-width space inside an absolute word: `A crate is on\\u200bly for shipping, and it is ne\\u200bver private.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "",
+   "repro": "`on<ZWSP>ly`, `ne<ZWSP>ver` -> no L304"
+  },
+  {
+   "id": "L09",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Absolute claims with words outside the list: `A crate is invariably public. No one except the owner is able to delete it, and nobody is able to move it.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "The list has nine entries. `no`, `not`, `all`, `every`, `any`, `none`, `maximum`, `minimum`, `at least`, `no more than`, `limited to`, `unlimited`, `required`, `does not support`, `is not possible`, `automatically`, `exclusively` are free.",
+   "repro": "`A crate is invariably public. No one except the owner is able to delete it.` -> no L304"
+  },
+  {
+   "id": "L10",
+   "gate": "lint (L303/L304/L306)",
+   "did": "`can not` written as two words: `You can not copy a crate.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "",
+   "repro": "`You can not copy a crate.` -> no L304"
+  },
+  {
+   "id": "L11",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Unit outside the list: `A crate weighs 9000 kg and takes 9000 TPS.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "The real SPEC list has no `bytes`, `TPS`, `RCU`, `WCU`, `AZs`, `Tbps`, `EB`, `volumes`, `snapshots`, `nodes`, `records`, `times`, `x`.",
+   "repro": "`A crate takes 9000 TPS.` -> no L304"
+  },
+  {
+   "id": "L12",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Plus sign after the number: `A crate holds 9000+ widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "",
+   "repro": "`9000+ widgets` -> no L304"
+  },
+  {
+   "id": "L13",
+   "gate": "lint (L303/L304/L306)",
+   "did": "The claim in inline code: ``A crate holds `up to 9000 widgets`.``",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Inline code is removed before the rules run (it is meant for commands), but it renders as readable text.",
+   "repro": "``A crate holds `up to 9000 widgets`.`` -> no L304"
+  },
+  {
+   "id": "L14",
+   "gate": "lint (L303/L304/L306)",
+   "did": "The claim as a question: `Did you know that a crate always holds up to 9000 widgets?`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Sentences that end with `?` are never read by L304 (R2).",
+   "repro": "`Did you know that a crate always holds up to 9000 widgets?` -> no L304"
+  },
+  {
+   "id": "L15",
+   "gate": "lint (L303/L304/L306)",
+   "did": "A `no-fact` marker on a factual sentence: `A crate must hold at most 9000 widgets. <!-- no-fact: requirement -->`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 1",
+    "new warning W308 99-sample/2-deep.md: no-fact marker (requirement): A crate must hold at most 9000 widgets."
+   ],
+   "through": true,
+   "note": "Passes with warning W308 by design; the gate result is exit 2 (pass). Only the claims reviewer can stop it.",
+   "repro": "any hard sentence + `<!-- no-fact: requirement -->` -> W308 only"
+  },
+  {
+   "id": "L16",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Absolute claim split over two sentences: `A crate stays public. Always.`",
+   "answers": [
+    "lint 99 -> exit 1; new errors against the unchanged fixture: 1; new warnings: 0",
+    "new error L304 99-sample/2-deep.md: absolute word `Always` without a fact link: Always."
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "L17",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Number and unit split over two sentences: `The limit of a crate is 9000. The unit is widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "A bare number without a unit is never a finding.",
+   "repro": "`The limit of a crate is 9000. The unit is widgets.` -> no L304"
+  },
+  {
+   "id": "L18",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Link text that hides the number in words: `A shelf holds [five hundred widgets](...#widget-shelf-max-widgets).`",
+   "answers": [
+    "lint 99 -> exit 1; new errors against the unchanged fixture: 1; new warnings: 0",
+    "new error L303 99-sample/2-deep.md: link text `five hundred widgets` holds no value of widget-shelf-max-widgets"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "L19",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Link text with the display inside a larger number written with a space: `[up to 2 500 widgets](...)`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "holds_display guards digits, commas and periods before the display, not a space-separated thousands group.",
+   "repro": "`[up to 2 500 widgets](../facts/widget.md#widget-shelf-max-widgets)` -> no L303"
+  },
+  {
+   "id": "L20",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Link text that holds the display and contradicts it: `[not 500 widgets but 9000 widgets](...)`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "L303 is a substring test, and the link then satisfies L304 for the whole sentence.",
+   "repro": "`A shelf holds [not 500 widgets but 9000 widgets](../facts/widget.md#widget-shelf-max-widgets).` -> clean"
+  },
+  {
+   "id": "L21",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Negated display: `A new shelf is [not private](...#widget-shelf-default-private) and can be read by all users.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "",
+   "repro": "`[not private](../facts/widget.md#widget-shelf-default-private)` -> clean"
+  },
+  {
+   "id": "L22",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Piggyback: an ungrounded hard claim in a sentence that has a fact link to another fact: `A crate always holds 9000 widgets, more than the [500 widgets](...) of a shelf.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "One fact link satisfies L304 for its sentence (R2). Left to the claims reviewer by design.",
+   "repro": "`A crate always holds 9000 widgets, more than the [500 widgets](LINK) of a shelf.` -> clean"
+  },
+  {
+   "id": "L23",
+   "gate": "lint (L303/L304/L306)",
+   "did": "A real fact link on the wrong subject: `A crate holds [up to 500 widgets](...#widget-shelf-max-widgets).` (the fact is about shelves)",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "No mechanical check of the subject; left to the claims reviewer.",
+   "repro": "`A crate holds [up to 500 widgets](../facts/widget.md#widget-shelf-max-widgets).` -> clean"
+  },
+  {
+   "id": "L24",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Exempt role: the flag of How it works changed from role=how to role=example, plus the control sentence.",
+   "answers": [
+    "lint 99 -> exit 1; new errors against the unchanged fixture: 2; new warnings: 0",
+    "new error L105 99-sample/2-deep.md: flag role is example; the section has role how",
+    "new error L304 99-sample/2-deep.md: number with a unit `9000 widgets`, absolute word `always` without a fact link: Each crate always holds 9000 widgets."
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "L25",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Hard claim placed in the section whose role is example (Decision record): `**Decision.** ... A crate always holds up to 9000 widgets, and a shelf can never be private.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Sections with grounding `example` are not checked at all. W903 (story numbers) did not fire either: the fixture has no data/harken.json entry.",
+   "repro": "add `A crate always holds up to 9000 widgets.` to a bold field of the Decision record -> clean"
+  },
+  {
+   "id": "L26",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Hard claim in a `Startup example` callout inside the strict section: `> **Startup example:** Callvale learned that a crate always holds up to 9000 widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Callouts with grounding `example` are exempt (R2 exemption 3).",
+   "repro": "`> **Startup example:** Callvale learned that a crate always holds up to 9000 widgets.` -> no L304"
+  },
+  {
+   "id": "L27",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Hard claim in an HTML comment: `<!-- A crate always holds 9000 widgets. -->`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "Passes, and is harmless for a Markdown reader (a comment is not rendered). Not counted as a hole.",
+   "repro": ""
+  },
+  {
+   "id": "L28",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Hard claim inside the collapsed Go deeper block (details).",
+   "answers": [
+    "lint 99 -> exit 1; new errors against the unchanged fixture: 1; new warnings: 0",
+    "new error L304 99-sample/2-deep.md: number with a unit `9000 widgets`, absolute word `always` without a fact link: A crate always holds 9000 widgets."
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "L29",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Hard claim in the summary line of a details block: `<summary>Go deeper: a crate always holds 9000 widgets</summary>`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "The summary line is visible text, even when the block is closed.",
+   "repro": "`<summary>Go deeper: a crate always holds 9000 widgets</summary>` -> clean"
+  },
+  {
+   "id": "L30",
+   "gate": "lint (L303/L304/L306)",
+   "did": "AWS quote block cut so that the negation is gone: `> \"move a shelf to another Region.\"` under the real attribution line.",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "L306 accepts any substring of an evidence quote, also one that starts in the middle of a sentence.",
+   "repro": "replace the FAQ quote by `> \"move a shelf to another Region.\"` -> no L306"
+  },
+  {
+   "id": "L31",
+   "gate": "lint (L303/L304/L306)",
+   "did": "Full-width digits: `A crate holds ９０００ widgets.`",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "",
+   "repro": "`A crate holds <full-width 9000> widgets.` -> no L304"
+  },
+  {
+   "id": "L32",
+   "gate": "lint (L303/L304/L306)",
+   "did": "A hand-written file that the template does not list: `99-sample/6-extra.md` with two false hard claims.",
+   "answers": [
+    "lint 99 -> exit 2; new errors against the unchanged fixture: 0; new warnings: 0"
+   ],
+   "through": true,
+   "note": "lint reads only the files of the resolved template. An extra .md in a chapter folder is reader-facing and unchecked.",
+   "repro": "create 99-sample/6-extra.md with any text -> lint 99 unchanged"
+  },
+  {
+   "id": "S01",
+   "gate": "sync --check",
+   "did": "Generated `5-quiz.md` edited by hand (first `500 widgets` changed to `900 widgets`).",
+   "answers": [
+    "baseline sync 99 --check -> exit 0: {\"checked\": 5, \"stale\": [], \"missing\": []}",
+    "after the edit -> exit 1: {\"checked\": 5, \"stale\": [\"99-sample/5-quiz.md\"], \"missing\": []}"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  },
+  {
+   "id": "S02",
+   "gate": "sync --check, sync gate",
+   "did": "Generated fact sheet `facts/widget.md` edited by hand: the AWS quote and the value changed from 500 to 900.",
+   "answers": [
+    "sheet existed after sync --all: True",
+    "sync 99 --check -> exit 0: {\"checked\": 5, \"stale\": [], \"missing\": []}",
+    "gate 99 --gate sync -> exit 0: {\"result\": \"PASS\", \"chapter\": \"99\", \"gates\": [{\"gate\": \"sync\", \"ok\": true, \"errors\": 0, \"warnings\": 0, \"record\": \"_build/ledger/gates/99.sync.json\"}], \"errors\": []}",
+    "sync --all --check -> exit 1: {\"checked\": 7, \"stale\": [\"facts/widget.md\"], \"missing\": []}",
+    "sync 99 --only facts --check -> exit 1: {\"checked\": 2, \"stale\": [\"facts/widget.md\"], \"missing\": []}"
+   ],
+   "through": true,
+   "note": "The chapter form of `sync --check`, which is what the `sync` gate of `edit`, `fix` and `finalize` runs, does not build the fact sheets. Only `sync --all --check` or `--only facts` compares them.",
+   "repro": "sync --all; edit facts/widget.md by hand; sync 99 --check -> ok; gate 99 --gate sync -> ok"
+  },
+  {
+   "id": "S03",
+   "gate": "sync --check, lint",
+   "did": "Generated fact sheet `facts/widget.md` deleted (every fact link of the chapter points at it).",
+   "answers": [
+    "sync 99 --check -> exit 0: {\"checked\": 5, \"stale\": [], \"missing\": []}",
+    "lint 99 -> exit 2, L601 findings that name facts/: 0"
+   ],
+   "through": true,
+   "note": "Neither the sync gate nor the lint notices that the target of every fact link is missing.",
+   "repro": "delete facts/widget.md; sync 99 --check -> ok; lint 99 has no finding for the fact links"
+  },
+  {
+   "id": "S04",
+   "gate": "sync --all --check",
+   "did": "An orphan `facts/ghost.md` written by hand in the form of a generated fact sheet, for a service with no fact.",
+   "answers": [
+    "sync --all --check -> exit 0: {\"checked\": 7, \"stale\": [], \"missing\": []}"
+   ],
+   "through": true,
+   "note": "sync compares only the files it would write; a file it would not write is never reported.",
+   "repro": "write facts/ghost.md by hand; sync --all --check -> ok"
+  },
+  {
+   "id": "S05",
+   "gate": "sync --check",
+   "did": "One false sentence appended after the last line of generated `5-quiz.md`.",
+   "answers": [
+    "sync 99 --check -> exit 1: {\"checked\": 5, \"stale\": [\"99-sample/5-quiz.md\"], \"missing\": []}"
+   ],
+   "through": false,
+   "note": "control",
+   "repro": ""
+  }
+ ],
+ "through": [
+  "A01",
+  "A04",
+  "F03",
+  "F06",
+  "F07",
+  "F08",
+  "F09",
+  "F10",
+  "F11",
+  "F13",
+  "F14",
+  "F15",
+  "F16",
+  "F17",
+  "F18",
+  "F19",
+  "F20",
+  "F22",
+  "F24",
+  "F25",
+  "L02",
+  "L03",
+  "L04",
+  "L06",
+  "L07",
+  "L08",
+  "L09",
+  "L10",
+  "L11",
+  "L12",
+  "L13",
+  "L14",
+  "L15",
+  "L17",
+  "L19",
+  "L20",
+  "L21",
+  "L22",
+  "L23",
+  "L25",
+  "L26",
+  "L27",
+  "L29",
+  "L30",
+  "L31",
+  "L32",
+  "S02",
+  "S03",
+  "S04"
+ ]
+}

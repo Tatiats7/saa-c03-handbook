@@ -1,0 +1,598 @@
+{
+ "v": 1,
+ "chapter": "iam",
+ "items": [
+  {
+   "id": "iam-s01",
+   "kind": "explain",
+   "prompt": "If I delete the access key, how does the code on the instance get permission to read the bucket?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "Give the instance an IAM role. AWS hands the code short-lived credentials through the instance, so no key is stored anywhere.",
+   "sixty_second": [
+    "The short answer is: you give the instance an IAM role instead of a key.",
+    "It works like this. A role has no password and no long-term keys.",
+    "You attach the role to the instance through an instance profile.",
+    "AWS then delivers temporary credentials for that role to the instance.",
+    "The SDK in your code finds them on its own, and AWS refreshes them automatically.",
+    "Every request is still checked against the role's permissions policy.",
+    "The thing to watch is the policy itself.",
+    "Give the code only the bucket and the actions it needs.",
+    "In your case, I'd create one role for the application first, then delete the root key.",
+    "Which other services does the application call, besides Amazon S3 and Transcribe?"
+   ],
+   "skeleton": [
+    "role, not key",
+    "instance profile delivers credentials",
+    "SDK finds them, AWS refreshes",
+    "least privilege per workload"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A role has no standard long-term credentials such as a password or access keys.",
+     "accept": [
+      "a role has no key of its own",
+      "no password and no access key on a role"
+     ],
+     "facts": [
+      "iam-users-have-long-term-credentials-roles-do-not"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "AWS delivers the role's temporary credentials to the instance, and the code gets them from the instance metadata.",
+     "accept": [
+      "the instance gets the credentials from AWS",
+      "the SDK picks up the role credentials automatically"
+     ],
+     "facts": [
+      "iam-compute-services-receive-role-credentials-no-keys-needed",
+      "iam-instance-profile-one-role-and-metadata-credentials"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "The role credentials are temporary and updated automatically.",
+     "accept": [
+      "AWS rotates them",
+      "they expire and refresh on their own"
+     ],
+     "facts": [
+      "iam-ec2-role-credentials-rotate-automatically"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "The permissions policy of the role decides what the code can do.",
+     "accept": [
+      "the role's policy limits the code",
+      "least privilege on the role"
+     ],
+     "facts": [
+      "iam-role-permissions-policy-defines-session-permissions"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Only one role can be assigned to an instance at a time.",
+     "accept": [
+      "one role per instance"
+     ],
+     "facts": [
+      "iam-instance-profile-one-role-and-metadata-credentials"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "put the access key in an environment variable",
+     "correct": "Use a role: AWS delivers temporary credentials to the instance, and no key is stored.",
+     "fact": "iam-compute-services-receive-role-credentials-no-keys-needed"
+    },
+    {
+     "error": "the role has its own access key",
+     "correct": "A role does not have standard long-term credentials, such as a password or access keys.",
+     "fact": "iam-users-have-long-term-credentials-roles-do-not"
+    }
+   ],
+   "terms": [
+    {
+     "say": "attach a role to the instance",
+     "avoid": [
+      "install a role"
+     ]
+    },
+    {
+     "say": "temporary credentials",
+     "avoid": [
+      "session password"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Do we have to rotate those credentials ourselves?",
+     "answer": "No. Role credentials on EC2 are temporary and updated automatically. The maximum session setting of the role does not limit them on EC2.",
+     "facts": [
+      "iam-ec2-role-credentials-rotate-automatically",
+      "iam-ec2-role-credentials-not-limited-by-max-session"
+     ]
+    },
+    {
+     "question": "What if one of those credentials leaks?",
+     "answer": "Temporary credentials cannot be revoked one by one, but their permissions are evaluated each time a request is made. You revoke the role's active sessions.",
+     "facts": [
+      "sts-temporary-credentials-cannot-be-revoked-permissions-can-change",
+      "iam-revoke-role-sessions-denies-credentials-issued-before"
+     ]
+    }
+   ],
+   "facts": [
+    "iam-users-have-long-term-credentials-roles-do-not",
+    "iam-compute-services-receive-role-credentials-no-keys-needed",
+    "iam-instance-profile-one-role-and-metadata-credentials",
+    "iam-ec2-role-credentials-rotate-automatically",
+    "iam-role-permissions-policy-defines-session-permissions",
+    "iam-ec2-role-credentials-not-limited-by-max-session",
+    "sts-temporary-credentials-cannot-be-revoked-permissions-can-change",
+    "iam-revoke-role-sessions-denies-credentials-issued-before"
+   ],
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "iam-s02",
+   "kind": "compare",
+   "prompt": "Bucket policy or cross-account role: how should a job in one AWS account read a bucket in another account?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Both work. A bucket policy keeps the job's own permissions. With a role, it acts as the other account's role. Both accounts must allow it.",
+   "sixty_second": [
+    "Both give the job access to the other account's bucket.",
+    "The difference is whose permissions the job uses during the read.",
+    "It works like this. With a bucket policy, the job stays in its own account.",
+    "The bucket policy names the job's role, and the role's own policy allows the read.",
+    "AWS checks both accounts, and both have to say yes.",
+    "With a role, the job assumes a role in the other account.",
+    "Then it has that role's permissions only, not its own.",
+    "The thing to watch is a KMS key: the key policy has to allow the job.",
+    "In your case, if the job copies into its own bucket, use the bucket policy.",
+    "Then it can use both buckets at once.",
+    "Is the source data encrypted with a KMS key?"
+   ],
+   "skeleton": [
+    "both work",
+    "bucket policy keeps own permissions",
+    "role swaps the permissions",
+    "KMS key needs its own allow"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Across accounts AWS allows the request only if both evaluations return Allow: the caller's policy and the bucket policy.",
+     "accept": [
+      "both accounts have to say yes",
+      "the role needs its own allow too"
+     ],
+     "facts": [
+      "iam-eval-cross-account-needs-both-policies"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "With a resource-based policy the caller does not give up its permissions.",
+     "accept": [
+      "the job stays in its own account",
+      "the job keeps its own permissions"
+     ],
+     "facts": [
+      "iam-cross-account-role-vs-resource-policy"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A principal that assumes a role gives up its own permissions during the session; they are not cumulative.",
+     "accept": [
+      "the job has only the role's permissions",
+      "it swaps its permissions"
+     ],
+     "facts": [
+      "iam-assume-role-replaces-original-permissions"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "nice",
+     "point": "Amazon EC2 does not support resource-based policies, so access to EC2 in another account uses a role.",
+     "accept": [
+      "EC2 needs a role",
+      "no policy on an instance"
+     ],
+     "facts": [
+      "iam-ec2-no-resource-based-policies"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "must",
+     "point": "With a KMS key, the key policy and the caller's IAM policy both have to allow the use.",
+     "accept": [
+      "the key needs its own permission"
+     ],
+     "facts": [
+      "iam-kms-cross-account-key-policy-and-iam-policy"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "the bucket policy alone is enough across accounts",
+     "correct": "Across accounts AWS allows the request only if both evaluations return Allow.",
+     "fact": "iam-eval-cross-account-needs-both-policies"
+    },
+    {
+     "error": "after it assumes the role, the job keeps its own permissions too",
+     "correct": "The permissions are not cumulative. During the role session the job has the role's permissions only.",
+     "fact": "iam-assume-role-replaces-original-permissions"
+    }
+   ],
+   "terms": [
+    {
+     "say": "resource-based policy",
+     "avoid": [
+      "resource policy"
+     ]
+    },
+    {
+     "say": "assume a role",
+     "avoid": [
+      "log in to a role"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we name the analysts group in the bucket policy?",
+     "answer": "No. You cannot identify a user group as a principal. Name a role of that account instead.",
+     "facts": [
+      "iam-principal-group-cannot-be-principal"
+     ]
+    },
+    {
+     "question": "If we add their account to the role's trust policy, are we done?",
+     "answer": "No. That is only half of the cross-account trust. Their side also allows sts:AssumeRole on the role ARN.",
+     "facts": [
+      "iam-assume-role-two-permissions-checked"
+     ]
+    }
+   ],
+   "facts": [
+    "iam-eval-cross-account-needs-both-policies",
+    "iam-cross-account-role-vs-resource-policy",
+    "iam-assume-role-replaces-original-permissions",
+    "iam-ec2-no-resource-based-policies",
+    "iam-kms-cross-account-key-policy-and-iam-policy",
+    "iam-principal-group-cannot-be-principal",
+    "iam-assume-role-two-permissions-checked"
+   ],
+   "section": "2-deep.md#same-account-access-needs-one-allow-but-cross-account-access-needs-two",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "iam-s03",
+   "kind": "compare",
+   "prompt": "What is the difference between a service control policy and a permissions boundary?",
+   "persona": "a startup CTO you advise",
+   "ten_second": "Both are ceilings and grant nothing. An SCP limits whole accounts in an organization. A boundary limits one user or one role.",
+   "sixty_second": [
+    "Both are ceilings, and neither one grants a permission.",
+    "The difference is who they cover.",
+    "It works like this. An SCP is attached to an account or an organizational unit.",
+    "It limits the users and roles in those member accounts, even the root user.",
+    "A permissions boundary is attached to one user or one role.",
+    "It limits what the policies of that identity can ever allow.",
+    "In both cases, an identity-based or resource-based policy still has to grant the action.",
+    "The thing to watch is the management account: SCPs don't apply there.",
+    "In your case, use a boundary when developers create roles for their own apps.",
+    "Add SCPs later, when you split into several accounts.",
+    "Do your developers create IAM roles themselves today?"
+   ],
+   "skeleton": [
+    "both ceilings, no grant",
+    "SCP covers accounts and organizational units",
+    "boundary covers one identity",
+    "management account escapes SCPs"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Neither an SCP nor a permissions boundary grants permissions; an identity-based or resource-based policy still has to allow the action.",
+     "accept": [
+      "both are ceilings",
+      "they only limit"
+     ],
+     "facts": [
+      "iam-scp-never-grants-permissions",
+      "iam-permissions-boundary-sets-maximum-does-not-grant"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "An SCP limits the users and roles in member accounts, including the root user of the member account.",
+     "accept": [
+      "an SCP covers whole accounts",
+      "even the root user"
+     ],
+     "facts": [
+      "iam-scp-applies-to-member-root-user"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "A permissions boundary sets the maximum permissions of one IAM user or role.",
+     "accept": [
+      "a boundary is on one identity"
+     ],
+     "facts": [
+      "iam-boundary-applies-to-users-and-roles-not-slr",
+      "iam-permissions-boundary-sets-maximum-does-not-grant"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "SCPs do not affect users or roles in the management account.",
+     "accept": [
+      "the management account is not limited"
+     ],
+     "facts": [
+      "iam-scp-no-effect-on-management-account"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Boundaries set the maximum permissions that you delegate, for example when developers create roles.",
+     "accept": [
+      "boundaries for delegation"
+     ],
+     "facts": [
+      "iam-best-practice-boundaries-delegate-role-creation"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "an SCP that allows S3 gives everyone S3 access",
+     "correct": "An SCP never grants permissions. An identity-based or resource-based policy still has to allow the action.",
+     "fact": "iam-scp-never-grants-permissions"
+    },
+    {
+     "error": "you attach a permissions boundary to a group",
+     "correct": "A permissions boundary is set on an IAM entity, which is a user or role.",
+     "fact": "iam-boundary-applies-to-users-and-roles-not-slr"
+    }
+   ],
+   "terms": [
+    {
+     "say": "service control policy",
+     "avoid": [
+      "org policy",
+      "account policy"
+     ]
+    },
+    {
+     "say": "permissions boundary",
+     "avoid": [
+      "permission limit"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Does an SCP limit our management account too?",
+     "answer": "No. SCPs do not affect users or roles in the management account, so keep workloads out of it.",
+     "facts": [
+      "iam-scp-no-effect-on-management-account"
+     ]
+    },
+    {
+     "question": "If the boundary allows Amazon S3, can the developer read the bucket?",
+     "answer": "Only when a policy grants the read: an identity-based policy, or in one account a resource-based policy. The boundary sets the maximum and does not grant permissions.",
+     "facts": [
+      "iam-permissions-boundary-sets-maximum-does-not-grant",
+      "iam-eval-same-account-identity-or-resource-allow"
+     ]
+    }
+   ],
+   "facts": [
+    "iam-scp-never-grants-permissions",
+    "iam-permissions-boundary-sets-maximum-does-not-grant",
+    "iam-scp-applies-to-member-root-user",
+    "iam-boundary-applies-to-users-and-roles-not-slr",
+    "iam-scp-no-effect-on-management-account",
+    "iam-best-practice-boundaries-delegate-role-creation",
+    "iam-eval-same-account-identity-or-resource-allow"
+   ],
+   "section": "2-deep.md#aws-allows-a-request-only-when-nothing-denies-and-something-allows",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "iam-s04",
+   "kind": "decide",
+   "prompt": "Should our two founders keep using the root user if we turn on MFA?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "No. Turn on MFA for the root user, but do daily work with your own IAM users. Keep the root user for root-only tasks.",
+   "sixty_second": [
+    "The short answer is no. Turn on MFA, but stop using the root user for daily work.",
+    "It works like this. The root user has full access to everything in the account, billing too.",
+    "MFA protects the sign-in, but the root user can still do everything.",
+    "AWS says not to use the root user for everyday tasks, even administrative ones.",
+    "So each of you gets your own IAM user with MFA.",
+    "And the root user gets no access key at all.",
+    "The thing to watch is the few tasks that only the root user can do.",
+    "So keep one tested way to sign in as the root user.",
+    "In your case, with one account, Ana and you each get an IAM user today.",
+    "When you move to several accounts, IAM Identity Center replaces those users.",
+    "Who holds the root user's MFA device today?"
+   ],
+   "skeleton": [
+    "MFA yes, daily root no",
+    "root has full access",
+    "own IAM user with MFA",
+    "keep a tested root path"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "The root user must not be used for everyday tasks, even administrative ones; other identities do the daily work.",
+     "accept": [
+      "no root user for daily work",
+      "use your own users for everyday tasks"
+     ],
+     "facts": [
+      "iam-root-user-not-for-everyday-tasks-roles-instead"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Where you still need the root user or an IAM user, require MFA.",
+     "accept": [
+      "turn on MFA for the root user",
+      "MFA on every person's sign-in"
+     ],
+     "facts": [
+      "iam-best-practice-require-mfa-for-iam-and-root-users"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "Do not create access keys for the root user, because it has full access to all services and resources in the account, including billing information.",
+     "accept": [
+      "no root access key",
+      "the root user can do everything, billing too"
+     ],
+     "facts": [
+      "iam-root-do-not-create-access-keys"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Some tasks can be performed only when you sign in as the root user, so you keep a working way to reach it.",
+     "accept": [
+      "keep a tested root sign-in",
+      "a few tasks need the root user"
+     ],
+     "facts": [
+      "iam-root-tasks-only-root-can-do"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "For human users, AWS recommends temporary credentials through federation, with IAM Identity Center for centralized access.",
+     "accept": [
+      "IAM Identity Center later",
+      "people get temporary credentials"
+     ],
+     "facts": [
+      "iam-best-practice-human-users-federate-with-identity-center"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "with MFA turned on, the root user is safe for daily use",
+     "correct": "MFA protects the sign-in, but the root user must not be used for everyday tasks, even administrative ones.",
+     "fact": "iam-root-user-not-for-everyday-tasks-roles-instead"
+    },
+    {
+     "error": "keep a root access key for your scripts",
+     "correct": "Do not create access keys for the root user. A workload on an instance uses an IAM role.",
+     "fact": "iam-root-do-not-create-access-keys"
+    },
+    {
+     "error": "attach an IAM policy to the root user to limit it",
+     "correct": "You cannot attach identity-based policies to the root user, and you cannot set a permissions boundary for it.",
+     "fact": "iam-root-user-no-identity-policies-or-boundary"
+    }
+   ],
+   "terms": [
+    {
+     "say": "root user",
+     "avoid": [
+      "root account",
+      "super user"
+     ]
+    },
+    {
+     "say": "turn on MFA",
+     "avoid": [
+      "two-step login"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What can only the root user do?",
+     "answer": "Some tasks can be performed only when you sign in as the root user. For example, if the only IAM administrator removes their own permissions, you sign in as the root user to restore them.",
+     "facts": [
+      "iam-root-tasks-only-root-can-do"
+     ]
+    },
+    {
+     "question": "Do we have to turn on MFA for the root user anyway?",
+     "answer": "Yes. All AWS account types (standalone, management, and member accounts) require MFA for the root user. A root user without MFA registers a device within 35 days of the first sign-in attempt.",
+     "facts": [
+      "iam-root-mfa-required-all-account-types"
+     ]
+    }
+   ],
+   "facts": [
+    "iam-root-user-not-for-everyday-tasks-roles-instead",
+    "iam-best-practice-require-mfa-for-iam-and-root-users",
+    "iam-root-do-not-create-access-keys",
+    "iam-root-tasks-only-root-can-do",
+    "iam-best-practice-human-users-federate-with-identity-center",
+    "iam-root-user-no-identity-policies-or-boundary",
+    "iam-root-mfa-required-all-account-types"
+   ],
+   "section": "2-deep.md#the-root-user-and-iam-users-hold-long-term-credentials",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "iam",
+   "status": "ready",
+   "rev": 1
+  }
+ ]
+}

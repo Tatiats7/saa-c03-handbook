@@ -1,0 +1,283 @@
+{
+ "v": 1,
+ "chapter": "identity-federation",
+ "items": [
+  {
+   "id": "identity-federation-t01",
+   "type": "look",
+   "title": "Find the roles that IAM Identity Center creates",
+   "kills": "\"IAM Identity Center creates an IAM user for each employee.\"",
+   "trap": "identity-federation-trap-idc-creates-iam-users",
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "iam:ListRoles",
+    "iam:ListUsers",
+    "sso:ListInstances"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative. If one step returns an access error, skip that step: the other steps still show the point.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. List the IAM roles whose names start with AWSReservedSSO_. IAM Identity Center made these roles when someone assigned a permission set to this account.",
+     "command": "aws iam list-roles --query \"Roles[?starts_with(RoleName, 'AWSReservedSSO_')].RoleName\"",
+     "expect": "Zero or more role names that start with AWSReservedSSO_. Each one comes from a permission set assigned to this account. An empty list means that no permission set is assigned here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the IAM users of the same account. Compare the names with the people who sign in through the AWS access portal.",
+     "command": "aws iam list-users --query \"Users[].UserName\"",
+     "expect": "A short list or an empty one. No IAM user was made for the people who sign in through IAM Identity Center: they reach the account through the AWSReservedSSO_ roles.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Ask IAM Identity Center for its instances. An empty list is a normal answer in many accounts.",
+     "command": "aws sso-admin list-instances --query \"Instances[].[InstanceArn,IdentityStoreId,OwnerAccountId]\"",
+     "expect": "An instance ARN, an identity store ID and the owner account ID, or an empty list. The identity store holds the Identity Center users. An organization instance lives in the management account.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "iam-identity-center-roles-named-awsreservedsso",
+    "iam-identity-center-creates-roles-per-permission-set-not-iam-users",
+    "iam-identity-center-org-instance-only-one-for-account-access"
+   ],
+   "sources": [
+    {
+     "title": "IAM roles created by IAM Identity Center",
+     "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/identity-center-and-iam-roles.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-roles",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/list-roles.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-users",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/list-users.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: sso-admin list-instances",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sso-admin/list-instances.html"
+    }
+   ],
+   "chapter": "identity-federation",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-12"
+  },
+  {
+   "id": "identity-federation-t02",
+   "type": "try",
+   "title": "Create a user pool and an identity pool and see which one gives AWS credentials",
+   "kills": "\"A Cognito user pool hands AWS credentials to the app.\"",
+   "trap": "identity-federation-trap-user-pool-gives-aws-credentials",
+   "section": "2-deep.md#a-user-pool-signs-users-in-and-an-identity-pool-hands-out-aws-credentials",
+   "pass_route": true,
+   "minutes": 15,
+   "cost": "$0. Identity pools are provided at no charge, and IAM roles have no additional charge. User pools are billed by monthly active users; this task creates no user and signs nobody in.",
+   "cost_if_forgotten": "$0 a day while the user pool has no users. Delete it anyway: a forgotten pool that later gets active users is billed for them.",
+   "cost_facts": [
+    "cognito-identity-pools-no-charge",
+    "cognito-user-pools-billed-by-mau",
+    "iam-offered-at-no-additional-charge"
+   ],
+   "permissions": [
+    "cognito-idp:CreateUserPool",
+    "cognito-idp:TagResource",
+    "cognito-idp:DescribeUserPool",
+    "cognito-idp:DeleteUserPool",
+    "cognito-identity:CreateIdentityPool",
+    "cognito-identity:TagResource",
+    "cognito-identity:DescribeIdentityPool",
+    "cognito-identity:SetIdentityPoolRoles",
+    "cognito-identity:GetIdentityPoolRoles",
+    "cognito-identity:DeleteIdentityPool",
+    "iam:CreateRole",
+    "iam:TagRole",
+    "iam:UpdateAssumeRolePolicy",
+    "iam:PassRole",
+    "iam:DeleteRole",
+    "tag:GetResources"
+   ],
+   "read_only_alternative": "Use this when your account allows no new resources. It changes nothing. List the user pools with aws cognito-idp list-user-pools --max-results 10 and the identity pools with aws cognito-identity list-identity-pools --max-results 10. Pick one identity pool ID as <IDENTITY_POOL_ID> and read its roles with aws cognito-identity get-identity-pool-roles --identity-pool-id <IDENTITY_POOL_ID>. Then read the example trust policy on the Amazon Cognito page \"IAM roles\" and find its aud condition.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a user pool, the user directory of an app. Tag it, and turn deletion protection off so that the cleanup can delete it.",
+     "command": "aws cognito-idp create-user-pool --pool-name saa-identity-federation-t02 --deletion-protection INACTIVE --user-pool-tags book=saa,task=identity-federation-t02",
+     "capture": {
+      "name": "USER_POOL_ID",
+      "query": "UserPool.Id"
+     },
+     "expect": "No output. USER_POOL_ID now holds the pool ID: your Region, an underscore and a code.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read what the user pool holds.",
+     "command": "aws cognito-idp describe-user-pool --user-pool-id $USER_POOL_ID --query \"UserPool.[Name,EstimatedNumberOfUsers]\"",
+     "expect": "The name saa-identity-federation-t02 and the number 0. The directory has no users yet, and this task adds none.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create an identity pool that accepts sign-ins from your user pool and allows no guests. Write your CloudShell Region, for example us-east-1, as <REGION>. A real app also names its app client here.",
+     "command": "aws cognito-identity create-identity-pool --identity-pool-name saa-identity-federation-t02 --no-allow-unauthenticated-identities --cognito-identity-providers ProviderName=cognito-idp.<REGION>.amazonaws.com/$USER_POOL_ID --identity-pool-tags book=saa,task=identity-federation-t02",
+     "capture": {
+      "name": "IDENTITY_POOL_ID",
+      "query": "IdentityPoolId"
+     },
+     "expect": "No output. IDENTITY_POOL_ID now holds the identity pool ID: your Region, a colon and a long code.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the identity pool. Find the user pool among its providers, and look for any user data.",
+     "command": "aws cognito-identity describe-identity-pool --identity-pool-id $IDENTITY_POOL_ID --query \"[IdentityPoolName,AllowUnauthenticatedIdentities,CognitoIdentityProviders[].ProviderName]\"",
+     "expect": "The name, false, and a provider name that ends with your user pool ID. No users and no profiles: the identity pool trusts the sign-in of the user pool and keeps no profiles itself.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create the IAM role for signed-in users of this identity pool. Its trust policy names your identity pool ID (aud) and signed-in users (amr). The role gets no permissions policy.",
+     "command": "aws iam create-role --role-name saa-identity-federation-t02-auth --assume-role-policy-document \"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":{\\\"Federated\\\":\\\"cognito-identity.amazonaws.com\\\"},\\\"Action\\\":\\\"sts:AssumeRoleWithWebIdentity\\\",\\\"Condition\\\":{\\\"StringEquals\\\":{\\\"cognito-identity.amazonaws.com:aud\\\":\\\"$IDENTITY_POOL_ID\\\"},\\\"ForAnyValue:StringLike\\\":{\\\"cognito-identity.amazonaws.com:amr\\\":\\\"authenticated\\\"}}}]}\" --tags Key=book,Value=saa Key=task,Value=identity-federation-t02",
+     "capture": {
+      "name": "ROLE_ARN",
+      "query": "Role.Arn"
+     },
+     "expect": "No output. ROLE_ARN now holds the ARN of saa-identity-federation-t02-auth.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Break it on purpose: replace the trust policy with one that keeps the amr check and drops the aud condition.",
+     "command": "aws iam update-assume-role-policy --role-name saa-identity-federation-t02-auth --policy-document '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Federated\":\"cognito-identity.amazonaws.com\"},\"Action\":\"sts:AssumeRoleWithWebIdentity\",\"Condition\":{\"ForAnyValue:StringLike\":{\"cognito-identity.amazonaws.com:amr\":\"authenticated\"}}}]}'",
+     "expect": "An error from IAM. The role keeps the trust policy from step 5.",
+     "break_it": true,
+     "predict": "The new policy still checks that the user signed in. Will IAM save it without the aud condition?",
+     "explain": "With cognito-identity.amazonaws.com as the principal, IAM does not let a trust policy [permit any identity pool to assume the role](../facts/cognito.md#cognito-identity-pool-trust-policy-aud-condition-enforced). Other condition keys are available, [but `aud` is required](../facts/cognito.md#cognito-identity-pool-trust-policy-aud-condition-enforced). Without it, [IAM returns an error](../facts/cognito.md#cognito-identity-pool-trust-policy-aud-condition-enforced). The amr check alone is not enough."
+    },
+    {
+     "text": "No fix is needed: the safe trust policy from step 5 is still in place. Attach the role to the identity pool as its authenticated role.",
+     "command": "aws cognito-identity set-identity-pool-roles --identity-pool-id $IDENTITY_POOL_ID --roles authenticated=$ROLE_ARN",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the roles of the identity pool. This mapping is where a sign-in turns into temporary AWS credentials.",
+     "command": "aws cognito-identity get-identity-pool-roles --identity-pool-id $IDENTITY_POOL_ID --query \"Roles\"",
+     "expect": "authenticated, with the ARN of saa-identity-federation-t02-auth. There is no unauthenticated role, because the pool allows no guests. The role belongs to the identity pool, not to the user pool.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the role.",
+     "command": "aws iam delete-role --role-name saa-identity-federation-t02-auth"
+    },
+    {
+     "text": "Delete the identity pool.",
+     "command": "aws cognito-identity delete-identity-pool --identity-pool-id $IDENTITY_POOL_ID"
+    },
+    {
+     "text": "Delete the user pool. You turned deletion protection off in step 1.",
+     "command": "aws cognito-idp delete-user-pool --user-pool-id $USER_POOL_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=identity-federation-t02 --query \"ResourceTagMappingList[].ResourceARN\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing after the cleanup. Identity pools are provided at no charge, IAM has no additional charge, and a user pool without active users has no monthly active users to bill.",
+    "The verify list does not show IAM roles: GetResources does not currently support IAM users and roles. Check the role with aws iam get-role --role-name saa-identity-federation-t02-auth and expect an error that the role does not exist.",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the pool IDs again with aws cognito-idp list-user-pools --max-results 10 and aws cognito-identity list-identity-pools --max-results 10."
+   ],
+   "facts": [
+    "cognito-user-pool-vs-identity-pool",
+    "cognito-identity-pools-store-no-profiles",
+    "cognito-pools-used-together-or-alone",
+    "cognito-identity-pool-trust-policy-aud-condition-enforced",
+    "cognito-identity-pool-role-trust-policy-aud-amr",
+    "cognito-identity-pools-no-charge",
+    "cognito-user-pools-billed-by-mau",
+    "iam-offered-at-no-additional-charge",
+    "iam-tagging-api-getresources-no-iam-roles"
+   ],
+   "sources": [
+    {
+     "title": "Amazon Cognito Identity examples using AWS CLI (create-identity-pool, describe-identity-pool, set-identity-pool-roles, get-identity-pool-roles, delete-identity-pool)",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_cognito-identity_code_examples.html"
+    },
+    {
+     "title": "Getting started with Amazon Cognito identity pools",
+     "url": "https://docs.aws.amazon.com/cognito/latest/developerguide/getting-started-with-identity-pools.html"
+    },
+    {
+     "title": "Amazon Cognito IAM roles: set up a trust policy (example with aud and amr)",
+     "url": "https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html"
+    },
+    {
+     "title": "CognitoIdentityProvider (a user pool and its client ID)",
+     "url": "https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_CognitoIdentityProvider.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-user-pool",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/create-user-pool.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-user-pool",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/describe-user-pool.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-user-pool",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/delete-user-pool.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-identity-pool",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/create-identity-pool.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: set-identity-pool-roles",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cognito-identity/set-identity-pool-roles.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-role",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/create-role.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: update-assume-role-policy",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/update-assume-role-policy.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-role",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/iam/delete-role.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-resources",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+    },
+    {
+     "title": "Resource Groups Tagging API Reference: supported services (Amazon Cognito Identity, Amazon Cognito User Pools)",
+     "url": "https://docs.aws.amazon.com/resourcegroupstagging/latest/APIReference/Welcome.html"
+    }
+   ],
+   "chapter": "identity-federation",
+   "status": "candidate",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-12"
+  }
+ ]
+}

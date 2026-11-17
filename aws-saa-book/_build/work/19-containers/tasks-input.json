@@ -1,0 +1,290 @@
+[
+ {
+  "id": "containers-t01",
+  "type": "look",
+  "title": "Read the Fargate quotas of your account",
+  "kills": "\"Fargate is serverless, so no account quota limits how many tasks run.\"",
+  "trap": null,
+  "section": "1-fast.md#look-first",
+  "pass_route": false,
+  "minutes": 4,
+  "cost": "$0",
+  "cost_if_forgotten": "$0",
+  "cost_facts": [],
+  "permissions": [
+   "servicequotas:ListAWSDefaultServiceQuotas",
+   "servicequotas:ListServiceQuotas"
+  ],
+  "read_only_alternative": "This task is read-only. It needs no alternative.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. List the default Fargate quotas of the current Region and read the Adjustable column.",
+    "command": "aws service-quotas list-aws-default-service-quotas --service-code fargate --query \"Quotas[].[QuotaName,Value,Adjustable]\" --output table",
+    "expect": "A table of quota names, default values and True or False. Find Fargate On-Demand vCPU resource count and Fargate Spot vCPU resource count. Both count vCPUs, not tasks, and both show True: you can ask to increase them.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "List the quota values that apply to your account in the same Region.",
+    "command": "aws service-quotas list-service-quotas --service-code fargate --query \"Quotas[].[QuotaName,Value,Adjustable]\" --output table",
+    "expect": "The values of your account. Compare the two vCPU rows with step 1. A new account can show lower values than the defaults. A quota that has no applied value for your account is not in this table.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Run the same command for a second Region, <OTHER_REGION>. Choose a Region you do not work in, for example eu-west-1.",
+    "command": "aws service-quotas list-service-quotas --service-code fargate --region <OTHER_REGION> --query \"Quotas[].[QuotaName,Value,Adjustable]\" --output table",
+    "expect": "The values of that Region. Each Region has its own vCPU quotas: tasks that run in one Region do not use the quota of another Region.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [],
+  "verify": null,
+  "still_costs": [],
+  "facts": [
+   "fargate-ondemand-vcpu-quota",
+   "fargate-spot-vcpu-quota",
+   "fargate-faq-quotas-based-on-vcpu-per-region-account",
+   "fargate-faq-new-accounts-lower-quotas-raisable"
+  ],
+  "sources": [
+   {
+    "title": "list-aws-default-service-quotas, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/service-quotas/list-aws-default-service-quotas.html"
+   },
+   {
+    "title": "list-service-quotas, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/service-quotas/list-service-quotas.html"
+   },
+   {
+    "title": "Amazon ECS endpoints and quotas",
+    "url": "https://docs.aws.amazon.com/general/latest/gr/ecs-service.html"
+   },
+   {
+    "title": "AWS Fargate FAQs",
+    "url": "https://aws.amazon.com/fargate/faqs/"
+   }
+  ]
+ },
+ {
+  "id": "containers-t02",
+  "type": "try",
+  "title": "Create an ECR repository and look for it in another Region",
+  "kills": "\"One ECR repository serves tasks in every Region.\"",
+  "trap": "containers-trap-ecr-global",
+  "section": "2-deep.md#images-live-in-a-regional-ecr-repository-that-tasks-pull-from",
+  "pass_route": true,
+  "minutes": 10,
+  "cost": "$0: the repository stays empty. With Amazon ECR you pay only for the amount of data you store and for data transferred to the internet, and this task stores and transfers no image.",
+  "cost_if_forgotten": "$0 a day as long as the repository stays empty. Delete it anyway, so that no unused repository stays in the account.",
+  "cost_facts": [
+   "ecr-faq-pricing-storage-and-internet-transfer",
+   "ecr-pricing-dimensions-storage-transfer-actions"
+  ],
+  "permissions": [
+   "ecr:CreateRepository",
+   "ecr:TagResource",
+   "ecr:DescribeRepositories",
+   "ecr:ListImages",
+   "ecr:DeleteRepository"
+  ],
+  "read_only_alternative": "In an account where you cannot create resources, compare the repositories of two Regions: aws ecr describe-repositories --query \"repositories[].[repositoryName,repositoryUri]\" --output table, then the same command with --region <OTHER_REGION>. Each Region shows its own list, and each repository URI names its Region. The commands change nothing.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Create a private repository with immutable image tags, so that no push can overwrite a tag that already exists.",
+    "command": "aws ecr create-repository --repository-name saa-containers-t02 --image-tag-mutability IMMUTABLE --tags Key=book,Value=saa Key=task,Value=containers-t02",
+    "expect": "A JSON description of the repository with repositoryUri and imageTagMutability IMMUTABLE.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read the tag setting and the encryption type of the new repository. You did not choose an encryption type.",
+    "command": "aws ecr describe-repositories --repository-names saa-containers-t02 --query \"repositories[].{Name:repositoryName,Mutability:imageTagMutability,Encryption:encryptionConfiguration.encryptionType}\" --output table",
+    "expect": "One row: saa-containers-t02, IMMUTABLE and AES256.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Ask a second Region, <OTHER_REGION>, for the same repository. Choose a Region you do not work in, for example eu-west-1.",
+    "command": "aws ecr describe-repositories --repository-names saa-containers-t02 --region <OTHER_REGION>",
+    "expect": "An error that says the repository does not exist. No repository description.",
+    "break_it": true,
+    "predict": "The repository exists in your account, and you ask with the same name. Does the other Region find it?",
+    "explain": "Amazon ECR is a [Regional service](../facts/ecr.md#ecr-faq-regional-service). The repository lives in the Region where you created it, and the other Region does not have it. A task in another Region can still pull from this repository, with [additional latency and data transfer costs](../facts/ecr.md#ecr-faq-cross-region-pull-latency-and-transfer-cost). For tasks in several Regions, push the images once and let Amazon ECR [automatically replicate them to other Regions and accounts](../facts/ecr.md#ecr-faq-replicates-across-regions-and-accounts)."
+   },
+   {
+    "text": "Fix the call: ask the Region that holds the repository. Read the repository URI, the address that a task uses to pull an image.",
+    "command": "aws ecr describe-repositories --repository-names saa-containers-t02 --query \"repositories[].repositoryUri\" --output text",
+    "expect": "One address: your account ID, dkr.ecr, your current Region, amazonaws.com and the repository name. The Region is part of the address, so every pull goes to that Region.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the repository. It holds no image, so no force option is needed.",
+    "command": "aws ecr delete-repository --repository-name saa-containers-t02"
+   }
+  ],
+  "verify": {
+   "command": "aws ecr list-images --repository-name saa-containers-t02",
+   "expect": "An error that says the repository does not exist in this Region."
+  },
+  "still_costs": [
+   "Nothing, as long as the repository stays empty: Amazon ECR charges for the data you store and for data transferred to the internet.",
+   "If you pushed an image to the repository yourself, delete the repository with the --force option, so that ECR also deletes the image."
+  ],
+  "facts": [
+   "ecr-faq-regional-service",
+   "ecr-faq-cross-region-pull-latency-and-transfer-cost",
+   "ecr-faq-replicates-across-regions-and-accounts",
+   "ecr-encryption-default-sse-s3-aes256",
+   "ecr-tag-immutability-prevent-overwrite",
+   "ecr-faq-pricing-storage-and-internet-transfer",
+   "ecr-pricing-dimensions-storage-transfer-actions"
+  ],
+  "sources": [
+   {
+    "title": "Moving an image through its lifecycle in Amazon ECR (AWS CLI tutorial)",
+    "url": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-cli.html"
+   },
+   {
+    "title": "create-repository, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecr/create-repository.html"
+   },
+   {
+    "title": "describe-repositories, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecr/describe-repositories.html"
+   },
+   {
+    "title": "delete-repository, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecr/delete-repository.html"
+   },
+   {
+    "title": "list-images, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecr/list-images.html"
+   },
+   {
+    "title": "Preventing image tags from being overwritten in Amazon ECR",
+    "url": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-tag-mutability.html"
+   },
+   {
+    "title": "Encryption at rest (Amazon ECR)",
+    "url": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/encryption-at-rest.html"
+   },
+   {
+    "title": "Amazon ECR FAQs",
+    "url": "https://aws.amazon.com/ecr/faqs/"
+   }
+  ]
+ },
+ {
+  "id": "containers-t03",
+  "type": "try",
+  "title": "Register a Fargate task definition and break its network mode",
+  "kills": "\"A Fargate task can use any network mode, as a task on an EC2 instance can.\"",
+  "trap": null,
+  "section": "2-deep.md#in-awsvpc-mode-each-task-gets-its-own-network-interface",
+  "pass_route": false,
+  "minutes": 12,
+  "cost": "$0: there is no additional charge for Amazon ECS, and a registered task definition runs no task, so Fargate bills no vCPU or memory.",
+  "cost_if_forgotten": "$0 a day: a task definition that runs no task has no charge. Delete it anyway, so that no unused task definition stays in the account.",
+  "cost_facts": [
+   "ecs-faq-no-additional-charge",
+   "fargate-faq-billing-dimensions-and-minimum"
+  ],
+  "permissions": [
+   "ecs:RegisterTaskDefinition",
+   "ecs:TagResource",
+   "ecs:DescribeTaskDefinition",
+   "ecs:ListTaskDefinitions",
+   "ecs:DeregisterTaskDefinition",
+   "ecs:DeleteTaskDefinitions",
+   "tag:GetResources"
+  ],
+  "read_only_alternative": "In an account where you cannot create resources, read an existing task definition: aws ecs list-task-definitions lists the revisions, and aws ecs describe-task-definition --task-definition <TASK_DEFINITION> --query \"taskDefinition.{Mode:networkMode,Requires:requiresCompatibilities}\" shows its network mode. A task definition that requires FARGATE shows awsvpc. The commands change nothing.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Register a task definition for Fargate with the bridge network mode, the smallest task size and one public web server container.",
+    "command": "aws ecs register-task-definition --family saa-containers-t03 --requires-compatibilities FARGATE --network-mode bridge --cpu 256 --memory 512 --container-definitions '[{\"name\":\"saa-web\",\"image\":\"public.ecr.aws/docker/library/httpd:latest\",\"essential\":true}]' --tags key=book,value=saa key=task,value=containers-t03",
+    "expect": "An error (a client exception) that names the network mode. No task definition is registered.",
+    "break_it": true,
+    "predict": "On an EC2 instance, a task can use the bridge network mode. Does ECS accept bridge mode in a task definition that requires FARGATE?",
+    "explain": "Amazon ECS tasks for AWS Fargate require the awsvpc network mode, which [provides each task with an elastic network interface](../facts/fargate.md#fargate-requires-awsvpc-network-mode). You asked for FARGATE in the required compatibilities, so ECS checked the task definition against Fargate and returned the error. Tasks that use Fargate do not support [all of the Amazon ECS task definition parameters](../facts/fargate.md#fargate-launch-type-requires-task-definition-config) that are available."
+   },
+   {
+    "text": "Fix it: register the same task definition with the awsvpc network mode. The shell keeps the ARN of the new revision in TD_ARN.",
+    "command": "aws ecs register-task-definition --family saa-containers-t03 --requires-compatibilities FARGATE --network-mode awsvpc --cpu 256 --memory 512 --container-definitions '[{\"name\":\"saa-web\",\"image\":\"public.ecr.aws/docker/library/httpd:latest\",\"essential\":true}]' --tags key=book,value=saa key=task,value=containers-t03",
+    "capture": {
+     "name": "TD_ARN",
+     "query": "taskDefinition.taskDefinitionArn"
+    },
+    "expect": "No output: the shell keeps the task definition ARN in TD_ARN.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read the network mode, the required compatibilities, the task size and the status of the new revision.",
+    "command": "aws ecs describe-task-definition --task-definition $TD_ARN --query \"taskDefinition.{Mode:networkMode,Requires:requiresCompatibilities,Cpu:cpu,Memory:memory,Status:status}\"",
+    "expect": "Mode awsvpc, Requires FARGATE, Cpu 256, Memory 512 and Status ACTIVE.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Deregister the revision. Its status becomes INACTIVE. If your CloudShell session ended, TD_ARN is empty: set it again to the ARN that aws ecs list-task-definitions --family-prefix saa-containers-t03 prints.",
+    "command": "aws ecs deregister-task-definition --task-definition $TD_ARN"
+   },
+   {
+    "text": "Delete the deregistered revision. ECS marks it DELETE_IN_PROGRESS until no task or service uses it, and here none does.",
+    "command": "aws ecs delete-task-definitions --task-definitions $TD_ARN"
+   }
+  ],
+  "verify": {
+   "command": "aws resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=containers-t03 --query \"ResourceTagMappingList[].ResourceARN\"",
+   "expect": "An empty list. If the task definition ARN still shows, ECS has not finished the deletion: wait one minute and run the command again. A second check without tags: aws ecs describe-task-definition --task-definition $TD_ARN returns an error after the deletion has finished."
+  },
+  "still_costs": [
+   "Nothing: a task definition that runs no task has no charge, and there is no additional charge for Amazon ECS. Delete it anyway, so that no unused task definition stays in the account."
+  ],
+  "facts": [
+   "fargate-requires-awsvpc-network-mode",
+   "fargate-launch-type-requires-task-definition-config",
+   "fargate-task-size-smallest",
+   "ecs-faq-no-additional-charge",
+   "fargate-faq-billing-dimensions-and-minimum"
+  ],
+  "sources": [
+   {
+    "title": "Creating an Amazon ECS Linux task for the Fargate with the AWS CLI (tutorial)",
+    "url": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_AWSCLI_Fargate.html"
+   },
+   {
+    "title": "register-task-definition, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecs/register-task-definition.html"
+   },
+   {
+    "title": "describe-task-definition, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecs/describe-task-definition.html"
+   },
+   {
+    "title": "deregister-task-definition, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecs/deregister-task-definition.html"
+   },
+   {
+    "title": "delete-task-definitions, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ecs/delete-task-definitions.html"
+   },
+   {
+    "title": "get-resources, AWS CLI Command Reference",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+   },
+   {
+    "title": "Amazon ECS task definition differences for Fargate",
+    "url": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-tasks-services.html"
+   }
+  ]
+ }
+]

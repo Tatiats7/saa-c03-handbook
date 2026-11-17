@@ -1,0 +1,1002 @@
+[
+ {
+  "id": "vpc-q002",
+  "section": "2-deep.md#security-groups-remember-connections-but-network-acls-check-every-packet",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": [
+   "1.2.K3"
+  ],
+  "topics": [
+   "networking",
+   "security"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "nacl-ephemeral-reply",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a public website on Amazon EC2 instances in a public subnet. Customers connect over HTTPS from many different devices and operating systems. The security team replaced the default network ACL of the subnet with a custom network ACL. The custom network ACL allows inbound TCP 443 from 0.0.0.0/0 and outbound TCP 443 to 0.0.0.0/0. The security group of the instances allows inbound TCP 443 from 0.0.0.0/0. Since the change, every customer connection times out. The company must restore access for all customers. Which change will meet these requirements in the MOST secure way?",
+  "keywords": [
+   "custom network ACL",
+   "outbound TCP 443 to 0.0.0.0/0",
+   "many different devices and operating systems",
+   "MOST secure"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an outbound rule to the security group of the instances that allows TCP ports 1024-65535 to 0.0.0.0/0 for the replies to the customers.",
+    "correct": false,
+    "why": "Because [security groups are stateful](../facts/vpc.md#vpc-sg-connection-tracking-stateful), the replies already pass the security group; the network ACL still drops them.",
+    "concept": "sg-outbound-reply-rule",
+    "trap": null,
+    "misconception": "a security group needs an outbound rule for the replies, like a network ACL",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Add an outbound rule to the custom network ACL that allows TCP ports 1024-65535 to 0.0.0.0/0 for the replies to the customers.",
+    "correct": true,
+    "why": "The replies leave the subnet toward each customer's ephemeral port, and AWS suggests you [open ephemeral ports 1024-65535](../facts/vpc.md#vpc-nacl-ephemeral-open-1024-65535) to cover every client type.",
+    "concept": "nacl-outbound-ephemeral-rule",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Replace the rules of the custom network ACL with one inbound rule and one outbound rule that allow all traffic to and from 0.0.0.0/0.",
+    "correct": false,
+    "why": "It works, but it opens every port in both directions, which is far less secure than one outbound rule for the reply ports.",
+    "concept": "nacl-allow-all",
+    "trap": null,
+    "misconception": "opening the whole network ACL is an acceptable fix for one blocked reply",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add an inbound rule to the custom network ACL that allows TCP ports 1024-65535 from 0.0.0.0/0 for the replies to the customers.",
+    "correct": false,
+    "why": "The replies go out of the subnet, so an inbound rule does not let them pass, and it opens more inbound ports.",
+    "concept": "nacl-inbound-ephemeral-rule",
+    "trap": null,
+    "misconception": "the reply to a customer enters the subnet on the ephemeral port",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "[Network ACLs are stateless](../facts/vpc.md#vpc-nacl-stateless-needs-response-rule), so the reply to each request needs an outbound rule of its own. The reply goes to the ephemeral port that the customer's device chose, not to port 443, so the current outbound rule does not match it. The customers use many operating systems, so the outbound rule covers the full range of [ports 1024-65535](../facts/vpc.md#vpc-nacl-ephemeral-natgw-elb-lambda-1024-65535).",
+  "takeaway": "A custom network ACL needs an outbound rule for the reply ports, because it does not remember connections.",
+  "twin": "If the stem said \"the clients are Amazon Linux instances in another subnet\" instead: an outbound rule for [ports 32768-61000](../facts/vpc.md#vpc-nacl-ephemeral-linux-32768-61000), because the client's operating system chooses the ephemeral range.",
+  "say": "A network ACL is stateless, so I'd add an outbound rule for the ephemeral ports.",
+  "facts": [
+   "vpc-nacl-ephemeral-open-1024-65535",
+   "vpc-sg-connection-tracking-stateful",
+   "vpc-nacl-stateless-needs-response-rule",
+   "vpc-nacl-ephemeral-natgw-elb-lambda-1024-65535",
+   "vpc-nacl-ephemeral-linux-32768-61000"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-these-requirements",
+   "ee-most-secure"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q004",
+  "section": "2-deep.md#a-nat-gateway-lets-private-instances-start-connections-and-charges-hourly-and-per-gigabyte",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.S3"
+  ],
+  "topics": [
+   "networking",
+   "cost"
+  ],
+  "services": [
+   "vpc",
+   "s3",
+   "ec2"
+  ],
+  "concept": "s3-gateway-endpoint-cost",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs data-processing workers on Amazon EC2 instances in private subnets of a VPC. Each night the workers upload several terabytes of result files to an Amazon S3 bucket in the same AWS Region. All outbound traffic from the private subnets goes through a NAT gateway, and the monthly bill shows high NAT gateway data processing charges. The workers must still download software updates from the internet. The uploads must reach Amazon S3 privately. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "upload several terabytes of result files to an Amazon S3 bucket in the same AWS Region",
+   "NAT gateway data processing charges",
+   "must still download software updates from the internet",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create an interface endpoint for Amazon S3 in each private subnet, and send the uploads to the DNS name of the interface endpoint.",
+    "correct": false,
+    "why": "It works and stays private, but an interface endpoint is [billed for each hour that your interface VPC endpoint is provisioned in each Availability Zone](../facts/vpc.md#vpc-interface-endpoint-billed-hour-per-az-and-gb) and per GB processed.",
+    "concept": "s3-interface-endpoint",
+    "trap": null,
+    "misconception": "every VPC endpoint is free, like a gateway endpoint",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Move the workers to public subnets, assign a public IPv4 address to each worker, and send all traffic through the internet gateway.",
+    "correct": false,
+    "why": "The uploads would leave the private subnets, which breaks the private requirement, and [AWS charges for all public IPv4 addresses](../facts/vpc.md#vpc-public-ipv4-charge-2024).",
+    "concept": "public-subnet-workers",
+    "trap": "vpc-trap-public-ipv4-free",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Create a gateway endpoint for Amazon S3, and associate the endpoint with the route tables of the private subnets that the workers use.",
+    "correct": true,
+    "why": "Instances in subnets with the endpoint route [automatically use the gateway endpoint to access the service](../facts/vpc.md#vpc-gateway-endpoint-applies-per-route-table), so the uploads stop passing through the NAT gateway.",
+    "concept": "s3-gateway-endpoint",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a NAT gateway in each Availability Zone, and point the route table of each private subnet to the NAT gateway in its zone.",
+    "correct": false,
+    "why": "Each NAT gateway still charges for [each gigabyte of data that it processes](../facts/vpc.md#vpc-natgw-pricing-dimensions), so the upload bytes are still billed for processing.",
+    "concept": "natgw-per-az",
+    "trap": "vpc-trap-s3-needs-nat",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The expensive bytes are the uploads to Amazon S3. [Gateway VPC endpoints provide reliable connectivity to Amazon S3 and DynamoDB without requiring an internet gateway or a NAT device for your VPC](../facts/vpc.md#vpc-gateway-endpoint-s3-dynamodb-no-privatelink), and [There are no data processing or hourly charges for using Gateway Type VPC endpoints](../facts/vpc.md#vpc-gateway-endpoint-no-hourly-or-processing-charge). The default route to the NAT gateway stays, so the software updates still work.",
+  "takeaway": "Send same-Region Amazon S3 traffic through a gateway endpoint, not through a NAT gateway.",
+  "twin": "If the stem said \"servers in the data center upload the files\" instead: an interface endpoint, because S3 [gateway endpoints do not allow access from on-premises networks, from peered VPCs in other AWS Regions, or through a transit gateway](../facts/vpc.md#vpc-gateway-endpoint-no-onprem-cross-region-tgw).",
+  "say": "For S3 in the same Region I'd add a gateway endpoint: no hourly charge and no NAT processing.",
+  "facts": [
+   "vpc-gateway-endpoint-applies-per-route-table",
+   "vpc-interface-endpoint-billed-hour-per-az-and-gb",
+   "vpc-public-ipv4-charge-2024",
+   "vpc-natgw-pricing-dimensions",
+   "vpc-gateway-endpoint-s3-dynamodb-no-privatelink",
+   "vpc-gateway-endpoint-no-hourly-or-processing-charge",
+   "vpc-gateway-endpoint-no-onprem-cross-region-tgw",
+   "vpc-natgw-data-processing-any-destination"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-privately"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the MOST cost-effective way to meet every requirement.",
+    "I mark the constraints: the bucket is in the same Region, the NAT gateway data processing charge is the problem, the workers still need the internet for updates, and the uploads stay private.",
+    "Before I look at the options, I predict a gateway endpoint for Amazon S3, because a gateway endpoint has no hourly or data processing charge and keeps the traffic off the NAT gateway.",
+    "I remove the public subnets, because the uploads must stay private and every public IPv4 address is billed. I remove a NAT gateway in each zone, because each NAT gateway still charges for every gigabyte it processes.",
+    "Between the gateway endpoint and the interface endpoint the difference is the price; both keep the traffic private, but the interface endpoint charges per hour in each zone and per GB, and the stem asks for the lowest cost, so the gateway endpoint wins.",
+    "Check: the gateway endpoint carries the uploads privately, the NAT gateway still serves the updates, and no new hourly charge appears. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ },
+ {
+  "id": "vpc-q006",
+  "section": "2-deep.md#a-subnet-is-public-only-when-its-route-table-points-to-an-internet-gateway",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": [
+   "1.2.S1"
+  ],
+  "topics": [
+   "networking"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "igw-route-public-subnet",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company creates a new VPC for an internet-facing website and attaches an internet gateway to the VPC. The company then creates a subnet and launches an Amazon EC2 instance in the subnet. The instance has a public IPv4 address. The security group of the instance allows inbound HTTPS from 0.0.0.0/0, and the subnet uses the default network ACL of the VPC. Users on the internet cannot reach the website. What should a solutions architect do to make the website reachable from the internet?",
+  "keywords": [
+   "attaches an internet gateway to the VPC",
+   "creates a subnet",
+   "uses the default network ACL"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Attach a second internet gateway to the VPC, and associate the second internet gateway with the subnet of the instance.",
+    "correct": false,
+    "why": "You can attach [only one internet gateway to a VPC at a time](../facts/vpc.md#vpc-quota-internet-gateways-per-region), and an internet gateway belongs to the VPC, not to one subnet.",
+    "concept": "second-igw",
+    "trap": null,
+    "misconception": "an internet gateway is attached to a subnet, so a new subnet needs its own gateway",
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "b",
+    "text": "Create a NAT gateway in the subnet, and add a route with destination 0.0.0.0/0 and the NAT gateway as its target.",
+    "correct": false,
+    "why": "With a NAT gateway, [Connections must always be initiated from within the VPC containing the NAT gateway](../facts/vpc.md#vpc-natgw-connections-originate-inside-vpc), so users still cannot reach the website.",
+    "concept": "natgw-for-inbound",
+    "trap": null,
+    "misconception": "a NAT gateway lets users on the internet reach an instance",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Add an inbound rule that allows HTTPS from 0.0.0.0/0 to the default network ACL that the subnet of the instance uses.",
+    "correct": false,
+    "why": "The default network ACL is [configured to allow all traffic to flow in and out of the subnets with which it is associated](../facts/vpc.md#vpc-default-nacl-allows-all-traffic), so it does not block HTTPS.",
+    "concept": "default-nacl-rule",
+    "trap": "vpc-trap-igw-attach-makes-public",
+    "misconception": null,
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "d",
+    "text": "Add a route with destination 0.0.0.0/0 and the internet gateway as its target to the route table of the subnet.",
+    "correct": true,
+    "why": "The missing piece is the route: [you must update the subnet route table with a route to the internet gateway](../facts/vpc.md#vpc-igw-attach-not-enough) before users reach the instance.",
+    "concept": "igw-default-route",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "[Attaching an internet gateway to a VPC does not automatically make your instances accessible from the internet](../facts/vpc.md#vpc-igw-attach-not-enough). The instance already has a public IPv4 address, and the security group already allows HTTPS. The missing piece is a route in the route table of the subnet for [0.0.0.0/0](../facts/vpc.md#vpc-igw-route-destination) with the internet gateway as its target.",
+  "takeaway": "Attaching an internet gateway is not enough: the subnet route table needs a route to the gateway.",
+  "twin": "If the stem said \"the instance only downloads updates\" instead: a NAT gateway in a public subnet, because [Connections must always be initiated from within the VPC containing the NAT gateway](../facts/vpc.md#vpc-natgw-connections-originate-inside-vpc).",
+  "say": "Attaching the internet gateway isn't enough; the subnet needs a default route to it.",
+  "facts": [
+   "vpc-igw-attach-not-enough",
+   "vpc-quota-internet-gateways-per-region",
+   "vpc-natgw-connections-originate-inside-vpc",
+   "vpc-default-nacl-allows-all-traffic",
+   "vpc-igw-route-destination"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-internet-facing"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q008",
+  "section": "2-deep.md#a-vpc-cidr-block-cannot-be-resized-so-plan-it-for-growth",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.S2"
+  ],
+  "topics": [
+   "networking",
+   "performance"
+  ],
+  "services": [
+   "vpc",
+   "ec2-auto-scaling"
+  ],
+  "concept": "cidr-secondary-block",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company created a VPC with the CIDR block 10.0.0.0/24 for a pilot project. The project grew, and the VPC now runs an application on Amazon EC2 instances in an Auto Scaling group across two subnets. New instances fail to launch because the two subnets have no free IP addresses. The network design must be scalable for the next stage of growth. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "10.0.0.0/24",
+   "no free IP addresses",
+   "scalable",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Associate a non-overlapping secondary IPv4 CIDR block with the VPC, create new subnets in it, and add them to the Auto Scaling group.",
+    "correct": true,
+    "why": "A secondary block adds addresses to the same VPC, and [a route is automatically added to your VPC route tables to enable routing within the VPC](../facts/vpc.md#vpc-secondary-cidr-adds-local-route).",
+    "concept": "secondary-cidr",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Change the CIDR block of the VPC from 10.0.0.0/24 to 10.0.0.0/16, and then enlarge the two existing subnets into the new space.",
+    "correct": false,
+    "why": "You [cannot increase or decrease the size of an existing CIDR block](../facts/vpc.md#vpc-cidr-cannot-resize), so the VPC block stays a /24.",
+    "concept": "resize-vpc-cidr",
+    "trap": "vpc-trap-resize-cidr",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Create a new VPC with the CIDR block 10.1.0.0/16, migrate the application into new subnets there, and delete the old VPC afterward.",
+    "correct": false,
+    "why": "It works, but a new VPC and a migration of the whole application is far more work than adding a block to the current VPC.",
+    "concept": "new-vpc-migration",
+    "trap": null,
+    "misconception": "a VPC that runs out of addresses has to be rebuilt",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Associate a secondary IPv4 CIDR block of 10.0.0.0/23 that contains the current block, and launch the new instances in the added addresses.",
+    "correct": false,
+    "why": "A secondary block [must not overlap with any existing CIDR block that's associated with the VPC](../facts/vpc.md#vpc-cidr-cannot-resize), and a /23 that contains 10.0.0.0/24 overlaps it.",
+    "concept": "overlapping-secondary-cidr",
+    "trap": null,
+    "misconception": "a secondary CIDR block can contain the primary block and extend it",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The fix adds address space to the same VPC instead of rebuilding it. You [cannot increase or decrease the size of an existing CIDR block](../facts/vpc.md#vpc-cidr-cannot-resize), so you associate a secondary block that does not overlap the first one. New subnets in that block can route at once, because [a route is automatically added to your VPC route tables to enable routing within the VPC](../facts/vpc.md#vpc-secondary-cidr-adds-local-route).",
+  "takeaway": "A full VPC gets a secondary, non-overlapping CIDR block instead of a larger first block.",
+  "twin": "If the stem said \"the company is still designing the VPC for a product that will grow\" instead: choose a large CIDR block now, because Well-Architected warns against [CIDR blocks that are too small and requiring reconfiguration, potentially causing downtime](../facts/vpc.md#vpc-wa-rel02-bp03-subnet-anti-patterns).",
+  "say": "You can't resize a VPC block, so I'd add a secondary CIDR block and new subnets.",
+  "facts": [
+   "vpc-secondary-cidr-adds-local-route",
+   "vpc-cidr-cannot-resize",
+   "vpc-wa-rel02-bp03-subnet-anti-patterns"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-scalable"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q010",
+  "section": "2-deep.md#every-default-subnet-is-public-so-production-tiers-belong-in-private-subnets",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.S1"
+  ],
+  "topics": [
+   "networking",
+   "security",
+   "resilience"
+  ],
+  "services": [
+   "vpc",
+   "elb",
+   "ec2"
+  ],
+  "concept": "three-tier-subnet-layout",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "none",
+  "stem": "A company is designing a VPC for an internet-facing web application. The application has an Application Load Balancer, a fleet of Amazon EC2 application instances, and a database that runs on Amazon EC2 instances. The application must keep running if one Availability Zone fails. The application instances and the database must have no direct network path to or from the internet. Which subnet layout will meet these requirements?",
+  "keywords": [
+   "internet-facing web application",
+   "keep running if one Availability Zone fails",
+   "no direct network path to or from the internet"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Place the load balancer, the application instances and the database instances in public subnets in two Availability Zones, and restrict access with security groups.",
+    "correct": false,
+    "why": "A public subnet routes to the internet gateway, so the application and database tiers get a direct path to the internet, which the stem forbids.",
+    "concept": "all-tiers-public",
+    "trap": null,
+    "misconception": "tight security groups make a public subnet the same as a private subnet",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Place the load balancer in public subnets in two Availability Zones, and place the application and database instances in private subnets in the same two zones.",
+    "correct": true,
+    "why": "This matches the AWS example, where [The VPC has public subnets and private subnets in two Availability Zones](../facts/vpc.md#vpc-example-web-db-two-tier-layout).",
+    "concept": "public-lb-private-tiers",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Place the load balancer in public subnets in two Availability Zones, and place the application and database instances in one private subnet that spans both zones.",
+    "correct": false,
+    "why": "Each subnet [must reside entirely within one Availability Zone](../facts/vpc.md#vpc-subnet-single-az) and [cannot span zones](../facts/vpc.md#vpc-subnet-single-az).",
+    "concept": "subnet-across-azs",
+    "trap": "vpc-trap-subnet-spans-azs",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Place the load balancer in private subnets in two Availability Zones, and place the application and database instances in public subnets in the same two zones.",
+    "correct": false,
+    "why": "The layers are reversed: users on the internet need the load balancer, and the application and database tiers get a direct path to the internet.",
+    "concept": "reversed-layers",
+    "trap": null,
+    "misconception": "the load balancer is internal, so it belongs in the private layer",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "AWS says to [Distinguish between components that require inbound access from the internet, such as public web endpoints, and those that only need internal access, such as databases](../facts/vpc.md#vpc-wa-sec05-bp01-network-layers). The load balancer is the component that receives traffic from users, so it goes in public subnets. The application and database instances go in private subnets. Subnets in two zones keep the application running when one zone fails.",
+  "takeaway": "Put the internet-facing load balancer in public subnets and every other tier in private subnets, in two zones.",
+  "twin": "If the stem said \"the application instances must also download updates from the internet\" instead: add a NAT gateway in the public subnets, because a NAT gateway lets private instances start outbound connections.",
+  "say": "Load balancer public, everything else private, and two Availability Zones.",
+  "facts": [
+   "vpc-example-web-db-two-tier-layout",
+   "vpc-subnet-single-az",
+   "vpc-wa-sec05-bp01-network-layers"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-internet-facing",
+   "ee-these-requirements"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q012",
+  "section": "2-deep.md#a-security-group-rule-can-name-another-security-group-as-its-source",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.S3"
+  ],
+  "topics": [
+   "networking",
+   "security"
+  ],
+  "services": [
+   "vpc",
+   "ec2",
+   "ec2-auto-scaling"
+  ],
+  "concept": "database-placement-sg-reference",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST securely",
+  "stem": "A company runs a self-managed MySQL database on an Amazon EC2 instance in a private subnet. The application tier runs on Amazon EC2 instances in an Auto Scaling group in two other private subnets. The Auto Scaling group launches and terminates instances many times each day, so the IP addresses of the application instances change often. The database must accept connections on TCP 3306 from the application instances. Which solution will meet these requirements MOST securely?",
+  "keywords": [
+   "IP addresses of the application instances change often",
+   "accept connections on TCP 3306 from the application instances",
+   "MOST securely"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an inbound rule to the database security group that allows TCP 3306 from the CIDR blocks of the two application subnets.",
+    "correct": false,
+    "why": "It works, but any other resource in those two subnets also reaches the database, so the rule is wider than the application tier.",
+    "concept": "sg-subnet-cidr-source",
+    "trap": null,
+    "misconception": "a subnet CIDR block is as precise as naming the application tier",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Allow TCP 3306 from the application subnets in the network ACL of the database subnet, and allow all inbound traffic in the database security group.",
+    "correct": false,
+    "why": "The security group opens every port to every source, and the network ACL filters by subnet, not by tier, so the database is far less protected.",
+    "concept": "nacl-only-filter",
+    "trap": null,
+    "misconception": "a subnet-level rule protects an instance as well as a security group rule",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Add an inbound rule to the database security group that allows TCP 3306 with the security group of the application tier as the source.",
+    "correct": true,
+    "why": "The rule covers every instance in the application group, because [the rule affects all instances that are associated with the security groups](../facts/vpc.md#vpc-sg-reference-sg-private-ips).",
+    "concept": "sg-references-sg",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Run a script after each scaling event that adds the private IP address of each new application instance to the database security group.",
+    "correct": false,
+    "why": "It works with effort, but old addresses stay allowed until the script runs; naming the group avoids both, because [the rule affects all instances that are associated with the security groups](../facts/vpc.md#vpc-sg-reference-sg-private-ips).",
+    "concept": "sg-ip-list-script",
+    "trap": null,
+    "misconception": "a security group rule can name IP addresses but not another security group",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "A security group rule can name another security group as its source, and [the rule affects all instances that are associated with the security groups](../facts/vpc.md#vpc-sg-reference-sg-private-ips). New application instances join the application security group at launch, so the database rule needs no edits when the group scales. AWS uses the same pattern for a database: [Allows inbound MySQL Server access from the web servers](../facts/vpc.md#vpc-sg-chain-db-allows-web-sg).",
+  "takeaway": "When source IP addresses change, name the source security group in the rule instead of addresses.",
+  "twin": "If the stem said \"the database must also block one known hostile address range\" instead: add a deny rule in a network ACL, because a security group has [allow rules only](../facts/vpc.md#vpc-sg-vs-nacl-rule-type).",
+  "say": "I'd let the database security group allow the app tier's security group, not IP addresses.",
+  "facts": [
+   "vpc-sg-reference-sg-private-ips",
+   "vpc-sg-chain-db-allows-web-sg",
+   "vpc-sg-vs-nacl-rule-type"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-secure"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q014",
+  "section": "2-deep.md#a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.K4"
+  ],
+  "topics": [
+   "networking",
+   "operations"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "natgw-vs-nat-instance-operations",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company uses NAT instances in public subnets to give Amazon EC2 instances in private subnets outbound access to the internet. The operations team maintains a script that fails over between the NAT instances, and the team must patch the NAT instances every month. Outbound traffic is growing, and the NAT instances are reaching the network bandwidth of their instance type. The private instances start every connection themselves and need no port forwarding. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "fails over between the NAT instances",
+   "patch the NAT instances every month",
+   "reaching the network bandwidth of their instance type",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Move the NAT instances to a larger instance type with more network bandwidth, and keep the failover script and the monthly patching.",
+    "correct": false,
+    "why": "It solves the bandwidth, which [Depends on the bandwidth of the instance type](../facts/vpc.md#vpc-natgw-vs-instance-bandwidth), but the team keeps the script and the patching.",
+    "concept": "larger-nat-instance",
+    "trap": null,
+    "misconception": "more bandwidth is the only problem to solve",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Run the NAT instances in an Auto Scaling group across Availability Zones, and patch them by replacing their AMI every month.",
+    "correct": false,
+    "why": "Auto Scaling replaces failed instances, but a NAT instance is still [Managed by you, for example, by installing software updates or operating system patches on the instance](../facts/vpc.md#vpc-natgw-vs-instance-maintenance).",
+    "concept": "nat-instance-asg",
+    "trap": null,
+    "misconception": "an Auto Scaling group removes the work of running NAT instances",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Replace the NAT instances with an egress-only internet gateway, and add a 0.0.0.0/0 route to it in each private route table.",
+    "correct": false,
+    "why": "An egress-only internet gateway is [for use with IPv6 traffic only](../facts/vpc.md#vpc-eigw-ipv6-outbound-only), so it does not carry this IPv4 traffic.",
+    "concept": "eigw-for-ipv4",
+    "trap": "vpc-trap-eigw-ipv4",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Replace the NAT instances with NAT gateways, and update the route tables of the private subnets to send 0.0.0.0/0 to the NAT gateways.",
+    "correct": true,
+    "why": "A NAT gateway is [Managed by AWS](../facts/vpc.md#vpc-natgw-vs-instance-maintenance), so the team stops patching and stops running the failover script.",
+    "concept": "replace-with-natgw",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The stem names three burdens: patching, a failover script and bandwidth. AWS states that [NAT gateways provide better availability, higher bandwidth, and requires less administrative effort](../facts/vpc.md#vpc-natgw-preferred-over-nat-instance). A NAT gateway is [Managed by AWS](../facts/vpc.md#vpc-natgw-vs-instance-maintenance), so no patches and no script remain. The private instances need no port forwarding, so a NAT instance has no feature advantage here.",
+  "takeaway": "Prefer a NAT gateway to a NAT instance unless the design needs port forwarding or a bastion.",
+  "twin": "If the stem said \"the same device must also forward an inbound port to one private instance\" instead: keep a NAT instance, because for a NAT gateway port forwarding is [Not supported](../facts/vpc.md#vpc-natgw-vs-instance-port-forwarding).",
+  "say": "A NAT gateway is managed by AWS, so there's nothing to patch and no failover script.",
+  "facts": [
+   "vpc-natgw-vs-instance-maintenance",
+   "vpc-natgw-vs-instance-bandwidth",
+   "vpc-eigw-ipv6-outbound-only",
+   "vpc-natgw-preferred-over-nat-instance",
+   "vpc-natgw-vs-instance-port-forwarding"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-patch"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q016",
+  "section": "2-deep.md#ipv6-addresses-are-public-so-outbound-only-ipv6-uses-an-egress-only-internet-gateway",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.K2"
+  ],
+  "topics": [
+   "networking",
+   "security"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "egress-only-internet-gateway",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs dual-stack Amazon EC2 instances in a private subnet of a VPC that has an IPv6 CIDR block. The instances must download updates from servers on the internet that are reachable over IPv6 addresses. The network path must prevent the internet from starting connections to the instances, whatever their security groups allow. The VPC already has an internet gateway for its public subnets. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "reachable over IPv6 addresses",
+   "prevent the internet from starting connections to the instances",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create an egress-only internet gateway, and add a route for ::/0 with the egress-only internet gateway as its target to the private route table.",
+    "correct": true,
+    "why": "This is the AWS design for a private subnet: [create a route that routes all internet-bound IPv6 traffic from the subnet to an egress-only internet gateway](../facts/vpc.md#vpc-ipv6-add-step2-routes).",
+    "concept": "eigw-ipv6-route",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Add a route for ::/0 with the existing internet gateway as its target to the route table of the private subnet of the instances.",
+    "correct": false,
+    "why": "The route makes the subnet public for IPv6, and [IPv6 addresses are globally unique, and therefore public by default](../facts/vpc.md#vpc-eip-ipv6-not-supported), so the internet can start connections.",
+    "concept": "igw-ipv6-route",
+    "trap": null,
+    "misconception": "an IPv6 address in a private subnet is private, like a private IPv4 address",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Create an egress-only internet gateway, and add a route for 0.0.0.0/0 with the egress-only internet gateway as its target to the private route table.",
+    "correct": false,
+    "why": "The gateway is [for use with IPv6 traffic only](../facts/vpc.md#vpc-eigw-ipv6-outbound-only), and the updates go to IPv6 addresses, which a 0.0.0.0/0 route does not match.",
+    "concept": "eigw-ipv4-route",
+    "trap": "vpc-trap-eigw-ipv4",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Launch a fleet of proxy instances in a public subnet, and route ::/0 from the private subnet to the proxies, which forward the update requests.",
+    "correct": false,
+    "why": "It can work, but the team must run, patch and scale a proxy fleet, which is far more work than one managed gateway and one route.",
+    "concept": "proxy-fleet",
+    "trap": null,
+    "misconception": "outbound-only IPv6 needs a self-managed proxy",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "An egress-only internet gateway [allows outbound communication over IPv6 from instances in your VPC to the internet, and prevents the internet from initiating an IPv6 connection with your instances](../facts/vpc.md#vpc-eigw-ipv6-outbound-only). The gateway is a VPC component, so the team runs no servers for it. The route for ::/0 sends every IPv6 destination on the internet to the gateway.",
+  "takeaway": "Outbound-only IPv6 uses an egress-only internet gateway; outbound-only IPv4 uses a NAT gateway.",
+  "twin": "If the stem said \"servers that are reachable over IPv4 addresses\" instead: a NAT gateway, because AWS says [To enable outbound-only internet communication over IPv4, use a NAT gateway instead](../facts/vpc.md#vpc-eigw-ipv6-outbound-only).",
+  "say": "For outbound-only IPv6 I'd use an egress-only internet gateway with a ::/0 route.",
+  "facts": [
+   "vpc-ipv6-add-step2-routes",
+   "vpc-eip-ipv6-not-supported",
+   "vpc-eigw-ipv6-outbound-only"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-must",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q018",
+  "section": "2-deep.md#flow-logs-record-accepted-and-rejected-traffic-so-they-show-where-packets-drop",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": [
+   "1.2.S1"
+  ],
+  "topics": [
+   "networking",
+   "security",
+   "operations"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "flow-log-diagnosis-stateless",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST secure",
+  "stem": "A company runs a reporting service on Amazon EC2 instances in a private subnet. Amazon Linux instances in another subnet of the same VPC call the service on TCP 8443, and every call times out. The client subnet uses the default network ACL. The security group of the service allows inbound TCP 8443 from the security group of the clients. A VPC flow log for the service shows an ACCEPT record for each request and a REJECT record for each response. The company must restore the calls. Which change will meet these requirements in the MOST secure way?",
+  "keywords": [
+   "Amazon Linux instances",
+   "ACCEPT record for each request and a REJECT record for each response",
+   "MOST secure"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an outbound rule to the security group of the service instances that allows TCP ports 32768-61000 to the security group of the clients.",
+    "correct": false,
+    "why": "Because [security groups are stateful](../facts/vpc.md#vpc-sg-connection-tracking-stateful), the security group already lets the responses out; the network ACL drops them.",
+    "concept": "sg-outbound-reply-rule",
+    "trap": "vpc-trap-nacl-reply",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Add an outbound rule to the network ACL of the service subnet that allows TCP ports 32768-61000 to the CIDR block of the client subnet.",
+    "correct": true,
+    "why": "The rule lets the responses leave the service subnet, and Amazon Linux clients use [ports 32768-61000](../facts/vpc.md#vpc-nacl-ephemeral-linux-32768-61000) for the reply.",
+    "concept": "nacl-outbound-linux-ephemeral",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Replace the outbound rules of the network ACL of the service subnet with one rule that allows all traffic to every destination.",
+    "correct": false,
+    "why": "It works, but it opens every port to every destination, which is far less secure than one rule for the reply ports of the client subnet.",
+    "concept": "nacl-allow-all-outbound",
+    "trap": null,
+    "misconception": "opening all outbound traffic is an acceptable fix for one blocked reply",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Add an inbound rule to the network ACL of the client subnet that allows TCP ports 32768-61000 from the CIDR block of the service subnet.",
+    "correct": false,
+    "why": "The client subnet uses the default network ACL, and [The default network ACL allows all inbound and outbound traffic](../facts/vpc.md#vpc-nacl-every-subnet-associated), so the responses pass there.",
+    "concept": "client-nacl-inbound",
+    "trap": null,
+    "misconception": "a response is rejected where it arrives, not where it leaves",
+    "distractor_type": "keyword-bait"
+   }
+  ],
+  "explanation": "AWS shows the same record pair for a ping: [A REJECT record for the response ping that the network ACL denied](../facts/vpc.md#vpc-flow-logs-diagnose-stateless-nacl). The request passes, and the response is dropped on its way out, because [network ACLs perform stateless filtering](../facts/vpc.md#vpc-faq-stateful-vs-stateless). The service subnet needs an outbound rule for the reply ports that the Amazon Linux clients use.",
+  "takeaway": "An ACCEPT for the request and a REJECT for the response point to an outbound network ACL rule.",
+  "twin": "If the stem said \"the flow log shows a REJECT record for each request\" instead: fix the inbound side, because the request itself is blocked before the service can answer.",
+  "say": "Accept in, reject out means a stateless network ACL, so I'd add the outbound ephemeral rule.",
+  "facts": [
+   "vpc-nacl-ephemeral-linux-32768-61000",
+   "vpc-sg-connection-tracking-stateful",
+   "vpc-nacl-every-subnet-associated",
+   "vpc-flow-logs-diagnose-stateless-nacl",
+   "vpc-faq-stateful-vs-stateless"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-these-requirements",
+   "ee-most-secure"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the MOST secure change that restores the calls.",
+    "I mark the constraints: the clients run Amazon Linux, the client subnet uses the default network ACL, the security group allows the request, and the flow log shows ACCEPT for the request and REJECT for the response.",
+    "Before I look at the options, I predict an outbound security group rule for the reply ports, because the response is the part that fails.",
+    "I remove the inbound rule in the client subnet, because the default network ACL allows all traffic. I remove the allow-all outbound rule, because it opens every port.",
+    "Between the outbound security group rule and the outbound network ACL rule the difference is state. My first idea breaks because security groups are stateful, so the security group already lets the response out; the stateless network ACL of the service subnet drops it, so I choose the network ACL rule for the Amazon Linux reply ports.",
+    "Check: the network ACL rule allows the responses, opens only the reply range to one subnet, and needs no other change. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ },
+ {
+  "id": "vpc-q020",
+  "section": "2-deep.md#every-public-ipv4-address-is-billed-but-only-an-elastic-ip-address-stays-yours",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.4",
+  "bullets": [
+   "3.4.K2"
+  ],
+  "topics": [
+   "networking",
+   "cost"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "public-ipv4-cost-reduction",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs 400 Amazon EC2 instances in public subnets. Each instance has a public IPv4 address so that it can download small operating system updates from the internet each night. Nothing on the internet starts connections to the instances. A cost review shows a large monthly charge for public IPv4 addresses. The instances must keep downloading the updates. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "400 Amazon EC2 instances",
+   "Nothing on the internet starts connections to the instances",
+   "large monthly charge for public IPv4 addresses",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Replace the public IPv4 address of each instance with an Elastic IP address, so that the address stays the same and is not billed while in use.",
+    "correct": false,
+    "why": "An Elastic IP address is a public IPv4 address too, and [AWS charges for all public IPv4 addresses](../facts/vpc.md#vpc-public-ipv4-charge-2024), in use or idle.",
+    "concept": "eip-per-instance",
+    "trap": "vpc-trap-public-ipv4-free",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Remove the public IPv4 addresses, and place an internet-facing Application Load Balancer in front of the instances for their update traffic.",
+    "correct": false,
+    "why": "A load balancer serves traffic that comes in; the instances start outbound connections, and without public addresses they have no egress path.",
+    "concept": "alb-for-egress",
+    "trap": null,
+    "misconception": "a load balancer gives its targets outbound internet access",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Move the instances to private subnets without public IPv4 addresses, and send their outbound traffic through NAT gateways in public subnets.",
+    "correct": true,
+    "why": "A few NAT gateways replace hundreds of billed addresses, and AWS points to this pattern: [use Elastic Load Balancers and NAT Gateways for ingress and egress traffic](../facts/vpc.md#vpc-public-ipv4-avoid-per-instance-with-elb-nat).",
+    "concept": "private-subnets-natgw",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Move the instances to private subnets with NAT gateways, and convert each public IPv4 address to an Elastic IP address that stays allocated for a rollback.",
+    "correct": false,
+    "why": "The updates still work, but [The price is the same whether the public IPv4 address is in-use](../facts/vpc.md#vpc-public-ipv4-hourly-in-use-or-idle) or idle, so the kept addresses still cost money.",
+    "concept": "idle-eips-kept",
+    "trap": null,
+    "misconception": "an Elastic IP address that is not attached to an instance is free",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Every public IPv4 address is billed: [You pay an hourly rate for each public IPv4 address used by your AWS account](../facts/vpc.md#vpc-public-ipv4-hourly-in-use-or-idle). The instances start all their connections themselves, so they need egress, not public addresses. AWS points to this design to lower the charge: [use Elastic Load Balancers and NAT Gateways for ingress and egress traffic](../facts/vpc.md#vpc-public-ipv4-avoid-per-instance-with-elb-nat).",
+  "takeaway": "Instances that only start outbound connections belong in private subnets behind a NAT gateway, without public IPv4 addresses.",
+  "twin": "If the stem said \"users on the internet call a web application on the instances\" instead: an internet-facing load balancer in front of private instances, because AWS suggests [use Elastic Load Balancers and NAT Gateways for ingress and egress traffic](../facts/vpc.md#vpc-public-ipv4-avoid-per-instance-with-elb-nat).",
+  "say": "Every public IPv4 address costs money, so I'd move outbound-only instances behind a NAT gateway.",
+  "facts": [
+   "vpc-public-ipv4-avoid-per-instance-with-elb-nat",
+   "vpc-public-ipv4-charge-2024",
+   "vpc-public-ipv4-hourly-in-use-or-idle"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q022",
+  "section": "2-deep.md#a-subnet-is-public-only-when-its-route-table-points-to-an-internet-gateway",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": [
+   "1.2.S2"
+  ],
+  "topics": [
+   "networking",
+   "security"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "private-subnet-outbound-path",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST securely",
+  "stem": "A company runs Amazon EC2 instances in a private subnet. A previous administrator associated an Elastic IP address with each instance, but the instances still cannot download operating system patches from the internet. The route table of the private subnet has the local route and no other routes. The VPC also has an internet gateway and a public subnet whose route table sends 0.0.0.0/0 to the internet gateway. Which solution will let the instances download patches MOST securely?",
+  "keywords": [
+   "Elastic IP address with each instance",
+   "has the local route and no other routes",
+   "MOST securely"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a 0.0.0.0/0 route to the internet gateway in the route table of the private subnet, and keep the Elastic IP addresses on the instances.",
+    "correct": false,
+    "why": "It works, but the subnet becomes public, and the instances can then receive connections from the internet whenever a security group rule allows them.",
+    "concept": "igw-route-private-subnet",
+    "trap": null,
+    "misconception": "a security group gives the same protection as a private subnet",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Add an outbound rule that allows HTTPS to 0.0.0.0/0 to the security groups of the instances, and keep the Elastic IP addresses.",
+    "correct": false,
+    "why": "The missing piece is a route: [instances in the private subnet can't communicate with the internet, even if they have public IP addresses](../facts/vpc.md#vpc-public-vs-private-subnet-by-igw-route).",
+    "concept": "sg-outbound-https",
+    "trap": "vpc-trap-public-ip-is-enough",
+    "misconception": null,
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "c",
+    "text": "Create a zonal NAT gateway in the private subnet, add a 0.0.0.0/0 route to it in the private route table, and release the Elastic IP addresses.",
+    "correct": false,
+    "why": "For internet access, [The NAT gateway must be in a public subnet with a route table that routes internet traffic to an internet gateway](../facts/vpc.md#vpc-natgw-troubleshoot-route-placement).",
+    "concept": "natgw-private-subnet",
+    "trap": null,
+    "misconception": "a NAT gateway belongs in the subnet of the instances that use it",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Create a NAT gateway in the public subnet, add a 0.0.0.0/0 route to it in the private route table, and release the Elastic IP addresses.",
+    "correct": true,
+    "why": "Outbound access works, and the internet cannot start connections, because [Connections must always be initiated from within the VPC containing the NAT gateway](../facts/vpc.md#vpc-natgw-connections-originate-inside-vpc).",
+    "concept": "natgw-public-subnet",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "To reach the internet from a private subnet, [create a NAT gateway or launch a NAT instance in a public subnet](../facts/vpc.md#vpc-natgw-route-from-private-subnet) and send 0.0.0.0/0 to it. The Elastic IP addresses have no use there: they [cannot be used on instances in subnets configured to use a NAT gateway or a NAT instance to access the Internet](../facts/vpc.md#vpc-faq-eip-not-behind-nat), so release them.",
+  "takeaway": "A private subnet reaches the internet through a NAT gateway in a public subnet, not through public IP addresses.",
+  "twin": "If the stem said \"users on the internet must connect to the instances directly\" instead: a route to the internet gateway, because [instances in the private subnet can't communicate with the internet, even if they have public IP addresses](../facts/vpc.md#vpc-public-vs-private-subnet-by-igw-route).",
+  "say": "A public IP isn't enough in a private subnet; I'd add a NAT gateway in a public subnet.",
+  "facts": [
+   "vpc-natgw-connections-originate-inside-vpc",
+   "vpc-public-vs-private-subnet-by-igw-route",
+   "vpc-natgw-troubleshoot-route-placement",
+   "vpc-natgw-route-from-private-subnet",
+   "vpc-faq-eip-not-behind-nat"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-secure",
+   "ee-patch"
+  ],
+  "twin_of": null
+ }
+]

@@ -1,0 +1,143 @@
+{
+ "id": "s3-q006",
+ "section": "2-deep.md#every-new-object-is-encrypted-with-sse-s3-unless-you-choose-another-key",
+ "pool": "chapter",
+ "layer": "core",
+ "domain": 1,
+ "task": "1.3",
+ "bullets": [
+  "1.3.S2"
+ ],
+ "topics": [
+  "security",
+  "storage"
+ ],
+ "services": [
+  "s3"
+ ],
+ "concept": "keys-outside-aws-sse-c",
+ "difficulty": 2,
+ "type": "single",
+ "select": 1,
+ "qualifier": "LEAST development effort",
+ "stem": "A company stores signed contracts as objects in an Amazon S3 bucket. The company manages its own keys in a hardware security module in its data center. Company policy says that the encryption keys must never be stored in AWS. Amazon S3 itself must encrypt each object at rest and decrypt it when an authorized user downloads it. Which solution will meet these requirements with the LEAST development effort?",
+ "keywords": [
+  "keys must never be stored in AWS",
+  "Amazon S3 itself must encrypt each object at rest",
+  "LEAST development effort"
+ ],
+ "options": [
+  {
+   "id": "a",
+   "text": "Use SSE-KMS with a customer managed key in AWS KMS, and let the company's security team control the key policy and the key rotation.",
+   "correct": false,
+   "why": "Customer managed does not mean kept by the company: the KMS key lives in AWS KMS, [in the same Region as the bucket](../facts/s3.md#s3-sse-kms-key-same-region-as-bucket).",
+   "concept": "sse-kms-customer-managed",
+   "trap": "s3-trap-kms-keys-on-premises",
+   "misconception": null,
+   "distractor_type": "sibling-confusion"
+  },
+  {
+   "id": "b",
+   "text": "Allow SSE-C in the bucket's default encryption settings, and send the company's key over HTTPS with every upload request and every download request.",
+   "correct": true,
+   "why": "With SSE-C, S3 performs the encryption, and [S3 never stores the encryption key](../facts/s3.md#s3-sse-c-key-never-stored-https-required), so the key stays in the company's hardware security module.",
+   "concept": "sse-c",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "c",
+   "text": "Encrypt each object in the data center with the company's key before upload, and decrypt it in the data center after download.",
+   "correct": false,
+   "why": "With client-side encryption, S3 [does not play a role in encrypting](../facts/s3.md#s3-client-side-encryption-not-exposed-to-aws) the data, but the stem asks S3 to encrypt and decrypt.",
+   "concept": "client-side-encryption",
+   "trap": null,
+   "misconception": "believes that client-side encryption counts as encryption by Amazon S3",
+   "distractor_type": "sibling-confusion"
+  },
+  {
+   "id": "d",
+   "text": "Encrypt each object in the data center before upload, and also allow SSE-C on the bucket and send the company's key with every request.",
+   "correct": false,
+   "why": "The SSE-C layer meets the policy, but the extra client-side encryption adds code and key handling that the stem does not need.",
+   "concept": "client-side-plus-sse-c",
+   "trap": "how-the-exam-asks-trap-works-means-correct",
+   "misconception": null,
+   "distractor_type": "violates-qualifier"
+  }
+ ],
+ "explanation": "The stem asks for encryption by Amazon S3 with a key that stays outside AWS. With SSE-C, S3 does the encryption and decryption while [you retain control of the encryption keys](../facts/s3.md#s3-faq-sse-c-keys). Because [S3 never stores the encryption key](../facts/s3.md#s3-sse-c-key-never-stored-https-required), each request carries the key, and [you must use HTTPS](../facts/s3.md#s3-sse-c-key-never-stored-https-required) for those requests.",
+ "takeaway": "S3 does the encryption but the key stays with the company: choose SSE-C.",
+ "twin": "If the stem said \"Each object must be encrypted before it leaves the data center\" instead: client-side encryption, because the objects [aren't exposed to any third party, including AWS](../facts/s3.md#s3-client-side-encryption-not-exposed-to-aws).",
+ "say": "S3 should do the encryption but never keep the key, so I would use SSE-C over HTTPS.",
+ "facts": [
+  "s3-sse-kms-key-same-region-as-bucket",
+  "s3-sse-c-key-never-stored-https-required",
+  "s3-client-side-encryption-not-exposed-to-aws",
+  "s3-faq-sse-c-keys",
+  "s3-sse-c-disabled-by-default-2026-04"
+ ],
+ "sources": [],
+ "exam_english": [
+  "ee-manages-its-own-keys",
+  "ee-at-rest",
+  "ee-must",
+  "ee-least-development-effort"
+ ],
+ "twin_of": null,
+ "chapter": "s3",
+ "status": "candidate",
+ "rev": 1,
+ "keyRev": 1,
+ "verification": {
+  "status": "candidate",
+  "round": 1,
+  "solvers": [
+   {
+    "lens": "closed",
+    "answer": [
+     "b"
+    ],
+    "agree": true,
+    "flag": null,
+    "solver": "solve-21-closed-r0",
+    "stem_only": "SSE-C: the client supplies its own key with each PUT and GET over HTTPS; S3 encrypts and decrypts with it and does not store the key (only a salted HMAC to validate)."
+   },
+   {
+    "lens": "open",
+    "answer": [
+     "b"
+    ],
+    "agree": true,
+    "flag": null,
+    "solver": "solve-21-open-r0",
+    "citations": [
+     "s3-client-side-encryption-not-exposed-to-aws",
+     "s3-server-side-vs-client-side-encryption",
+     "s3-sse-c-disabled-by-default-2026-04",
+     "s3-sse-c-key-never-stored-https-required",
+     "s3-sse-kms-when-more-key-control"
+    ],
+    "citations_ok": true
+   },
+   {
+    "lens": "ambiguity",
+    "answer": [
+     "b"
+    ],
+    "agree": true,
+    "flag": "The stem says Amazon S3 must encrypt and decrypt, which points to SSE-C, but 'turn on SSE-C for the bucket' is not how SSE-C works (it is set per request), and a careful candidate could defend client-side encryption because the key never reaches AWS.",
+    "solver": "solve-21-ambiguity-r0",
+    "case_option": "c"
+   }
+  ],
+  "checked": "2026-10-13",
+  "note": "ambiguity flag"
+ },
+ "volatile": false,
+ "authors": [
+  "questions-21-2"
+ ]
+}

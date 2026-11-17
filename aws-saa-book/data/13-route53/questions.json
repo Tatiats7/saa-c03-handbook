@@ -1,0 +1,3305 @@
+{
+ "v": 1,
+ "chapter": "route53",
+ "items": [
+  {
+   "id": "route53-q003",
+   "section": "2-deep.md#failover-records-answer-with-the-secondary-only-while-the-primary-is-unhealthy",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "networking",
+    "resilience"
+   ],
+   "services": [
+    "route53",
+    "elb",
+    "s3"
+   ],
+   "concept": "failover-evaluate-target-health",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a web application in the us-east-1 Region and keeps a static maintenance page in an Amazon S3 bucket that is configured as a website. The company creates Amazon Route 53 failover records for www.example.com. The primary record is an alias record for an Application Load Balancer. The secondary record points to the S3 website endpoint. The company must ensure that Route 53 sends users to the maintenance page when the application cannot serve requests. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "The primary record is an alias record for an Application Load Balancer",
+    "when the application cannot serve requests",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a Route 53 health check that sends HTTP requests to the primary endpoint, and associate the health check with the primary record.",
+     "correct": false,
+     "why": "It works, but AWS says to [associate health checks only with non-alias records](../facts/route53.md#route53-health-check-alias-record-not-recommended); this alias record can take its health from the load balancer.",
+     "concept": "route53-health-check-on-alias",
+     "trap": "route53-trap-separate-health-check-for-alias",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Run a scheduled AWS Lambda function that tests the application every minute and repoints the primary record to the S3 website endpoint on failure.",
+     "correct": false,
+     "why": "It works, but it adds code to run and record edits, and AWS calls such edits [a non-statically-stable design](../facts/route53.md#route53-fi-record-edits-depend-on-control-plane).",
+     "concept": "scripted-failover",
+     "trap": null,
+     "misconception": "Failover needs custom code that edits the records.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Turn on Evaluate Target Health for the primary record, so that Route 53 uses the health of the resource that the record points to.",
+     "correct": true,
+     "why": "For an alias record that points to an AWS resource such as a load balancer, you [set Evaluate Target Health to Yes](../facts/route53.md#route53-alias-to-aws-use-evaluate-target-health-not-health-check) and create no health check.",
+     "concept": "evaluate-target-health",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Create a Route 53 health check of the S3 website endpoint, and associate the health check with the secondary record.",
+     "correct": false,
+     "why": "Route 53 [responds to DNS queries using the secondary record](../facts/route53.md#route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy) when the primary is unhealthy, so a check on the secondary does not detect the application failure.",
+     "concept": "health-check-on-secondary",
+     "trap": "route53-trap-secondary-health-check-triggers-failover",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "Route 53 [responds to DNS queries using the primary record](../facts/route53.md#route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy) when the primary is healthy, so the primary needs a health signal. This primary is an alias record for a load balancer. Setting Evaluate Target Health lets Route 53 [route traffic away from unhealthy resources](../facts/route53.md#route53-evaluate-target-health-benefit-for-elb-beanstalk), with no health check to create or pay for.",
+   "takeaway": "Failover primary that is an alias record for a load balancer: turn on Evaluate Target Health, not a separate health check.",
+   "twin": "If the stem said \"an A record with the Elastic IP address of one EC2 instance\" instead: a Route 53 health check on the primary, because instances need a [record and a health check for each resource](../facts/route53.md#route53-simple-config-alias-targets-no-health-check-needed).",
+   "say": "The primary is an alias record for a load balancer, so I'd turn on Evaluate Target Health and skip the extra health check.",
+   "facts": [
+    "route53-health-check-alias-record-not-recommended",
+    "route53-fi-record-edits-depend-on-control-plane",
+    "route53-alias-to-aws-use-evaluate-target-health-not-health-check",
+    "route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy",
+    "route53-evaluate-target-health-benefit-for-elb-beanstalk",
+    "route53-simple-config-alias-targets-no-health-check-needed"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-ensure"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "The primary is an alias record for an ALB, so turn on Evaluate Target Health on the primary alias record: Route 53 then treats the record as unhealthy when the ALB has no healthy targets and answers with the S3 secondary. No separate health check or script is needed (a Route 53 HTTP health check on the primary also works but adds a resource to manage)."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-alias-to-aws-use-evaluate-target-health-not-health-check",
+       "route53-failover-record-health-check-checks-its-own-endpoint",
+       "route53-failover-secondary-health-check-optional",
+       "route53-faq-elb-failover-alias-evaluate-target-health",
+       "route53-faq-elb-health-checks-managed-automatically",
+       "route53-faq-failover-backup-site-s3",
+       "route53-faq-failover-returns-only-healthy-answers",
+       "route53-fi-record-edits-depend-on-control-plane",
+       "route53-health-check-alias-record-not-recommended"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q004",
+   "section": "2-deep.md#latency-records-follow-measured-latency-and-geolocation-records-follow-user-location",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking",
+    "performance"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "latency-vs-geolocation",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs the same stateless web application in us-east-1 and eu-west-1, behind an Application Load Balancer in each Region. The application has users around the world. The company hosts its DNS records in a Route 53 public hosted zone. Each user must be served from the Region that gives that user the lowest latency. Which routing configuration for www.example.com will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Each user must be served from the Region that gives that user the lowest latency",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Latency alias records for the two load balancers, one record in each Region, with Evaluate Target Health turned on for both records.",
+     "correct": true,
+     "why": "Route 53 uses [latency data taken over a period of time](../facts/route53.md#route53-latency-changes-over-time) and answers with the record of the Region that is fastest for that user.",
+     "concept": "latency-records",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Geolocation alias records: a Europe record that points to the eu-west-1 load balancer, and a Default record for the us-east-1 load balancer.",
+     "correct": false,
+     "why": "Geolocation routing uses the [geographic location of the requests](../facts/route53.md#route53-faq-geo-vs-latency-geography-not-latency), and in some cases geography is not a good proxy for latency.",
+     "concept": "geolocation-records",
+     "trap": "route53-trap-geolocation-for-performance",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "c",
+     "text": "Weighted alias records for the two load balancers with equal weights, so that each Region receives half of the DNS queries for the name.",
+     "correct": false,
+     "why": "Weights split queries among [multiple resources in proportions that you specify](../facts/route53.md#route53-choose-weighted-routing-proportions), whatever the location of the user, so half of the users reach the slower Region.",
+     "concept": "weighted-equal-split",
+     "trap": null,
+     "misconception": "believes that equal weights send each user to the nearer Region",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "d",
+     "text": "IP-based records with a CIDR collection that the team keeps current with the client IP ranges that each of the two Regions must serve.",
+     "correct": false,
+     "why": "It can work, but the team maintains the client IP ranges by hand; IP-based routing suits users [from certain ISPs to specific endpoints](../facts/route53.md#route53-ip-based-routing-use-cases).",
+     "concept": "ip-based-records",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The requirement names latency, not a place. Latency records send each user to [the Region that provides the best latency](../facts/route53.md#route53-choose-latency-routing-best-latency-region), with no list of networks to maintain. Evaluate Target Health lets Route 53 [route traffic away from unhealthy resources](../facts/route53.md#route53-evaluate-target-health-benefit-for-elb-beanstalk) if one Region fails.",
+   "takeaway": "Lowest latency for each user means latency records; a rule about places means geolocation records.",
+   "twin": "If the stem said \"Because of a data residency rule, users in Europe must be served from eu-west-1, and all other users from us-east-1\" instead: geolocation records, because each user location [always goes to the same endpoint](../facts/route53.md#route53-geolocation-use-cases).",
+   "say": null,
+   "facts": [
+    "route53-choose-latency-routing-best-latency-region",
+    "route53-evaluate-target-health-benefit-for-elb-beanstalk",
+    "route53-latency-changes-over-time",
+    "route53-faq-geo-vs-latency-geography-not-latency",
+    "route53-choose-weighted-routing-proportions",
+    "route53-ip-based-routing-use-cases",
+    "route53-geolocation-use-cases"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-users-around-the-world",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Latency-based alias records for the two ALBs, one per Region, with Evaluate Target Health so an unhealthy Region is skipped."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-bp-latency-for-performance-geo-for-predictability",
+       "route53-choose-latency-routing-best-latency-region",
+       "route53-choose-weighted-routing-proportions",
+       "route53-elb-alias-evaluate-target-health-yes-routes-by-health",
+       "route53-faq-geo-vs-latency-geography-not-latency",
+       "route53-ip-based-routing-geolocation-latency-use-aws-data",
+       "route53-ip-based-routing-uses-your-ip-to-endpoint-mappings",
+       "route53-latency-routing-lowest-latency-region",
+       "route53-weighted-routing-share-of-total-weight"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q005",
+   "section": "2-deep.md#resolver-endpoints-carry-dns-queries-between-a-vpc-and-an-on-premises-network",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "direct-connect",
+    "vpc"
+   ],
+   "concept": "hybrid-inbound-endpoint",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has a hybrid network. Its data center connects to a VPC in the eu-west-1 Region through an AWS Direct Connect dedicated connection. The VPC is associated with an Amazon Route 53 private hosted zone named corp.internal. DNS servers in the data center host the zone onprem.corp. Servers in the data center must resolve names in corp.internal. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Servers in the data center must resolve names in corp.internal",
+    "private hosted zone named corp.internal",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an outbound Resolver endpoint and a forwarding rule for onprem.corp that targets the data center DNS servers, and associate the rule with the VPC.",
+     "correct": false,
+     "why": "[Outbound Resolver endpoints allow DNS queries](../facts/route53.md#route53-resolver-outbound-endpoint-definition) from the VPC to the data center, which is the opposite direction: onprem.corp names for the VPC.",
+     "concept": "outbound-endpoint",
+     "trap": "route53-trap-inbound-outbound-direction",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Run DNS forwarder software on EC2 instances in two Availability Zones, and configure both networks to forward queries for the other zone to them.",
+     "correct": false,
+     "why": "It works, but endpoints and rules forward queries [without having to deploy additional DNS servers](../facts/route53.md#route53-hybrid-resolver-endpoints-no-extra-dns-servers), so forwarder instances add patching and scaling work.",
+     "concept": "dns-forwarder-instances",
+     "trap": null,
+     "misconception": "Hybrid DNS needs forwarder instances that the company runs.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create an inbound Resolver endpoint in the VPC, and configure the data center DNS servers to forward corp.internal queries to the endpoint's IP addresses.",
+     "correct": true,
+     "why": "[Inbound Resolver endpoints allow DNS queries](../facts/route53.md#route53-resolver-inbound-endpoint-definition) into the VPC from the data center, so its DNS servers forward corp.internal queries to the endpoint.",
+     "concept": "inbound-endpoint",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Configure the data center DNS servers to forward corp.internal queries to the VPC Resolver address at the base of the VPC CIDR range plus two.",
+     "correct": false,
+     "why": "Forwarding from on-premises DNS servers to the CIDR+2 address [is not supported, and can cause unstable results](../facts/route53.md#route53-resolver-cidr-plus-two-forwarding-unsupported).",
+     "concept": "vpc-plus-two-forwarding",
+     "trap": "route53-trap-forward-to-vpc-plus-two",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "The queries start in the data center and need answers from the private hosted zone, so they travel into the VPC. Inbound endpoints carry queries [from your on-premises network or another VPC](../facts/route53.md#route53-resolver-inbound-endpoint-definition), and Route 53 VPC Resolver answers them from corp.internal. AWS names [conditional forwarding rules and Resolver endpoints](../facts/route53.md#route53-faq-vpc-resolver-hybrid-forwarding-direct-connect-vpn) as the way to resolve names across Direct Connect.",
+   "takeaway": "Data center asks the VPC: inbound endpoint. VPC asks the data center: outbound endpoint and a forwarding rule.",
+   "twin": "If the stem said \"EC2 instances in the VPC must resolve names in onprem.corp\" instead: an outbound endpoint and a forwarding rule, because [Outbound Resolver endpoints allow DNS queries](../facts/route53.md#route53-resolver-outbound-endpoint-definition) out of the VPC.",
+   "say": "The questions come from the data center into the VPC, so I'd create an inbound Resolver endpoint and forward corp.internal to it.",
+   "facts": [
+    "route53-resolver-outbound-endpoint-definition",
+    "route53-hybrid-resolver-endpoints-no-extra-dns-servers",
+    "route53-resolver-inbound-endpoint-definition",
+    "route53-resolver-cidr-plus-two-forwarding-unsupported",
+    "route53-faq-vpc-resolver-hybrid-forwarding-direct-connect-vpn"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-hybrid",
+    "ee-dedicated-connection",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "On-premises servers resolving a private hosted zone need an inbound Route 53 Resolver endpoint in the VPC; the data center DNS servers conditionally forward corp.internal to the endpoint IP addresses over Direct Connect. The VPC+2 resolver is not reachable from outside the VPC."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-hybrid-resolver-endpoints-no-extra-dns-servers",
+       "route53-hybrid-selection-management-overhead",
+       "route53-phz-answers-only-from-associated-vpc-or-inbound-endpoint",
+       "route53-resolver-cidr-plus-two-forwarding-unsupported",
+       "route53-resolver-hybrid-over-vpn-or-direct-connect",
+       "route53-resolver-inbound-endpoint-definition",
+       "route53-resolver-outbound-endpoint-definition",
+       "route53-resolver-rules-control-forwarding"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q001",
+   "section": "2-deep.md#an-alias-record-can-answer-at-the-zone-apex-where-a-cname-record-cannot",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.4",
+   "bullets": [
+    "4.4.K7"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "zone-apex-alias-load-balancer",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company hosts the DNS records for its domain, example.com, in an Amazon Route 53 public hosted zone. The company's website runs on Amazon EC2 instances behind an Application Load Balancer. The marketing team wants users to open the website by typing example.com in a browser, without the www prefix. The DNS answer for example.com must keep working when the load balancer scales. Which DNS record should a solutions architect create in the hosted zone to meet these requirements?",
+   "keywords": [
+    "without the www prefix",
+    "behind an Application Load Balancer",
+    "must keep working when the load balancer scales"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "A CNAME record for example.com whose value is the DNS name of the Application Load Balancer.",
+     "correct": false,
+     "why": "The [DNS protocol does not allow you to create](../facts/route53.md#route53-cname-dns-protocol-forbids-zone-apex) a CNAME record at the zone apex, and example.com is the apex.",
+     "concept": "cname-at-apex",
+     "trap": "route53-trap-cname-at-apex",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "An alias record of type A for example.com that points to the Application Load Balancer.",
+     "correct": true,
+     "why": "Unlike a CNAME record, [you can create an alias record](../facts/route53.md#route53-alias-allowed-at-zone-apex) at example.com, and [Route 53 detects changes in the resource on its own](../facts/route53.md#route53-alias-follows-resource-ip-changes).",
+     "concept": "alias-record-at-apex",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "An A record for example.com whose value is the current IP addresses of the Application Load Balancer.",
+     "correct": false,
+     "why": "Elastic Load Balancing scales the load balancer and its DNS entry has a [time-to-live (TTL) of 60 seconds](../facts/route53.md#route53-elb-dns-entry-updated-ttl-60), so copied addresses go stale.",
+     "concept": "a-record-with-lb-addresses",
+     "trap": "route53-trap-a-record-to-lb-ip",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "An NS record for example.com whose value is the DNS name of the Application Load Balancer.",
+     "correct": false,
+     "why": "An NS record [identifies the name servers for the hosted zone](../facts/route53.md#route53-ns-record-identifies-name-servers); it delegates a domain and does not point a name to a load balancer.",
+     "concept": "ns-record",
+     "trap": null,
+     "misconception": "An NS record points a domain to the resource that serves the website.",
+     "distractor_type": "keyword-bait"
+    }
+   ],
+   "explanation": "The name example.com is the zone apex, [the top node of a DNS namespace](../facts/route53.md#route53-alias-allowed-at-zone-apex). An alias record to a load balancer works [both for the root domain](../facts/route53.md#route53-elb-alias-record-for-root-and-subdomains) and for subdomains. Route 53 supports alias records for [three types of load balancers](../facts/route53.md#route53-faq-apex-alias-elb-three-types), and the Application Load Balancer is one of them.",
+   "takeaway": "At the zone apex, use an alias record for an AWS resource; a CNAME record fits subdomains such as www.",
+   "twin": "If the stem said \"users open www.example.com\" instead: a CNAME record would also resolve, because the rule that blocks it applies [for the top node of a DNS namespace](../facts/route53.md#route53-cname-dns-protocol-forbids-zone-apex), not for subdomains.",
+   "say": "Example.com is the zone apex, so I'd use an alias record for the load balancer, not a CNAME record.",
+   "facts": [
+    "route53-cname-dns-protocol-forbids-zone-apex",
+    "route53-alias-allowed-at-zone-apex",
+    "route53-alias-follows-resource-ip-changes",
+    "route53-elb-dns-entry-updated-ttl-60",
+    "route53-ns-record-identifies-name-servers",
+    "route53-elb-alias-record-for-root-and-subdomains",
+    "route53-faq-apex-alias-elb-three-types"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-these-requirements"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for the DNS record that meets these requirements.",
+     "I mark the constraints: the name is example.com without www, the target is an Application Load Balancer, and the answer must keep working when the load balancer scales.",
+     "Before I look at the options, I predict a CNAME record to the DNS name of the load balancer, because a CNAME record maps one name to another name.",
+     "I remove the A record with the current IP addresses, because the load balancer changes its addresses as it scales. I remove the NS record, because an NS record names the name servers of a hosted zone, not a website.",
+     "Between the CNAME record and the alias record the difference is where the record sits; the stem says example.com, with no www. My first idea breaks because example.com is the zone apex, where the DNS protocol does not allow a CNAME record.",
+     "Check: the alias record of type A sits at the zone apex, points to the load balancer and follows its address changes. Time: 90 seconds."
+    ],
+    "wrong_path": true
+   },
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "A zone apex (example.com) cannot hold a CNAME, and ALB IP addresses change; create an alias record of type A at the apex that points to the ALB."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "elb-scales-capacity-automatically",
+       "route53-alias-allowed-at-zone-apex",
+       "route53-alias-follows-resource-ip-changes",
+       "route53-cname-dns-protocol-forbids-zone-apex",
+       "route53-cname-not-allowed-at-zone-apex",
+       "route53-elb-alias-record-for-root-and-subdomains",
+       "route53-ns-record-identifies-name-servers"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q007",
+   "section": "2-deep.md#latency-records-follow-measured-latency-and-geolocation-records-follow-user-location",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "geolocation-default-record",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A media company serves users around the world from Application Load Balancers in eu-west-1 and us-east-1. Because of distribution rights, the company uses Amazon Route 53 geolocation records: users in Europe go to eu-west-1, and users in North America go to us-east-1. Users in South America, and some users whose location cannot be identified, get no answer from DNS. These users must be served from us-east-1. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "Because of distribution rights",
+    "some users whose location cannot be identified",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a geolocation record for each remaining continent, and point each new continent record to the us-east-1 load balancer.",
+     "correct": false,
+     "why": "Geolocation maps addresses to places, and [some IP addresses aren't mapped to a location](../facts/route53.md#route53-geolocation-maps-ip-addresses-some-unmapped), so those users still get no answer.",
+     "concept": "continent-records",
+     "trap": "route53-trap-all-continents-cover-everyone",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Add a latency record with the same name that points to the us-east-1 load balancer, so that it answers when no geolocation record matches.",
+     "correct": false,
+     "why": "To combine two policies for one name, AWS uses alias records to [build a decision tree](../facts/route53.md#route53-complex-config-latency-alias-weighted-tree), which is more work than the Default record that geolocation routing already offers.",
+     "concept": "mixed-routing-policies",
+     "trap": "route53-trap-mix-routing-policies-same-name",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Add a geolocation record for each remaining continent and a record with the location Default, all pointing to the us-east-1 load balancer.",
+     "correct": false,
+     "why": "It works, but the Default record [handles both queries from unmapped IP addresses](../facts/route53.md#route53-geolocation-default-record-handles-unmapped) and unlisted places, so the continent records add work and change nothing.",
+     "concept": "continent-records-plus-default",
+     "trap": null,
+     "misconception": "Each place needs its own geolocation record even when a default record exists.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Add a geolocation record with the location Default that points to the us-east-1 load balancer, and keep the existing records.",
+     "correct": true,
+     "why": "One record with [a value of Default for Location](../facts/route53.md#route53-geolocation-recommend-one-default-record) covers places without a record and [IP addresses that Route 53 can't identify a location for](../facts/route53.md#route53-geolocation-recommend-one-default-record).",
+     "concept": "default-geolocation-record",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "If you do not create a default record, Route 53 [returns a \"no answer\" response](../facts/route53.md#route53-geolocation-no-default-no-answer) for places without a geolocation record. One Default record catches each query that no continent or country record matches, also queries from unmapped addresses. The Europe and North America records stay, so the distribution rights still hold.",
+   "takeaway": "Geolocation records need one Default record for places without a record and for unmapped addresses.",
+   "twin": "If the stem said \"send each user to the Region with the lowest latency\" instead: replace them with latency records, which route to [the Region that provides the best latency](../facts/route53.md#route53-choose-latency-routing-best-latency-region).",
+   "say": "Without a Default geolocation record some users get no answer, so I'd add one Default record for us-east-1.",
+   "facts": [
+    "route53-geolocation-maps-ip-addresses-some-unmapped",
+    "route53-complex-config-latency-alias-weighted-tree",
+    "route53-geolocation-default-record-handles-unmapped",
+    "route53-geolocation-recommend-one-default-record",
+    "route53-geolocation-no-default-no-answer",
+    "route53-choose-latency-routing-best-latency-region"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-users-around-the-world",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "verified",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Add a geolocation record with location Default pointing to the us-east-1 ALB; it answers for every location without a matching record, including unidentified locations. Keep the Europe and North America records."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-faq-geo-dns-global-record-recommended",
+       "route53-geolocation-default-record-handles-unmapped",
+       "route53-geolocation-maps-ip-addresses-some-unmapped",
+       "route53-geolocation-no-default-no-answer",
+       "route53-geolocation-recommend-one-default-record",
+       "route53-latency-no-non-latency-record-same-name-type"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": "kept in the verified pool; route53-q022 ships in its place (exam-05 difficulty mix, exam-06 stem gap)"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q013",
+   "section": "2-deep.md#dns-answers-and-health-check-failover-keep-working-when-the-control-plane-is-impaired",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.S2"
+   ],
+   "topics": [
+    "resilience",
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "data-plane-failover-prepared",
+   "difficulty": 3,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "MOST resilient",
+   "stem": "A company runs a web application behind an Application Load Balancer in us-east-1 and keeps a warm standby copy behind another Application Load Balancer in us-west-2. Amazon Route 53 hosts the company's public DNS records. The cross-Region recovery plan must move users to us-west-2 when the application in us-east-1 fails, even if the Route 53 control plane is impaired during the event. Which combination of steps will make the plan the MOST resilient? (Select TWO.)",
+   "keywords": [
+    "even if the Route 53 control plane is impaired during the event",
+    "move users to us-west-2",
+    "MOST resilient"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "During the event, change the weights of weighted alias records so that the us-west-2 load balancer gets all the traffic.",
+     "correct": false,
+     "why": "It works only when the control plane works: [this is a control plane operation](../facts/route53.md#route53-dr-weight-change-is-control-plane), so it is less resilient.",
+     "concept": "weight-change-failover",
+     "trap": "route53-trap-control-plane-failover",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Create failover alias records in advance, with the us-east-1 load balancer as the primary and the us-west-2 load balancer as the secondary.",
+     "correct": true,
+     "why": "AWS says to [pre-provision resources that require DNS records](../facts/route53.md#route53-fi-preprovision-for-multi-region-dr), so no record change is needed during the event.",
+     "concept": "failover-records-in-advance",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "During the event, create a new record that points the application's domain name to the us-west-2 load balancer.",
+     "correct": false,
+     "why": "Creating records to fail over is [a non-statically-stable design](../facts/route53.md#route53-fi-record-edits-depend-on-control-plane), because it depends on the control plane.",
+     "concept": "create-records-during-event",
+     "trap": "route53-trap-control-plane-failover",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Base the health of the primary record on a health check or on Evaluate Target Health, so that Route 53 fails over by itself.",
+     "correct": true,
+     "why": "Health-based failover is a [highly reliable operation done on the data plane](../facts/route53.md#route53-dr-health-check-failover-data-plane), so no person must act during the event.",
+     "concept": "health-based-failover",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "e",
+     "text": "Before the event, move the hosted zone from us-east-1 to us-west-2 so that DNS changes can be made in us-west-2.",
+     "correct": false,
+     "why": "Public DNS, private DNS and health checks in Route 53 are [all global services](../facts/route53.md#route53-faq-route53-still-global-service), so a hosted zone has no Region to move to.",
+     "concept": "move-hosted-zone",
+     "trap": null,
+     "misconception": "A hosted zone lives in one Region and can move to another Region.",
+     "distractor_type": "impossible-feature"
+    }
+   ],
+   "explanation": "AWS says [you should not rely on the Route 53 control plane in your recovery path](../facts/route53.md#route53-fi-no-control-plane-in-recovery-path). In an impairment, DNS answers and health checks [will continue to work](../facts/route53.md#route53-fi-impairment-dns-and-health-checks-keep-working). So the records exist before the event, and health status moves the users.",
+   "takeaway": "Create failover records before the event and let health status move users; record edits need the control plane.",
+   "twin": "If the stem said \"an operator must approve each failover\" instead: keep the failover records and switch them with ARC routing control; AWS recommends [features like Route 53 health checks and ARC routing control that rely on data plane functionality](../facts/route53.md#route53-bp-control-plane-prioritizes-consistency-not-availability).",
+   "say": "I'd create the failover records now and let health checks switch them, because editing records needs the control plane.",
+   "facts": [
+    "route53-dr-weight-change-is-control-plane",
+    "route53-fi-preprovision-for-multi-region-dr",
+    "route53-fi-record-edits-depend-on-control-plane",
+    "route53-dr-health-check-failover-data-plane",
+    "route53-faq-route53-still-global-service",
+    "route53-fi-no-control-plane-in-recovery-path",
+    "route53-fi-impairment-dns-and-health-checks-keep-working",
+    "route53-bp-control-plane-prioritizes-consistency-not-availability"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-select-two",
+    "ee-most-resilient",
+    "ee-cross-region"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Rely only on the Route 53 data plane: pre-create failover records (primary us-east-1 ALB, secondary us-west-2 ALB) and make the primary's health come from a health check or Evaluate Target Health so failover happens automatically without any record change during the event. Hosted zones are global and cannot be moved; editing weights or creating records are control-plane actions."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-control-plane-us-east-1",
+       "route53-dr-health-check-failover-data-plane",
+       "route53-dr-weight-change-is-control-plane",
+       "route53-failover-needs-one-primary-one-secondary",
+       "route53-faq-elb-failover-alias-evaluate-target-health",
+       "route53-faq-route53-still-global-service",
+       "route53-fi-impairment-dns-and-health-checks-keep-working",
+       "route53-fi-no-control-plane-in-recovery-path",
+       "route53-fi-preprovision-for-multi-region-dr",
+       "route53-fi-record-edits-depend-on-control-plane"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q015",
+   "section": "2-deep.md#an-alias-record-follows-the-changing-addresses-of-the-aws-resource-it-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.4",
+   "bullets": [
+    "4.4.K7"
+   ],
+   "topics": [
+    "networking",
+    "performance"
+   ],
+   "services": [
+    "route53",
+    "cloudfront"
+   ],
+   "concept": "cloudfront-apex-ipv6",
+   "difficulty": 2,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company serves its website at the edge through an Amazon CloudFront distribution. IPv6 is turned on for the distribution, and example.com is an alternate domain name of the distribution. The company hosts example.com in an Amazon Route 53 public hosted zone. Users on IPv4 networks and users on IPv6 networks must reach the website at example.com. Which combination of actions should the company take in the hosted zone to meet these requirements with the LEAST operational overhead? (Select TWO.)",
+   "keywords": [
+    "IPv6 is turned on for the distribution",
+    "Users on IPv4 networks and users on IPv6 networks",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a CNAME record for example.com whose value is the domain name of the CloudFront distribution.",
+     "correct": false,
+     "why": "The [DNS protocol does not allow you to create](../facts/route53.md#route53-cname-dns-protocol-forbids-zone-apex) a CNAME record at the zone apex, and example.com is the apex.",
+     "concept": "cname-at-apex",
+     "trap": "route53-trap-cname-at-apex",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "b",
+     "text": "Create an alias record of type A for example.com that points to the domain name of the CloudFront distribution.",
+     "correct": true,
+     "why": "With IPv6 turned on, you [create two records](../facts/route53.md#route53-alias-cloudfront-ipv6-two-records) for the distribution; this alias record of type A answers the IPv4 users.",
+     "concept": "alias-a-cloudfront",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create an A record for example.com that lists the IP addresses that the distribution's domain name returns today.",
+     "correct": false,
+     "why": "CloudFront addresses [vary based on your end user’s location](../facts/route53.md#route53-faq-cloudfront-ip-addresses-vary-by-location) and can change, so a fixed list sends users to wrong edges.",
+     "concept": "a-record-with-cloudfront-addresses",
+     "trap": null,
+     "misconception": "CloudFront edge addresses stay fixed, so copied addresses keep working.",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Create a Lambda function that rewrites A and AAAA records for example.com with the distribution's addresses every minute.",
+     "correct": false,
+     "why": "It adds code to run, and it copies addresses that [vary based on your end user’s location](../facts/route53.md#route53-faq-cloudfront-ip-addresses-vary-by-location); alias records need no upkeep.",
+     "concept": "script-rewrites-records",
+     "trap": null,
+     "misconception": "A script can keep copied CloudFront addresses current.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "e",
+     "text": "Create an alias record of type AAAA for example.com that points to the domain name of the CloudFront distribution.",
+     "correct": true,
+     "why": "An AAAA record routes traffic [using an IPv6 address](../facts/route53.md#route53-aaaa-record-ipv6), so this alias record serves the IPv6 users of the distribution.",
+     "concept": "alias-aaaa-cloudfront",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Example.com is the zone apex, and an alias record can map it to [your Amazon CloudFront distribution](../facts/route53.md#route53-faq-apex-alias-cloudfront). With IPv6 turned on, you [create two records](../facts/route53.md#route53-alias-cloudfront-ipv6-two-records): type A for IPv4 and type AAAA for IPv6.",
+   "takeaway": "Apex of a CloudFront site with IPv6: two alias records, type A and type AAAA.",
+   "twin": "If the stem said \"IPv6 is turned off for the distribution\" instead: the alias record of type A is enough, because the AAAA record routes [using an IPv6 address](../facts/route53.md#route53-aaaa-record-ipv6).",
+   "say": "For example.com on CloudFront with IPv6, I'd create two alias records, one of type A and one of type AAAA.",
+   "facts": [
+    "route53-cname-dns-protocol-forbids-zone-apex",
+    "route53-alias-cloudfront-ipv6-two-records",
+    "route53-faq-cloudfront-ip-addresses-vary-by-location",
+    "route53-aaaa-record-ipv6",
+    "route53-faq-apex-alias-cloudfront"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-select-two",
+    "ee-which-combination",
+    "ee-edge",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "At the apex, create two alias records that point to the CloudFront distribution: one of type A (IPv4) and one of type AAAA (IPv6). No CNAME at the apex and no hard-coded IPs."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-aaaa-record-ipv6",
+       "route53-alias-cloudfront-ipv6-two-records",
+       "route53-alias-follows-resource-ip-changes",
+       "route53-alias-target-cloudfront",
+       "route53-cloudfront-needs-matching-alternate-domain-name",
+       "route53-cloudfront-requires-alias-record",
+       "route53-cname-not-allowed-at-zone-apex",
+       "route53-faq-cloudfront-ip-addresses-vary-by-location",
+       "route53-pricing-alias-free-for-listed-aws-services"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b",
+       "e"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q019",
+   "section": "2-deep.md#a-resolver-follows-the-delegation-to-the-name-servers-of-your-hosted-zone",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.4",
+   "bullets": [
+    "4.4.K7"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53"
+   ],
+   "concept": "keep-registrar-change-name-servers",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company registered the domain example.com with a third-party registrar, which also hosts the DNS records today. The company wants to migrate the DNS service for example.com to Amazon Route 53. Because of a contract, the domain registration must stay with the current registrar. Users on the internet must keep resolving the company's website during the change. What should the company do?",
+   "keywords": [
+    "the domain registration must stay with the current registrar",
+    "migrate the DNS service",
+    "Users on the internet"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Transfer the domain registration to Route 53 first, then create the records in the hosted zone that Route 53 creates for the domain.",
+     "correct": false,
+     "why": "A transfer is possible, but [this isn't required to use other Route 53 features](../facts/route53.md#route53-domain-transfer-not-required-for-other-features), and the contract keeps the registration where it is.",
+     "concept": "transfer-registration",
+     "trap": "route53-trap-transfer-domain-to-use-dns",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Create a Route 53 private hosted zone with the records, and associate the hosted zone with the VPC that runs the website.",
+     "correct": false,
+     "why": "A private hosted zone will [only return these records when queried from within](../facts/route53.md#route53-faq-private-zone-answers-only-from-associated-vpcs) associated VPCs, so internet users get no answers.",
+     "concept": "private-hosted-zone",
+     "trap": "route53-trap-private-zone-answers-internet",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Create a Route 53 public hosted zone with the records, then change the domain's name servers at the registrar to the hosted zone's name servers.",
+     "correct": true,
+     "why": "When another registrar manages the domain, you [update the name servers for your domain](../facts/route53.md#route53-faq-external-registrar-must-update-name-servers) to the ones of the hosted zone, and Route 53 starts to answer.",
+     "concept": "update-name-servers",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Create the records in Route 53, and add a CNAME record at the registrar that points example.com to a Route 53 name server.",
+     "correct": false,
+     "why": "The [DNS protocol does not allow you to create](../facts/route53.md#route53-cname-dns-protocol-forbids-zone-apex) a CNAME record at example.com, and delegation names name servers, not a CNAME target.",
+     "concept": "cname-delegation",
+     "trap": null,
+     "misconception": "A CNAME record at the registrar hands a domain to another DNS service.",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "If the registrar does not use the name servers of the hosted zone, Route 53 [will not be authoritative for queries](../facts/route53.md#route53-faq-registrar-must-use-hosted-zone-name-servers) to the domain. So the company copies the records into a public hosted zone first, and then changes the name servers at the current registrar. A transfer of the registration is optional.",
+   "takeaway": "Keep the registrar, move the DNS: create a public hosted zone and change the name servers at the registrar.",
+   "twin": "If the stem said \"the company also wants Route 53 as its registrar\" instead: transfer the registration too, because [you can transfer the domain registration to Route 53](../facts/route53.md#route53-domain-transfer-not-required-for-other-features).",
+   "say": "The registration can stay where it is; I'd create a public hosted zone and change the name servers at the registrar.",
+   "facts": [
+    "route53-domain-transfer-not-required-for-other-features",
+    "route53-faq-private-zone-answers-only-from-associated-vpcs",
+    "route53-faq-external-registrar-must-update-name-servers",
+    "route53-cname-dns-protocol-forbids-zone-apex",
+    "route53-faq-registrar-must-use-hosted-zone-name-servers"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-migrate"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Create a Route 53 public hosted zone, recreate all the records there (ideally lower the old NS TTL first), then update the domain's name servers at the current registrar to the four Route 53 name servers of the hosted zone. Registration does not have to move."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-cname-not-allowed-at-zone-apex",
+       "route53-domain-transfer-not-required-for-other-features",
+       "route53-faq-external-registrar-must-update-name-servers",
+       "route53-faq-private-zone-answers-only-from-associated-vpcs",
+       "route53-faq-registrar-must-use-hosted-zone-name-servers",
+       "route53-faq-transfer-no-disruption-copy-zone-first",
+       "route53-migrate-dns-before-transfer-if-registrar-has-no-paid-dns",
+       "route53-migrate-in-use-recreate-records-in-new-zone",
+       "route53-phz-answers-only-from-associated-vpc-or-inbound-endpoint"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q009",
+   "section": "2-deep.md#failover-records-answer-with-the-secondary-only-while-the-primary-is-unhealthy",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "networking",
+    "resilience"
+   ],
+   "services": [
+    "route53",
+    "ec2",
+    "s3"
+   ],
+   "concept": "failover-health-check-non-alias",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a web application in the us-east-1 Region and keeps a static maintenance page in an Amazon S3 bucket that is configured as a website. The company creates Amazon Route 53 failover records for www.example.com. The primary record is an A record with the Elastic IP address of one EC2 instance. The secondary record points to the S3 website endpoint. The company must ensure that Route 53 sends users to the maintenance page when the application cannot serve requests. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "The primary record is an A record with the Elastic IP address of one EC2 instance",
+    "when the application cannot serve requests",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a Route 53 health check that sends HTTP requests to the primary endpoint, and associate the health check with the primary record.",
+     "correct": true,
+     "why": "For resources without alias records, such as EC2 instances, you create a [record and a health check for each resource](../facts/route53.md#route53-simple-config-alias-targets-no-health-check-needed); a failing check moves users to the secondary.",
+     "concept": "route53-health-check-on-primary",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Run a scheduled AWS Lambda function that tests the application every minute and repoints the primary record to the S3 website endpoint on failure.",
+     "correct": false,
+     "why": "It works, but it adds code to run and record edits, and AWS calls such edits [a non-statically-stable design](../facts/route53.md#route53-fi-record-edits-depend-on-control-plane).",
+     "concept": "scripted-failover",
+     "trap": null,
+     "misconception": "Failover needs custom code that edits the records.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Turn on Evaluate Target Health for the primary record, so that Route 53 uses the health of the resource that the record points to.",
+     "correct": false,
+     "why": "Evaluate Target Health decides [whether Route 53 checks the health of the resource](../facts/route53.md#route53-evaluate-target-health-other-policies-checks-resource) that an alias record refers to; this A record is not an alias record.",
+     "concept": "evaluate-target-health",
+     "trap": "route53-trap-evaluate-target-health-any-record",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "d",
+     "text": "Create a Route 53 health check of the S3 website endpoint, and associate the health check with the secondary record.",
+     "correct": false,
+     "why": "Route 53 [responds to DNS queries using the secondary record](../facts/route53.md#route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy) when the primary is unhealthy, so a check on the secondary does not detect the application failure.",
+     "concept": "health-check-on-secondary",
+     "trap": "route53-trap-secondary-health-check-triggers-failover",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "Route 53 [responds to DNS queries using the primary record](../facts/route53.md#route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy) when the primary is healthy, so the primary needs a health signal. An A record with an Elastic IP address names no AWS resource whose health Route 53 can read. A Route 53 health check of the instance gives that signal, and a failing check sends users to the S3 maintenance page.",
+   "takeaway": "A failover primary that points to an EC2 instance needs its own Route 53 health check.",
+   "twin": "If the stem said \"an alias record for an Application Load Balancer\" instead: turn on Evaluate Target Health, because for that alias record you [set Evaluate Target Health to Yes](../facts/route53.md#route53-alias-to-aws-use-evaluate-target-health-not-health-check).",
+   "say": "The primary is a plain A record for one instance, so I'd attach a Route 53 health check to the primary record.",
+   "facts": [
+    "route53-simple-config-alias-targets-no-health-check-needed",
+    "route53-fi-record-edits-depend-on-control-plane",
+    "route53-evaluate-target-health-other-policies-checks-resource",
+    "route53-failover-one-primary-one-secondary-responds-secondary-when-unhealthy",
+    "route53-alias-to-aws-use-evaluate-target-health-not-health-check"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-ensure"
+   ],
+   "twin_of": "route53-q003",
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "The primary is a non-alias A record with an Elastic IP, so Evaluate Target Health is not available; create a Route 53 HTTP health check of the primary endpoint and associate it with the primary failover record. The secondary needs no health check."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-dns-failover-routes-traffic-away-from-unhealthy-record",
+       "route53-evaluate-target-health-other-policies-checks-resource",
+       "route53-failover-record-health-check-checks-its-own-endpoint",
+       "route53-failover-secondary-health-check-optional",
+       "route53-faq-failover-backup-site-s3",
+       "route53-fi-record-edits-depend-on-control-plane",
+       "route53-health-check-useful-only-when-choosing-between-records",
+       "route53-simple-config-alias-targets-no-health-check-needed"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q021",
+   "section": "2-deep.md#weighted-records-give-each-resource-its-share-of-the-total-weight",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "weighted-new-version",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A small team runs version 1 of a web application behind one Application Load Balancer. The team deploys version 2 behind a second Application Load Balancer in the same Region. The team wants about 10 percent of users to reach version 2 first, a larger share during the next week, and a quick way to send every user back to version 1 if errors appear. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "about 10 percent of users to reach version 2 first",
+    "send every user back to version 1",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create failover alias records with the version 1 load balancer as the primary and the version 2 load balancer as the secondary.",
+     "correct": false,
+     "why": "Route 53 answers with the secondary [when the first one is unhealthy](../facts/route53.md#route53-failover-routing-primary-or-secondary), so version 2 gets no users when version 1 works.",
+     "concept": "failover-for-canary",
+     "trap": null,
+     "misconception": "Failover records split traffic between two healthy versions.",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Create weighted alias records for the two load balancers with weights of 90 and 10, and change the weights to shift users or roll back.",
+     "correct": true,
+     "why": "Route 53 answers in the [ratio of a resource's weight to the total](../facts/route53.md#route53-weighted-ratio-of-weight-to-total), and you [change the weight for that record to 0](../facts/route53.md#route53-weighted-routing-weight-zero-stops-traffic) to roll back.",
+     "concept": "weighted-records",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create multivalue answer alias records for the two load balancers, and change how many records each version has to shift users.",
+     "correct": false,
+     "why": "Multivalue answer alias records are [not supported](../facts/route53.md#route53-multivalue-alias-not-supported) in Route 53, so the load balancers cannot be targets of this routing policy.",
+     "concept": "multivalue-alias",
+     "trap": null,
+     "misconception": "Multivalue answer records can point to load balancers and split users by share.",
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "d",
+     "text": "Run a scheduled script that switches a simple alias record between the two load balancers to approximate the share of users.",
+     "correct": false,
+     "why": "It needs code, a schedule and monitoring, but weighted routing sends traffic to [multiple resources in proportions that you specify](../facts/route53.md#route53-choose-weighted-routing-proportions) without them.",
+     "concept": "scripted-record-switch",
+     "trap": null,
+     "misconception": "Route 53 has no built-in way to split users by share.",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "AWS names weighted routing for [testing new versions of software](../facts/route53.md#route53-choose-weighted-routing-proportions). Route 53 answers in the [ratio of a resource's weight to the total](../facts/route53.md#route53-weighted-ratio-of-weight-to-total), so weights of 90 and 10 send about one DNS query in ten to version 2. A higher version 2 weight shifts more users, and a weight of zero on version 2 sends everyone back.",
+   "takeaway": "Share users between versions with weighted records; a weight of zero takes one version out.",
+   "twin": "If the stem said \"version 2 receives users only when version 1 fails\" instead: failover alias records, because the secondary answers [when the first one is unhealthy](../facts/route53.md#route53-failover-routing-primary-or-secondary).",
+   "say": "I'd use weighted alias records at ninety and ten, raise version two over the week, and set it to zero to roll back.",
+   "facts": [
+    "route53-failover-routing-primary-or-secondary",
+    "route53-weighted-ratio-of-weight-to-total",
+    "route53-weighted-routing-weight-zero-stops-traffic",
+    "route53-multivalue-alias-not-supported",
+    "route53-choose-weighted-routing-proportions"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-small-team",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Weighted alias records for the two ALBs (90/10), then change the weights over the week; set version 2 to weight 0 to roll back."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-active-passive-only-healthy-primary-then-secondary",
+       "route53-failover-routing-primary-or-secondary",
+       "route53-faq-wrr-weights-set-frequency",
+       "route53-multivalue-alias-not-supported",
+       "route53-multivalue-purpose-not-lb-substitute",
+       "route53-ttl-definition-resolver-cache",
+       "route53-weighted-routing-purpose",
+       "route53-weighted-routing-share-of-total-weight",
+       "route53-weighted-routing-weight-zero-stops-traffic"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q006",
+   "section": "2-deep.md#resolvers-cache-each-answer-for-its-ttl-before-they-ask-route-53-again",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.4",
+   "bullets": [
+    "4.4.K7"
+   ],
+   "topics": [
+    "networking",
+    "resilience"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "ttl-before-cutover",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST downtime",
+   "stem": "A company will migrate www.example.com from web servers in its data center to an Application Load Balancer next Saturday. In the Route 53 public hosted zone, www.example.com is an A record with a TTL of 86,400 seconds. Users must move to the new site with minimal downtime, and the team must be able to roll back quickly if the new site fails. Which approach will meet these requirements with the LEAST downtime for users?",
+   "keywords": [
+    "a TTL of 86,400 seconds",
+    "minimal downtime",
+    "roll back quickly",
+    "LEAST downtime"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "On Saturday, replace the A record with an alias record for the load balancer, because Route 53 sends record changes to all of its servers within a minute.",
+     "correct": false,
+     "why": "Route 53 updates its own servers [within 60 seconds](../facts/route53.md#route53-faq-propagation-within-60-seconds), but resolvers keep the old answer until the TTL of 86,400 seconds runs out.",
+     "concept": "change-record-on-cutover-day",
+     "trap": "route53-trap-ttl-instant-change",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Two days before Saturday, lower the TTL of the A record to 300 seconds; on Saturday, replace the record with an alias record for the load balancer.",
+     "correct": true,
+     "why": "AWS suggests a shorter TTL, [such as 300 seconds](../facts/route53.md#route53-ttl-start-shorter-300-seconds-in-use), for a name in use; after two days the short TTL is in every cache.",
+     "concept": "lower-ttl-days-before",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "On Saturday, lower the TTL of the A record to 300 seconds and replace it with an alias record for the load balancer in the same change.",
+     "correct": false,
+     "why": "Resolvers that cached the old answer keep it for the old TTL of 86,400 seconds, so a lower TTL set on Saturday comes too late.",
+     "concept": "lower-ttl-at-cutover",
+     "trap": null,
+     "misconception": "believes that resolvers drop a cached answer when the TTL of the record is lowered",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Create a second public hosted zone for example.com with an alias record for the load balancer, and change the name servers at the registrar on Saturday.",
+     "correct": false,
+     "why": "Resolvers cache NS records too, with a typical TTL of [172800 seconds](../facts/route53.md#route53-ns-record-typical-ttl-172800), so a change of name servers moves users more slowly.",
+     "concept": "switch-name-servers-at-cutover",
+     "trap": null,
+     "misconception": "believes that a change of name servers reaches users faster than a record change",
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "Resolvers cache an answer [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control), so after a change some users keep the old address for up to 86,400 seconds. Lower the TTL first, as AWS advises: [temporarily shorten the TTLs](../facts/route53.md#route53-best-practice-shorten-ttl-before-critical-change). After two days every cache holds the short TTL, so the switch and a roll back reach users within minutes.",
+   "takeaway": "Lower the TTL before a planned DNS change, and wait for the old TTL to pass before the switch.",
+   "twin": "If the stem said \"an A record with a TTL of 60 seconds\" instead: change the record on Saturday, because resolvers cache the old answer [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control).",
+   "say": null,
+   "facts": [
+    "route53-faq-resolver-caches-by-ttl-outside-control",
+    "route53-best-practice-shorten-ttl-before-critical-change",
+    "route53-faq-propagation-within-60-seconds",
+    "route53-ttl-start-shorter-300-seconds-in-use",
+    "route53-ns-record-typical-ttl-172800"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-minimal-downtime",
+    "ee-migrate"
+   ],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for the approach with the LEAST downtime for users.",
+     "I mark the constraints: the A record has a TTL of 86,400 seconds, the move is next Saturday, and the team must be able to roll back quickly.",
+     "Before I look at the options, I predict that the TTL must go down days before the move, because resolvers keep a cached answer until its TTL runs out.",
+     "I remove the change on Saturday alone, because Route 53 updates its own servers fast, but resolvers keep the old answer for up to a day. I remove the second hosted zone, because resolvers also cache NS records, typically for two days.",
+     "Between lowering the TTL two days early and lowering it on Saturday, the difference is when the caches learn the short TTL; the stem says minimal downtime, so the short TTL must be in every cache before Saturday.",
+     "Check: lowering the TTL two days early meets every constraint, and a roll back also reaches users within minutes. Time: 90 seconds."
+    ],
+    "wrong_path": false
+   },
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Lower the TTL of the A record well in advance (at least the old TTL of one day before the cutover) so cached answers expire; on the day switch the record to an alias for the ALB; the short TTL also allows a quick rollback."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-best-practice-shorten-ttl-before-critical-change",
+       "route53-changes-propagate-within-60-seconds",
+       "route53-faq-resolver-caches-by-ttl-outside-control",
+       "route53-migrate-lower-ns-ttl-else-two-days-down",
+       "route53-ns-record-typical-ttl-172800",
+       "route53-ttl-definition-resolver-cache",
+       "route53-ttl-longer-cheaper-shorter-faster-change",
+       "route53-ttl-start-shorter-300-seconds-in-use",
+       "route53-weighted-ttl-short-before-change"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "c"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q008",
+   "section": "2-deep.md#route-53-leaves-unhealthy-records-out-of-answers-until-every-record-is-unhealthy",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "resilience",
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "ec2",
+    "s3"
+   ],
+   "concept": "all-unhealthy-static-page",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company serves www.example.com from three Amazon EC2 instances that have Elastic IP addresses. Route 53 answers with three weighted A records, each with a nonzero weight and its own health check. During a failed deployment, all three instances failed their health checks, but users still received the addresses of the failed instances. When no instance is healthy, users must see a static error page from an S3 bucket named www.example.com that is configured as a website. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "each with a nonzero weight and its own health check",
+    "users still received the addresses of the failed instances",
+    "When no instance is healthy",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Rename the three weighted records, then create failover records for www.example.com: an alias record for the weighted records as the primary, and the S3 website as the secondary.",
+     "correct": false,
+     "why": "It works with more effort: [You can't create non-failover records](../facts/route53.md#route53-failover-no-non-failover-record-same-name-type) with the name and type of failover records, so the weighted records need new names.",
+     "concept": "failover-over-weighted-tree",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Lower the TTL of the three weighted records to 60 seconds, so that resolvers drop the failed addresses soon after Route 53 stops returning the unhealthy records.",
+     "correct": false,
+     "why": "When no record is healthy, Route 53 [considers all the records in the group](../facts/route53.md#route53-no-record-healthy-all-records-considered-healthy) healthy and keeps returning them, so no error page appears.",
+     "concept": "lower-ttl-for-unhealthy-records",
+     "trap": "route53-trap-all-unhealthy-no-answer",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Add a fourth weighted record for www.example.com: an alias record for the S3 website endpoint with a weight of 0, and keep the three records as they are.",
+     "correct": true,
+     "why": "[All the records with nonzero weights must be unhealthy](../facts/route53.md#route53-failover-weighted-zero-weight-caveat) before Route 53 answers with a record that has a weight of 0, so the S3 website answers only when no instance is healthy.",
+     "concept": "zero-weight-fallback-record",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Add a weighted alias record for the S3 website endpoint with a weight of 0, and remove the health checks from the three records so that failed instances are left out.",
+     "correct": false,
+     "why": "When a record has no health check, Route 53 [always considers it healthy](../facts/route53.md#route53-record-without-health-check-always-healthy), so the failed instances keep their share of users.",
+     "concept": "remove-health-checks",
+     "trap": "route53-trap-record-without-health-check-skipped",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "Route 53 has [a mode of last resort](../facts/route53.md#route53-last-resort-mode-all-unhealthy-returns-answer): when every record is unhealthy, it answers with them anyway, which is why users got the failed addresses. A record with a weight of 0 waits behind the nonzero records, and the bucket already has the [same name as your domain or subdomain](../facts/route53.md#route53-s3-website-bucket-name-must-match).",
+   "takeaway": "A weighted record with a weight of 0 answers when every nonzero weighted record is unhealthy.",
+   "twin": "If the stem said \"each weighted record has no health check\" instead: first add a health check to each record, because Route 53 [always considers it healthy](../facts/route53.md#route53-record-without-health-check-always-healthy) when a record has none.",
+   "say": null,
+   "facts": [
+    "route53-last-resort-mode-all-unhealthy-returns-answer",
+    "route53-s3-website-bucket-name-must-match",
+    "route53-failover-no-non-failover-record-same-name-type",
+    "route53-no-record-healthy-all-records-considered-healthy",
+    "route53-failover-weighted-zero-weight-caveat",
+    "route53-record-without-health-check-always-healthy"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-these-requirements"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "rejected",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r1",
+      "stem_only": "When every record in a weighted group is unhealthy, Route 53 treats them all as healthy and keeps returning them, which is why users got the failed addresses. Route 53 first considers only nonzero-weight records, and falls back to zero-weight records only when all nonzero-weight records are unhealthy. So the smallest change is to add one more weighted alias record for www.example.com that points to the S3 website endpoint (the bucket name matches the record name) with weight 0, and keep the three health-checked records as they are. A failover pair over the weighted set would also work but needs renaming and more records."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": "B is also a documented design that meets the requirements (failover alias records over the weighted records, S3 website as secondary), so D wins only on the LEAST operational overhead tie-break (one added record versus renaming three records and adding two failover records); B also leaves out Evaluate Target Health = Yes, which the documented failover alias needs, so the stem leaves its correctness unclear.",
+      "solver": "solve-13-open-r1",
+      "citations": [
+       "docs/Route53/latest/DeveloperGuide/dns-failover-types#If you're using an Amazon S3 bucket for ",
+       "docs/Route53/latest/DeveloperGuide/health-checks-how-route-53-chooses-records#If a record in a group of records that h",
+       "docs/Route53/latest/DeveloperGuide/health-checks-how-route-53-chooses-records#If none of the records in a group of rec",
+       "docs/Route53/latest/DeveloperGuide/routing-policy-weighted#If all the records that have a weight gr",
+       "route53-alias-evaluate-target-health-weighted-branch",
+       "route53-alias-s3-record-name-matches-bucket-and-website-hosting",
+       "route53-complex-config-omitted-health-check-assumed-healthy",
+       "route53-failover-weighted-zero-weight-caveat",
+       "route53-faq-all-endpoints-unhealthy-acts-as-all-pass",
+       "route53-faq-resolver-caches-by-ttl-outside-control",
+       "route53-weighted-zero-weight-used-when-all-unhealthy"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": "Option D also meets the requirement if Evaluate Target Health is set on the primary alias to the weighted records (a nested failover-over-weighted design), so only the LEAST-overhead cue separates A from D, and the key depends on the zero-weight record being returned when every nonzero-weight record is unhealthy.",
+      "solver": "solve-13-ambiguity-r1",
+      "case_option": "a"
+     }
+    ],
+    "note": "open flag; ambiguity flag",
+    "edits": 1,
+    "checked": "2026-10-14"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-13-r0",
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q012",
+   "section": "2-deep.md#health-checkers-around-the-world-decide-whether-an-endpoint-is-healthy",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "resilience",
+    "security",
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "cloudwatch",
+    "ec2",
+    "vpc"
+   ],
+   "concept": "private-endpoint-health-check",
+   "difficulty": 2,
+   "type": "multi",
+   "select": 2,
+   "qualifier": "MOST secure",
+   "stem": "A company uses failover records in a Route 53 private hosted zone for an internal API. The primary record is an A record for the API, which runs on Amazon EC2 instances that have only private IP addresses. The secondary record points to a standby copy of the API. Route 53 must fail over to the secondary record when the primary API stops working. Which combination of steps will meet these requirements in the MOST secure way? (Select TWO.)",
+   "keywords": [
+    "private hosted zone",
+    "have only private IP addresses",
+    "when the primary API stops working",
+    "MOST secure"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an Amazon CloudWatch metric that reflects the health of the primary API, and create a CloudWatch alarm that watches that metric.",
+     "correct": true,
+     "why": "The metric and its alarm judge the API from inside AWS, so the instances need no public address and no inbound path.",
+     "concept": "cloudwatch-metric-and-alarm",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Create a Route 53 HTTP health check that sends requests to the private IP address of one primary instance, and associate it with the primary record.",
+     "correct": false,
+     "why": "[Route 53 cannot check the health of endpoints](../facts/route53.md#route53-hc-cannot-check-private-ip-ranges) whose IP address is in [local, private, nonroutable, or multicast ranges](../facts/route53.md#route53-hc-cannot-check-private-ip-ranges).",
+     "concept": "health-check-private-ip",
+     "trap": "route53-trap-health-check-private-ip",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "c",
+     "text": "Add the IP ranges of the Route 53 health checkers to the security group of the primary instances, so that the health checkers can reach the API.",
+     "correct": false,
+     "why": "The [health checkers are outside the VPC](../facts/route53.md#route53-hc-checkers-outside-vpc-need-public-ip), so a security group rule gives them no path to instances that have no public IP address.",
+     "concept": "allow-checker-ranges-in-security-group",
+     "trap": null,
+     "misconception": "believes that a security group rule lets the health checkers reach a private IP address",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Create a Route 53 health check that monitors the state of the CloudWatch alarm, and associate that health check with the primary record.",
+     "correct": true,
+     "why": "A health check [based on the data stream for the alarm](../facts/route53.md#route53-hc-private-endpoint-cloudwatch-alarm-health-check) turns unhealthy with the alarm, and Route 53 then answers with the secondary record.",
+     "concept": "health-check-on-alarm",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "e",
+     "text": "Assign public IP addresses to the primary instances, allow the health checker IP ranges in their security group, and check those public addresses.",
+     "correct": false,
+     "why": "It works, because for an IP check you [must assign a public IP address](../facts/route53.md#route53-hc-checkers-outside-vpc-need-public-ip), but public addresses expose the API, which the alarm-based check avoids.",
+     "concept": "public-ip-for-health-check",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "Route 53 [health checkers are outside the VPC](../facts/route53.md#route53-hc-checkers-outside-vpc-need-public-ip), so they cannot reach a private address. For instances with only private IP addresses, AWS documents three steps: create a [CloudWatch metric, associate an alarm with the metric](../facts/route53.md#route53-hc-private-endpoint-cloudwatch-alarm-health-check), and then create a health check [based on the data stream for the alarm](../facts/route53.md#route53-hc-private-endpoint-cloudwatch-alarm-health-check).",
+   "takeaway": "For a private endpoint, base the Route 53 health check on a CloudWatch alarm, not on the private IP address.",
+   "twin": "If the stem said \"the primary record is an alias record for an internal Application Load Balancer\" instead: for that resource AWS says to [set Evaluate Target Health to Yes](../facts/route53.md#route53-alias-to-aws-use-evaluate-target-health-not-health-check) on the record.",
+   "say": null,
+   "facts": [
+    "route53-hc-checkers-outside-vpc-need-public-ip",
+    "route53-hc-private-endpoint-cloudwatch-alarm-health-check",
+    "route53-hc-cannot-check-private-ip-ranges",
+    "route53-alias-to-aws-use-evaluate-target-health-not-health-check"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-select-two",
+    "ee-which-combination",
+    "ee-most-secure"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Route 53 health checkers run on the internet and cannot reach private IP addresses. Publish a CloudWatch metric for the API's health, create an alarm on it, and create a Route 53 health check that monitors the alarm state; associate it with the primary record. No public IPs."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-faq-metric-based-health-check-uses-cloudwatch-alarm",
+       "route53-faq-phz-failover-metric-based-health-checks",
+       "route53-hc-allow-all-region-and-global-cidr-ranges",
+       "route53-hc-cannot-check-private-ip-ranges",
+       "route53-hc-checkers-outside-vpc-need-public-ip",
+       "route53-hc-private-endpoint-cloudwatch-alarm-health-check",
+       "route53-hc-router-firewall-must-allow-health-checker-ips",
+       "route53-phz-health-checks-routing-policies"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a",
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "e"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q011",
+   "section": "2-deep.md#resolver-endpoints-carry-dns-queries-between-a-vpc-and-an-on-premises-network",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "direct-connect",
+    "vpc"
+   ],
+   "concept": "hybrid-outbound-forwarding",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has a hybrid network. Its data center connects to a VPC in the eu-west-1 Region through an AWS Direct Connect dedicated connection. The VPC is associated with an Amazon Route 53 private hosted zone named corp.internal. DNS servers in the data center host the zone onprem.corp. EC2 instances in the VPC must resolve names in onprem.corp. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "EC2 instances in the VPC must resolve names in onprem.corp",
+    "DNS servers in the data center host the zone onprem.corp",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an outbound Resolver endpoint and a forwarding rule for onprem.corp that targets the data center DNS servers, and associate the rule with the VPC.",
+     "correct": true,
+     "why": "[Outbound Resolver endpoints allow DNS queries](../facts/route53.md#route53-resolver-outbound-endpoint-definition) from the VPC to the data center, and the forwarding rule sends onprem.corp names to the data center DNS servers.",
+     "concept": "outbound-endpoint",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Run DNS forwarder software on EC2 instances in two Availability Zones, and configure both networks to forward queries for the other zone to them.",
+     "correct": false,
+     "why": "It works, but endpoints and rules forward queries [without having to deploy additional DNS servers](../facts/route53.md#route53-hybrid-resolver-endpoints-no-extra-dns-servers), so forwarder instances add patching and scaling work.",
+     "concept": "dns-forwarder-instances",
+     "trap": null,
+     "misconception": "Hybrid DNS needs forwarder instances that the company runs.",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create an inbound Resolver endpoint in the VPC, and configure the data center DNS servers to forward corp.internal queries to the endpoint's IP addresses.",
+     "correct": false,
+     "why": "[Inbound Resolver endpoints allow DNS queries](../facts/route53.md#route53-resolver-inbound-endpoint-definition) into the VPC from the data center, which is the opposite direction: corp.internal names for the data center.",
+     "concept": "inbound-endpoint",
+     "trap": "route53-trap-inbound-outbound-direction",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Configure the data center DNS servers to forward corp.internal queries to the VPC Resolver address at the base of the VPC CIDR range plus two.",
+     "correct": false,
+     "why": "It serves corp.internal, not onprem.corp, and forwarding to the CIDR+2 address [is not supported, and can cause unstable results](../facts/route53.md#route53-resolver-cidr-plus-two-forwarding-unsupported).",
+     "concept": "vpc-plus-two-forwarding",
+     "trap": "route53-trap-forward-to-vpc-plus-two",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "The queries start in the VPC and need answers from the data center DNS servers, so they travel out of the VPC. Outbound endpoints carry queries [from your VPC to your on-premises network](../facts/route53.md#route53-resolver-outbound-endpoint-definition). Resolver rules decide which queries go out and [which queries VPC Resolver answers itself](../facts/route53.md#route53-resolver-rules-control-forwarding), so a rule for onprem.corp sends only those names.",
+   "takeaway": "VPC asks the data center: outbound endpoint and a forwarding rule. Data center asks the VPC: inbound endpoint.",
+   "twin": "If the stem said \"Servers in the data center must resolve names in corp.internal\" instead: an inbound endpoint, because [Inbound Resolver endpoints allow DNS queries](../facts/route53.md#route53-resolver-inbound-endpoint-definition) into the VPC.",
+   "say": "The questions go from the VPC to the data center, so I'd create an outbound Resolver endpoint with a forwarding rule for onprem.corp.",
+   "facts": [
+    "route53-resolver-outbound-endpoint-definition",
+    "route53-hybrid-resolver-endpoints-no-extra-dns-servers",
+    "route53-resolver-inbound-endpoint-definition",
+    "route53-resolver-cidr-plus-two-forwarding-unsupported",
+    "route53-resolver-rules-control-forwarding"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-hybrid",
+    "ee-dedicated-connection",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": "route53-q005",
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "VPC resources resolving an on-premises domain need an outbound Resolver endpoint plus a forwarding rule for onprem.corp whose targets are the data center DNS servers, with the rule associated with the VPC."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-hybrid-resolver-endpoints-no-extra-dns-servers",
+       "route53-hybrid-selection-management-overhead",
+       "route53-resolver-cidr-plus-two-forwarding-unsupported",
+       "route53-resolver-inbound-endpoint-definition",
+       "route53-resolver-outbound-endpoint-definition",
+       "route53-resolver-outbound-path-private-connection",
+       "route53-resolver-rules-control-forwarding"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q014",
+   "section": "2-deep.md#latency-records-follow-measured-latency-and-geolocation-records-follow-user-location",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking",
+    "performance"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "geolocation-for-data-residency",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs the same stateless web application in us-east-1 and eu-west-1, behind an Application Load Balancer in each Region. The application has users around the world. The company hosts its DNS records in a Route 53 public hosted zone. Because of a data residency rule, users in Europe must be served from eu-west-1, and all other users from us-east-1. Which routing configuration for www.example.com will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "data residency rule",
+    "users in Europe must be served from eu-west-1",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Latency alias records for the two load balancers, one record in each Region, with Evaluate Target Health turned on for both records.",
+     "correct": false,
+     "why": "Latency-based routing uses [latency data taken over a period of time](../facts/route53.md#route53-latency-changes-over-time), so a European user can reach us-east-1 when that Region measures faster for the user.",
+     "concept": "latency-records",
+     "trap": null,
+     "misconception": "believes that latency-based routing keeps users in Europe in eu-west-1 because that Region is closer",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Geolocation alias records: a Europe record that points to the eu-west-1 load balancer, and a Default record for the us-east-1 load balancer.",
+     "correct": true,
+     "why": "With geolocation routing, each user location [always goes to the same endpoint](../facts/route53.md#route53-geolocation-use-cases), so queries from Europe get eu-west-1 and the Default record answers everyone else.",
+     "concept": "geolocation-records",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Weighted alias records for the two load balancers with equal weights, so that each Region receives half of the DNS queries for the name.",
+     "correct": false,
+     "why": "Weights split queries among [multiple resources in proportions that you specify](../facts/route53.md#route53-choose-weighted-routing-proportions), whatever the location of the user, so half of the European users reach us-east-1.",
+     "concept": "weighted-equal-split",
+     "trap": null,
+     "misconception": "believes that weighted routing can keep the users of one place in one Region",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "d",
+     "text": "IP-based records with a CIDR collection that the team keeps current with the client IP ranges that each of the two Regions must serve.",
+     "correct": false,
+     "why": "It can work, but the team maintains the client IP ranges of Europe by hand; IP-based routing suits users [from certain ISPs to specific endpoints](../facts/route53.md#route53-ip-based-routing-use-cases).",
+     "concept": "ip-based-records",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "A data residency rule ties a place to a Region, so the location of the user decides. Geolocation routing sends traffic [based on the location of your users](../facts/route53.md#route53-choose-geolocation-routing-user-location), and the Default record [handles both queries from unmapped IP addresses](../facts/route53.md#route53-geolocation-default-record-handles-unmapped) and the queries from places outside Europe.",
+   "takeaway": "A rule about where users are served is a geolocation question, with a Default record for everyone else.",
+   "twin": "If the stem said \"Each user must be served from the Region that gives that user the lowest latency\" instead: latency records, because they route traffic to [the Region that provides the best latency](../facts/route53.md#route53-choose-latency-routing-best-latency-region).",
+   "say": null,
+   "facts": [
+    "route53-choose-geolocation-routing-user-location",
+    "route53-geolocation-default-record-handles-unmapped",
+    "route53-latency-changes-over-time",
+    "route53-geolocation-use-cases",
+    "route53-choose-weighted-routing-proportions",
+    "route53-ip-based-routing-use-cases",
+    "route53-choose-latency-routing-best-latency-region"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-data-residency",
+    "ee-users-around-the-world",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": "route53-q004",
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Geolocation routing: a Europe record that points to the eu-west-1 ALB and a Default record that points to the us-east-1 ALB."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-bp-latency-for-performance-geo-for-predictability",
+       "route53-choose-ip-based-routing-known-client-ips",
+       "route53-faq-geo-vs-latency-geography-not-latency",
+       "route53-faq-lbr-for-latency-geo-for-compliance",
+       "route53-geolocation-recommend-one-default-record",
+       "route53-geolocation-use-cases",
+       "route53-ip-based-routing-uses-your-ip-to-endpoint-mappings",
+       "route53-weighted-routing-share-of-total-weight"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q016",
+   "section": "2-deep.md#route-53-leaves-unhealthy-records-out-of-answers-until-every-record-is-unhealthy",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K6"
+   ],
+   "topics": [
+    "resilience"
+   ],
+   "services": [
+    "route53",
+    "ec2-auto-scaling",
+    "elb",
+    "ec2"
+   ],
+   "concept": "route53-vs-elb-vs-auto-scaling-health",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a web application on Amazon EC2 instances in an Auto Scaling group behind an Application Load Balancer in us-east-1. A copy of the application runs the same way in us-west-2. A failed instance must be replaced automatically. When the whole application in us-east-1 fails, users must be sent to us-west-2. Which solution will provide a highly available design with the LEAST operational overhead?",
+   "keywords": [
+    "A failed instance must be replaced automatically",
+    "When the whole application in us-east-1 fails",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a Route 53 health check for each instance, so that Route 53 replaces a failed instance and sends users to us-west-2 when every check fails.",
+     "correct": false,
+     "why": "A Route 53 health check changes DNS answers: [Route 53 routes traffic away from the associated record](../facts/route53.md#route53-dns-failover-routes-traffic-away-from-unhealthy-record), but nothing in Route 53 replaces an instance.",
+     "concept": "route53-health-check-per-instance",
+     "trap": "route53-trap-health-check-replaces-instance",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Turn on ELB health checks for both Auto Scaling groups, so that the us-east-1 load balancer sends users to us-west-2 when all of its targets fail.",
+     "correct": false,
+     "why": "A load balancer acts on its own targets: [it stops routing traffic to that target](../facts/elb.md#elb-unhealthy-target-stop-resume), and the DNS answer that sends users to us-east-1 stays the same.",
+     "concept": "load-balancer-cross-region",
+     "trap": null,
+     "misconception": "believes that a load balancer sends users to another Region when all of its targets fail",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Turn on ELB health checks for both Auto Scaling groups, and run a scheduled script that points the record to us-west-2 when the us-east-1 load balancer fails.",
+     "correct": false,
+     "why": "It works, but the team writes, runs and tests the script, and failover records with Evaluate Target Health switch without any code.",
+     "concept": "script-switches-record",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Turn on ELB health checks for both Auto Scaling groups, and create failover alias records for the two load balancers with Evaluate Target Health on the primary.",
+     "correct": true,
+     "why": "With ELB health checks, [Amazon EC2 Auto Scaling replaces the unhealthy instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace), and the failover records answer with us-west-2 when the primary load balancer is unhealthy.",
+     "concept": "elb-checks-plus-failover-alias",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Each health check changes a different thing. With ELB health checks on the group, [Amazon EC2 Auto Scaling replaces the unhealthy instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-elb-checks-reroute-and-replace). For the Region, DNS failover for an ELB endpoint uses an alias record with the [“Evaluate Target Health” parameter to true](../facts/route53.md#route53-faq-elb-failover-alias-evaluate-target-health), so Route 53 can [route traffic away from unhealthy resources](../facts/route53.md#route53-evaluate-target-health-benefit-for-elb-beanstalk).",
+   "takeaway": "Auto Scaling replaces instances, a load balancer avoids failed targets, and Route 53 moves users between Regions.",
+   "twin": "If the stem said \"both Regions must serve users at the same time\" instead: latency or weighted alias records with Evaluate Target Health, because Route 53 then answers [a DNS query using any healthy record](../facts/route53.md#route53-active-active-failover-definition).",
+   "say": null,
+   "facts": [
+    "ec2-auto-scaling-elb-checks-reroute-and-replace",
+    "route53-evaluate-target-health-benefit-for-elb-beanstalk",
+    "route53-faq-elb-failover-alias-evaluate-target-health",
+    "route53-dns-failover-routes-traffic-away-from-unhealthy-record",
+    "elb-unhealthy-target-stop-resume",
+    "route53-active-active-failover-definition"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-highly-available",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "verified",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "edited-pass",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r1",
+      "stem_only": "Use ELB health checks on the Auto Scaling groups so that Auto Scaling replaces instances the load balancer reports as unhealthy. For Regional failover, create Route 53 failover alias records: primary alias to the us-east-1 ALB with Evaluate Target Health set to Yes, secondary alias to the us-west-2 ALB. No scripts are needed."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r1",
+      "citations": [
+       "docs/autoscaling/ec2/userguide/health-checks-overview#To run this health check type, you must ",
+       "docs/elasticloadbalancing/latest/application/load-balancer-target-groups#Route 53 directs traffic to the primary ",
+       "docs/elasticloadbalancing/latest/userguide/disaster-recovery-resiliency#Distributes incoming traffic across mult",
+       "route53-asg-unhealthy-instance-replaced",
+       "route53-dns-failover-routes-traffic-away-from-unhealthy-record",
+       "route53-elb-alias-evaluate-target-health-yes-routes-by-health",
+       "route53-faq-elb-failover-alias-evaluate-target-health",
+       "route53-faq-elb-health-checks-managed-automatically",
+       "route53-faq-failover-step-disables-records",
+       "route53-faq-health-checks-are-automated-requests"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r1",
+      "case_option": "c"
+     }
+    ],
+    "note": null,
+    "edits": 1,
+    "checked": "2026-10-14"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-13-r0",
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q018",
+   "section": "2-deep.md#a-private-hosted-zone-answers-only-through-the-vpc-resolver-of-its-associated-vpcs",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "vpc",
+    "ec2"
+   ],
+   "concept": "split-view-missing-record",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company has a Route 53 public hosted zone for example.com with records for www.example.com and api.example.com. The company creates a private hosted zone named example.com, associates it with its production VPC, and adds a record for db.example.com. Currently, instances in the VPC resolve db.example.com but not api.example.com, so calls to the public API fail. The name db.example.com must stay private and must not change. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "private hosted zone named example.com",
+    "resolve db.example.com but not api.example.com",
+    "must stay private and must not change",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create api.example.com and the other public names that the instances use in the private hosted zone, with the same values as the public records.",
+     "correct": true,
+     "why": "Route 53 VPC Resolver answers [based on the most specific match](../facts/route53.md#route53-overlap-public-private-most-specific-match), and the private zone then holds api.example.com while db.example.com stays private.",
+     "concept": "copy-public-records-to-private-zone",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Set the VPC attributes enableDnsSupport and enableDnsHostnames to true, so that names missing from the private hosted zone are answered from the public hosted zone.",
+     "correct": false,
+     "why": "A matching private zone with no record for the name means [it returns NXDOMAIN (non-existent domain) to the client](../facts/route53.md#route53-matching-phz-no-record-returns-nxdomain), whatever the VPC attributes are.",
+     "concept": "vpc-dns-attributes-fallback",
+     "trap": "route53-trap-private-zone-falls-back-to-public",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Create an outbound Resolver endpoint and a forwarding rule for example.com that sends the DNS queries of the VPC to a public DNS resolver on the internet.",
+     "correct": false,
+     "why": "[The VPC Resolver rule takes precedence](../facts/route53.md#route53-resolver-rule-beats-phz-same-name) over the private zone [for the same domain name](../facts/route53.md#route53-resolver-rule-beats-phz-same-name), so db.example.com would go to public DNS and stop resolving.",
+     "concept": "forwarding-rule-to-public-dns",
+     "trap": null,
+     "misconception": "believes that a forwarding rule fills in the names that the private hosted zone lacks",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Run DNS forwarder software on EC2 instances that answers db.example.com from a local zone file and forwards all other names to public DNS resolvers.",
+     "correct": false,
+     "why": "It works, but the team then runs, patches and scales the forwarder instances and keeps a second copy of db.example.com.",
+     "concept": "self-managed-dns-forwarder",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "A private zone matches when it is a [parent of the domain name in the request](../facts/route53.md#route53-phz-parent-zone-counts-as-match), so example.com matches api.example.com. With no record for that name, Route 53 VPC Resolver [doesn't forward the request to a public DNS](../facts/route53.md#route53-matching-phz-no-record-returns-nxdomain) resolver. In split-view DNS, each zone needs its own records.",
+   "takeaway": "A private hosted zone that matches a name hides the public zone of that name, so copy the public records you need.",
+   "twin": "If the stem said \"the private hosted zone is named db.example.com\" instead: change nothing, because that zone is not a [parent of the domain name in the request](../facts/route53.md#route53-phz-parent-zone-counts-as-match) api.example.com.",
+   "say": null,
+   "facts": [
+    "route53-phz-parent-zone-counts-as-match",
+    "route53-matching-phz-no-record-returns-nxdomain",
+    "route53-overlap-public-private-most-specific-match",
+    "route53-resolver-rule-beats-phz-same-name"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-currently"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Split-view DNS: for a VPC associated with a private hosted zone, Route 53 Resolver answers the whole example.com namespace from the private zone and does not fall back to the public zone. Copy the public records that the VPC needs (api.example.com) into the private hosted zone."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "docs/Route53/latest/DeveloperGuide/hosted-zone-private-considerations#To use private hosted zones, you must se",
+       "route53-custom-dns-servers-forward-to-vpc-plus-two",
+       "route53-hybrid-resolver-endpoints-no-extra-dns-servers",
+       "route53-matching-phz-no-record-returns-nxdomain",
+       "route53-overlap-public-private-most-specific-match",
+       "route53-resolver-rule-beats-phz-same-name",
+       "route53-resolver-rule-most-specific-match-wins",
+       "route53-split-view-dns-definition"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "a"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q020",
+   "section": "2-deep.md#route-53-leaves-unhealthy-records-out-of-answers-until-every-record-is-unhealthy",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.S2"
+   ],
+   "topics": [
+    "resilience",
+    "performance"
+   ],
+   "services": [
+    "route53",
+    "elb"
+   ],
+   "concept": "active-active-latency-evaluate-target-health",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST operationally efficient",
+   "stem": "An application runs in us-east-1 and ap-southeast-1 behind an Application Load Balancer in each Region. Both Regions must serve users at all times. Each user must reach the Region with the lowest latency, and users must leave a Region whose application fails. The company wants a highly available cross-Region design that the team can run with little effort. Which Route 53 configuration is the MOST operationally efficient?",
+   "keywords": [
+    "Both Regions must serve users at all times",
+    "the Region with the lowest latency",
+    "users must leave a Region whose application fails",
+    "MOST operationally efficient"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Failover alias records for the two load balancers, with us-east-1 as the primary, ap-southeast-1 as the secondary, and Evaluate Target Health turned on.",
+     "correct": false,
+     "why": "Route 53 [includes only the healthy primary resources](../facts/route53.md#route53-active-passive-only-healthy-primary-then-secondary), so ap-southeast-1 serves no users as long as us-east-1 is healthy.",
+     "concept": "failover-active-passive",
+     "trap": null,
+     "misconception": "believes that failover records keep both Regions serving users",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Latency A records that hold the current IP addresses of each load balancer, with no health checks, because Route 53 skips a Region that stops answering.",
+     "correct": false,
+     "why": "When a record has no health check, Route 53 [always considers it healthy](../facts/route53.md#route53-record-without-health-check-always-healthy), and the copied addresses go stale when the load balancer scales.",
+     "concept": "latency-records-without-health",
+     "trap": "route53-trap-record-without-health-check-skipped",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Latency alias records for the two load balancers, one record for each Region, with Evaluate Target Health set to Yes on both records.",
+     "correct": true,
+     "why": "Each latency record serves its Region, and Evaluate Target Health takes a Region out of the answers when its load balancer has no healthy targets.",
+     "concept": "latency-alias-evaluate-target-health",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Latency alias records for the two load balancers, and a Route 53 HTTP health check of each load balancer that is associated with its record.",
+     "correct": false,
+     "why": "It works, but for these resources AWS says to [set Evaluate Target Health to Yes](../facts/route53.md#route53-alias-to-aws-use-evaluate-target-health-not-health-check) instead of creating health checks to manage.",
+     "concept": "latency-alias-with-own-health-checks",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "Both Regions active is active-active failover: [all the records that have the same name](../facts/route53.md#route53-active-active-failover-definition) stay active unless they are unhealthy. Latency records pick [the Region that provides the best latency](../facts/route53.md#route53-choose-latency-routing-best-latency-region), and [setting Evaluate target health to Yes](../facts/route53.md#route53-evaluate-target-health-benefit-for-elb-beanstalk) lets Route 53 [route traffic away from unhealthy resources](../facts/route53.md#route53-evaluate-target-health-benefit-for-elb-beanstalk) without extra health checks.",
+   "takeaway": "Active-active across Regions with the lowest latency: latency alias records with Evaluate Target Health on every record.",
+   "twin": "If the stem said \"ap-southeast-1 must serve users only after us-east-1 fails\" instead: failover alias records, because Route 53 then [begins to include only the healthy secondary resources](../facts/route53.md#route53-active-passive-only-healthy-primary-then-secondary) when the primary fails.",
+   "say": null,
+   "facts": [
+    "route53-active-active-failover-definition",
+    "route53-choose-latency-routing-best-latency-region",
+    "route53-evaluate-target-health-benefit-for-elb-beanstalk",
+    "route53-active-passive-only-healthy-primary-then-secondary",
+    "route53-record-without-health-check-always-healthy",
+    "route53-alias-to-aws-use-evaluate-target-health-not-health-check"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-most-operationally-efficient",
+    "ee-cross-region",
+    "ee-highly-available"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Active-active latency-based alias records for the two ALBs with Evaluate Target Health = Yes, so users go to the lowest-latency healthy Region with no extra health checks to manage."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-alias-follows-resource-ip-changes",
+       "route53-alias-to-aws-use-evaluate-target-health-not-health-check",
+       "route53-complex-config-omitted-health-check-assumed-healthy",
+       "route53-elb-alias-evaluate-target-health-yes-routes-by-health",
+       "route53-failover-active-active-any-policy-but-failover",
+       "route53-failover-routing-primary-or-secondary",
+       "route53-faq-elb-health-checks-managed-automatically",
+       "route53-health-check-alias-record-not-recommended",
+       "route53-latency-routing-lowest-latency-region",
+       "route53-record-without-health-check-always-healthy"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "d"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q017",
+   "section": "2-deep.md#a-resolver-follows-the-delegation-to-the-name-servers-of-your-hosted-zone",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 2,
+   "task": "2.2",
+   "bullets": [
+    "2.2.K1"
+   ],
+   "topics": [
+    "networking",
+    "resilience"
+   ],
+   "services": [
+    "route53",
+    "ec2"
+   ],
+   "concept": "route53-global-dns-service",
+   "difficulty": 1,
+   "type": "single",
+   "select": 1,
+   "qualifier": "none",
+   "stem": "A company runs its own DNS servers for its public domain on two Amazon EC2 instances in one Availability Zone of the us-east-1 Region. The DNS servers answer queries from customers on the internet. The company wants a fully managed DNS service that keeps answering queries if an Availability Zone or a whole AWS Region fails. What should a solutions architect recommend?",
+   "keywords": [
+    "fully managed DNS service",
+    "if an Availability Zone or a whole AWS Region fails",
+    "customers on the internet"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Move the DNS servers to EC2 instances in two Availability Zones of us-east-1, behind a Network Load Balancer.",
+     "correct": false,
+     "why": "Two Availability Zones survive a zone failure, but every server still sits in us-east-1, and the company still runs the DNS software itself.",
+     "concept": "dns-on-ec2-multi-az",
+     "trap": "how-the-exam-asks-trap-multi-az-covers-region",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Create a Route 53 private hosted zone for the domain, and associate it with VPCs in two AWS Regions.",
+     "correct": false,
+     "why": "A private hosted zone will [only return these records when queried from within](../facts/route53.md#route53-faq-private-zone-answers-only-from-associated-vpcs) the associated VPCs, so internet customers get no answers.",
+     "concept": "private-hosted-zone",
+     "trap": "route53-trap-private-zone-answers-internet",
+     "misconception": null,
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "c",
+     "text": "Create inbound Resolver endpoints in two Availability Zones of us-east-1, and send the internet DNS queries to the endpoint addresses.",
+     "correct": false,
+     "why": "[VPC Resolver is a Regional service](../facts/route53.md#route53-vpc-resolver-regional) that answers queries that reach a VPC; it does not host a public domain for internet users.",
+     "concept": "resolver-endpoints",
+     "trap": null,
+     "misconception": "Resolver endpoints serve a public domain to users on the internet.",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Create a Route 53 public hosted zone for the domain, and update the domain's name servers at the registrar.",
+     "correct": true,
+     "why": "Route 53 offers [highly available and scalable Domain Name System (DNS)](../facts/route53.md#route53-faq-what-is-route53-dns-domains-health) as a managed service, and its public DNS is not tied to one Region.",
+     "concept": "public-hosted-zone",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Public and private DNS in Route 53 are [all global services](../facts/route53.md#route53-faq-route53-still-global-service), answered by a [global anycast network of DNS servers](../facts/route53.md#route53-faq-global-anycast-low-latency). The loss of one zone or one Region does not stop the answers. The registrar has to use the zone's name servers, or Route 53 [will not be authoritative for queries](../facts/route53.md#route53-faq-registrar-must-use-hosted-zone-name-servers).",
+   "takeaway": "Public DNS that survives a zone or Region failure: a Route 53 public hosted zone.",
+   "twin": "If the stem said \"names that only instances in its VPCs resolve\" instead: a private hosted zone, which will [only return these records when queried from within](../facts/route53.md#route53-faq-private-zone-answers-only-from-associated-vpcs) associated VPCs.",
+   "say": "Route 53 is a global managed DNS service, so I'd move the public zone there and update the name servers.",
+   "facts": [
+    "route53-faq-private-zone-answers-only-from-associated-vpcs",
+    "route53-vpc-resolver-regional",
+    "route53-faq-what-is-route53-dns-domains-health",
+    "route53-faq-route53-still-global-service",
+    "route53-faq-global-anycast-low-latency",
+    "route53-faq-registrar-must-use-hosted-zone-name-servers"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-fully-managed"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Move the public domain to a Route 53 public hosted zone (globally distributed authoritative DNS with a 100 percent availability SLA) and change the name servers at the registrar to the hosted zone's name servers."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-dns-data-plane-pops",
+       "route53-faq-external-registrar-must-update-name-servers",
+       "route53-faq-private-dns-no-internet-exposure",
+       "route53-faq-private-zone-answers-only-from-associated-vpcs",
+       "route53-faq-route53-still-global-service",
+       "route53-hybrid-own-forwarders-on-ec2-alternative",
+       "route53-public-hosted-zone-two-ways",
+       "route53-resilience-primarily-global-some-features-regional",
+       "route53-resolver-inbound-endpoint-no-behavior-change",
+       "route53-resolver-inbound-ips-not-public-need-private-link"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "b"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-1"
+   ]
+  },
+  {
+   "id": "route53-q002",
+   "section": "2-deep.md#an-alias-record-follows-the-changing-addresses-of-the-aws-resource-it-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 4,
+   "task": "4.4",
+   "bullets": [
+    "4.4.K7"
+   ],
+   "topics": [
+    "networking",
+    "cost"
+   ],
+   "services": [
+    "route53",
+    "elb",
+    "lambda"
+   ],
+   "concept": "alias-follows-load-balancer-addresses",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "MOST cost-effective",
+   "stem": "A company runs a web application on Amazon EC2 instances behind an Application Load Balancer. In the Route 53 public hosted zone, app.example.com is an A record that holds the IP addresses of the load balancer. An engineer copied the addresses when the load balancer was created. The name receives millions of DNS queries each month. Users now report intermittent connection errors, mostly after traffic peaks. The company wants to stop the errors. Which solution is the MOST cost-effective way to meet these requirements?",
+   "keywords": [
+    "holds the IP addresses of the load balancer",
+    "millions of DNS queries each month",
+    "intermittent connection errors, mostly after traffic peaks",
+    "MOST cost-effective"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Replace the A record with a CNAME record for app.example.com whose value is the DNS name that AWS assigned to the Application Load Balancer.",
+     "correct": false,
+     "why": "It works, because the name follows the load balancer, but Route 53 [charges for CNAME queries](../facts/route53.md#route53-alias-queries-free-cname-charged), so it costs more than an alias record.",
+     "concept": "cname-to-load-balancer-subdomain",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "b",
+     "text": "Create a scheduled AWS Lambda function that reads the current load balancer addresses every minute and writes them into the A record for app.example.com.",
+     "correct": false,
+     "why": "The function adds cost, and resolvers keep the old addresses [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control) after each rewrite.",
+     "concept": "script-rewrites-a-record",
+     "trap": null,
+     "misconception": "believes that rewriting the record every minute keeps every user on the current addresses",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Associate Elastic IP addresses with the Application Load Balancer, and replace the values of the A record for app.example.com with those Elastic IP addresses.",
+     "correct": false,
+     "why": "Elastic IP addresses do not attach to an Application Load Balancer: in the feature table, [IP address - Static, Elastic](../facts/elb.md#elb-compare-static-elastic-ip-nlb-only) belongs to the [Network Load Balancer](../facts/elb.md#elb-compare-static-elastic-ip-nlb-only).",
+     "concept": "elastic-ip-on-alb",
+     "trap": "elb-trap-alb-static-ip",
+     "misconception": null,
+     "distractor_type": "impossible-feature"
+    },
+    {
+     "id": "d",
+     "text": "Replace the A record with an alias record of type A for app.example.com that points to the Application Load Balancer.",
+     "correct": true,
+     "why": "Route 53 follows the address changes of the load balancer for an alias record, and Amazon Route 53 [doesn't charge for alias queries to ELB](../facts/route53.md#route53-alias-elb-no-query-charge) load balancers.",
+     "concept": "alias-record-for-load-balancer",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "Elastic Load Balancing scales the load balancer and updates its DNS entry with a [time-to-live (TTL) of 60 seconds](../facts/route53.md#route53-elb-dns-entry-updated-ttl-60), so copied addresses go stale after peaks. With an alias record, [Route 53 detects changes in the resource on its own](../facts/route53.md#route53-alias-follows-resource-ip-changes) and answers with the current addresses. With millions of queries a month, the query charge is what separates a CNAME record from an alias record.",
+   "takeaway": "Point a name at a load balancer with an alias record: Route 53 follows its changing addresses at no query charge.",
+   "twin": "If the stem said \"app.example.com must point to a host name of a partner outside AWS\" instead: a CNAME record, because an alias record [can only redirect queries to selected AWS resources](../facts/route53.md#route53-alias-targets-only-selected-aws-resources).",
+   "say": null,
+   "facts": [
+    "route53-elb-dns-entry-updated-ttl-60",
+    "route53-alias-follows-resource-ip-changes",
+    "route53-alias-queries-free-cname-charged",
+    "route53-faq-resolver-caches-by-ttl-outside-control",
+    "elb-compare-static-elastic-ip-nlb-only",
+    "route53-alias-elb-no-query-charge",
+    "route53-alias-targets-only-selected-aws-resources"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-intermittent",
+    "ee-most-cost-effective"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "rejected",
+   "rev": 2,
+   "keyRev": 1,
+   "verification": {
+    "status": "rejected",
+    "round": 1,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r1",
+      "stem_only": "The ALB's IP addresses change as it scales, so a hard-coded A record goes stale. Replace it with a Route 53 alias record (type A) that targets the ALB: Route 53 follows the current addresses, and queries to alias records that point to an ELB load balancer are not charged, which beats a CNAME (charged per query) for millions of queries. An ALB cannot take Elastic IP addresses."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r1",
+      "citations": [
+       "docs/elasticloadbalancing/latest/application/application-load-balancers#While these IPs are visible in your acco",
+       "docs/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works#As traffic to your application changes o",
+       "docs/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works#You can optionally associate one Elastic",
+       "route53-alias-follows-resource-ip-changes",
+       "route53-alias-queries-free-cname-charged",
+       "route53-alias-target-elb-answer",
+       "route53-best-practice-alias-cheaper-faster-than-cname",
+       "route53-cname-to-route53-record-charged-two-queries",
+       "route53-elb-dns-entry-updated-ttl-60"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "d"
+      ],
+      "agree": true,
+      "flag": "Option B (a CNAME to the load balancer DNS name) also stops the intermittent errors because it follows the ALB's changing addresses; the stem separates it from D only through the MOST cost-effective cue and the 'millions of DNS queries' hint, so the key depends on alias queries to AWS resources being free while CNAME queries are billed.",
+      "solver": "solve-13-ambiguity-r1",
+      "case_option": "a"
+     }
+    ],
+    "note": "ambiguity flag",
+    "edits": 1,
+    "checked": "2026-10-14"
+   },
+   "volatile": false,
+   "authors": [
+    "adjq-13-r0",
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q010",
+   "section": "2-deep.md#weighted-records-give-each-resource-its-share-of-the-total-weight",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking",
+    "resilience"
+   ],
+   "services": [
+    "route53",
+    "elb",
+    "ec2"
+   ],
+   "concept": "multivalue-vs-load-balancer",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a TCP service on six Amazon EC2 instances across two Availability Zones in one Region. Clients connect to service.example.com, which is in a Route 53 public hosted zone. New connections must be spread evenly across the healthy instances. When an instance fails, it must stop receiving new connections at once, also from clients that cached a DNS answer earlier. Which solution will provide a highly available design with the LEAST operational overhead?",
+   "keywords": [
+    "spread evenly across the healthy instances",
+    "also from clients that cached a DNS answer earlier",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a multivalue answer record for each instance under service.example.com, and associate a Route 53 health check with each of the six records.",
+     "correct": false,
+     "why": "Multivalue answer routing [returns only values for healthy resources](../facts/route53.md#route53-multivalue-purpose-not-lb-substitute), but [this isn't a substitute for a load balancer](../facts/route53.md#route53-multivalue-purpose-not-lb-substitute), and resolvers cache answers [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control).",
+     "concept": "multivalue-answer-records",
+     "trap": "route53-trap-multivalue-is-load-balancer",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Run open-source proxy software on two EC2 instances in different Availability Zones to spread connections and check the six instances, with a record for each proxy.",
+     "correct": false,
+     "why": "It works, but the proxy instances are software that the team patches, scales and monitors, which a managed load balancer avoids.",
+     "concept": "self-managed-proxy",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create a Network Load Balancer with the six instances as targets in both Availability Zones, and an alias record for service.example.com that points to it.",
+     "correct": true,
+     "why": "Clients reach the instances through the load balancer: when an instance fails, [it stops routing traffic to that target](../facts/elb.md#elb-unhealthy-target-stop-resume), whatever the clients cached.",
+     "concept": "nlb-with-alias-record",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Create one simple A record for service.example.com that lists the IP addresses of all six instances, so that each client picks one address at random.",
+     "correct": false,
+     "why": "Route 53 returns the values [to the recursive resolver in random order](../facts/route53.md#route53-simple-routing-multiple-values-random-order-no-health-check), and [they are not health checked](../facts/route53.md#route53-simple-routing-multiple-values-random-order-no-health-check), so clients keep picking failed instances.",
+     "concept": "simple-record-many-values",
+     "trap": null,
+     "misconception": "believes that Route 53 leaves failed addresses out of a simple record with several values",
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "A Network Load Balancer spreads TCP connections across healthy targets, and when a target fails, [it stops routing traffic to that target](../facts/elb.md#elb-unhealthy-target-stop-resume). Clients connect to the load balancer, so an answer that a resolver cached [according to their time to live (TTL)](../facts/route53.md#route53-faq-resolver-caches-by-ttl-outside-control) still leads to healthy instances.",
+   "takeaway": "Multivalue answer routing is not a load balancer; to take failed instances out at once, use Elastic Load Balancing.",
+   "twin": "If the stem said \"clients need several healthy addresses and the company wants no load balancer\" instead: multivalue answer records, because they return [up to eight healthy records](../facts/route53.md#route53-multivalue-up-to-eight-healthy).",
+   "say": null,
+   "facts": [
+    "elb-unhealthy-target-stop-resume",
+    "route53-faq-resolver-caches-by-ttl-outside-control",
+    "route53-multivalue-purpose-not-lb-substitute",
+    "route53-simple-routing-multiple-values-random-order-no-health-check",
+    "route53-multivalue-up-to-eight-healthy"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-highly-available",
+    "ee-least-operational-overhead"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Put a Network Load Balancer (TCP) in front of the six instances across both AZs and point an alias record to it; the NLB health checks stop new connections to a failed instance at once regardless of client DNS caching."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "elb-choose-nlb-for-layer4-extreme-performance-static-ip",
+       "elb-nlb-flow-hash-target-selection",
+       "elb-scales-capacity-automatically",
+       "route53-elb-alias-load-balancer-types",
+       "route53-faq-resolver-caches-by-ttl-outside-control",
+       "route53-multivalue-purpose-not-lb-substitute",
+       "route53-simple-routing-multiple-values-random-order-no-health-check"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "c"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": null
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  },
+  {
+   "id": "route53-q022",
+   "section": "2-deep.md#a-private-hosted-zone-answers-only-through-the-vpc-resolver-of-its-associated-vpcs",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 3,
+   "task": "3.4",
+   "bullets": [
+    "3.4.S1"
+   ],
+   "topics": [
+    "networking"
+   ],
+   "services": [
+    "route53",
+    "vpc"
+   ],
+   "concept": "private-zone-cross-account-association",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses a shared-services account to centrally manage a private hosted zone named internal.example.com. One VPC in a separate workload account must resolve the records of that zone, and the records must stay private. In the Route 53 console of the shared-services account, an engineer tries to associate the zone with the workload VPC but cannot find the VPC. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": [
+    "One VPC in a separate workload account",
+    "the records must stay private",
+    "cannot find the VPC",
+    "LEAST operational overhead"
+   ],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create a VPC peering connection between a VPC in the shared-services account and the workload VPC, so that the workload VPC can query the private hosted zone.",
+     "correct": false,
+     "why": "A private hosted zone will [only return these records when queried from within](../facts/route53.md#route53-faq-private-zone-answers-only-from-associated-vpcs) associated VPCs, and peering associates nothing.",
+     "concept": "peering-for-private-zone",
+     "trap": null,
+     "misconception": "believes that a network path to a VPC of the zone's account lets another VPC use the private hosted zone",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Authorize the association from the shared-services account with the AWS CLI, associate the VPC with the zone from the workload account, and then delete the authorization.",
+     "correct": true,
+     "why": "The two steps connect the VPC directly to the zone, and deleting the authorization later [does not affect the association](../facts/route53.md#route53-cross-account-delete-authorization-recommended).",
+     "concept": "cross-account-authorize-and-associate",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Create a copy of the private hosted zone in the workload account, associate the copy with the workload VPC, and sync the records with a scheduled script.",
+     "correct": false,
+     "why": "It works, but a second zone and a sync script are more to run than one association, and the two copies can drift apart.",
+     "concept": "copy-zone-per-account",
+     "trap": "how-the-exam-asks-trap-works-means-correct",
+     "misconception": null,
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Replace the private hosted zone with a public hosted zone that has the same records, so that the workload VPC can resolve the names without an association.",
+     "correct": false,
+     "why": "A public hosted zone answers queries from anyone on the internet, which breaks the requirement that the records stay private.",
+     "concept": "public-zone-instead",
+     "trap": null,
+     "misconception": "believes that a public hosted zone is a good way to share internal names between accounts",
+     "distractor_type": "different-problem"
+    }
+   ],
+   "explanation": "For a VPC of another account, [you first must authorize the association](../facts/route53.md#route53-cross-account-association-needs-authorization-no-console), and [you can't use the AWS console](../facts/route53.md#route53-cross-account-association-needs-authorization-no-console) for it, which is why the VPC is missing. [Using the account that created the hosted zone](../facts/route53.md#route53-cross-account-auth-by-hosted-zone-account), you authorize. [Using the account that created the VPC, associate](../facts/route53.md#route53-cross-account-auth-by-hosted-zone-account) the VPC with the zone.",
+   "takeaway": "A private hosted zone and a VPC in different accounts need an authorization, then an association, through the CLI or API.",
+   "twin": "If the stem said \"the workload VPC is in the shared-services account\" instead: associate the VPC in the console, because [you first must authorize the association](../facts/route53.md#route53-cross-account-association-needs-authorization-no-console) only for a VPC of another account.",
+   "say": null,
+   "facts": [
+    "route53-cross-account-association-needs-authorization-no-console",
+    "route53-cross-account-auth-by-hosted-zone-account",
+    "route53-faq-private-zone-answers-only-from-associated-vpcs",
+    "route53-cross-account-delete-authorization-recommended"
+   ],
+   "sources": [],
+   "exam_english": [
+    "ee-least-operational-overhead",
+    "ee-centrally-manage"
+   ],
+   "twin_of": null,
+   "chapter": "route53",
+   "status": "ready",
+   "rev": 1,
+   "keyRev": 1,
+   "verification": {
+    "status": "pass",
+    "round": 0,
+    "solvers": [
+     {
+      "lens": "closed",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-closed-r0",
+      "stem_only": "Cross-account private hosted zone association: in the zone-owner account run create-vpc-association-authorization (CLI/SDK/API, not the console), then from the workload account run associate-vpc-with-hosted-zone, then delete the authorization."
+     },
+     {
+      "lens": "open",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-open-r0",
+      "citations": [
+       "route53-cross-account-association-needs-authorization-no-console",
+       "route53-cross-account-auth-by-hosted-zone-account",
+       "route53-cross-account-delete-authorization-recommended",
+       "route53-faq-phz-cross-account-vpcs",
+       "route53-faq-private-dns-no-internet-exposure",
+       "route53-faq-private-zone-answers-only-from-associated-vpcs",
+       "route53-phz-answers-only-from-associated-vpc-or-inbound-endpoint",
+       "route53-phz-no-transitive-vpn-access",
+       "route53-public-hosted-zone-two-ways"
+      ],
+      "citations_ok": true
+     },
+     {
+      "lens": "ambiguity",
+      "answer": [
+       "b"
+      ],
+      "agree": true,
+      "flag": null,
+      "solver": "solve-13-ambiguity-r0",
+      "case_option": "a"
+     }
+    ],
+    "checked": "2026-10-14",
+    "note": "ships in place of route53-q007: difficulty mix (exam-05)"
+   },
+   "volatile": false,
+   "authors": [
+    "questions-13-2"
+   ]
+  }
+ ]
+}

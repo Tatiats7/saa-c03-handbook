@@ -1,0 +1,248 @@
+{
+ "lens": "claims",
+ "chapter": "13",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "13-route53/2-deep.md",
+   "section": "failover-records-answer-with-the-secondary-only-while-the-primary-is-unhealthy-5-min (Why a policy?)",
+   "quote": "The switch follows the health of the primary, so the primary record needs the health check.",
+   "type": "technical: recommendation contradicts the chapter's own best practice; no fact link",
+   "severity": "blocking",
+   "evidence": "Fact route53-alias-to-aws-use-evaluate-target-health-not-health-check (dns-failover-types): \"If you're routing traffic to any AWS resources that you can create alias records for, don't create health checks for those resources. When you create the alias records, you set Evaluate Target Health to Yes instead.\" The very next Exam trap and step 2 of the same subsection teach Evaluate Target Health for a load balancer primary, and 5-quiz Question 3 (route53-q003) keys Evaluate Target Health and calls a separate health check the wrong answer. The sentence tells the reader the opposite. Fix: \"so the primary record needs a health signal: a health check, or Evaluate Target Health on an alias record\".",
+   "status": "fixed",
+   "resolution": "fix-13: the wrong 'needs the health check' clause is gone. The Why paragraph now ends 'So the primary needs a health signal (see the Exam trap).', and the Exam trap below it says 'For an alias record to an AWS resource, [set Evaluate Target Health to Yes](route53-alias-to-aws-use-evaluate-target-health-not-health-check) instead' and keeps a record and a health check for an EC2 instance."
+  },
+  {
+   "id": "claims-02",
+   "file": "data/13-route53/questions.json (route53-q013 twin; renders into 13-route53/5-quiz.md Question 12)",
+   "section": "route53-q013 Twin",
+   "quote": "If the stem said \"an operator must approve each failover\" instead: change weights by hand, and accept that [this is a control plane operation](../facts/route53.md#route53-dr-weight-change-is-control-plane).",
+   "type": "technical: twin answer contradicts AWS guidance and the chapter's data-plane rule (still open from the pre-edit review)",
+   "severity": "blocking",
+   "evidence": "The cited fact route53-dr-weight-change-is-control-plane itself continues: \"However, be aware this is a control plane operation and therefore not as resilient as the data plane approach using Amazon Application Recovery Controller (ARC).\" source_id docs/Route53/latest/DeveloperGuide/best-practices-dns (line 9): \"For scenarios such as failover during disaster recovery, we recommend that you use features like Route 53 health checks and ARC routing control that rely on data plane functionality to update DNS.\" The twin keeps the stem's 'even if the Route 53 control plane is impaired' and 'MOST resilient', and the same question's Why not calls the weight change less resilient; 2-deep teaches 'use only data plane operations'. Fix: twin answer = failover records whose primary health is an ARC routing control that the operator turns off (data plane), or drop the twin line.",
+   "status": "fixed",
+   "resolution": "fix-13: q013 twin now reads: 'If the stem said \"an operator must approve each failover\" instead: keep the failover records and switch them with ARC routing control; AWS recommends [features like Route 53 health checks and ARC routing control that rely on data plane functionality](route53-bp-control-plane-prioritizes-consistency-not-availability).' The fact is added to q013.facts. The twin field is not shown to blind solvers; stem, options, key and explanation are byte-identical, so the question keeps its verification (precedent: chapters 07 and 17). q lint --ship clean."
+  },
+  {
+   "id": "claims-03",
+   "file": "13-route53/2-deep.md",
+   "section": "the-record-type-decides-what-kind-of-value-a-name-returns-4-min (step 4)",
+   "quote": "Each record has a **routing policy** and a time to live (TTL): how long resolvers can cache it. Records [must have a TTL](../facts/route53.md#route53-ttl-required-on-all-records).",
+   "type": "claims: link text right, sentence says more (alias exception dropped)",
+   "severity": "should",
+   "evidence": "Fact route53-alias-to-aws-resource-ttl-not-settable (used in 1-fast 'Who sets the TTL?' and card route53-c022: 'you can't set the time to live (TTL)' for an alias record to an AWS resource); fact route53-alias-to-record-in-zone-uses-target-ttl (task route53-t02 step 6: 'The alias has no TTL of its own'). The best-practices quote sits in a paragraph about non-alias records; stated flat, the reader learns that every record, alias included, carries a TTL that she sets. Fix: \"A non-alias record must have a TTL; an alias record takes the TTL of its target.\"",
+   "status": "fixed",
+   "resolution": "fix-13: step 4 now says 'A non-alias record [must have a TTL](route53-ttl-required-on-all-records). For an alias record to an AWS resource, [Route 53 uses the default TTL for the resource](route53-alias-to-aws-resource-ttl-not-settable).'"
+  },
+  {
+   "id": "claims-04",
+   "file": "13-route53/2-deep.md",
+   "section": "a-resolver-follows-the-delegation-to-the-name-servers-of-your-hosted-zone-4-min (Exam signal)",
+   "quote": "\"DNS that does not depend on one Region\" points to Route 53: public DNS and health checks are [all global services](../facts/route53.md#route53-faq-route53-still-global-service).",
+   "type": "technical: oversimplified; contradicted later in the same file",
+   "severity": "should",
+   "evidence": "Fact route53-control-plane-us-east-1: \"For Route 53 public and private DNS and health checks, the control plane is located in the us-east-1 AWS Region and the data planes are globally distributed.\" Fact route53-resilience-primarily-global-some-features-regional: \"Route 53 is primarily a global service, but the following features support AWS Regions:\". The last subsection of 2-deep teaches that record changes depend on us-east-1. Fix: \"DNS answers that do not depend on one Region\" (the data plane), and keep record changes out of the signal.",
+   "status": "fixed",
+   "resolution": "fix-13: Exam signal now reads '\"DNS answers that do not depend on one Region\" points to Route 53: its [data planes are globally distributed](route53-control-plane-us-east-1).' Record changes are no longer in the signal."
+  },
+  {
+   "id": "claims-05",
+   "file": "13-route53/1-fast.md",
+   "section": "signals-and-traps-3-min (Traps, route53-trap-ttl-instant-change) and check-2-min (Predict 1 answer)",
+   "quote": "Route 53 servers update [within 60 seconds](../facts/route53.md#route53-faq-propagation-within-60-seconds), but resolvers cache records",
+   "type": "claims: condition dropped from a fact",
+   "severity": "should",
+   "evidence": "Fact route53-faq-propagation-within-60-seconds: \"... within 60 seconds under normal conditions.\" Fact route53-changes-propagate-within-60-seconds (used in Check, Predict 1): \"Changes generally propagate to all Route 53 servers within 60 seconds.\" Both 1-fast sentences turn a design target into a guarantee; 2-deep keeps 'generally'. Fix: \"Route 53 servers generally update within 60 seconds\".",
+   "status": "fixed",
+   "resolution": "fix-13: trap truth now 'Route 53 servers update [within 60 seconds] under normal conditions'; Check, Predict 1 answer now 'Route 53 servers generally update [within 60 seconds]'."
+  },
+  {
+   "id": "claims-06",
+   "file": "13-route53/2-deep.md",
+   "section": "health-checkers-around-the-world-decide-whether-an-endpoint-is-healthy-4-min (steps 1 and 2, line 237)",
+   "quote": "by default every [30 seconds](../facts/route53.md#route53-hc-request-interval-default-30).2. **Judge one response.** An HTTP check",
+   "type": "technical: broken list (two steps fused on one line)",
+   "severity": "should",
+   "evidence": "Rule: STYLE numbered steps, one step per list item. The newline before '2.' is missing, so Markdown renders step 2 inside step 1 and the list restarts at 3 for the reader; the Stop-and-answer flow of the subsection reads as three steps. Fix: put '2. **Judge one response.** ...' on its own line.",
+   "status": "fixed",
+   "resolution": "fix-13: step 2 is on its own line; the list renders as four steps."
+  },
+  {
+   "id": "claims-07",
+   "file": "13-route53/2-deep.md",
+   "section": "numbers-that-decide-answers-3-min (A-list, weight row)",
+   "quote": "| [between 0 and 255](../facts/route53.md#route53-weighted-weight-range-0-255) | Weight of a record | Weight 0 stops traffic as long as a record with weight above 0 is healthy |",
+   "type": "claims: behavior claim in a cell without a fact link",
+   "severity": "should",
+   "evidence": "The cell states a 'stops / as long as' rule; the only link in the row grounds the range. The rule is fact route53-weighted-zero-weight-used-when-all-unhealthy: \"If all the records that have a weight greater than 0 are unhealthy, then Route 53 considers the zero-weighted records.\" and route53-weighted-routing-weight-zero-stops-traffic. Fix: link the cell, for example 'Route 53 [considers the zero-weighted records](../facts/route53.md#route53-weighted-zero-weight-used-when-all-unhealthy) only when every record above 0 is unhealthy'.",
+   "status": "fixed",
+   "resolution": "fix-13: the cell now reads 'Route 53 [considers the zero-weighted records](route53-weighted-zero-weight-used-when-all-unhealthy) only when all others are unhealthy'."
+  },
+  {
+   "id": "claims-08",
+   "file": "data/13-route53/questions.json (route53-q007; renders into 13-route53/5-quiz.md Question 11)",
+   "section": "route53-q007 Why not (latency record option)",
+   "quote": "Route 53 keeps policies apart: [you can't create non-latency records](../facts/route53.md#route53-latency-no-non-latency-record-same-name-type) with the name and type of latency records, so the two kinds cannot share a name.",
+   "type": "claims: link does not support the sentence (wrong direction; still open from the pre-edit review)",
+   "severity": "should",
+   "evidence": "The option adds a latency record to a name that already has geolocation records. The cited fact route53-latency-no-non-latency-record-same-name-type covers the reverse case (non-latency records beside latency records). The rule that applies is in the corpus: source_id docs/Route53/latest/DeveloperGuide/resource-record-sets-values-geo (line 81): \"You can't create non-geolocation records that have the same values for **Record name** and **Record type** as geolocation records.\" Fix: register that quote as a fact and link it, or rephrase to the geolocation rule.",
+   "status": "fixed",
+   "resolution": "fix-13: q007 option b why now reads 'To combine two policies for one name, AWS uses alias records to [build a decision tree](route53-complex-config-latency-alias-weighted-tree), which is more work than the Default record that geolocation routing already offers.' facts: route53-latency-no-non-latency-record-same-name-type replaced by route53-complex-config-latency-alias-weighted-tree. Why field only; stem, options and key unchanged. q007 also no longer ships (exam-05): it stays verified in the pool."
+  },
+  {
+   "id": "claims-09",
+   "file": "data/13-route53/tasks.json (route53-t03, steps 7 and 8; renders into 13-route53/3-do.md)",
+   "section": "route53-t03 steps 7-8",
+   "quote": "aws route53 test-dns-answer --hosted-zone-id $ZONE_ID --record-name www.saa-route53-t03.example --record-type A ... expect: NOERROR and [\"192.0.2.10\"]: an answer, with the address of the primary record.",
+   "type": "technical: task expectation not grounded in the saved docs",
+   "severity": "should",
+   "evidence": "The whole lesson of the task rests on TestDNSAnswer returning a health-aware answer. source_id docs/Route53/latest/APIReference/API_TestDNSAnswer says only: \"Gets the value that Amazon Route 53 returns in response to a DNS request for a specified record name and type.\" and \"This call only supports querying public hosted zones.\" A corpus search for test-dns-answer/TestDNSAnswer with health finds no page that says the call reflects health check status. The DNS behavior itself is grounded (route53-failover-both-unhealthy-returns-primary, route53-failover-secondary-health-check-optional), but the expected CLI output is not. Also not documented: that CreateHealthCheck accepts Type=CALCULATED with no ChildHealthChecks (API_HealthCheckConfig only says ChildHealthChecks is for CALCULATED checks). Fix: add 'if the output differs, ...' guidance or test with dig against an assigned name server, and label the expected output as unverified.",
+   "status": "fixed",
+   "resolution": "fix-13 (softened, commands unchanged so the CLI check report still matches): step 7 expect now starts 'From the documented failover rules:' and adds 'The docs do not say that this test command applies health checks; if it shows another answer, trust the explain text below.'; step 8 expect also starts 'From the documented failover rules'; step 4 expect adds 'The docs do not show a calculated health check without children; if Route 53 refuses it, answer the predict question of step 7 on paper and run the cleanup.'"
+  },
+  {
+   "id": "claims-10",
+   "file": "data/13-route53/tasks.json (route53-t03 verify)",
+   "section": "route53-t03 verify",
+   "quote": "aws route53 list-hosted-zones-by-name --dns-name saa-route53-t03.example --query \"HostedZones[?Name=='saa-route53-t03.example.'].Id\"",
+   "type": "technical: verify does not prove the cleanup removed everything the task created (still open from the pre-edit review)",
+   "severity": "should",
+   "evidence": "The task creates a hosted zone and a health check (step 4); the verify command checks only the zone. The health check check is buried in still_costs. Rule RULINGS hard rule 9: a verify step on every Try. A forgotten health check counts toward the 200 active health checks quota (fact route53-quota-health-checks-per-account) and can bill after the first 50 (route53-pricing-health-checks-first-50-aws-endpoints-free). Fix: make verify also run aws route53 list-health-checks --query \"HealthChecks[?CallerReference=='saa-route53-t03-hc-1'].Id\" (expect an empty list), or tag-filter both.",
+   "status": "fixed",
+   "resolution": "fix-13: a task has one verify command (T108), so the verify expect of route53-t03 now ends 'Then run the list-health-checks command under still costs: it must also return an empty list.' The health check check is now part of the verify step the reader follows."
+  },
+  {
+   "id": "claims-11",
+   "file": "13-route53/3-do.md, 13-route53/4-say.md, 13-route53/1-fast.md (Look first task region); data/13-route53/{tasks,speak,cards}.json",
+   "section": "generated files",
+   "quote": "# Amazon Route 53: do it\n\nNothing here yet.",
+   "type": "process: items never set to ready, so the reader files are empty",
+   "severity": "should",
+   "evidence": "All 3 tasks, 4 speak items and 32 cards have \"status\": \"candidate\". TOOLS-rules.md R (set-status): \"A reviewer sets cards, speak items and tasks to `ready` in the stage of that kind, after the item lint is clean.\" sync 13 (written=0 unchanged=8) leaves 3-do.md and 4-say.md as 'Nothing here yet.' and the Look first region of 1-fast.md empty, so the chapter ships no hands-on tasks or spoken answers and the 'See 3-do.md' Try it links lead nowhere. The counts gate (T201, P201, C201) will block finalize. Fix: tasks/speak/cards set-status --status ready after item lint, then sync.",
+   "status": "fixed",
+   "resolution": "fix-13: item lints clean (tasks lint 13, speak lint 13, cards lint 13); set-status ready by fix-13 for route53-t01 to t03, route53-s01 to s04 and route53-c001 to c033. sync 13 wrote 3-do.md, 4-say.md, 5-quiz.md, sources.md and the Look first task region of 1-fast.md. gate counts: ok."
+  },
+  {
+   "id": "claims-12",
+   "file": "data/13-route53/speak.json (route53-s03)",
+   "section": "route53-s03 ten_second and sixty_second",
+   "quote": "Use failover records with a health check on the primary. ... In your case, point each record to the load balancer in that Region.",
+   "type": "technical: spoken answer gives the less recommended health signal for its own scenario",
+   "severity": "should",
+   "evidence": "The records point to load balancers, so fact route53-alias-to-aws-use-evaluate-target-health-not-health-check applies: \"don't create health checks for those resources. When you create the alias records, you set Evaluate Target Health to Yes instead.\" The follow-up of the same item says so, but the 10-second answer, the one she will say, does not. Fix: \"Use failover alias records; the primary takes its health from the load balancer (Evaluate Target Health) or from a health check.\"",
+   "status": "fixed",
+   "resolution": "fix-13: s03 ten_second now 'Use failover alias records. The primary gets its health from Evaluate Target Health or a health check. Users move when their cached answer expires.'; sixty_second line 1 says 'a health signal on the primary Region', and the In your case line says 'use alias records for the load balancers, with Evaluate Target Health'. speak lint clean."
+  },
+  {
+   "id": "claims-13",
+   "file": "13-route53/2-deep.md",
+   "section": "resolver-endpoints-carry-dns-queries-between-a-vpc-and-an-on-premises-network-4-min (step 1)",
+   "quote": "Endpoints use private addresses, so you need a [Direct Connect connection or a VPN connection](../facts/route53.md#route53-resolver-inbound-ips-not-public-need-private-link).",
+   "type": "claims: scope widened beyond the fact",
+   "severity": "note",
+   "evidence": "Fact route53-resolver-inbound-ips-not-public-need-private-link is scoped to inbound endpoints: \"Those IP addresses aren't public IP addresses, so for each inbound endpoint, you need to connect your VPC to your network using either an Direct Connect connection or a VPN connection.\" The sentence says 'Endpoints'. Fix: 'Inbound endpoints use private addresses ...' or keep the general idea without the absolute.",
+   "status": "fixed",
+   "resolution": "fix-13: step 1 now says 'Inbound endpoints use private addresses'."
+  },
+  {
+   "id": "claims-14",
+   "file": "13-route53/1-fast.md",
+   "section": "changed-recently-1-min (geoproximity entry)",
+   "quote": "> **Old:** [geoproximity routing (traffic flow only)](../facts/route53.md#route53-change-geoproximity-records-console-2024-01).",
+   "type": "claims: display taken from a quote about another feature",
+   "severity": "note",
+   "evidence": "In fact route53-change-geoproximity-records-console-2024-01 the display 'geoproximity routing (traffic flow only)' comes from the History row \"July 19, 2023 You can now use Local Zones with geoproximity routing (traffic flow only) after you enable them.\", a Local Zones note. The old state is better grounded by the same fact's 2017 quote (\"If you're using Route 53 traffic flow, you can now use geoproximity routing\"). The claim is right; the evidence is indirect.",
+   "status": "rejected",
+   "resolution": "fix-13: the claim is right, as the finding says. The fact's only displays are 'January 9, 2024', 'create geoproximity routing records' and 'geoproximity routing (traffic flow only)'. A display from the 2017 quote needs facts amend, which raises rev, empties the votes and resets the dependent questions (TOOLS 5.7). Logged for the W14 fact pass."
+  },
+  {
+   "id": "claims-15",
+   "file": "13-route53/1-fast.md",
+   "section": "choose-it-or-not-3-min (Alias record or CNAME record, charge row)",
+   "quote": "| Is a query to an AWS resource charged? | No: these queries [do not incur a charge](../facts/route53.md#route53-pricing-alias-free-for-listed-aws-services) |",
+   "type": "claims: condition dropped from a fact",
+   "severity": "note",
+   "evidence": "Fact route53-pricing-alias-free-for-listed-aws-services: \"Alias A/AAAA records that are mapped to the following AWS services do not incur a charge: Elastic Load Balancers, Amazon CloudFront distributions, ...\" (a list, A/AAAA only). An alias to another record in the zone is billed (fact route53-pricing-alias-to-record-in-zone-standard-rate, used in task route53-t02 cost). Fix: 'No, for alias A and AAAA records to the listed services'.",
+   "status": "fixed",
+   "resolution": "fix-13: the cell now reads 'No, for listed services: A and AAAA alias records [do not incur a charge](route53-pricing-alias-free-for-listed-aws-services)'."
+  },
+  {
+   "id": "claims-16",
+   "file": "13-route53/2-deep.md",
+   "section": "faq-quick-fire-5-min (FAQ 4) with 1-fast.md choose-it-or-not (TTL row)",
+   "quote": "There is no default TTL.",
+   "type": "claims: two true statements that read as a contradiction",
+   "severity": "note",
+   "evidence": "FAQ quote: \"Amazon Route 53 does not have a default TTL for any record type.\" 1-fast: \"For an AWS resource, [Route 53 uses the default TTL for the resource]\" (fact route53-alias-to-aws-resource-ttl-not-settable). The first is about records she creates, the second about the target's own TTL (60 seconds for a load balancer, route53-elb-dns-entry-updated-ttl-60). Add one clause to FAQ 4: 'An alias record to an AWS resource uses the TTL of that resource.'",
+   "status": "fixed",
+   "resolution": "fix-13: FAQ 4 answer now 'There is no default TTL: you set it on each non-alias record.' The alias exception is stated in How it works, step 4 of the record type subsection (claims-03), with fact route53-alias-to-aws-resource-ttl-not-settable."
+  },
+  {
+   "id": "claims-17",
+   "file": "13-route53/2-deep.md (A-list row 1); data/13-route53/tasks.json (route53-t02 step 2 expect)",
+   "section": "numbers-that-decide-answers-3-min; route53-t02 step 2",
+   "quote": "Route 53 gives each new hosted zone its own set of four name servers.",
+   "type": "claims: 'by default' dropped from a default",
+   "severity": "note",
+   "evidence": "Fact route53-default-unique-delegation-set-per-zone: \"By default, Route 53 assigns a unique set of four name servers (called a delegation set) to each hosted zone that you create.\" Scope: 'reusable delegation set not used'. Card route53-c007 keeps 'by default'; the task expect and the A-list label 'Name servers of a new zone' do not.",
+   "status": "fixed",
+   "resolution": "fix-13: A-list label now 'Default name servers of a new zone'; t02 step 2 expect now 'By default, Route 53 gives each new hosted zone its own set of four name servers.'"
+  },
+  {
+   "id": "claims-18",
+   "file": "data/13-route53/questions.json (route53-q010; 5-quiz.md Question 18) and route53-q021 (Question 14)",
+   "section": "route53-q010 Why not; route53-q021 Why",
+   "quote": "AWS says [this isn't a substitute for a load balancer](../facts/route53.md#route53-multivalue-purpose-not-lb-substitute): cached answers keep a failed address. / Route 53 answers each record in the ratio of its weight to the total, so weights of 90 and 10 send about one user in ten to version 2.",
+   "type": "claims: reasons added after the link without grounding",
+   "severity": "note",
+   "evidence": "The multivalue fact quote gives no reason; 'cached answers keep a failed address' is an inference from route53-faq-resolver-caches-by-ttl-outside-control and should link it. In q021 the ratio rule has a verified fact (route53-weighted-ratio-of-weight-to-total: \"responds to queries based on the ratio of a resource's weight to the total\") that is not linked, and the ratio is of DNS queries, not users (resolver caching skews it). Wording: 'about one DNS query in ten'.",
+   "status": "fixed",
+   "resolution": "fix-13: q010 option a why now ends 'but [this isn't a substitute for a load balancer](...), and resolvers cache answers [according to their time to live (TTL)](route53-faq-resolver-caches-by-ttl-outside-control).'; q021 explanation now links [ratio of a resource's weight to the total](route53-weighted-ratio-of-weight-to-total) and says 'about one DNS query in ten'. Why and explanation fields only; stems, options and keys unchanged."
+  },
+  {
+   "id": "claims-19",
+   "file": "data/13-route53/speak.json (route53-s03)",
+   "section": "route53-s03 sixty_second, line 9",
+   "quote": "Create the records and health checks in advance. Don't plan to edit records during the outage.",
+   "type": "style: contraction in a model answer",
+   "severity": "note",
+   "evidence": "Rule L803 (no contraction in prose; SPEC lint.contractions_in_prose) and STYLE plain English; every other model answer of the chapter avoids contractions. Fix: 'Do not plan to edit records during the outage.'",
+   "status": "fixed",
+   "resolution": "fix-13: 'Do not plan to edit records during the outage.'"
+  },
+  {
+   "id": "claims-20",
+   "file": "13-route53/2-deep.md (diagram route53-policy-ladder)",
+   "section": "latency-records-follow-measured-latency-and-geolocation-records-follow-user-location-5-min (figure)",
+   "quote": "A decision ladder with five questions. ... Otherwise, a simple record.",
+   "type": "technical: diagram omits two routing policies the chapter teaches",
+   "severity": "note",
+   "evidence": "1-fast 'Routing by latency or by location' teaches geoproximity (fact route53-choose-geoproximity-routing-resource-location-bias) and IP-based routing (route53-choose-ip-based-routing-known-client-ips); the ladder sends a 'shift traffic between places' or 'known client networks' requirement to a simple record. Add the two rungs or say in the caption that the ladder covers the five most-tested policies.",
+   "status": "rejected",
+   "resolution": "fix-13: the diagram's claim, alt and rungs are fixed by brief.json (TOOLS-rules R4), and the caption must equal the spec claim (L702); 2-deep.md is at 4496 of its 4500 words, so no extra prose sentence fits. Geoproximity and IP-based routing stay in the 1-fast compare table 'Routing by latency or by location'. Logged for the orchestrator as a brief change (add two rungs)."
+  },
+  {
+   "id": "claims-21",
+   "file": "data/13-route53/cards.json (route53-c027)",
+   "section": "2-deep.md#a-private-hosted-zone-answers-only-through-the-vpc-resolver-of-its-associated-vpcs",
+   "quote": "In Route 53, can you use IP-based routing for records in a private hosted zone?",
+   "type": "claims: card teaches a fact its section never teaches",
+   "severity": "note",
+   "evidence": "Fact route53-ip-based-routing-not-in-private-hosted-zone is linked from no hand file; the private hosted zone subsection does not mention IP-based routing, so the card's Review link sends her to a section without the answer. Add one clause to the subsection or point the card to 1-fast 'Routing by latency or by location'.",
+   "status": "fixed",
+   "resolution": "fix-13: the private hosted zone subsection now has 'In a private zone, [you cannot use IP-based routing policy](route53-ip-based-routing-not-in-private-hosted-zone) for records.', so the card's Review link holds the answer."
+  },
+  {
+   "id": "claims-22",
+   "file": "data/13-route53/tasks.json (route53-t02 and route53-t03 verify)",
+   "section": "route53-t02 verify; route53-t03 verify",
+   "quote": "If Route 53 refuses the name, use a subdomain of a domain that you administer in every command of this task.",
+   "type": "technical: fallback path not covered by the verify command",
+   "severity": "note",
+   "evidence": "Step 1 of both tasks allows another zone name, but the verify command filters on the fixed name 'saa-route53-t02.example.' / 'saa-route53-t03.example.', so on the fallback path it returns an empty list even when the zone still exists (a verify that cannot fail). Fix: verify by tag (book=saa, task=<id>) or tell her to use the same replacement name in the verify command.",
+   "status": "fixed",
+   "resolution": "fix-13: both verify expects (t02, t03) now say 'If you used another zone name in step 1, put that name in this command.' Commands unchanged."
+  }
+ ]
+}

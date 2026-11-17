@@ -1,0 +1,1118 @@
+{
+ "chapter": "24",
+ "angle": "follow one backup from the rule that creates it to the restore that uses it: a backup plan turns the RPO and the retention into scheduled rules that select resources by tag (1); each backup becomes a recovery point in an encrypted vault, and the resource type decides which key encrypts it (2); continuous backups add point-in-time restore for recent mistakes, snapshots keep the long history (3); the lifecycle moves some backups to cold storage and deletes them at the end (4); a copy in another Region or account survives the loss of the source (5); Vault Lock in compliance mode stops even the root user from deleting backups (6); most restores create a new resource, and restore testing plus Audit Manager prove that recovery works (7). DR strategies beyond backup and restore are chapter 40 (ha-dr); this chapter teaches backup and restore and the RPO and RTO words.",
+ "brief_by": "brief-24",
+ "written_at": "2026-10-22",
+ "template": "medium (no chapter override). Hand files: 1-fast.md (at most 1,000 words, file limit is an error), 2-deep.md (1,800 to 2,400 words, file limit is an error; How it works 1,300 to 1,800 in 7 subsections, each 150 to 400 words of body and callouts). No 2-services.md (the registry entry has no cards list). Generated: 3-do.md, 4-say.md, 5-quiz.md, sources.md. Counts: 12 questions written (10 shipped: core 5, extended 5; twin pairs at least 1; multi 1 to 2; worked 1, no wrong path), 2 speak items (1 pass route), 12 written cards (core 4, extended 8), Look 0 to 1, Try 1 to 2 (1 pass route), Lab 0, diagrams 1 to 4, 7 brief traps (cap).",
+ "base": "Pattern: _build/style/exemplar/ (README, iam-2-deep.md, vpc-2-deep-slice.md): house pattern U1 (problem, numbered trace with bold step names, compressing table when there are two or more cases, one Why reason, Exam signal, Exam trap or Go deeper or Try it or Spot the bug, Say it, Stop and answer). Shape of this brief: _build/work/19-containers/brief.json (medium). Link texts in the plans are displays copied from _build/work/24-backup/fact-cards.md (chapter facts) and nb-cards.md, nb-scan1.txt, nb-scan2.txt, nb-scan3.txt (verified facts of chapters 02, 21, 22, 23, 26, 27, 28, linked by id). A link text in [brackets] is followed by its fact id in (parentheses); copy the bracket text exactly, with the capital letters, hyphens and apostrophes of the display.",
+ "notes_for_writers": [
+  "Read the exemplar first. Each How-it-works subsection follows U1 and ends with Say it, then Stop and answer with its reveal. Spend the words on the trace; a feature list goes into a Go deeper block.",
+  "Budgets are tight, and the file limits are errors: 1-fast.md at most 1,000 words; 2-deep.md at most 2,400. lint.word_count counts reveals, Go deeper blocks, prompts, alt texts and captions. Use the per-section aims in budgets.",
+  "Headings may hold only letters, digits, spaces and hyphens (SPEC headings.h2_h3_regex): no apostrophe, comma, slash or colon. The H3 texts in this brief already follow the rule; copy them exactly.",
+  "Story numbers allowed in this chapter (data/startup.json chapters.24.uses_numbers): daily backups kept for 30 days and monthly backups kept for 7 years. Stage 3, month 22; Chen (security lead) and Ben (CTO) exist. Question stems say 'A company' and never name Callvale. Story numbers may stand only in the Startup example callout, the Decision record and prompt paragraphs; in a How-it-works table cell or trace they are strict text and need a fact link, so write 'for weeks' or 'for years' there.",
+  "STARTUP.md says Callvale's trade-off is 'a second policy layer' and 'storage cost of seven-year copies'. Ground both (RULINGS: the story never teaches a fact): the relation of AWS Backup to native backups [varies by service] (backup-native-relationship-varies-by-service); Aurora has no lifecycle to cold storage in the feature table (backup-feature-row-aurora), so its monthly backups stay in warm storage; and backups in a locked vault [cannot be deleted until their lifecycle completes] (backup-vault-lock-locked-backups-persist-until-lifecycle-ends).",
+  "Recordings in Amazon S3 are protected by S3 Versioning, S3 Object Lock and replication, not by AWS Backup (data/startup.json chapters.24.note). Do not draw or describe Callvale's recording bucket inside an AWS Backup plan.",
+  "Do not write any sentence on: per-GB prices of AWS Backup storage, restore or transfer (script-rendered on the pricing page, never stored; brief.v0 d011); that incremental backups bill only changed data (d012, no AWS Backup page says it; for EBS use ebs-snapshot-charged-by-data-not-volume-size only if needed); the lowest-cost rank or the 'RPO in hours, RTO in 24 hours' figures of the backup and restore DR strategy (the Well-Architected facts exist but are mech-pass, home chapter 02; see notes_for_orchestrator 3); object size rules of S3 backup tiering (d010); the maximum retention value of a logically air-gapped vault (d014). Use the verified wording only.",
+  "Volatile or recent features are taught as options, never as the one right answer, and no question keys on them: logically air-gapped vault as a primary backup target (2025-11-17), multi-party approval (2025-06-17), GuardDuty malware scanning of backups (2025-11-19), S3 backup tiering (2025-11-18), backup search (2024-12-17), EKS backups (2025-11-10), single-action database snapshot copy (2025-10-30). The logically air-gapped vault itself (2024-08-07) and its sharing through AWS RAM may be a key. Facts after the cut-off 2026-07-15 (S3 access points for backups, FSx for ONTAP copies and logically air-gapped vaults, more than 1,000 S3 buckets) appear nowhere in the chapter.",
+  "Neighbour chapters (registry numbers): Organizations and RAM 04; KMS 06; detection and AWS Config 09; S3 21; EBS 22; EFS and FSx 23; hybrid storage 25; RDS 26; Aurora 27; DynamoDB 28; high availability and disaster recovery 40 (slug ha-dr, not written yet: a cross-reference to it is an xref marker). Link a verified neighbour fact by id where the plan names one.",
+  "Displays with a contraction (can't, don't, isn't): if L803 fires on the contraction inside a link text, file a display request (facts request --fact ID --display TEXT) instead of rewording the AWS quote.",
+  "Every subsection carries exactly one Exam signal and one Say it. Go deeper: 2 required (subsections 1 and 3) and 1 optional (subsection 7, only if words remain). Spot the bug: exactly 1 (subsection 6). Exam trap callouts: exactly 4 (subsections 3, 4, 5, 7), each ending with its trap comment. Try it: subsection 6 (backup-t02) and, only if the tasks writer ships it, subsection 4 (backup-t03). Counted callouts in 2-deep.md: 4 Exam trap + up to 2 Try it = 6 of 8.",
+  "Use one term per concept: 'backup vault' (not 'vault' alone at first use in a subsection), 'recovery point' and 'backup' as AWS uses them interchangeably (backup-recovery-point-is-backup-at-specified-time), 'Vault Lock' (AWS Backup Vault Lock at first use in each file), 'logically air-gapped vault' (never 'air-gapped backup'), 'continuous backup' and 'snapshot backup' (AWS also says 'periodic backup'; say so once)."
+ ],
+ "frozen": {
+  "2-deep.md": "Nothing frozen. Write the 7 subsections from the plans below, in this order.",
+  "items": "No exemplar items exist for backup; write every item from the slots, cards, speak and tasks below."
+ },
+ "budgets": {
+  "rule": "lint.word_count counts every word of the file: reveals, Go deeper blocks, prompts, image alt text and captions included (code blocks and comments excluded). File limits are errors; section limits are warnings.",
+  "1-fast.md_total_max": 1000,
+  "1-fast.md_aims": "Predict 55, Look first 30 (the task region is generated and not counted), In one breath 195 (section max 200: alt 35, caption 20, 5 steps at about 12 words each, Say it 25, problem field 18, prompt 15, startup example 48), Words 85, Choose it or not 200, Signals and traps 215, Changed recently 60, Check 85, Recap 55 = about 980.",
+  "1-fast.md_callouts": "callouts_max 4: Say it (one-breath; not counted) and Startup example (counted); Changed recently entries do not count.",
+  "2-deep.md_total_min": 1800,
+  "2-deep.md_total_max": 2400,
+  "2-deep.md_aims": "How it works about 1,650 (H2 intro line 20; 7 subsections with body and callouts of 155 to 180 words each; Stop and answer with its reveal at most 35 words each; Go deeper 2 blocks of at most 55 words, a third only if words remain; Spot the bug with reveal about 50; the optional lifecycle timeline about 45 words of alt and caption) + Numbers 170 + Decision record 230 (fields 140, two diagrams with alt at most 30 words and caption at most 20 words each) + FAQ 240 + In the real world 80 = about 2,370. If the file runs over 2,400, cut the optional timeline first, then the third Go deeper, then table cells; never drop a required device.",
+  "subsection_rule": "Body plus callouts (not Go deeper, prompts or reveals) at least 150 words per subsection (SPEC subsection_words) and at most 400; aim 155 to 180.",
+  "callouts_max_2_deep": 8,
+  "callouts_planned_2_deep": "6: Exam trap x4 (subsections 3, 4, 5, 7), Try it x2 (subsection 6 backup-t02; subsection 4 backup-t03 only if shipped). No Startup example in 2-deep.md: the fast Startup example uses about 48 of the 80 story words of the chapter."
+ },
+ "sections": [
+  {
+   "file": "1-fast.md",
+   "section": "predict",
+   "heading": "Predict",
+   "role": "predict",
+   "minutes": 1,
+   "bullets": [],
+   "facts": [],
+   "plan": "Two prompts, each ending with '?'. Predict 1 is the gist trap (<!-- gist-trap -->): 'A database keeps a standby copy in a second Availability Zone, updated as every write happens. A developer deletes a table by mistake. Can the team get the table back from the standby?' (common sense says yes; the answer is no: a copy that follows every change also copies the delete). Predict 2: 'A daily backup rule keeps each backup for 30 days. To save money, the team wants the rule to move each backup to cold storage after 7 days. Will AWS Backup accept this rule?' (no). Answers appear only in Check (U4). No term defined in a prompt; no AWS number. At most 60 words."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "look-first",
+   "heading": "Look first",
+   "role": "task",
+   "minutes": 3,
+   "bullets": ["4.3.S1"],
+   "facts": ["backup-service-opt-in-checked-per-region", "backup-service-opt-in-before-plan-assignment"],
+   "task": "backup-t01",
+   "plan": "One or two sentences (at most 30 words) and the task region for backup-t01 (read-only, 3 minutes): read which services AWS Backup may protect in this Region. Example lead: 'AWS Backup protects a service only after you [opt in to using AWS Backup] (backup-service-opt-in-before-plan-assignment) for it. Look at the setting of your Region.' Then <!-- task:start id=backup-t01 --> <!-- task:end -->."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "in-one-breath",
+   "heading": "In one breath",
+   "role": "breath",
+   "minutes": 2,
+   "bullets": ["4.1.K5", "1.3.S5"],
+   "facts": ["backup-what-is-fully-managed-centralize", "backup-plan-applied-by-tagging-resources", "backup-recovery-points-saved-in-vaults", "backup-vault-lock-denies-delete-and-lifecycle-change-even-root", "backup-copy-action-same-or-other-region-and-account", "backup-restore-destructive-exceptions-listed"],
+   "plan": "Say it (one-breath definition, at most 25 words, linked): 'AWS Backup is a [fully-managed service] that helps you [centralize and automate data protection] across AWS services, [in the cloud, and on premises] (backup-what-is-fully-managed-centralize).' Then the bold field '**The problem it solves.**' in one sentence of about 18 words: each service backs up in its own way, and a company needs one policy, one lock and one report. Then the 'Predict the picture.' prompt: 'A production administrator deletes the original database. Where can the team still restore it from?' with the hero backup-hero in a reveal, its caption and its 5 numbered steps (text fixed in diagrams). Then the Startup example callout with data/startup.json chapters.24.problem word for word (48 words; at most 60 with the label). The story never teaches a fact."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "words-that-go-together",
+   "heading": "Words that go together",
+   "role": "words",
+   "minutes": 1,
+   "bullets": ["4.1.K5"],
+   "facts": [],
+   "plan": "A words table of 4 rows (see words_table). Cell 1 spelled as the term field of data/terms.json after the terms agent adds it; cell 2 one collocation of the bank with exactly one bold span. At most 85 words."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "choose-it-or-not",
+   "heading": "Choose it or not",
+   "role": "choose",
+   "minutes": 2,
+   "bullets": ["4.1.K5", "4.1.S6", "2.2.K4", "2.2.S5"],
+   "facts": ["backup-faq-dlm-vs-backup-when-to-use", "ebs-aws-backup-central-policy-across-accounts", "backup-faq-vault-lock-purpose-worm", "backup-does-not-govern-backups-outside-aws-backup", "aurora-cmp-wp-multi-site-recovery-near-zero", "backup-restore-no-sla-for-restore-time", "rds-compare-maz-failover-time", "rds-compare-purpose-ha-dr-scale", "backup-faq-recovery-point-definition"],
+   "plan": "Two compare tables (see compare_tables), at most 4 columns each, each under its H3 and followed by its bold **Deciding question:** line. At most 200 words in all. If the section runs long, cut table 2 to three rows, never a deciding question."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "signals-and-traps",
+   "heading": "Signals and traps",
+   "role": "signals",
+   "minutes": 2,
+   "bullets": ["1.3.S1", "4.3.S1", "1.3.S5", "2.2.S5", "4.1.S6", "1.3.K2"],
+   "facts": ["backup-vault-lock-compliance-immutable-by-anyone", "organizations-backup-policy-effective-plan-immutable", "backup-pitr-restore-rewinds-to-chosen-time", "backup-faq-lifecycle-warm-to-cold", "backup-copy-action-same-or-other-region-and-account", "backup-faq-audit-manager-purpose", "s3-replication-delete-markers-optional", "backup-faq-recovery-point-definition", "backup-vault-lock-governance-lock-removable-with-iam", "backup-vault-key-applies-only-to-independent-encryption-types", "backup-encryption-rds-row", "ebs-dlm-automates-snapshots-and-amis", "backup-faq-lag-vault-share-ram", "backup-feature-row-aurora"],
+   "plan": "A signals table of exactly 6 rows (see signals; columns: The stem says | Think | Because | But not if) and the fixed H3 'Traps' with the 3 fast traps (backup-trap-replication-is-backup, backup-trap-governance-stops-admins, backup-trap-vault-key-encrypts-everything), each a list item that ends with <!-- trap: <id> --> (see fast_traps_text). At most 215 words."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "changed-recently",
+   "heading": "Changed recently",
+   "role": "changed",
+   "minutes": 1,
+   "bullets": ["1.3.S1"],
+   "facts": ["backup-change-vault-lock-governance-mode-2022-10", "backup-vault-lock-governance-lock-removable-with-iam"],
+   "plan": "One examinable entry (see changed_recently.fast), in the form of CONVENTIONS D6, at most 60 words. The date (2022-10-04) must equal changed.date of the fact linked in Now (L107): fact request fr-0108 asks the registrar to set it. Until fr-0108 is filled, write the entry and expect the L107 warning; if fr-0108 is closed as unfillable, use changed_recently.fallback instead (its fact already carries changed.date 2025-10-30)."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "check",
+   "heading": "Check",
+   "role": "check",
+   "minutes": 1,
+   "bullets": [],
+   "facts": ["s3-replication-delete-markers-optional", "backup-faq-recovery-point-definition", "backup-cold-ebs-is-snapshot-archive-monthly-or-less", "backup-cold-storage-min-90-days-retention-rule", "backup-cold-storage-plan-total-retention-90-days"],
+   "plan": "Two Check prompts parallel to Predict, each a new case, each answered in its reveal, with a separate '**Predict <n>:**' paragraph (U4). Check 1: 'A company replicates an S3 bucket to a second Region, with delete marker replication turned on. A user deletes a folder of objects. Do the objects stay visible in the second Region?' (No: S3 then behaves as if [the object was deleted in both buckets] (s3-replication-delete-markers-optional). Predict 1: no; the standby receives the same delete; only a recovery point keeps [the content of a resource at a specified time] (backup-faq-recovery-point-definition).) Check 2: 'A monthly rule keeps EBS backups for 7 years. Can the rule move them to cold storage after 30 days?' (Yes: EBS backups can move when the frequency is [monthly or less often] (backup-cold-ebs-is-snapshot-archive-monthly-or-less), and each stays a [minimum of 90 days] in cold storage (backup-cold-storage-min-90-days-retention-rule). Predict 2: no; a plan with cold storage needs a total retention of [90 days or greater] (backup-cold-storage-plan-total-retention-90-days).) Keep each reveal at about 35 words; the numbers in the prompts are story data of the prompt."
+  },
+  {
+   "file": "1-fast.md",
+   "section": "recap-from-memory",
+   "heading": "Recap from memory",
+   "role": "recap",
+   "minutes": 1,
+   "bullets": [],
+   "facts": [],
+   "plan": "Three Recap prompts, each asking only for a sentence, row or cell that 1-fast.md states above (U4): the deciding question under the table 'AWS Backup or the backups of each service'; the 'But not if' cell of the signals row that points to Vault Lock in compliance mode (S3 Object Lock); which Vault Lock mode a user with enough IAM permissions can remove (traps list). Reveals copy the fast-file text."
+  },
+  {
+   "file": "2-deep.md",
+   "section": "how-it-works",
+   "heading": "How it works",
+   "role": "how",
+   "minutes": 28,
+   "bullets": [],
+   "facts": [],
+   "plan": {
+    "intro_line": "About 20 words: this part follows one backup, from the rule that creates it to the copy, the lock and the restore that uses it. Not a list of subsections.",
+    "subsections_in_order": [
+     "a-backup-plan-turns-the-rpo-and-the-retention-into-scheduled-rules",
+     "each-backup-becomes-a-recovery-point-in-an-encrypted-backup-vault",
+     "continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days",
+     "the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them",
+     "a-copy-in-another-region-or-account-survives-the-loss-of-the-source",
+     "vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+     "most-restores-create-a-new-resource-and-restore-testing-proves-they-work"
+    ],
+    "pass_route_subsections": [
+     "a-backup-plan-turns-the-rpo-and-the-retention-into-scheduled-rules",
+     "continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days",
+     "a-copy-in-another-region-or-account-survives-the-loss-of-the-source",
+     "vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups"
+    ],
+    "causal_chain": "objective (RPO, retention) -> backup plan with rules, tag selection, opt-in and service role (in one account or as an Organizations backup policy) -> backup job writes a recovery point into a backup vault (incremental, key by resource type, stored across Availability Zones) -> continuous backup adds point-in-time restore for recent mistakes, snapshots keep the long history -> lifecycle: warm, then cold for some resource types, then expiry -> copy action to another Region or account (same organization, destination vault policy) -> Vault Lock: governance or compliance mode, grace time, retention limits; logically air-gapped vault -> restore creates a new resource; restore testing and AWS Backup Audit Manager prove recovery and compliance",
+    "minutes": "4 + 4 + 4 + 4 + 4 + 4 + 4 = 28"
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "a-backup-plan-turns-the-rpo-and-the-retention-into-scheduled-rules",
+   "heading": "A backup plan turns the RPO and the retention into scheduled rules",
+   "parent": "how-it-works",
+   "order": 1,
+   "minutes": 4,
+   "route": "pass",
+   "bullets": ["4.3.S1", "4.1.K5", "2.2.K4", "1.3.S1"],
+   "facts": ["well-architected-rpo-definition", "well-architected-rto-definition", "backup-faq-backup-plan-central-policy", "backup-faq-backup-rule-four-parts", "backup-window-jobs-start-within-window", "backup-plan-snapshot-frequency-options", "backup-plan-applied-by-tagging-resources", "backup-iam-role-passed-for-plans-on-demand-copy-restore", "backup-overlapping-rules-longer-retention-wins", "backup-faq-assigned-resources-encrypted-vault", "organizations-backup-policy-effective-plan-immutable", "backup-org-policy-creates-visible-plan-in-each-account", "backup-org-policy-resources-by-type-or-tag-not-arns", "backup-delegated-admin-privileges-manage-policies-row", "backup-on-demand-backup-starts-immediately", "backup-delegated-admin-performs-most-admin-tasks-from-member-account", "backup-org-management-account-opt-in-overrides-member-accounts", "backup-org-member-accounts-need-vault-and-iam-role", "backup-opt-in-still-applies-with-tag-assignment", "backup-service-opt-in-before-plan-assignment"],
+   "plan": {
+    "problem": "A company must lose at most one day of data and keep monthly backups for years. Four services in several accounts must follow the same rule.",
+    "trace": [
+     "**Set the objective.** The RPO is the [maximum acceptable amount of time since the last data recovery point] (well-architected-rpo-definition); the RTO is the [maximum acceptable delay between the interruption of service and restoration of service] (well-architected-rto-definition). How often you back up decides the RPO you can meet.",
+     "**Write the rules.** A backup plan is the [central data protection policy called a backup plan] (backup-faq-backup-plan-central-policy), [comprised of one or more backup rules] (backup-faq-backup-rule-four-parts): a schedule, a backup window, a lifecycle and a target backup vault. [Backup jobs are started within this window] (backup-window-jobs-start-within-window).",
+     "**Select resources.** AWS Backup can [apply backup plans to your AWS resources] by their tags (backup-plan-applied-by-tagging-resources).",
+     "**Pass a role.** For each resource assignment [you must pass a service role] that AWS Backup uses to [create, tag, and delete resources in your account] (backup-iam-role-passed-for-plans-on-demand-copy-restore)."
+    ],
+    "trace_note": "Keep the service opt-in out of the trace: it is the Stop and answer. Bold backup plan, backup rule, backup window and resource assignment at first use (term requests).",
+    "table": "Where the plan lives (columns: Question | Backup plan in one account | Backup policy in AWS Organizations): Who edits it | the account itself | the management account or a delegated administrator ([Manage backup policies across accounts in AWS Organizations], backup-delegated-admin-privileges-manage-policies-row, or write the cell without a link); What member accounts see | their own plan | [a corresponding backup plan] that is [visible in that account] (backup-org-policy-creates-visible-plan-in-each-account), [as an immutable plan for that account] (organizations-backup-policy-effective-plan-immutable); How it selects resources | tags or resource ARNs | [by resource types] or tags, [not by individual resource ARNs] (backup-org-policy-resources-by-type-or-tag-not-arns). Three rows; cells at most 15 words; link each fact once in the subsection.",
+    "why": "Why rules, not scripts? A rule says what you want (how often, how long, where), and AWS Backup [automates the creation of backups] (backup-faq-assigned-resources-encrypted-vault). When two rules run on the same day, AWS Backup keeps the backup under the [rule with the longer retention period] (backup-overlapping-rules-longer-retention-wins).",
+    "exam_signal": "\"one backup policy for all accounts in the organization\" points to backup policies in AWS Organizations, which [centrally manage and apply backup plans] (organizations-backup-policy-effective-plan-immutable); \"take a backup now, outside the schedule\" points to an on-demand backup, which [begins to back up your resource immediately] (backup-on-demand-backup-starts-immediately).",
+    "exam_trap": null,
+    "go_deeper": "Go deeper: running backup for an organization (at most 55 words). A delegated administrator lets assigned users work [outside the management account] (backup-delegated-admin-performs-most-admin-tasks-from-member-account), but the [resource opt-in settings in the management account override] those of member accounts (backup-org-management-account-opt-in-overrides-member-accounts). Each member account needs a vault and [the IAM role that will be used] (backup-org-member-accounts-need-vault-and-iam-role).",
+    "say_it": "The short answer is: write the RPO and the retention as rules in one backup plan. The thing to watch is the role that AWS Backup uses in each account.",
+    "stop_and_answer": "A team tags its DynamoDB tables and adds the tag to a backup plan. The plan, the backup vault and the role are correct, but no DynamoDB backups appear. What is missing? Answer: the DynamoDB opt-in; with tag assignment the [service opt-in settings will still apply] (backup-opt-in-still-applies-with-tag-assignment), and you [opt in to using AWS Backup] per service (backup-service-opt-in-before-plan-assignment). Keep these facts out of the trace."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "each-backup-becomes-a-recovery-point-in-an-encrypted-backup-vault",
+   "heading": "Each backup becomes a recovery point in an encrypted backup vault",
+   "parent": "how-it-works",
+   "order": 2,
+   "minutes": 4,
+   "bullets": ["4.1.K5", "2.2.S5", "1.3.S1"],
+   "facts": ["backup-recovery-points-saved-in-vaults", "backup-recovery-point-is-backup-at-specified-time", "backup-faq-vault-encrypted-per-region", "backup-incremental-first-full-then-changes", "backup-incremental-restore-full-even-after-first-backup-expired", "backup-vault-key-applies-only-to-independent-encryption-types", "backup-resilience-stored-across-azs-eleven-nines", "backup-vault-backups-immutable-content-and-survive-source-deletion", "backup-encryption-efs-row", "backup-encryption-s3-row", "backup-encryption-ebs-row", "backup-encryption-rds-row", "backup-full-management-backup-arns-for-backup-specific-policies", "backup-native-relationship-varies-by-service", "ebs-aws-backup-multi-volume-crash-consistent", "backup-windows-vss-application-consistent-ec2-only", "backup-vault-kms-key-fixed-after-creation", "backup-encryption-role-needs-kms-access-else-silent-skip"],
+   "plan": {
+    "problem": "A backup job finishes. The team wants to know where the backup lives, what it stores, and which key protects it.",
+    "trace": [
+     "**Store.** AWS Backup [saves recovery points in backup vaults] (backup-recovery-points-saved-in-vaults); a recovery point [represents the content of a resource] at a specified time (backup-recovery-point-is-backup-at-specified-time).",
+     "**Store less.** For supported resource types the first backup [backs up a full copy of your data] and later backups store [only the changes to your AWS resources] (backup-incremental-first-full-then-changes); each one keeps the [reference data to allow a full restore] (backup-incremental-restore-full-even-after-first-backup-expired).",
+     "**Encrypt.** The vault key [applies to the backups of certain resource types]; the other backups keep the key [used to encrypt the source resource] (backup-vault-key-applies-only-to-independent-encryption-types).",
+     "**Keep apart.** Backups are stored [across multiple Availability Zones] (backup-resilience-stored-across-azs-eleven-nines), and a vault keeps EC2 and EBS backups [even if you delete the source Amazon EC2 instance and Amazon EBS volumes] (backup-vault-backups-immutable-content-and-survive-source-deletion)."
+    ],
+    "trace_note": "Bold recovery point, backup vault and incremental backup at first use. The 11 nines number goes to the B-list only.",
+    "table": "Which key encrypts the backup (columns: Resource | Backup encrypted with | Independent encryption): Amazon EFS | the key of the backup vault: [Amazon EFS backups are always encrypted] (backup-encryption-efs-row) | yes; Amazon S3 | the vault key, [even if the source Amazon S3 buckets are not encrypted] (backup-encryption-s3-row) | yes; Amazon EBS | the key [used to encrypt the source volume] (backup-encryption-ebs-row) | no; Amazon RDS | the key used to [encrypt the source Amazon RDS database] (backup-encryption-rds-row) | no. Four rows; the 'yes' and 'no' cells need no link.",
+    "why": "Why two kinds of encryption? For resource types with full AWS Backup management the backup belongs to AWS Backup ([Backup ARNs begin with] arn:aws:backup, backup-full-management-backup-arns-for-backup-specific-policies); for the others the relation to the service's own backups [varies by service] (backup-native-relationship-varies-by-service), and the snapshot keeps the encryption of its source.",
+    "exam_signal": "\"back up all EBS volumes of an instance at the same moment\" points to AWS Backup, which takes [crash-consistent, multi-volume snapshots] (ebs-aws-backup-multi-volume-crash-consistent); \"application-consistent backups of Windows applications\" points to Windows VSS backups, and AWS Backup [only supports application-consistent backups of resources running on Amazon EC2] (backup-windows-vss-application-consistent-ec2-only).",
+    "exam_trap": null,
+    "exam_trap_note": "No Exam trap callout here: backup-trap-vault-key-encrypts-everything lives in the fast Traps list. Do not repeat it as a callout.",
+    "body_extras": "One sentence only if words remain: after you create a vault you [can no longer edit the key] (backup-vault-kms-key-fixed-after-creation).",
+    "say_it": "The short answer is: every backup is a recovery point in a backup vault. The thing to watch is which key encrypts it.",
+    "stop_and_answer": "The backup role cannot use the KMS key of an S3 bucket. The backup job reports success. Is the data backed up? Answer: no; without access to the key, [Otherwise the job is successful] applies, but the [objects are not backed up or restored] (backup-encryption-role-needs-kms-access-else-silent-skip). Write the reveal so that both displays read as part of the sentence. Keep this fact out of the trace."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days",
+   "heading": "Continuous backups allow point-in-time restore but keep at most 35 days",
+   "parent": "how-it-works",
+   "order": 3,
+   "minutes": 4,
+   "route": "pass",
+   "bullets": ["1.3.S5", "2.2.K4", "4.1.S6", "4.3.S1"],
+   "facts": ["backup-continuous-rule-allows-pitr-unlike-snapshot", "backup-pitr-continuous-works-by-full-backup-and-transaction-logs", "backup-pitr-restore-rewinds-to-chosen-time", "backup-pitr-latest-restorable-time-by-service", "backup-snapshot-hourly-and-100-years", "backup-retention-snapshot-range", "backup-retention-continuous-range", "backup-continuous-rds-supported-not-multi-az-clusters", "backup-feature-row-s3", "backup-feature-row-sap-hana", "backup-pitr-no-cold-storage-because-35-vs-90", "backup-pitr-recommend-continuous-and-snapshot-rules-together", "backup-faq-s3-continuous-vs-periodic-use", "backup-continuous-copy-becomes-snapshot-no-pitr", "backup-s3-copies-available-copies-of-continuous-no-pitr", "backup-continuous-one-per-resource-redundant-extra", "backup-continuous-cannot-be-scheduled", "backup-continuous-rds-settings-managed-only-in-aws-backup", "backup-s3-eventbridge-disabled-failure-is-silent", "backup-ddb-advanced-does-not-replace-native-pitr", "dynamodb-pitr-35-days-default-1-to-35-configurable"],
+   "plan": {
+    "problem": "A bad deployment corrupts a database at 10:20. The last daily backup is from midnight, so restoring it loses a morning of orders. The team wants the state of 10:19.",
+    "trace": [
+     "**Turn it on.** Unlike snapshot backups, [continuous backups allow you to perform point-in-time restore] (backup-continuous-rule-allows-pitr-unlike-snapshot).",
+     "**Record.** AWS Backup takes a full backup and then keeps [constantly backing up your resource's transaction logs] (backup-pitr-continuous-works-by-full-backup-and-transaction-logs).",
+     "**Rewind.** A restore goes to the time you choose, [within 1 second of precision], back [a maximum of 35 days] (backup-pitr-restore-rewinds-to-chosen-time).",
+     "**Know the edge.** Amazon RDS restores up to the [most recent 5 minutes of activity], Amazon S3 up to the [most recent 15 minutes of activity] (backup-pitr-latest-restorable-time-by-service)."
+    ],
+    "trace_note": "The problem's times (10:20, 10:19, midnight) are story data of the problem sentence; keep them out of the trace. Bold continuous backup, snapshot backup and point-in-time restore at first use (point-in-time recovery is a bank term; AWS Backup says point-in-time restore: say both once).",
+    "table": "Snapshot rule or continuous rule (columns: Question | Snapshot backup | Continuous backup): How often | [as frequently as every hour] (backup-snapshot-hourly-and-100-years) | changes recorded all the time; How long kept | up to [100 years] (backup-retention-snapshot-range) | [1 day to 35 days] (backup-retention-continuous-range); Resources | most supported types | [all Amazon RDS instances and Aurora] (backup-continuous-rds-supported-not-multi-az-clusters), [Amazon S3] (backup-feature-row-s3), [SAP HANA databases on Amazon EC2 instances] (backup-feature-row-sap-hana); Cold storage | for some types | none: cold storage needs a [minimum transition period of 90 days] (backup-pitr-no-cold-storage-because-35-vs-90). Four rows; cells at most 15 words. If the Resources cell runs long, keep the RDS and Aurora link and write 'S3, SAP HANA on EC2' without links.",
+    "why": "Why does AWS recommend [both continuous and snapshot backup rules] (backup-pitr-recommend-continuous-and-snapshot-rules-together)? The continuous rule gives the exact second for a recent mistake; the snapshot rule keeps the long history that a continuous backup cannot keep.",
+    "exam_signal": "\"undo accidental deletions in an S3 bucket\" points to continuous S3 backups, which help with [undoing accidental deletions]; \"long-term retention\" points to periodic backups, which serve [long-term data retention needs] (backup-faq-s3-continuous-vs-periodic-use).",
+    "exam_trap": "backup-trap-copy-keeps-pitr",
+    "exam_trap_text": "Wrong belief: a copy of a continuous backup in another Region keeps point-in-time restore. Truth: the copy [becomes a snapshot (periodic) backup], and point-in-time restore [is not available for these copies] (backup-continuous-copy-becomes-snapshot-no-pitr). End with <!-- trap: backup-trap-copy-keeps-pitr -->. At most 40 words.",
+    "go_deeper": "Go deeper: one continuous backup per resource (at most 55 words). A resource [can only have one continuous backup] (backup-continuous-one-per-resource-redundant-extra), and continuous backups [cannot be scheduled] with a cron expression (backup-continuous-cannot-be-scheduled). After an RDS instance gets a continuous rule, you [can't create or modify continuous backup settings] in Amazon RDS (backup-continuous-rds-settings-managed-only-in-aws-backup). For S3, if the EventBridge setting of the bucket is off, [This failure is silent] (backup-s3-eventbridge-disabled-failure-is-silent).",
+    "say_it": "The short answer is: continuous backups give you any second of the last weeks, and snapshots give you years. The thing to watch is that a copy loses the point-in-time part.",
+    "stop_and_answer": "A team protects DynamoDB tables with AWS Backup and wants to restore one table to the second before a bad write. Does an AWS Backup continuous rule do it? Answer: no; AWS Backup gives DynamoDB periodic backups, which [do not replace or duplicate native DynamoDB point-in-time] recovery (backup-ddb-advanced-does-not-replace-native-pitr); turn on DynamoDB point-in-time recovery, with a period of [any value between 1 and 35] days (dynamodb-pitr-35-days-default-1-to-35-configurable). Keep these facts out of the trace."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them",
+   "heading": "The lifecycle moves some backups to cold storage and later deletes them",
+   "parent": "how-it-works",
+   "order": 4,
+   "minutes": 4,
+   "bullets": ["4.1.S6", "4.3.S1"],
+   "facts": ["backup-every-backup-starts-in-warm-storage", "backup-cold-storage-resource-types", "backup-cold-storage-ignored-for-unsupported-resources", "backup-cold-storage-min-90-days-retention-rule", "backup-pricing-cold-early-deletion-prorated-90-days", "backup-plan-expired-backups-deleted-within-8-hours", "backup-cold-ebs-is-snapshot-archive-monthly-or-less", "backup-feature-row-dynamodb", "backup-feature-row-dynamodb-advanced", "backup-feature-row-aurora", "backup-s3-no-cold-storage-transition", "ebs-archive-full-snapshot", "ebs-archive-recommended-monthly-not-daily", "backup-faq-lifecycle-warm-to-cold", "backup-restore-from-cold-storage-takes-longer", "backup-pitr-no-cold-storage-because-35-vs-90", "backup-faq-s3-no-cold-storage", "backup-cold-storage-plan-total-retention-90-days"],
+   "plan": {
+    "problem": "Monthly backups must stay for years. Keeping all of them in the normal storage tier costs money every month, and most of them will never be restored.",
+    "trace": [
+     "**Start warm.** Every backup is first [stored in warm storage]; the lifecycle can later move it to a [lower-cost tier called cold storage] (backup-every-backup-starts-in-warm-storage).",
+     "**Check the type.** Cold storage exists for, among others, [Amazon EBS (using EBS Snapshot Archive)], [Amazon EFS] and [DynamoDB with advanced features] (backup-cold-storage-resource-types); for other types the setting is [ignored for other resources] (backup-cold-storage-ignored-for-unsupported-resources).",
+     "**Stay long enough.** A backup stays in cold storage for a [minimum of 90 days] (backup-cold-storage-min-90-days-retention-rule); deleting it earlier costs a [pro-rated charge equal to the storage charge] (backup-pricing-cold-early-deletion-prorated-90-days).",
+     "**Expire.** At the end of the lifecycle, AWS Backup deletes the backup at a random point [over the following 8 hours] (backup-plan-expired-backups-deleted-within-8-hours)."
+    ],
+    "trace_note": "Bold lifecycle, warm storage and cold storage at first use. The lifecycle timeline backup-lifecycle (optional, see diagrams) goes after the trace only if words remain.",
+    "table": "Can its backups go to cold storage? (columns: Resource | Cold storage | Note): Amazon EBS | yes | when backups run [monthly or less often] (backup-cold-ebs-is-snapshot-archive-monthly-or-less); Amazon EFS | yes | (empty or a dash); Amazon DynamoDB | with advanced features | the plain row has no lifecycle check (backup-feature-row-dynamodb), the advanced row has one ([DynamoDB with AWS Backup advanced features], backup-feature-row-dynamodb-advanced); Amazon Aurora | no | no check mark for lifecycle in the feature table for [Amazon Aurora] (backup-feature-row-aurora); Amazon S3 | no | [Cold storage transition of S3 backups is not supported] (backup-s3-no-cold-storage-transition). Five rows; the H3-less table follows the trace. A table caption is not needed; the first header cell is 'Resource'.",
+    "why": "Why monthly for EBS? An archived EBS snapshot is [converted to a full snapshot] (ebs-archive-full-snapshot), so archiving daily snapshots [can lead to higher costs] (ebs-archive-recommended-monthly-not-daily).",
+    "exam_signal": "\"keep backups for years at the lowest cost; restores are rare\" points to a lifecycle rule that moves recovery points to [a lower-cost cold storage tier] (backup-faq-lifecycle-warm-to-cold); \"restore within minutes\" speaks against cold storage, because a cold restore [typically takes 4 hours more] (backup-restore-from-cold-storage-takes-longer).",
+    "exam_trap": "backup-trap-every-backup-goes-cold",
+    "exam_trap_text": "Wrong belief: any backup in a plan can move to cold storage. Truth: continuous backups never do, because cold storage needs a [minimum transition period of 90 days] and continuous backups keep a [maximum retention period of 35 days] (backup-pitr-no-cold-storage-because-35-vs-90); S3 backups [does not support cold storage tier] (backup-faq-s3-no-cold-storage) either. Rephrase around the S3 display so that it reads well, or drop the S3 half. End with <!-- trap: backup-trap-every-backup-goes-cold -->. At most 45 words.",
+    "try_it": "Try it callout for backup-t03 only if the tasks writer ships it (after the Exam trap), ending with its task comment. If backup-t03 is parked, leave the callout out.",
+    "say_it": "The short answer is: move long-kept backups to cold storage when the resource type allows it. The thing to watch is the minimum time in cold storage.",
+    "stop_and_answer": "A daily rule keeps EBS backups for 30 days and moves them to cold storage after 7 days. Will AWS Backup accept the rule? Answer: no; a plan that uses cold storage needs a total retention period of [90 days or greater] (backup-cold-storage-plan-total-retention-90-days). Keep this fact out of the trace and the table."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "a-copy-in-another-region-or-account-survives-the-loss-of-the-source",
+   "heading": "A copy in another Region or account survives the loss of the source",
+   "parent": "how-it-works",
+   "order": 5,
+   "minutes": 4,
+   "route": "pass",
+   "bullets": ["1.3.S5", "2.2.S5", "2.2.K4"],
+   "facts": ["backup-copy-action-same-or-other-region-and-account", "backup-cross-region-copy-on-demand-or-scheduled", "backup-cross-region-first-copy-full-then-incremental", "backup-encryption-copy-uses-destination-vault-key", "backup-cross-account-requires-same-organization", "backup-cross-account-management-account-enables-feature", "backup-cross-account-destination-vault-must-allow-copy-into", "backup-cross-account-copy-purpose-recover-deleted-original", "backup-cross-region-copy-minimum-distance-requirement", "backup-pricing-cross-region-transfer-out-only", "backup-vault-policy-cross-account-only-copy-into-vault", "backup-faq-lag-vault-ransomware-strategy", "backup-faq-lag-vault-share-ram", "backup-copy-cold-storage-backups-cannot-be-copied", "backup-resilience-copy-across-regions-greater-resilience"],
+   "plan": {
+    "problem": "All backups sit in one account and one Region. If the Region fails, or someone deletes backups in that account, nothing is left to restore.",
+    "trace": [
+     "**Add a copy action.** A rule can copy each backup [in the same or another AWS Region], [in the same account or another account] (backup-copy-action-same-or-other-region-and-account), [on demand or automatically] (backup-cross-region-copy-on-demand-or-scheduled).",
+     "**Copy to a Region.** The first copy to a new Region [copies the backup in full]; later copies [in the same AWS Region will be incremental] (backup-cross-region-first-copy-full-then-incremental). The copy uses [the KMS key of the target vault] (backup-encryption-copy-uses-destination-vault-key).",
+     "**Copy to an account.** The accounts [must belong to the same organization] (backup-cross-account-requires-same-organization); the [management account] turns on cross-account backup (backup-cross-account-management-account-enables-feature); the destination vault allows [the access policy backup:CopyIntoBackupVault] (backup-cross-account-destination-vault-must-allow-copy-into).",
+     "**Recover.** If the original is [inadvertently deleted], you copy it back [from its destination account to its source account] and restore it (backup-cross-account-copy-purpose-recover-deleted-original)."
+    ],
+    "trace_note": "Step 3 links three facts, each with its own display; if the body passes 180 words, move the management-account clause into the Say it or drop it. Bold copy action, cross-Region copy and cross-account copy at first use.",
+    "table": "What each copy protects against (columns: Copy | Protects against | Note): another Region | the loss of a Region; backups stay [a minimum distance away from your production data] (backup-cross-region-copy-minimum-distance-requirement) | data transfer is charged only [when transferring data out of an AWS Region] (backup-pricing-cross-region-transfer-out-only); another account | a deletion or a takeover in the production account | needs the same organization (no link: stated in the trace). Two rows; cells at most 15 words.",
+    "why": "Why a second account? A vault access policy cannot open a vault to another account for anything but copying in: cross-account actions [other than backup:CopyIntoBackupVault will be rejected] (backup-vault-policy-cross-account-only-copy-into-vault). Credentials stolen in production do not reach the backup account.",
+    "exam_signal": "\"keep copies of backups in a second Region for disaster recovery\" points to a copy action, which gives [even greater resilience] (backup-resilience-copy-across-regions-greater-resilience); \"ransomware\" points to a logically air-gapped vault, part of a [ransomware resilience strategy] (backup-faq-lag-vault-ransomware-strategy).",
+    "exam_trap": "backup-trap-cross-account-any-account",
+    "exam_trap_text": "Wrong belief: a copy action can send backups to any AWS account, also one of another company. Truth: copy actions stay inside the organization; to give an account outside it access, share a logically air-gapped vault [with accounts in different Organizations] (backup-faq-lag-vault-share-ram). End with <!-- trap: backup-trap-cross-account-any-account -->. At most 40 words.",
+    "say_it": "The short answer is: copy each backup to a second account, and to a second Region when the Region itself is a risk. The thing to watch is the vault policy in the destination account.",
+    "stop_and_answer": "A monthly rule moves backups to cold storage after 30 days. In January a new rule tries to copy last year's monthly backups to another Region. Does it work? Answer: no; backups in cold storage or [archive tiers cannot be copied] (backup-copy-cold-storage-backups-cannot-be-copied) to another Region or account; copy them before the lifecycle moves them. Keep this fact out of the trace."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+   "heading": "Vault Lock in compliance mode stops even the root user from deleting backups",
+   "parent": "how-it-works",
+   "order": 6,
+   "minutes": 4,
+   "route": "pass",
+   "bullets": ["1.3.S1", "2.2.S5"],
+   "facts": ["backup-vault-lock-two-modes-governance-compliance", "backup-vault-lock-min-max-retention-fail-nonconforming-jobs", "backup-vault-lock-grace-time-minimum-3-days", "backup-vault-lock-compliance-immutable-by-anyone", "backup-vault-lock-denies-delete-and-lifecycle-change-even-root", "backup-vault-lock-governance-lock-removable-with-iam", "backup-vault-lock-governance-intent-designated-personnel", "backup-lag-vault-encryption-key-and-compliance-lock", "backup-vault-lock-compliance-grace-time-remove-or-change", "backup-vault-lock-cohasset-assessment-sec-cftc-finra", "backup-legal-hold-no-expiry-released-by-user-complements-vault-lock", "backup-vault-access-policy-controls-only-backup-apis", "backup-vault-policy-deny-delete-recovery-point-except-principal", "backup-vault-lock-account-closure-deletes-vault-after-90-days", "backup-vault-lock-no-extra-charge-storage-charges-apply"],
+   "plan": {
+    "problem": "An administrator's credentials are stolen. IAM permissions cannot stop someone who already holds every permission in the account.",
+    "trace": [
+     "**Choose a mode.** AWS Backup Vault Lock has [Governance mode] and [Compliance mode] (backup-vault-lock-two-modes-governance-compliance).",
+     "**Set retention limits.** The lock sets a minimum and a maximum retention; new backup and copy jobs [will fail if they do not conform] (backup-vault-lock-min-max-retention-fail-nonconforming-jobs).",
+     "**Wait out the grace time.** A compliance lock has a grace time of [at least 3 days (72 hours)] (backup-vault-lock-grace-time-minimum-3-days); after it, the lock [cannot be altered or deleted by any user] (backup-vault-lock-compliance-immutable-by-anyone).",
+     "**Deny deletes.** In a locked vault, when any user, [including the root user], tries to delete a backup or change its lifecycle, [AWS Backup will deny the operation] (backup-vault-lock-denies-delete-and-lifecycle-change-even-root)."
+    ],
+    "trace_note": "Bold Vault Lock, governance mode, compliance mode and grace time at first use.",
+    "table": "Governance or compliance (columns: Question | Governance mode | Compliance mode): Who can remove the lock | users with IAM permissions: the [lock removed by users with sufficient IAM permissions] (backup-vault-lock-governance-lock-removable-with-iam) | nobody, after the grace time; Use it when | [only designated personnel can make changes] (backup-vault-lock-governance-intent-designated-personnel) | records must stay unchanged until the retention ends; Logically air-gapped vault | not used | always: the vault comes with [Vault Lock's compliance mode] (backup-lag-vault-encryption-key-and-compliance-lock). Three rows; rephrase the governance cell so that the display reads well, for example 'can have its [lock removed by users with sufficient IAM permissions]'.",
+    "why": "Why a grace time? A wrong retention in a compliance lock cannot be fixed later, so AWS lets you test it first: until the grace time ends, [you can still remove the vault lock] (backup-vault-lock-compliance-grace-time-remove-or-change).",
+    "exam_signal": "\"WORM\" or \"no user, including the root user, can delete backups\" points to Vault Lock in compliance mode, assessed for [SEC 17a-4, CFTC, and FINRA regulations] (backup-vault-lock-cohasset-assessment-sec-cftc-finra); \"keep one backup past its retention for a lawsuit\" points to a legal hold, which [does not expire] (backup-legal-hold-no-expiry-released-by-user-complements-vault-lock).",
+    "exam_trap": null,
+    "exam_trap_note": "No Exam trap callout here: backup-trap-governance-stops-admins lives in the fast Traps list.",
+    "spot_the_bug": "Spot the bug (the one of the file), after the Exam signal and before the Try it, about 50 words with its reveal: 'A team protects EBS and RDS backups with a vault access policy that denies backup:DeleteRecoveryPoint to everyone except the security role. An engineer still deletes an RDS snapshot that AWS Backup created. What is wrong?' Reveal: vault access policies [only control user access to AWS Backup APIs]; snapshots also need [separate access policies in IAM] (backup-vault-access-policy-controls-only-backup-apis). The deny statement itself is right for the AWS Backup API (a [resource-based access policy on a backup vault], backup-vault-policy-deny-delete-recovery-point-except-principal) and is the decoy. Do not claim that Vault Lock blocks the RDS API: no fact says it.",
+    "try_it": "Try it callout for backup-t02 after the Spot the bug, ending with its task comment.",
+    "say_it": "The short answer is: lock the backup vault in compliance mode, and keep a copy in a second account. The thing to watch is the grace time, because after it nobody can undo a mistake.",
+    "stop_and_answer": "A company locks a backup vault in compliance mode with a 7-year retention and later closes the AWS account. Are the backups kept for 7 years? Answer: no; AWS keeps a closed account suspended (the display is [suspend your account for 90 days]) and then deletes the vault contents even when [AWS Backup Vault Lock was in place] (backup-vault-lock-account-closure-deletes-vault-after-90-days). Keep this fact out of the trace."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "most-restores-create-a-new-resource-and-restore-testing-proves-they-work",
+   "heading": "Most restores create a new resource and restore testing proves they work",
+   "parent": "how-it-works",
+   "order": 7,
+   "minutes": 4,
+   "bullets": ["1.3.K2", "1.3.S1", "2.2.K4"],
+   "facts": ["backup-restore-destructive-exceptions-listed", "backup-restore-testing-automated-periodic-evaluation", "backup-restore-testing-resources-deleted-after-validation", "backup-faq-audit-manager-purpose", "backup-audit-manager-control-restore-time", "backup-audit-manager-control-min-frequency-retention", "backup-audit-manager-frameworks-and-daily-reports", "backup-audit-manager-control-vault-lock", "backup-restore-no-sla-for-restore-time", "well-architected-rto-definition", "backup-audit-manager-needs-resource-tracking-aws-config", "backup-s3-restore-not-destructive-existing-objects-skipped", "backup-search-find-files-or-objects-without-full-restore", "backup-malware-on-demand-scan-find-last-clean-backup", "backup-restore-efs-files-not-in-original-locations"],
+   "plan": {
+    "problem": "An auditor asks for proof that last month's backups can be restored, and how long a restore takes.",
+    "trace": [
+     "**Restore.** For most resource types AWS Backup [creates a new resource during restore], to [protect your existing resources from being destroyed] (backup-restore-destructive-exceptions-listed).",
+     "**Test on a schedule.** Restore testing gives [automated and periodic evaluation of restore viability] (backup-restore-testing-automated-periodic-evaluation); after validation, AWS Backup [deletes the resources involved with the restore test] (backup-restore-testing-resources-deleted-after-validation).",
+     "**Prove it.** AWS Backup Audit Manager audits [the compliance of your data protection policies] (backup-faq-audit-manager-purpose), with controls such as [Restore time for resources meet target] (backup-audit-manager-control-restore-time)."
+    ],
+    "trace_note": "Three steps only; the EFS recovery directory stays out of the trace (Stop and answer). Bold restore testing, AWS Backup Audit Manager, framework and control at first use.",
+    "table": "What answers the auditor (columns: The auditor asks | Answer with | Evidence): Are backups taken as the policy says? | the control [Backup plan has minimum frequency and minimum retention] (backup-audit-manager-control-min-frequency-retention) | a report that Audit Manager [automatically generates a new report for you every 24 hours] (backup-audit-manager-frameworks-and-daily-reports); Do restores work, and how fast? | restore testing | restore job duration; Can anyone delete the backups? | the control for a [backup plan with an AWS Backup Vault Lock] (backup-audit-manager-control-vault-lock) | the compliance report. Three rows; cells at most 15 words; if a display makes a cell too long, keep the link in one cell of the row only.",
+    "why": "Why test? AWS Backup [does not provide any service-level agreements (SLAs)] for restore time (backup-restore-no-sla-for-restore-time), so only a test shows whether a restore fits the RTO, the [maximum acceptable delay between the interruption of service and restoration of service] (well-architected-rto-definition). If the RTO display makes the sentence too long, write 'fits the RTO' without the second link.",
+    "exam_signal": "\"prove to auditors that backups follow the policy\" points to AWS Backup Audit Manager, for which [you must turn on resource tracking] in AWS Config (backup-audit-manager-needs-resource-tracking-aws-config); \"check every month that backups can be restored\" points to restore testing.",
+    "exam_trap": "backup-trap-restore-overwrites",
+    "exam_trap_text": "Wrong belief: a restore writes the data back into the original resource. Truth: even into the original S3 bucket, AWS Backup [does not perform a destructive restore] and skips objects with the [same name or version ID] (backup-s3-restore-not-destructive-existing-objects-skipped); only [Amazon Redshift Serverless] and [SAP HANA on Amazon EC2] restores overwrite (backup-restore-destructive-exceptions-listed). End with <!-- trap: backup-trap-restore-overwrites -->. At most 45 words.",
+    "go_deeper": "Optional Go deeper, only if the file stays under 2,400 words: find one file, or a clean backup (at most 50 words). Backup search lets you [search the metadata of your backups] and restore [just the specific file or object] (backup-search-find-files-or-objects-without-full-restore). After an attack, AWS recommends on-demand malware scans to [identify your last clean backup] (backup-malware-on-demand-scan-find-last-clean-backup). Both features are recent: teach them as options.",
+    "say_it": "The short answer is: a restore makes a new resource, and restore testing shows that it works. The thing to watch is the restore time, which only a test tells you.",
+    "stop_and_answer": "After a full restore of an EFS file system into the existing file system, users still see the broken files. Did the restore fail? Answer: no; the files are [located in a recovery subdirectory under the root], and [Files are not restored to their original locations] (backup-restore-efs-files-not-in-original-locations); move them where they belong. Keep this fact out of the trace."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "heading": "Numbers that decide answers",
+   "role": "numbers",
+   "minutes": 2,
+   "bullets": ["4.3.S1", "1.3.S5", "4.1.S6", "1.3.S1"],
+   "facts": ["backup-snapshot-hourly-and-100-years", "backup-retention-continuous-range", "backup-pitr-latest-restorable-time-by-service", "backup-cold-storage-min-90-days-retention-rule", "backup-vault-lock-grace-time-minimum-3-days", "backup-retention-snapshot-range", "backup-restore-from-cold-storage-takes-longer", "backup-resilience-stored-across-azs-eleven-nines", "backup-plan-window-start-within-default-8-hours", "backup-plan-expired-backups-deleted-within-8-hours", "backup-lag-min-retention-7-days", "backup-legal-hold-max-50-active-per-account", "backup-quota-copy-actions-per-backup-rule"],
+   "plan": {
+    "a_list": [
+     {"fact": "backup-snapshot-hourly-and-100-years", "display": "as frequently as every hour", "what": "Most frequent snapshot backup of a backup rule", "why_it_decides": "A shorter RPO needs a continuous backup"},
+     {"fact": "backup-retention-continuous-range", "display": "1 day to 35 days", "what": "Retention of a continuous backup", "why_it_decides": "Older points in time need snapshot backups"},
+     {"fact": "backup-pitr-latest-restorable-time-by-service", "display": "most recent 5 minutes of activity", "what": "Latest point an RDS point-in-time restore reaches", "why_it_decides": "For S3 the edge is the [most recent 15 minutes of activity] (same fact): link it or leave S3 out"},
+     {"fact": "backup-cold-storage-min-90-days-retention-rule", "display": "minimum of 90 days", "what": "Time a backup stays in cold storage", "why_it_decides": "Short retention cannot use cold storage"},
+     {"fact": "backup-vault-lock-grace-time-minimum-3-days", "display": "at least 3 days (72 hours)", "what": "Shortest grace time of a compliance-mode Vault Lock", "why_it_decides": "After it ends, nobody can remove the lock"}
+    ],
+    "b_list": [
+     {"fact": "backup-retention-snapshot-range", "display": "100 years", "what": "Longest retention of a snapshot backup"},
+     {"fact": "backup-restore-from-cold-storage-takes-longer", "display": "typically takes 4 hours more", "what": "Extra time of a restore from cold storage"},
+     {"fact": "backup-resilience-stored-across-azs-eleven-nines", "display": "99.999999999% (11 nines)", "what": "Designed durability of stored backups"},
+     {"fact": "backup-plan-window-start-within-default-8-hours", "display": "8 hours", "what": "Default 'Start within' of a backup window in the console"},
+     {"fact": "backup-plan-expired-backups-deleted-within-8-hours", "display": "over the following 8 hours", "what": "When an expired backup is deleted"},
+     {"fact": "backup-lag-min-retention-7-days", "display": "7 days", "what": "Lowest minimum retention of a logically air-gapped vault"},
+     {"fact": "backup-legal-hold-max-50-active-per-account", "display": "maximum of 50 legal holds", "what": "Active legal holds per account"},
+     {"fact": "backup-quota-copy-actions-per-backup-rule", "display": "5 copy actions", "what": "Copy actions in one backup rule"}
+    ],
+    "not_examinable_entry_under_b_list": null,
+    "note": "Every A-list row has one number card (backup-c001 to c005). The 'what' and 'why' cells are strict text. No not-examinable entry is planned (word budget). At most 170 words."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "decision-record",
+   "heading": "Decision record",
+   "role": "example",
+   "minutes": 2,
+   "bullets": ["4.3.S1", "1.3.S1", "4.1.K5"],
+   "facts": ["backup-org-policy-creates-visible-plan-in-each-account", "backup-plan-applied-by-tagging-resources", "backup-vault-lock-compliance-immutable-by-anyone", "backup-cross-account-copy-purpose-recover-deleted-original", "backup-native-relationship-varies-by-service", "backup-feature-row-aurora", "backup-vault-lock-locked-backups-persist-until-lifecycle-ends", "backup-cold-ebs-is-snapshot-archive-monthly-or-less"],
+   "plan": {
+    "context": "From data/startup.json chapters.24 (trigger and problem), at most 80 words: stage 3, month 22. The bank asks for the backup policy of every data store, proof of last month's backups and a restore test. Data is in Aurora, DynamoDB, EFS and EBS in several accounts, each with its own backup settings; the bank requires daily backups kept for 30 days and monthly backups kept for 7 years, and administrators must not be able to delete backups. Embed backup-before after this field.",
+    "requirement": "Exam English: The company must protect data in four AWS services across several accounts with one backup policy, keep daily backups for 30 days and monthly backups for 7 years, and ensure that no administrator can delete a backup, with the LEAST operational overhead.",
+    "options": ["The backup settings of each service, plus a written policy.", "Custom programs that create snapshots on a schedule.", "AWS Backup plans for the whole organization."],
+    "decision": "AWS Backup for the whole organization: one backup policy creates [a corresponding backup plan] in each account (backup-org-policy-creates-visible-plan-in-each-account); the plan selects resources by tag; a daily rule and a monthly rule; a backup vault locked in compliance mode, so the lock [cannot be altered or deleted by any user] after the grace time (backup-vault-lock-compliance-immutable-by-anyone); a copy action to a vault in a separate backup account, from which a deleted backup can be copied back (backup-cross-account-copy-purpose-recover-deleted-original). Embed backup-after after this field.",
+    "trade_off": "A second policy layer sits above the services' own backups, whose relation to AWS Backup [varies by service] (backup-native-relationship-varies-by-service). Seven-year copies cost storage: the feature table gives [Amazon Aurora] no lifecycle to cold storage (backup-feature-row-aurora), so its monthly backups stay in warm storage, while EBS monthly backups can move ([monthly or less often], backup-cold-ebs-is-snapshot-archive-monthly-or-less); and locked backups [cannot be deleted until their lifecycle completes] (backup-vault-lock-locked-backups-persist-until-lifecycle-ends).",
+    "diagrams": ["backup-before", "backup-after"],
+    "budget": "Fields at most 140 words; each diagram alt at most 30 words and caption at most 20 words. Story numbers 30 days and 7 years only (W903)."
+   }
+  },
+  {
+   "file": "2-deep.md",
+   "section": "faq-quick-fire",
+   "heading": "FAQ quick-fire",
+   "role": "faq",
+   "minutes": 3,
+   "bullets": ["4.1.K5", "4.1.S6", "1.3.S1"],
+   "facts": ["backup-faq-can-back-up-on-premises", "backup-faq-dlm-and-backup-independent", "backup-faq-s3-no-cold-storage", "backup-faq-legal-hold-definition", "backup-faq-s3-versioning-prerequisite"],
+   "plan": "Five items (see faq), each a can-or-cannot question, the short answer with a fact link, and an AWS quote block with whole sentences of the evidence quote and the source link. At most 240 words in all; keep each answer line at about 12 words."
+  },
+  {
+   "file": "2-deep.md",
+   "section": "in-the-real-world",
+   "heading": "In the real world",
+   "role": "realworld",
+   "minutes": 1,
+   "bullets": ["2.2.K4"],
+   "facts": ["ebs-case-games24x7-aws-backup-rpo-rto"],
+   "plan": "See realworld. At most 80 words. Required in this brief (L905 checks every brief section from the edit stage on): if 2-deep.md would pass 2,400 words, cut the optional timeline and Go deeper words first."
+  }
+ ],
+ "traps": [
+  {
+   "id": "backup-trap-replication-is-backup",
+   "belief": "A replica or standby copy of the data (Multi-AZ, a read replica, S3 replication, a global table) is a backup, so the workload needs no separate backups.",
+   "truth": "A copy that follows every change also receives deletes and corruption; only a recovery point keeps the content of a resource at a specified time, and even multi-site designs still need backups for data corruption.",
+   "facts": ["s3-replication-delete-markers-optional", "backup-faq-recovery-point-definition", "aurora-cmp-wp-multi-site-recovery-near-zero", "backup-faq-why-durable-still-needs-backup"],
+   "placed_in": "1-fast.md#signals-and-traps"
+  },
+  {
+   "id": "backup-trap-governance-stops-admins",
+   "belief": "Any AWS Backup Vault Lock stops every administrator from deleting backups.",
+   "truth": "A lock in governance mode can be removed by users with sufficient IAM permissions; only a lock in compliance mode, after its grace time, cannot be altered or deleted by any user.",
+   "facts": ["backup-vault-lock-governance-lock-removable-with-iam", "backup-vault-lock-compliance-immutable-by-anyone"],
+   "placed_in": "1-fast.md#signals-and-traps"
+  },
+  {
+   "id": "backup-trap-vault-key-encrypts-everything",
+   "belief": "The KMS key of a backup vault encrypts every backup stored in that vault, so an unencrypted database gets encrypted backups.",
+   "truth": "The vault key applies only to the backups of certain resource types (those with full AWS Backup management); EBS, RDS and Aurora backups keep the key of the source, and backups of an unencrypted RDS database stay unencrypted.",
+   "facts": ["backup-vault-key-applies-only-to-independent-encryption-types", "backup-encryption-rds-row", "backup-encryption-ebs-row"],
+   "placed_in": "1-fast.md#signals-and-traps"
+  },
+  {
+   "id": "backup-trap-copy-keeps-pitr",
+   "belief": "A cross-Region or cross-account copy of a continuous backup still allows point-in-time restore.",
+   "truth": "The copy becomes a snapshot (periodic) backup, and point-in-time restore is not available for it.",
+   "facts": ["backup-continuous-copy-becomes-snapshot-no-pitr", "backup-s3-copies-available-copies-of-continuous-no-pitr"],
+   "placed_in": "2-deep.md#continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days (Exam trap callout)"
+  },
+  {
+   "id": "backup-trap-every-backup-goes-cold",
+   "belief": "Any backup can move to cold storage to save money, whatever the resource type or rule.",
+   "truth": "Cold storage exists only for listed resource types and is ignored for the others (Aurora and S3 backups do not transition); continuous backups never transition, and a backup must stay at least 90 days in cold storage.",
+   "facts": ["backup-cold-storage-ignored-for-unsupported-resources", "backup-pitr-no-cold-storage-because-35-vs-90", "backup-s3-no-cold-storage-transition", "backup-feature-row-aurora", "backup-cold-storage-min-90-days-retention-rule"],
+   "placed_in": "2-deep.md#the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them (Exam trap callout)"
+  },
+  {
+   "id": "backup-trap-cross-account-any-account",
+   "belief": "An AWS Backup copy action can send backups to any AWS account, including an account of another company.",
+   "truth": "Cross-account copies need accounts in the same organization, cross-account backup turned on by the management account and a destination vault policy that allows backup:CopyIntoBackupVault; an account outside the organization gets access through a logically air-gapped vault shared with AWS RAM.",
+   "facts": ["backup-cross-account-requires-same-organization", "backup-cross-account-management-account-enables-feature", "backup-cross-account-destination-vault-must-allow-copy-into", "backup-faq-lag-vault-share-ram"],
+   "placed_in": "2-deep.md#a-copy-in-another-region-or-account-survives-the-loss-of-the-source (Exam trap callout)"
+  },
+  {
+   "id": "backup-trap-restore-overwrites",
+   "belief": "A restore with AWS Backup writes the data back into the original resource and replaces what is there.",
+   "truth": "For most resource types AWS Backup creates a new resource during restore; an S3 restore into the original bucket skips existing objects, an EFS restore goes to a recovery directory, and only Redshift Serverless and SAP HANA on EC2 restores overwrite.",
+   "facts": ["backup-restore-destructive-exceptions-listed", "backup-s3-restore-not-destructive-existing-objects-skipped", "backup-restore-efs-no-destructive-restore-recovery-directory"],
+   "placed_in": "2-deep.md#most-restores-create-a-new-resource-and-restore-testing-proves-they-work (Exam trap callout)"
+  }
+ ],
+ "traps_note": "7 traps = brief_traps_max of the medium template (U5): 3 in the fast Traps list, 4 as Exam trap callouts in 2-deep.md (subsections 3, 4, 5, 7). Misconceptions without a trap id (questions use a misconception sentence): 'a vault access policy that denies DeleteRecoveryPoint stops every deletion of EBS and RDS backups' (backup-vault-access-policy-controls-only-backup-apis; it is the Spot the bug); 'AWS Backup governs every snapshot in the account, also those made by scripts or by the service' (backup-does-not-govern-backups-outside-aws-backup, backup-native-service-backups-not-centrally-governed); 'AWS Backup replaces RDS automated backups' (backup-faq-per-service-capabilities-unchanged); 'a backup plan protects a service as soon as its resources carry the tag' (backup-opt-in-still-applies-with-tag-assignment); 'Data Lifecycle Manager backs up EFS and databases' (backup-faq-dlm-vs-backup-when-to-use); 'backups in cold storage can be copied to another Region' (backup-copy-cold-storage-backups-cannot-be-copied); 'locked backups survive the closing of the account' (backup-vault-lock-account-closure-deletes-vault-after-90-days).",
+ "traps_from_other_chapters": {
+  "rule": "Question writers can tag a distractor with a trap id of another chapter when the distractor states exactly that trap's belief (lint.traps() knows them). Q205 needs a trap id on at least half of the wrong options; reuse is allowed.",
+  "ids": [
+   "rds-trap-multi-az-is-a-backup",
+   "rds-trap-encrypt-existing-in-place",
+   "rds-trap-restore-overwrites-instance",
+   "rds-trap-retention-beyond-35-days",
+   "dynamodb-trap-backup-is-standby",
+   "dynamodb-trap-restore-in-place",
+   "aurora-trap-restore-in-place",
+   "s3-trap-durability-is-backup",
+   "s3-trap-versioning-stops-deletes",
+   "s3-trap-governance-stops-everyone",
+   "ebs-trap-aws-backs-up-ebs",
+   "ebs-trap-io2-durability-replaces-backup",
+   "ebs-trap-archive-daily-snapshots",
+   "ebs-trap-snapshots-in-my-s3-bucket",
+   "kms-trap-key-is-global",
+   "how-the-exam-asks-trap-cheapest-wins",
+   "how-the-exam-asks-trap-works-means-correct",
+   "how-the-exam-asks-trap-keyword-bait",
+   "how-the-exam-asks-trap-newest-feature-wins",
+   "how-the-exam-asks-trap-multi-az-covers-region",
+   "how-the-exam-asks-trap-always-max-availability",
+   "how-the-exam-asks-trap-detect-meets-ensure"
+  ]
+ },
+ "compare_tables": [
+  {
+   "where": "1-fast.md#choose-it-or-not",
+   "h3": "AWS Backup or the backups of each service",
+   "columns": ["Question", "AWS Backup", "Backup features of each service"],
+   "rows": [
+    "Scope | backups across services [from a single place] (backup-faq-dlm-vs-backup-when-to-use) | one service each, for example Data Lifecycle Manager for EBS snapshots (no second link to the same fact)",
+    "Several accounts and Regions | one policy that you [apply it across accounts and Regions] (ebs-aws-backup-central-policy-across-accounts): rephrase so that the display reads well | set up in each account",
+    "Delete protection | Vault Lock can [prevent manual deletion of backups] (backup-faq-vault-lock-purpose-worm) | a different feature in each service, if any",
+    "Backups made elsewhere | it [does not govern backups] taken [outside of AWS Backup] (backup-does-not-govern-backups-outside-aws-backup) | each service sees its own"
+   ],
+   "deciding_question": "Do several services or accounts need one policy, one lock and one report?"
+  },
+  {
+   "where": "1-fast.md#choose-it-or-not",
+   "h3": "Backups or replication",
+   "columns": ["Question", "Backups", "Replication"],
+   "rows": [
+    "Data deleted or corrupted by mistake | an earlier recovery point still holds [the content of a resource at a specified time] (backup-faq-recovery-point-definition) | the copy receives the same change; even multi-site designs, which cut [recovery time to near zero], still need backups for corruption (aurora-cmp-wp-multi-site-recovery-near-zero)",
+    "Time to recover | a restore, and AWS Backup [does not provide any service-level agreements (SLAs)] for its duration (backup-restore-no-sla-for-restore-time) | a failover, for RDS Multi-AZ [as quickly as 60 seconds] (rds-compare-maz-failover-time)",
+    "Main purpose | getting data back | for Multi-AZ, [Main purpose is high availability] (rds-compare-purpose-ha-dr-scale)"
+   ],
+   "deciding_question": "Is the risk lost data or lost time? Production data usually needs both."
+  }
+ ],
+ "signals": [
+  {
+   "stem": "\"backups that no one, including the root user, can delete or change\"",
+   "think": "Vault Lock in compliance mode",
+   "because": "after the grace time the lock [cannot be altered or deleted by any user] (backup-vault-lock-compliance-immutable-by-anyone)",
+   "but_not_if": "single S3 objects must be WORM: S3 Object Lock (chapter 21)"
+  },
+  {
+   "stem": "\"one backup policy for all accounts in the organization\"",
+   "think": "AWS Backup policies in AWS Organizations",
+   "because": "backup policies [centrally manage and apply backup plans] (organizations-backup-policy-effective-plan-immutable)",
+   "but_not_if": "only EBS snapshots and AMIs, at no extra cost: Amazon Data Lifecycle Manager, which runs [at no additional cost] (ebs-dlm-automates-snapshots-and-amis)"
+  },
+  {
+   "stem": "\"restore the database to a specific second within the last weeks\"",
+   "think": "a continuous backup rule",
+   "because": "it rewinds [within 1 second of precision] (backup-pitr-restore-rewinds-to-chosen-time)",
+   "but_not_if": "the backup must be kept for years: a snapshot backup rule"
+  },
+  {
+   "stem": "\"keep monthly backups for years at the lowest cost\"",
+   "think": "a lifecycle rule to cold storage",
+   "because": "the lifecycle moves recovery points to [a lower-cost cold storage tier] (backup-faq-lifecycle-warm-to-cold)",
+   "but_not_if": "the resource is Aurora or S3: they have no cold storage, so keep warm"
+  },
+  {
+   "stem": "\"backups must survive the loss of a Region or of the production account\"",
+   "think": "a copy action to another Region or account",
+   "because": "a rule can copy [in the same or another AWS Region] and to another account (backup-copy-action-same-or-other-region-and-account)",
+   "but_not_if": "the account is outside the organization: share a logically air-gapped vault through AWS RAM"
+  },
+  {
+   "stem": "\"prove to auditors that backups meet the policy\"",
+   "think": "AWS Backup Audit Manager",
+   "because": "it audits [the compliance of your data protection policies] (backup-faq-audit-manager-purpose)",
+   "but_not_if": "the proof is that restores work in time: restore testing"
+  }
+ ],
+ "signals_note": "Columns 0, 1 and 3 are example and heuristic text (L304 exemption 5), but write the 'But not if' cells without numbers or absolute words. The Aurora and S3 cell needs no link; if a reviewer asks, link [Amazon Aurora] (backup-feature-row-aurora).",
+ "fast_traps_text": [
+  "backup-trap-replication-is-backup: **Wrong belief:** A replica or standby copy is a backup. **Truth:** a copy that follows every change also receives deletes; with delete marker replication, S3 acts as if [the object was deleted in both buckets] (s3-replication-delete-markers-optional). Only a recovery point keeps [the content of a resource at a specified time] (backup-faq-recovery-point-definition). If Choose it or not already links this fact, write the second sentence without a link.",
+  "backup-trap-governance-stops-admins: **Wrong belief:** Any Vault Lock stops every administrator. **Truth:** a governance-mode vault can have its [lock removed by users with sufficient IAM permissions] (backup-vault-lock-governance-lock-removable-with-iam); a compliance-mode lock, after its grace time, [cannot be altered or deleted by any user] (backup-vault-lock-compliance-immutable-by-anyone).",
+  "backup-trap-vault-key-encrypts-everything: **Wrong belief:** The vault's KMS key encrypts every backup in it. **Truth:** the vault key [applies to the backups of certain resource types] (backup-vault-key-applies-only-to-independent-encryption-types); RDS backups keep the key used to [encrypt the source Amazon RDS database] (backup-encryption-rds-row)."
+ ],
+ "words_table": [
+  {"term": "backup plan", "collocation": "**assign** resources to a backup plan", "plain": "The rules that say when to back up, how long to keep and where", "not": "a backup policy (AWS Organizations)"},
+  {"term": "recovery point", "collocation": "**restore** a recovery point", "plain": "One backup of one resource at one moment", "not": "the backup vault that holds it"},
+  {"term": "backup vault", "collocation": "**lock** a backup vault", "plain": "The encrypted container that holds recovery points", "not": "an S3 bucket"},
+  {"term": "Vault Lock", "collocation": "turn on Vault Lock in **compliance mode**", "plain": "A vault setting that stops deletes and retention changes", "not": "S3 Object Lock"}
+ ],
+ "words_table_note": "Each row's term and collocation are term requests (term_requests); the terms agent adds them to data/terms.json with exactly these collocations before the writers start. Cells 3 and 4 are free text.",
+ "changed_recently": {
+  "fast": [
+   {
+    "date": "2022-10-04",
+    "what": "Vault Lock in governance mode, next to compliance mode.",
+    "now_fact": "backup-change-vault-lock-governance-mode-2022-10",
+    "old": "not available.",
+    "now": "Vault Lock can be created in [governance mode for additional IAM protections] (backup-change-vault-lock-governance-mode-2022-10), a lock that users with IAM permissions can remove (backup-vault-lock-governance-lock-removable-with-iam, linked only if the line has room)",
+    "exam_expects": "older questions treat every Vault Lock as one that nobody can remove; read the stem for 'compliance mode' or for a team that must still be able to remove the lock.",
+    "status": "examinable",
+    "fact_request": "fr-0108 (changed.date 2022-10-04 on backup-change-vault-lock-governance-mode-2022-10)"
+   }
+  ],
+  "fallback": {
+   "use_when": "fr-0108 is closed as unfillable",
+   "date": "2025-10-30",
+   "what": "Database snapshot copies to another Region and another account in one action.",
+   "now_fact": "backup-change-single-action-snapshot-copy-2025-10",
+   "old": "a [two-step process] (backup-change-single-action-snapshot-copy-2025-10): first another Region, then another account",
+   "now": "since [Oct 30, 2025] (backup-change-single-action-snapshot-copy-2025-10), RDS, Aurora, DocumentDB and Neptune copy [in a single action] (backup-feature-snapshot-copy-single-action-databases)",
+   "exam_expects": "older questions copy in two steps; both paths reach the same result. Prefer an option that is right under both.",
+   "status": "examinable"
+  },
+  "dropped": "Logically air-gapped vault as a primary backup target (2025-11-17, backup-change-lag-primary-backups-2025-11, has changed.date) was weighed; the 1,000-word cap of the fast file allows one entry, and the governance mode decides more answers. Restore testing and EBS cold storage (both 2023-11-27) and Aurora continuous backups (2023-09-07) have no changed.date and are taught as current truth in 2-deep.md.",
+  "not_examinable_yet": "None placed (word budget). Facts after the cut-off 2026-07-15 (backup-change-s3-access-points-2026-08, backup-change-fsx-ontap-cross-copy-2026-08, backup-change-s3-more-than-1000-buckets-2026-09, backup-change-lag-fsx-ontap-2026-09) appear nowhere in the chapter."
+ },
+ "faq": [
+  {
+   "n": 1,
+   "question": "Can AWS Backup back up data in a company's own data center?",
+   "answer": "Yes, [on-premises Storage Gateway volumes and VMware virtual machines] (backup-faq-can-back-up-on-premises).",
+   "fact": "backup-faq-can-back-up-on-premises",
+   "quote": "Yes, you can use AWS Backup can back up on-premises Storage Gateway volumes and VMware virtual machines, providing a common way to manage the backups of your application data both on premises and on AWS.",
+   "quote_note": "Copy the AWS sentence exactly, the doubled 'can' included.",
+   "source": "https://aws.amazon.com/backup/faqs/ (AWS Backup FAQs)"
+  },
+  {
+   "n": 2,
+   "question": "Do Data Lifecycle Manager policies and AWS Backup plans control each other?",
+   "answer": "No. They [work independently from each other] (backup-faq-dlm-and-backup-independent).",
+   "fact": "backup-faq-dlm-and-backup-independent",
+   "quote": "Amazon Data Lifecycle Manager policies and backup plans created in AWS Backup work independently from each other and provide two ways to manage EBS snapshots.",
+   "source": "https://aws.amazon.com/backup/faqs/ (AWS Backup FAQs)"
+  },
+  {
+   "n": 3,
+   "question": "Can S3 backups move to cold storage?",
+   "answer": "No. AWS Backup for S3 [does not support cold storage tier] (backup-faq-s3-no-cold-storage).",
+   "fact": "backup-faq-s3-no-cold-storage",
+   "quote": "AWS Backup for S3 supports backup access policies and encryption of backups with a different key, but does not support cold storage tier.",
+   "source": "https://aws.amazon.com/backup/faqs/ (AWS Backup FAQs)"
+  },
+  {
+   "n": 4,
+   "question": "Can a backup be kept after its retention period ends?",
+   "answer": "Yes, with a legal hold, kept [even if their retention period is over] (backup-faq-legal-hold-definition).",
+   "fact": "backup-faq-legal-hold-definition",
+   "quote": "These holds prevent backups from being deleted, even if their retention period is over, and remain in place until explicitly released.",
+   "source": "https://aws.amazon.com/backup/faqs/ (AWS Backup FAQs)"
+  },
+  {
+   "n": 5,
+   "question": "Can AWS Backup back up an S3 bucket without versioning?",
+   "answer": "No. [S3 Versioning is a prerequisite to creating backups] (backup-faq-s3-versioning-prerequisite).",
+   "fact": "backup-faq-s3-versioning-prerequisite",
+   "quote": "Yes, turning on S3 Versioning is a prerequisite to creating backups of S3 buckets and objects.",
+   "source": "https://aws.amazon.com/backup/faqs/ (AWS Backup FAQs)"
+  }
+ ],
+ "faq_alternatives": [
+  "backup-faq-hipaa-eligible-baa (protected health information with a BAA: yes)",
+  "backup-faq-access-backups-both-ways (backups of EBS seen from AWS Backup and the other way round: yes)",
+  "backup-faq-lag-vault-share-ram (share a logically air-gapped vault with another organization: yes)",
+  "backup-faq-vault-lock-vs-glacier-vault-lock (is AWS Backup Vault Lock the same as S3 Glacier Vault Lock: no)",
+  "backup-faq-why-durable-still-needs-backup (do durable services still need backups: yes)"
+ ],
+ "story": {
+  "trigger": "data/startup.json chapters.24.trigger (stage 3, month 22).",
+  "startup_example_fast": "1-fast.md#in-one-breath: the problem of data/startup.json chapters.24.problem, word for word (48 words).",
+  "chen_question": "Chen asks: 'If an attacker gets administrator access in production, can the attacker delete our backups?' It is speak item backup-s01, not prose.",
+  "continuity": "Components that exist before month 22: Aurora PostgreSQL (chapter 27, month 15 or later), DynamoDB (28), EFS (23), EBS volumes of the conversion workers (22), several accounts in AWS Organizations (04, month 18), KMS keys (06). The recording bucket stays protected by S3 Versioning, Object Lock and replication (21), not by AWS Backup. Cross-Region copy to US West (Oregon) comes at stage 4 (chapter 40): do not draw it in backup-after."
+ },
+ "decision_record": "See sections[decision-record].plan.",
+ "realworld": {
+  "company_line": "**Games24x7, 2024.** (year from the AWS customer-references entry of the case page, date 2024-11-21; corpus cases/index.jsonl)",
+  "intro": "At most two sentences with a link to the case fact: Games24x7, a gaming company, backed up its S3 and EBS data with AWS Backup and, in testing, reached an RPO of [1 hour] and an RTO of [30 minutes] (ebs-case-games24x7-aws-backup-rpo-rto) for a large database.",
+  "quote": "Games24x7 set up automated backups for this stored data using AWS Backup.",
+  "quote_source": "https://aws.amazon.com/solutions/case-studies/games24x7-backup-case-study/",
+  "it_shows": "**It shows:** a tested restore turns RPO and RTO targets into numbers that you can show.",
+  "say_it": "Two sentences: Games24x7 automated its backups with AWS Backup. A restore test showed one hour of data loss and thirty minutes to recover.",
+  "note": "The quote has 12 words (limit 25). Real company names appear only here. The CalvertHealth case (backup-case-calverthealth-edr-and-aws-backup-rto-72-hours-to-under-2) also exists, but it mixes in AWS Elastic Disaster Recovery, which is not in the exam's in-scope list."
+ },
+ "devices": {
+  "go_deeper": ["subsection 1: running backup for an organization", "subsection 3: one continuous backup per resource", "subsection 7 (optional): find one file, or a clean backup"],
+  "spot_the_bug": "subsection 6 (a vault access policy that covers only the AWS Backup API)",
+  "exam_trap_callouts": {
+   "subsection 3": "backup-trap-copy-keeps-pitr",
+   "subsection 4": "backup-trap-every-backup-goes-cold",
+   "subsection 5": "backup-trap-cross-account-any-account",
+   "subsection 7": "backup-trap-restore-overwrites"
+  },
+  "try_it": {
+   "subsection 6": "backup-t02",
+   "subsection 4": "backup-t03 (only if shipped)"
+  },
+  "look_first": "backup-t01 in 1-fast.md#look-first",
+  "predict_the_picture": "backup-hero in 1-fast.md#in-one-breath",
+  "pass_route": "subsections 1, 3, 5 and 6 carry <!-- section: route=pass --> (the core questions review them)"
+ },
+ "question_slots": [
+  {
+   "slot": 1,
+   "id": "backup-q001",
+   "bullet": "4.1.K5",
+   "concept": "aws-backup-vs-native-central-policy",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "core",
+   "exam_english": ["ee-centrally-manage", "ee-mandates", "ee-least-operational-overhead"],
+   "section": "2-deep.md#a-backup-plan-turns-the-rpo-and-the-retention-into-scheduled-rules",
+   "trap": null,
+   "plan": "A company runs Amazon RDS, Amazon EFS, Amazon DynamoDB and Amazon EBS in many accounts of one organization in AWS Organizations. A new regulation mandates one backup policy for every account and a monthly report that shows compliance with it. LEAST operational overhead. Key: AWS Backup policies in AWS Organizations, plus an AWS Backup Audit Manager framework with a report (organizations-backup-policy-effective-plan-immutable, backup-faq-audit-manager-purpose, backup-faq-audit-manager-multi-account-reports). Distractors: Amazon Data Lifecycle Manager policies in each account [misconception: it automates EBS snapshots only; backup-faq-dlm-vs-backup-when-to-use]; an AWS Lambda function on an EventBridge schedule in each account that creates snapshots and writes a report [how-the-exam-asks-trap-works-means-correct]; the backup settings of each service plus AWS Config rules that check them [misconception: backups made outside AWS Backup are not centrally governed; backup-native-service-backups-not-centrally-governed; how-the-exam-asks-trap-detect-meets-ensure only if the text states detection as the solution]."
+  },
+  {
+   "slot": 2,
+   "id": "backup-q002",
+   "bullet": "1.3.S1",
+   "concept": "vault-lock-mode-choice",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "core",
+   "exam_english": ["ee-immutable", "ee-ensure", "ee-must"],
+   "section": "2-deep.md#vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+   "trap": "backup-trap-governance-stops-admins",
+   "twin": "strict twin A of backup-q006",
+   "plan": "Shared context with q006: a company stores the backups of its databases in one AWS Backup vault and must keep each backup for its full retention period. Changed phrase (the only difference from q006): 'No user, including the root user, can delete a backup or shorten its retention before the retention period ends.' Ask 'Which solution will meet these requirements?'. Options identical in q002 and q006, in neutral words: (a) turn on AWS Backup Vault Lock in compliance mode with a grace time, and let the grace time expire [key here; backup-vault-lock-compliance-immutable-by-anyone, backup-vault-lock-denies-delete-and-lifecycle-change-even-root]; (b) turn on AWS Backup Vault Lock in governance mode [trap backup-trap-governance-stops-admins; key in q006]; (c) turn on S3 Object Lock in compliance mode for the backup vault [misconception: Object Lock protects object versions in S3 buckets, not backup vaults; s3-faq-object-lock-what; impossible-feature]; (d) turn on the AWS Backup Audit Manager control that checks whether vaults prevent manual deletion of recovery points [how-the-exam-asks-trap-detect-meets-ensure; backup-audit-manager-control-vault-prevent-deletion]. Facts: backup-vault-lock-compliance-immutable-by-anyone, backup-vault-lock-governance-lock-removable-with-iam, backup-vault-lock-two-modes-governance-compliance."
+  },
+  {
+   "slot": 3,
+   "id": "backup-q003",
+   "bullet": "4.1.S6",
+   "concept": "cold-storage-for-long-retention",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "core",
+   "exam_english": ["ee-retain", "ee-most-cost-effective", "ee-infrequently-accessed"],
+   "section": "2-deep.md#the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them",
+   "trap": "backup-trap-every-backup-goes-cold",
+   "plan": "A company backs up Amazon EBS volumes and Amazon EFS file systems with one AWS Backup plan. Daily backups must be retained for 30 days; monthly backups must be retained for 7 years and are infrequently accessed. MOST cost-effective. Key: in the monthly rule, add a lifecycle that transitions the backups to cold storage and expires them after 7 years; leave the daily rule in warm storage (backup-cold-storage-resource-types, backup-cold-ebs-is-snapshot-archive-monthly-or-less, backup-cold-storage-min-90-days-retention-rule). Distractors: transition the backups of the daily rule to cold storage after 1 day [backup-trap-every-backup-goes-cold; backup-cold-storage-plan-total-retention-90-days, ebs-archive-recommended-monthly-not-daily]; copy the monthly backups into an S3 bucket and transition them to S3 Glacier Deep Archive with an S3 Lifecycle rule [ebs-trap-snapshots-in-my-s3-bucket; ebs-snapshot-s3-buckets-not-accessible]; transition the monthly backups to cold storage and copy them to a second Region every month [different-problem and impossible: backup-copy-cold-storage-backups-cannot-be-copied]."
+  },
+  {
+   "slot": 4,
+   "id": "backup-q004",
+   "bullet": "1.3.S5",
+   "concept": "continuous-vs-snapshot-rule",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "extended",
+   "exam_english": ["ee-point-in-time", "ee-retain"],
+   "section": "2-deep.md#continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days",
+   "trap": "backup-trap-copy-keeps-pitr",
+   "twin": "strict twin A of backup-q009",
+   "plan": "Shared context with q009: a company protects an Amazon RDS for PostgreSQL DB instance with AWS Backup. Changed phrase (the only difference from q009): 'The company must be able to restore the database to its state of a few minutes before an error, for errors found within the last 2 weeks.' Options identical in q004 and q009: (a) a backup rule with continuous backups turned on and a retention of 14 days [key here; backup-continuous-rule-allows-pitr-unlike-snapshot, backup-retention-continuous-range, backup-pitr-latest-restorable-time-by-service]; (b) a backup rule that creates a snapshot backup on the first day of every month with a retention of 5 years [key in q009; here it cannot reach a point minutes before an error]; (c) a backup rule with continuous backups turned on and a lifecycle that transitions them to cold storage after 30 days [impossible-feature: backup-pitr-no-cold-storage-because-35-vs-90]; (d) a continuous backup rule with a copy action to a second Region, and point-in-time restores from the copy [trap backup-trap-copy-keeps-pitr; backup-continuous-copy-becomes-snapshot-no-pitr]. The twin line of each question quotes the changed phrase of the other."
+  },
+  {
+   "slot": 5,
+   "id": "backup-q005",
+   "bullet": "2.2.S5",
+   "concept": "share-backups-outside-organization",
+   "difficulty": 3,
+   "type": "multi",
+   "layer": "extended",
+   "exam_english": ["ee-isolate", "ee-select-two", "ee-which-combination"],
+   "section": "2-deep.md#a-copy-in-another-region-or-account-survives-the-loss-of-the-source",
+   "trap": "backup-trap-cross-account-any-account",
+   "plan": "(Select TWO.) A company uses AWS Backup in its organization in AWS Organizations. A recovery partner, whose AWS account belongs to a different organization, must be able to restore the company's backups if the company's accounts are compromised. The backups must stay isolated from the company's production accounts. Which combination of steps meets these requirements? Keys: (1) create a logically air-gapped vault and copy the backups to it (backup-lag-vault-definition-secondary-vault-rto, backup-lag-vault-encryption-key-and-compliance-lock); (2) share the logically air-gapped vault with the partner's account ID through AWS RAM (backup-faq-lag-vault-share-ram, backup-lag-vault-share-with-account-ids-only, backup-lag-vault-restore-from-owner-or-shared-account). Distractors: add a copy action that copies the backups directly into a vault in the partner's account [trap backup-trap-cross-account-any-account; backup-cross-account-requires-same-organization]; share the standard backup vault with the partner through AWS RAM [misconception: backup-lag-vs-standard-sharing-row, a standard vault is not compatible with AWS RAM]; share the EBS snapshots publicly so that the partner can copy them [violates the isolation requirement; ebs-snapshot-only-unencrypted-public]. Five options. Do not key on multi-party approval (volatile)."
+  },
+  {
+   "slot": 6,
+   "id": "backup-q006",
+   "bullet": "1.3.S1",
+   "concept": "vault-lock-mode-choice",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "core",
+   "exam_english": ["ee-immutable", "ee-ensure", "ee-must"],
+   "section": "2-deep.md#vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+   "trap": null,
+   "twin_of": "backup-q002",
+   "twin": "strict twin B of backup-q002",
+   "plan": "Same context and same four options as q002. Changed phrase: 'Most users must not be able to delete a backup or shorten its retention, but members of the security team who hold a specific IAM permission must be able to remove the protection.' Key moves to (b) governance mode (backup-vault-lock-governance-lock-removable-with-iam, backup-vault-lock-governance-intent-designated-personnel). Option (a), compliance mode, now fails the requirement, because after the grace time the lock [cannot be altered or deleted by any user] (backup-vault-lock-compliance-immutable-by-anyone): distractor_type violates-requirement, with a misconception sentence. Options (c) and (d) keep their traps. The twin line of each question quotes the changed phrase of the other."
+  },
+  {
+   "slot": 7,
+   "id": "backup-q007",
+   "bullet": "1.3.S1",
+   "concept": "encrypt-backups-of-unencrypted-rds",
+   "difficulty": 3,
+   "type": "single",
+   "layer": "extended",
+   "exam_english": ["ee-at-rest", "ee-mandates"],
+   "section": "2-deep.md#each-backup-becomes-a-recovery-point-in-an-encrypted-backup-vault",
+   "trap": "backup-trap-vault-key-encrypts-everything",
+   "plan": "A company backs up an unencrypted Amazon RDS DB instance with AWS Backup. A new rule mandates that every backup is encrypted at rest with a customer managed KMS key. Which solution meets this requirement? Key: take a DB snapshot, copy it with encryption under the customer managed key, restore a new encrypted DB instance from the copy, and back up the new instance (rds-encrypt-existing-via-snapshot-copy, backup-encryption-rds-row). Distractors: create a new backup vault that uses the customer managed key and send the backups there [trap backup-trap-vault-key-encrypts-everything; backup-vault-key-applies-only-to-independent-encryption-types]; modify the DB instance to turn on encryption with the customer managed key [rds-trap-encrypt-existing-in-place; rds-encryption-only-at-create]; turn on the AWS Backup Audit Manager control 'Recovery points are encrypted' [how-the-exam-asks-trap-detect-meets-ensure; backup-audit-manager-control-encrypted]. Do not use a cross-Region or cross-account copy as an option: backup-encryption-copy-uses-destination-vault-key makes it ambiguous."
+  },
+  {
+   "slot": 8,
+   "id": "backup-q008",
+   "bullet": "2.2.K4",
+   "concept": "backup-and-restore-dr-cost",
+   "difficulty": 3,
+   "type": "single",
+   "layer": "extended",
+   "exam_english": ["ee-cross-region", "ee-most-cost-effective", "ee-acceptable"],
+   "section": "1-fast.md#choose-it-or-not",
+   "trap": "how-the-exam-asks-trap-always-max-availability",
+   "plan": "A company runs an internal reporting application with an Amazon RDS database in one AWS Region. If the Region fails, the business finds it acceptable to recover within a day and to lose up to a day of data. The company wants the MOST cost-effective disaster recovery solution. Key: daily AWS Backup backups with a copy action to a backup vault in a second Region; restore there only after a disaster (backup-copy-action-same-or-other-region-and-account, backup-resilience-copy-across-regions-greater-resilience, well-architected-rpo-definition, well-architected-rto-definition). Distractors: a pilot light with a cross-Region read replica that runs all the time [violates-qualifier; aurora-cmp-wp-pilot-light-core-infrastructure-always-available; how-the-exam-asks-trap-always-max-availability]; a warm standby with a scaled-down copy of the application in the second Region [violates-qualifier; aurora-cmp-wp-warm-standby-faster-than-pilot-light]; a Multi-AZ deployment in the same Region [how-the-exam-asks-trap-multi-az-covers-region]. The stem's 'within a day' and 'a day of data' are requirements, not AWS numbers. Do not state in the explanation that backup and restore is the lowest-cost strategy as an AWS fact (the Well-Architected fact is not verified); argue from the always-on resources of the other options."
+  },
+  {
+   "slot": 9,
+   "id": "backup-q009",
+   "bullet": "4.3.S1",
+   "concept": "continuous-vs-snapshot-rule",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "extended",
+   "exam_english": ["ee-point-in-time", "ee-retain"],
+   "section": "2-deep.md#continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days",
+   "trap": "backup-trap-copy-keeps-pitr",
+   "twin_of": "backup-q004",
+   "twin": "strict twin B of backup-q004",
+   "plan": "Same context and same four options as q004. Changed phrase: 'The company must keep a restorable backup of the database from the end of every month for 5 years.' Key moves to (b) the monthly snapshot rule with a 5-year retention (backup-retention-snapshot-range, backup-snapshot-hourly-and-100-years). Option (a), the continuous rule, now fails, because continuous backups keep [1 day to 35 days] (backup-retention-continuous-range): misconception sentence 'a continuous backup can be kept for years' (rds-trap-retention-beyond-35-days only if the text states that belief). Options (c) and (d) keep their traps."
+  },
+  {
+   "slot": 10,
+   "id": "backup-q010",
+   "bullet": "2.2.S5",
+   "concept": "replica-is-not-backup",
+   "difficulty": 1,
+   "type": "single",
+   "layer": "core",
+   "exam_english": ["ee-durable", "ee-point-in-time"],
+   "section": "1-fast.md#signals-and-traps",
+   "trap": "backup-trap-replication-is-backup",
+   "plan": "A company stores orders in an Amazon DynamoDB global table with replicas in two AWS Regions. A faulty deployment overwrote many items. The company must be able to recover the table to its state before such a change. Key: turn on point-in-time recovery for the table (dynamodb-pitr-protects-accidental-writes-deletes, dynamodb-pitr-35-days-default-1-to-35-configurable), or AWS Backup periodic backups (backup-faq-recovery-point-definition); write one key only. Distractors: fail over to the replica in the second Region [trap backup-trap-replication-is-backup; dynamodb-trap-backup-is-standby]; add a replica in a third Region [backup-trap-replication-is-backup, different wording]; turn on DynamoDB Streams to keep the changes [misconception; dynamodb-trap-stream-keeps-changes only if the text states that belief]. Difficulty 1: qualifier none is allowed."
+  },
+  {
+   "slot": 11,
+   "id": "backup-q011",
+   "bullet": "1.3.K2",
+   "concept": "prove-restores-for-audit",
+   "difficulty": 2,
+   "type": "multi",
+   "layer": "core",
+   "exam_english": ["ee-audit", "ee-select-two", "ee-least-operational-overhead"],
+   "section": "2-deep.md#most-restores-create-a-new-resource-and-restore-testing-proves-they-work",
+   "trap": null,
+   "plan": "(Select TWO.) A company uses AWS Backup. Auditors require monthly evidence that backups can be restored and that each restore finishes within a target time. LEAST operational overhead. Keys: (1) a restore testing plan that restores recovery points on a schedule (backup-restore-testing-automated-periodic-evaluation, backup-restore-testing-plan-steps); (2) an AWS Backup Audit Manager framework with the control 'Restore time for resources meet target' and a report plan (backup-audit-manager-control-restore-time, backup-audit-manager-frameworks-and-daily-reports). Distractors: an engineer restores one backup by hand each month and records the time in a spreadsheet [violates-qualifier; how-the-exam-asks-trap-works-means-correct]; AWS CloudTrail logs of the backup jobs [misconception: shows that backups ran, not that restores work; backup-faq-cloudtrail-activity-logs]; Vault Lock in compliance mode [how-the-exam-asks-trap-keyword-bait]. Five options."
+  },
+  {
+   "slot": 12,
+   "id": "backup-q012",
+   "bullet": "1.3.K2",
+   "concept": "efs-restore-recovery-directory",
+   "difficulty": 2,
+   "type": "single",
+   "layer": "extended",
+   "exam_english": ["ee-currently", "ee-ensure"],
+   "section": "2-deep.md#most-restores-create-a-new-resource-and-restore-testing-proves-they-work",
+   "trap": "backup-trap-restore-overwrites",
+   "worked": "worked think-aloud, no wrong path (medium: worked 1, worked_wrong_path 0)",
+   "plan": "A company restored a full Amazon EFS backup into the existing file system after a bad script changed many files. The application still reads the changed files. The company must ensure that the application reads the restored files. What should the company do? Key: move or copy the restored files from the recovery directory under the root of the file system to their original paths (backup-restore-efs-files-not-in-original-locations, backup-restore-efs-no-destructive-restore-recovery-directory). Distractors: run the restore again with the option to overwrite existing files [trap backup-trap-restore-overwrites; impossible-feature with backup-restore-efs-no-destructive-restore-recovery-directory]; restore the backup from cold storage instead of warm storage [different-problem; backup-restore-from-cold-storage-takes-longer]; delete the file system and restore the backup into the same file system ID [misconception; backup-restore-destructive-exceptions-listed creates a new resource]. The think-aloud names the constraint first ('the application reads the original paths'), then the rule that EFS restores never overwrite."
+  }
+ ],
+ "question_plan": {
+  "write": 12,
+  "ship": "10 (core 5, extended 5)",
+  "layer": {"core": [1, 2, 3, 6, 10, 11], "extended": [4, 5, 7, 8, 9, 12]},
+  "difficulty": {"1": [10], "2": [1, 2, 3, 4, 6, 9, 11, 12], "3": [5, 7, 8]},
+  "multi": [5, 11],
+  "twin_pairs": [
+   "q002 / q006 (strict: 'No user, including the root user, can delete a backup or shorten its retention before the retention period ends' / 'Most users must not be able to delete a backup or shorten its retention, but members of the security team who hold a specific IAM permission must be able to remove the protection'; same four options; key compliance mode / governance mode)",
+   "q004 / q009 (strict: 'The company must be able to restore the database to its state of a few minutes before an error, for errors found within the last 2 weeks' / 'The company must keep a restorable backup of the database from the end of every month for 5 years'; same four options; key continuous rule / monthly snapshot rule)"
+  ],
+  "twin_note": "The template needs 1 twin pair; 2 are planned so that one rejection does not block shipping (orchestrator note). Both pairs are strict (J2). Twins share their layer; at least 3 questions stand between them (q002 and q006: 3; q004 and q009: 4).",
+  "worked": ["q012 (no wrong path)"],
+  "slots_on_a_brief_trap": "8 of 12 (q002, q003, q004, q005, q007, q009, q010, q012); with the trap of another chapter on q008: 9 of 12. Every brief trap is the slot trap of at least one slot.",
+  "bullets_covered": "all 8 bullets of the registry entry: 4.1.K5 q001; 4.1.S6 q003; 1.3.K2 q011 q012; 1.3.S5 q004; 2.2.K4 q008; 2.2.S5 q005 q010; 4.3.S1 q009; 1.3.S1 q002 q006 q007.",
+  "q205_rule": "Every wrong option names a trap id where one fits (this brief's 7, or traps_from_other_chapters); at least half of the wrong options carry one. A distractor gets a trap id only when its text states exactly that trap's belief; otherwise it carries a misconception sentence and a distractor_type.",
+  "rule": "Question ids are backup-q001 to backup-q012 in slot order. Protect both strict twin pairs, both multiple-response questions and the worked question when the weakest two are cut. At most 2 questions per concept; a unique (concept, trap) pair per question (twins exempt). At most one impossible-feature distractor per question, with its fact. Never key an answer on multi-party approval, a logically air-gapped vault as primary backup target, GuardDuty malware scanning, S3 backup tiering, backup search, EKS backups or single-action snapshot copy (recent changes, volatile window). Stems never name Callvale; they can reuse its situation (four data stores, several accounts)."
+ },
+ "terms": [
+  "recovery-point-objective",
+  "recovery-time-objective",
+  "snapshot",
+  "retention-period",
+  "point-in-time-recovery",
+  "write-once-read-many",
+  "customer-managed-key",
+  "aws-managed-key",
+  "aws-owned-key",
+  "management-account",
+  "durability",
+  "on-demand-backup",
+  "resource-based-policy",
+  "delete-marker",
+  "versioning",
+  "standby",
+  "read-replica"
+ ],
+ "terms_note": "These bank terms are used in this chapter (bold at first use in each hand file only where the chapter defines them, U6). Every term below in term_requests is defined in bold in this chapter; the terms agent adds them to data/terms.json right after this brief, and the orchestrator then moves their ids into terms, so no writer needs a needs-term marker.",
+ "term_requests": [
+  {"term": "backup plan", "where": "1-fast.md words table and 2-deep.md subsection 1", "meaning": "An AWS Backup policy that says when to back up resources, how long to keep the backups and where to store them.", "collocations": ["assign resources to a backup plan", "create a backup plan"], "do_not_confuse": ["backup policy", "backup rule"]},
+  {"term": "backup rule", "where": "2-deep.md subsection 1", "meaning": "One part of a backup plan with a schedule, a backup window, a lifecycle and a target backup vault.", "collocations": ["add a backup rule to a plan"], "do_not_confuse": ["backup plan"]},
+  {"term": "backup window", "where": "2-deep.md subsection 1", "meaning": "The time span in which a backup rule starts its backup jobs.", "collocations": ["start within the backup window"], "do_not_confuse": ["maintenance window"]},
+  {"term": "resource assignment", "where": "2-deep.md subsection 1", "meaning": "The part of a backup plan that selects resources, by tag, resource type or ARN, and names the role to use.", "collocations": ["select resources by tag in a resource assignment"], "do_not_confuse": ["backup rule"]},
+  {"term": "service opt-in", "where": "2-deep.md subsection 1 (Stop and answer) and 1-fast.md Look first", "meaning": "A Region setting that allows AWS Backup to protect the resources of one AWS service.", "collocations": ["opt in to a service in a Region"], "do_not_confuse": ["resource assignment"]},
+  {"term": "backup policy", "where": "2-deep.md subsection 1", "meaning": "An AWS Organizations policy that creates the same backup plan in many accounts.", "collocations": ["attach a backup policy to an organizational unit"], "do_not_confuse": ["backup plan", "vault access policy"]},
+  {"term": "delegated administrator", "where": "2-deep.md subsection 1 (Go deeper)", "meaning": "A member account that may manage an AWS service for the whole organization in place of the management account.", "collocations": ["register a delegated administrator"], "do_not_confuse": ["management account"], "note": "If the bank already holds this term from chapter 04, reuse it and add only the AWS Backup collocation."},
+  {"term": "recovery point", "where": "1-fast.md words table and 2-deep.md subsection 2", "meaning": "One backup of one resource at one moment, stored in a backup vault.", "collocations": ["restore a recovery point", "a recovery point in a vault"], "do_not_confuse": ["recovery point objective", "snapshot"]},
+  {"term": "backup vault", "where": "1-fast.md words table and 2-deep.md subsection 2", "meaning": "An encrypted container in one account and Region that stores and organizes recovery points.", "collocations": ["lock a backup vault", "store backups in a backup vault"], "do_not_confuse": ["S3 bucket", "logically air-gapped vault"]},
+  {"term": "incremental backup", "where": "2-deep.md subsection 2", "meaning": "A backup that stores only the data changed since the previous backup.", "collocations": ["later backups are incremental"], "do_not_confuse": ["full backup"]},
+  {"term": "full AWS Backup management", "where": "2-deep.md subsection 2 (Why)", "meaning": "The resource types whose backups AWS Backup owns, encrypts with the vault key and bills under AWS Backup.", "collocations": ["a resource type with full AWS Backup management"], "do_not_confuse": ["fully managed service"]},
+  {"term": "independent encryption", "where": "2-deep.md subsection 2 (table)", "meaning": "Encryption of a backup with the key of the backup vault instead of the key of the source resource.", "collocations": ["support independent encryption"], "do_not_confuse": ["encryption at rest of the source"]},
+  {"term": "continuous backup", "where": "2-deep.md subsection 3", "meaning": "A backup that records every change so that you can restore a resource to a chosen second.", "collocations": ["turn on continuous backups in a rule"], "do_not_confuse": ["snapshot backup", "replication"]},
+  {"term": "snapshot backup", "where": "2-deep.md subsection 3", "meaning": "A backup of a resource at one scheduled moment; AWS Backup also calls it a periodic backup.", "collocations": ["schedule a snapshot backup every day"], "do_not_confuse": ["continuous backup", "snapshot (EBS)"]},
+  {"term": "point-in-time restore", "where": "2-deep.md subsection 3", "meaning": "Restoring a resource to its state at a moment you choose within the retention of a continuous backup.", "collocations": ["perform a point-in-time restore"], "do_not_confuse": ["snapshot restore"], "note": "The bank term point-in-time-recovery (PITR) exists; add this AWS Backup wording as a variant or a collocation of it if the terms agent prefers one entry."},
+  {"term": "backup lifecycle", "where": "2-deep.md subsection 4", "meaning": "The settings that move a backup to cold storage and delete it after a number of days.", "collocations": ["set the lifecycle of a backup"], "do_not_confuse": ["S3 Lifecycle rule", "lifecycle policy (EFS)"]},
+  {"term": "warm storage", "where": "2-deep.md subsection 4", "meaning": "The storage tier where every AWS Backup backup starts.", "collocations": ["keep backups in warm storage"], "do_not_confuse": ["cold storage"]},
+  {"term": "cold storage", "where": "2-deep.md subsection 4", "meaning": "A lower-cost AWS Backup storage tier for backups that are kept long and restored rarely.", "collocations": ["transition backups to cold storage"], "do_not_confuse": ["S3 Glacier storage classes", "warm storage"]},
+  {"term": "copy action", "where": "2-deep.md subsection 5", "meaning": "A setting of a backup rule that copies each new backup to another backup vault.", "collocations": ["add a copy action to a rule"], "do_not_confuse": ["replication"]},
+  {"term": "cross-Region copy", "where": "2-deep.md subsection 5", "meaning": "A copy of a backup in a backup vault of another AWS Region.", "collocations": ["copy backups to another Region"], "do_not_confuse": ["Cross-Region Replication (S3)"]},
+  {"term": "cross-account copy", "where": "2-deep.md subsection 5", "meaning": "A copy of a backup in a backup vault of another account of the same organization.", "collocations": ["copy backups to a backup account"], "do_not_confuse": ["vault sharing through AWS RAM"]},
+  {"term": "Vault Lock", "where": "1-fast.md words table and 2-deep.md subsection 6", "meaning": "An AWS Backup vault setting that stops deletes and retention changes of the backups in the vault.", "collocations": ["turn on Vault Lock in compliance mode", "lock a vault"], "do_not_confuse": ["S3 Object Lock", "S3 Glacier Vault Lock"]},
+  {"term": "governance mode (Vault Lock)", "where": "2-deep.md subsection 6", "meaning": "A Vault Lock mode that users with enough IAM permissions can remove.", "collocations": ["lock a vault in governance mode"], "do_not_confuse": ["compliance mode", "governance mode (S3 Object Lock)"]},
+  {"term": "compliance mode (Vault Lock)", "where": "2-deep.md subsection 6", "meaning": "A Vault Lock mode that nobody can change or remove after its grace time.", "collocations": ["lock a vault in compliance mode"], "do_not_confuse": ["governance mode", "compliance mode (S3 Object Lock)"]},
+  {"term": "grace time", "where": "2-deep.md subsection 6", "meaning": "The days after you create a compliance-mode Vault Lock in which you can still change or remove it.", "collocations": ["the grace time expires"], "do_not_confuse": ["retention period"]},
+  {"term": "logically air-gapped vault", "where": "2-deep.md subsections 5 and 6", "meaning": "A backup vault, always locked in compliance mode, that you can share with other accounts through AWS RAM.", "collocations": ["share a logically air-gapped vault", "copy backups to a logically air-gapped vault"], "do_not_confuse": ["backup vault (standard)"]},
+  {"term": "legal hold", "where": "2-deep.md subsection 6 (Exam signal) and FAQ", "meaning": "A hold that keeps a backup from deletion, past its retention, until a user releases it.", "collocations": ["place a legal hold", "release a legal hold"], "do_not_confuse": ["Vault Lock", "legal hold (S3 Object Lock)"]},
+  {"term": "restore testing", "where": "2-deep.md subsection 7", "meaning": "An AWS Backup feature that restores recovery points on a schedule to check that restores work and how long they take.", "collocations": ["create a restore testing plan"], "do_not_confuse": ["on-demand restore"]},
+  {"term": "AWS Backup Audit Manager", "where": "2-deep.md subsection 7", "meaning": "An AWS Backup feature that checks backups against controls and writes compliance reports.", "collocations": ["deploy a framework in AWS Backup Audit Manager"], "do_not_confuse": ["AWS Audit Manager", "AWS Config"]},
+  {"term": "framework (AWS Backup Audit Manager)", "where": "2-deep.md subsection 7", "meaning": "A set of AWS Backup Audit Manager controls that you deploy and manage as one unit.", "collocations": ["deploy a framework"], "do_not_confuse": ["control", "conformance pack"]},
+  {"term": "backup and restore (DR strategy)", "where": "1-fast.md choose-it-or-not or 2-deep.md subsection 1 (only where written in bold)", "meaning": "A disaster recovery strategy that keeps backups and restores them, often in another Region, after a disaster.", "collocations": ["choose a backup and restore strategy"], "do_not_confuse": ["pilot light", "warm standby"], "note": "Chapter 40 owns the four strategies; this chapter defines only this one."}
+ ],
+ "tasks": [
+  {
+   "id": "backup-t01",
+   "type": "look",
+   "title": "Read which services AWS Backup may protect in your Region",
+   "section": "1-fast.md#look-first",
+   "kills": "\"A backup plan protects every resource that carries its tag, in every service.\"",
+   "trap": null,
+   "pass_route": false,
+   "minutes": 3,
+   "plan": "In AWS CloudShell, read-only, $0. Step 1: aws backup describe-region-settings (expect a map of resource types with true or false: the services you have [opted into in a specific Region], backup-service-opt-in-checked-per-region). Step 2: the same command with --region us-west-2 (expect a separate setting for that Region). Step 3: aws backup list-backup-vaults (expect the vaults of this Region; a default vault only if someone used the Backup vaults page of the console: backup-default-vault-created-by-console, backup-default-vault-not-created-by-cli-sdk-cloudformation). Creates nothing. Confirm the commands and the output fields with tasks check-cli --reference.",
+   "facts": ["backup-service-opt-in-checked-per-region", "backup-service-opt-in-before-plan-assignment", "backup-opt-in-still-applies-with-tag-assignment", "backup-default-vault-created-by-console", "backup-default-vault-not-created-by-cli-sdk-cloudformation"]
+  },
+  {
+   "id": "backup-t02",
+   "type": "try",
+   "title": "Create a backup vault and lock it in governance mode",
+   "section": "2-deep.md#vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+   "kills": "\"Every Vault Lock is permanent once you turn it on.\"",
+   "trap": "backup-trap-governance-stops-admins",
+   "pass_route": true,
+   "minutes": 10,
+   "plan": "In AWS CloudShell, about 10 minutes, $0 (an empty vault stores no backups; Vault Lock is [available at no additional charge], backup-vault-lock-no-extra-charge-storage-charges-apply). Step 1: aws backup create-backup-vault --backup-vault-name saa-backup-t02 --backup-vault-tags book=saa,task=backup-t02 (expect the vault ARN; without --encryption-key-arn the vault uses the key with the [KMS key with the alias aws/backup], backup-vault-default-key-aws-backup-alias). Step 2: aws backup put-backup-vault-lock-configuration --backup-vault-name saa-backup-t02 --min-retention-days 7 --max-retention-days 35, without --changeable-for-days, so the lock is created in governance mode (backup-vault-lock-mode-set-by-changeable-for-days). Step 3: aws backup describe-backup-vault --backup-vault-name saa-backup-t02 (expect MinRetentionDays 7 and MaxRetentionDays 35; claim no value of the Locked field unless the API reference in the corpus states it). Optional break-it step, only if a fact or the API reference grounds the expected error: predict whether a compliance lock with a 1-day grace time is accepted; run the put command with --changeable-for-days 1; expect a validation error; explain: the grace time must be [at least 3 days (72 hours)] (backup-vault-lock-grace-time-minimum-3-days). Never run a compliance lock that succeeds in a Try. Cleanup: aws backup delete-backup-vault-lock-configuration --backup-vault-name saa-backup-t02 (this works because a governance lock can be [lock removed by users with sufficient IAM permissions], backup-vault-lock-governance-lock-removable-with-iam), then aws backup delete-backup-vault --backup-vault-name saa-backup-t02. Verify by name (TOOLS-rules R6, T108): aws backup describe-backup-vault --backup-vault-name saa-backup-t02, expect ResourceNotFoundException. Permissions: backup:CreateBackupVault, backup:PutBackupVaultLockConfiguration, backup:DescribeBackupVault, backup:DeleteBackupVaultLockConfiguration, backup:DeleteBackupVault (confirm the action names in the corpus). Read-only alternative: aws backup list-backup-vaults. Confirm the tag syntax of --backup-vault-tags with tasks check-cli --reference.",
+   "facts": ["backup-vault-lock-no-extra-charge-storage-charges-apply", "backup-vault-default-key-aws-backup-alias", "backup-vault-lock-mode-set-by-changeable-for-days", "backup-vault-lock-grace-time-minimum-3-days", "backup-vault-lock-governance-lock-removable-with-iam"]
+  },
+  {
+   "id": "backup-t03",
+   "type": "try",
+   "title": "Break a backup rule with cold storage that is too short",
+   "section": "2-deep.md#the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them",
+   "kills": "\"Any backup rule can move backups to cold storage after a few days.\"",
+   "trap": "backup-trap-every-backup-goes-cold",
+   "pass_route": false,
+   "minutes": 10,
+   "status": "optional: write it only if the commands, the error and a T108 verify can be grounded in the corpus; the template needs at least 1 Try, which backup-t02 covers",
+   "plan": "In AWS CloudShell, about 10 minutes, $0 (a backup plan with no resource assignment creates no backups). Step 1, break it: predict whether the rule is accepted, then aws backup create-backup-plan with an inline --backup-plan value (BackupPlanName saa-backup-t03; one rule with a target vault that exists, for example Default only if it exists, or a vault created in an earlier step with its own cleanup; Lifecycle MoveToColdStorageAfterDays 7 and DeleteAfterDays 30) and --backup-plan-tags book=saa,task=backup-t03; expect a validation error; explain: a plan with cold storage needs a total retention of [90 days or greater] (backup-cold-storage-plan-total-retention-90-days), and a backup stays a [minimum of 90 days] in cold storage (backup-cold-storage-min-90-days-retention-rule). Step 2, the fix: the same command with MoveToColdStorageAfterDays 30 and DeleteAfterDays 120 (capture the BackupPlanId). Cleanup: aws backup delete-backup-plan --backup-plan-id $PLAN_ID. Verify: needs a T108-conforming read-only command (a by-name verify on --backup-plan-id is not in the R6 name rule): if no conforming verify exists, park the task and report it. No --cli-input-json and no file:// (T104).",
+   "facts": ["backup-cold-storage-plan-total-retention-90-days", "backup-cold-storage-min-90-days-retention-rule"]
+  }
+ ],
+ "speak": [
+  {
+   "id": "backup-s01",
+   "kind": "explain",
+   "persona": "Chen, security lead of Callvale",
+   "prompt": "If an attacker gets administrator access in production, can the attacker delete our backups?",
+   "section": "2-deep.md#vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups",
+   "layer": "core",
+   "pass_route": true,
+   "plan": {
+    "ten_second": "Not if the backup vault is locked in compliance mode and a copy sits in a separate account. Governance mode alone does not stop an administrator.",
+    "key_points_must": [
+     "In a locked vault, AWS Backup denies deletes and lifecycle changes, even from the root user (backup-vault-lock-denies-delete-and-lifecycle-change-even-root).",
+     "After the grace time, a compliance-mode lock cannot be altered or deleted by any user (backup-vault-lock-compliance-immutable-by-anyone).",
+     "A governance-mode lock can be removed by users with sufficient IAM permissions (backup-vault-lock-governance-lock-removable-with-iam).",
+     "A copy in another account of the organization lets you copy a deleted backup back and restore it (backup-cross-account-copy-purpose-recover-deleted-original)."
+    ],
+    "key_points_nice": [
+     "A vault access policy controls only the AWS Backup APIs; EBS and RDS snapshots also need IAM policies (backup-vault-access-policy-controls-only-backup-apis)."
+    ],
+    "must_not_say": [
+     "error: 'Vault Lock means nobody can ever delete a backup.' correct: a governance-mode lock can be removed by users with sufficient IAM permissions (backup-vault-lock-governance-lock-removable-with-iam).",
+     "error: 'Locked backups stay even if we close the account.' correct: AWS deletes the vault contents of a closed account that is not reopened, even with Vault Lock (backup-vault-lock-account-closure-deletes-vault-after-90-days)."
+    ],
+    "follow_ups": [
+     "Can we test the lock before it becomes permanent? Yes: the grace time is at least three days, and during it you can still remove the lock (backup-vault-lock-grace-time-minimum-3-days, backup-vault-lock-compliance-grace-time-remove-or-change).",
+     "What if we set the retention too long? The backups stay and cost storage until their lifecycle completes (backup-vault-lock-locked-backups-persist-until-lifecycle-ends)."
+    ],
+    "in_your_case": "Compliance lock in the backup account, copies from every production account. Check-back question: 'Who can sign in to the backup account today?'"
+   }
+  },
+  {
+   "id": "backup-s02",
+   "kind": "compare",
+   "persona": "a startup founder in office hours",
+   "prompt": "We already have RDS automated backups and EBS snapshots. Why would we add AWS Backup?",
+   "section": "2-deep.md#a-backup-plan-turns-the-rpo-and-the-retention-into-scheduled-rules",
+   "layer": "extended",
+   "pass_route": false,
+   "plan": {
+    "ten_second": "Both protect your data. AWS Backup adds one policy across services and accounts, a lock, copies and audit reports; your native backups keep working.",
+    "key_points_must": [
+     "AWS Backup manages and monitors backups across services from a single place (backup-faq-dlm-vs-backup-when-to-use).",
+     "Backups that services make on their own are not available for central governance through AWS Backup (backup-native-service-backups-not-centrally-governed).",
+     "The per-service backup features remain unchanged when you use AWS Backup (backup-faq-per-service-capabilities-unchanged).",
+     "Vault Lock prevents manual deletion of backups with a WORM model (backup-faq-vault-lock-purpose-worm)."
+    ],
+    "key_points_nice": [
+     "AWS Backup Audit Manager reports on the compliance of your data protection policies (backup-faq-audit-manager-purpose)."
+    ],
+    "must_not_say": [
+     "error: 'AWS Backup replaces RDS automated backups.' correct: per-service backup capabilities remain unchanged (backup-faq-per-service-capabilities-unchanged).",
+     "error: 'AWS Backup also governs the snapshots our scripts make.' correct: it does not govern backups taken outside AWS Backup (backup-does-not-govern-backups-outside-aws-backup)."
+    ],
+    "follow_ups": [
+     "What do we pay for? Backup storage, data copied between Regions, data restored and backup evaluations, with no minimum fee (backup-pricing-overview-dimensions).",
+     "Can it also back up our servers on premises? Yes: Storage Gateway volumes and VMware virtual machines (backup-faq-can-back-up-on-premises)."
+    ],
+    "in_your_case": "Check-back question: 'How many accounts and which data stores hold data that you must keep?'"
+   }
+  }
+ ],
+ "cards": [
+  {"id": "backup-c001", "type": "number", "deck": "core", "front": "In AWS Backup, a continuous backup can be kept for {{c1::1 day to 35 days}}.", "back": "1 day to 35 days", "facts": ["backup-retention-continuous-range"], "section": "2-deep.md#numbers-that-decide-answers"},
+  {"id": "backup-c002", "type": "number", "deck": "core", "front": "In AWS Backup Vault Lock, the grace time of a compliance-mode lock is {{c1::at least 3 days (72 hours)}}.", "back": "at least 3 days (72 hours)", "facts": ["backup-vault-lock-grace-time-minimum-3-days"], "section": "2-deep.md#numbers-that-decide-answers"},
+  {"id": "backup-c003", "type": "number", "deck": "extended", "front": "In AWS Backup, a backup in cold storage stays there for a {{c1::minimum of 90 days}}.", "back": "minimum of 90 days", "facts": ["backup-cold-storage-min-90-days-retention-rule"], "section": "2-deep.md#numbers-that-decide-answers"},
+  {"id": "backup-c004", "type": "number", "deck": "extended", "front": "In an AWS Backup rule, snapshot backups can run {{c1::as frequently as every hour}}.", "back": "as frequently as every hour", "facts": ["backup-snapshot-hourly-and-100-years"], "section": "2-deep.md#numbers-that-decide-answers"},
+  {"id": "backup-c005", "type": "number", "deck": "extended", "front": "With AWS Backup, an RDS point-in-time restore reaches up to the {{c1::most recent 5 minutes of activity}}.", "back": "most recent 5 minutes of activity", "facts": ["backup-pitr-latest-restorable-time-by-service"], "section": "2-deep.md#numbers-that-decide-answers"},
+  {"id": "backup-c006", "type": "differ", "deck": "core", "front": "In AWS Backup Vault Lock, governance mode or compliance mode: which lock can a user with enough IAM permissions remove?", "back": "Governance mode", "extra": "After its grace time, a compliance-mode lock cannot be altered or deleted by any user.", "facts": ["backup-vault-lock-governance-lock-removable-with-iam", "backup-vault-lock-compliance-immutable-by-anyone"], "trap": "backup-trap-governance-stops-admins", "section": "2-deep.md#vault-lock-in-compliance-mode-stops-even-the-root-user-from-deleting-backups"},
+  {"id": "backup-c007", "type": "cannot", "deck": "core", "front": "In AWS Backup, can you restore a cross-Region copy of a continuous backup to a point in time?", "back": "No: the copy is a snapshot backup", "extra": "Point-in-time restore is not available for copies of continuous backups.", "facts": ["backup-continuous-copy-becomes-snapshot-no-pitr"], "trap": "backup-trap-copy-keeps-pitr", "section": "2-deep.md#continuous-backups-allow-point-in-time-restore-but-keep-at-most-35-days"},
+  {"id": "backup-c008", "type": "cannot", "deck": "extended", "front": "In AWS Backup, does the KMS key of the backup vault encrypt the RDS snapshots stored in it?", "back": "No: they keep the key of the source database", "extra": "The vault key applies only to resource types with full AWS Backup management.", "facts": ["backup-encryption-rds-row", "backup-vault-key-applies-only-to-independent-encryption-types"], "trap": "backup-trap-vault-key-encrypts-everything", "section": "2-deep.md#each-backup-becomes-a-recovery-point-in-an-encrypted-backup-vault"},
+  {"id": "backup-c009", "type": "decide", "deck": "extended", "front": "AWS Backup: an account in another organization must be able to restore your backups. Which vault do you share, and how?", "back": "A logically air-gapped vault, through AWS RAM", "extra": "Copy actions reach only accounts in the same organization.", "facts": ["backup-faq-lag-vault-share-ram", "backup-cross-account-requires-same-organization"], "trap": "backup-trap-cross-account-any-account", "section": "2-deep.md#a-copy-in-another-region-or-account-survives-the-loss-of-the-source"},
+  {"id": "backup-c010", "type": "decide", "deck": "extended", "front": "AWS Backup: auditors want monthly proof that restores work within a target time. Which two features?", "back": "Restore testing and an Audit Manager restore-time control", "extra": "The control is 'Restore time for resources meet target'.", "facts": ["backup-restore-testing-automated-periodic-evaluation", "backup-audit-manager-control-restore-time"], "section": "2-deep.md#most-restores-create-a-new-resource-and-restore-testing-proves-they-work"},
+  {"id": "backup-c011", "type": "cannot", "deck": "extended", "front": "In AWS Backup, can the backups of an Amazon Aurora cluster move to cold storage?", "back": "No", "extra": "The feature table shows no lifecycle to cold storage for Aurora; the setting is ignored for such resources.", "facts": ["backup-feature-row-aurora", "backup-cold-storage-ignored-for-unsupported-resources"], "trap": "backup-trap-every-backup-goes-cold", "section": "2-deep.md#the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them"},
+  {"id": "backup-c012", "type": "differ", "deck": "extended", "front": "AWS Backup or Amazon Data Lifecycle Manager: which one manages backups of many AWS services from a single place?", "back": "AWS Backup", "extra": "Data Lifecycle Manager automates the creation, retention and deletion of EBS snapshots.", "facts": ["backup-faq-dlm-vs-backup-when-to-use"], "section": "1-fast.md#choose-it-or-not"}
+ ],
+ "card_plan": {
+  "core": 4,
+  "extended": 8,
+  "core_ids": ["backup-c001", "backup-c002", "backup-c006", "backup-c007"],
+  "number_cards_equal_a_list_rows": 5,
+  "rule": "Fronts and backs above are drafts for the card writer: one fact per card (c006, c008, c009, c010 and c011 name two facts of one rule; keep both or split), a back of at most 12 words, a display of a fact for any number with a unit (the cloze texts are the A-list displays), and the context named at the start of the front. The cloze syntax and the front of a number card follow the exemplar cards.json; change the front so that it does not hold the answer outside the cloze."
+ },
+ "diagrams": [
+  {
+   "id": "backup-hero",
+   "kind": "arch",
+   "placement": "1-fast.md#in-one-breath (behind 'Predict the picture.': 'A production administrator deletes the original database. Where can the team still restore it from?')",
+   "title": "One backup through AWS Backup",
+   "claim": "A backup plan selects tagged resources, stores recovery points in a locked backup vault, and copies them to a vault in a second account.",
+   "alt": "A production account holds an Aurora cluster, a DynamoDB table, an EFS file system and an EBS volume. A backup plan writes recovery points to a locked backup vault. A copy goes to a vault in a backup account.",
+   "say": [
+    "AWS Backup can apply backup plans to your AWS resources by their tags.",
+    "Each backup job saves recovery points in backup vaults, here a vault with Vault Lock.",
+    "In the locked vault, a delete fails for every user, including the root user.",
+    "A copy action puts each backup in a vault in the same or another AWS Region and in a second account.",
+    "For most resource types, AWS Backup creates a new resource during restore."
+   ],
+   "facts_for_steps": ["backup-plan-applied-by-tagging-resources", "backup-recovery-points-saved-in-vaults", "backup-vault-lock-denies-delete-and-lifecycle-change-even-root", "backup-copy-action-same-or-other-region-and-account", "backup-restore-destructive-exceptions-listed"],
+   "note": "Size s. Nodes: the four data stores (aurora, dynamodb, efs, ebs icons) in a 'Production account' group on the left; the backup plan (backup icon) in the middle; the locked backup vault (backup vault icon if the icon set has one, with a lock label) to its right; a 'Backup account' group on the right with a second vault; a restored resource below the production group, reached by a dashed edge from the vault. Numbered steps 1 to 5 on the edges in the order of 'say'. In the Markdown steps link step 1 [apply backup plans to your AWS resources] (backup-plan-applied-by-tagging-resources), step 2 [saves recovery points in backup vaults] (backup-recovery-points-saved-in-vaults), step 3 [including the root user] (backup-vault-lock-denies-delete-and-lifecycle-change-even-root), step 4 [in the same or another AWS Region] (backup-copy-action-same-or-other-region-and-account), step 5 [creates a new resource during restore] (backup-restore-destructive-exceptions-listed); rephrase a step only so that the verbatim display fits, and keep spec say and Markdown steps equal (L703). The caption states no hard fact. No AWS number in labels or steps. Do not draw a cross-Region copy (stage 4, chapter 40) or the S3 recording bucket."
+  },
+  {
+   "id": "backup-before",
+   "kind": "arch",
+   "placement": "2-deep.md#decision-record (after Context)",
+   "title": "Callvale before: four data stores, four backup settings",
+   "claim": "Each data store keeps its own backup setting, so there is no common policy, lock or report.",
+   "alt": "Before: in several accounts, an Aurora cluster, a DynamoDB table, an EFS file system and an EBS volume each have their own backup setting. No report covers all four.",
+   "say": [],
+   "note": "Story picture, no steps (word budget of the Decision record). Keep each component in the same grid cell as in backup-after (STARTUP A7 rule 13): data stores on the left in their account groups, backup components in the middle, the backup account on the right. The claim is story text: no AWS fact."
+  },
+  {
+   "id": "backup-after",
+   "kind": "arch",
+   "placement": "2-deep.md#decision-record (after Decision)",
+   "title": "Callvale after: one backup plan, one locked vault, a copy",
+   "claim": "One backup plan selects resources by tag in every account, writes to a locked vault and copies to a backup account.",
+   "alt": "After: an organization backup policy puts one backup plan in each account. The plan selects the four data stores by tag, writes to a locked backup vault and copies to a vault in a backup account.",
+   "say": [],
+   "note": "Story picture, no steps. Same grid cells as backup-before. Do not draw the stage 4 cross-Region copy to US West (Oregon). The alt text stays at most 40 words."
+  },
+  {
+   "id": "backup-lifecycle",
+   "kind": "timeline",
+   "placement": "2-deep.md#the-lifecycle-moves-some-backups-to-cold-storage-and-later-deletes-them (after the trace; optional, only if 2-deep.md stays under 2,400 words)",
+   "title": "The lifecycle of one monthly backup",
+   "claim": "A backup starts in warm storage, can move to cold storage, and stays there for a minimum of 90 days before it expires.",
+   "alt": "A timeline of one monthly backup: created in warm storage, moved to cold storage by the lifecycle, kept in cold storage for at least the minimum period, then deleted when it expires.",
+   "say": [],
+   "note": "Optional. Ticks in order: created (warm storage), transition to cold storage, earliest expiry, expiry. Spans: warm storage, cold storage. The axis is not to scale. Labels carry no number, except that a label may repeat '90 days' because the claim holds it. The Markdown caption repeats the claim with the link [minimum of 90 days] (backup-cold-storage-min-90-days-retention-rule) (L705). If the writer leaves the figure out, nothing else changes.",
+   "facts_for_caption": ["backup-cold-storage-min-90-days-retention-rule", "backup-every-backup-starts-in-warm-storage"]
+  }
+ ],
+ "fact_requests": [
+  {
+   "id": "fr-0108",
+   "service": "backup",
+   "where": "1-fast.md#changed-recently",
+   "question": "Set changed.date 2022-10-04 (new feature; changed.was: not available) with evidence on backup-change-vault-lock-governance-mode-2022-10, so that a Changed recently entry can link it in Now (L107 date rule).",
+   "effect": "Without it the Changed recently entry fails the date rule (L107). Filed 2026-10-22 by brief-24; it blocks the counts gate (B09) until it is filled or closed. If it is closed as unfillable, the writer uses changed_recently.fallback (single-action snapshot copy, changed.date 2025-10-30 already set)."
+  }
+ ],
+ "fact_requests_note": "No other planned sentence lacks a verified fact. Gaps that the plan avoids instead of filling (brief.v0): per-GB prices of backup storage, restore and transfer (d011, script-rendered); 'incremental backups bill only changed data' for AWS Backup in general (d012); S3 backup tiering object size rules (d010); the maximum retention value of a logically air-gapped vault (d014); the preview date of the logically air-gapped vault (d021); the AWS Backup What's New post of 2024-11-15 on Organizations backup policies (d023, robots.txt). The Well-Architected and DR-whitepaper facts of d055 to d058 exist but are mech-pass (notes_for_orchestrator 3).",
+ "notes_for_orchestrator": [
+  "1. Terms: 31 term requests (term_requests, with meanings, collocations and do-not-confuse lists). The words table uses backup plan, recovery point, backup vault and Vault Lock with exactly the collocations listed. After the terms agent adds them, move their ids into brief.json terms (B11 checks only existing ids; terms now holds 17 bank ids). Two requests may merge with existing bank entries: point-in-time restore (bank: point-in-time-recovery) and delegated administrator (if chapter 04 added it).",
+  "2. Fact request fr-0108 (changed.date 2022-10-04 on backup-change-vault-lock-governance-mode-2022-10) is open and blocks the counts gate (B09) until filled. If it is unfillable, close it with --unfillable and tell the fast-file writer to use changed_recently.fallback.",
+  "3. The DR whitepaper and Well-Architected REL09 and REL13 facts that the chapter 24 miners added (brief.v0 d055 to d058, for example well-architected-rel13-bp02-backup-restore-rpo-hours-rto-24-hours, well-architected-rel13-bp02-backup-restore-least-complex-higher-rto-rpo, well-architected-dr-backup-restore-suitable-for-data-loss-corruption, well-architected-dr-continuous-replication-shortest-backup-time-not-protect-corruption, well-architected-dr-backup-frequency-sets-recovery-point-rpo, well-architected-rel09-bp04-recover-periodically-to-verify-rto-rpo, well-architected-rel09-bp02-immutability-vault-lock-or-s3-object-lock) have home chapter 02 and status mech-pass, so chapter 24's verify-facts did not vote on them. This brief plans no sentence on them: 2.2.K4 is covered with verified facts (RPO and RTO definitions, aurora-cmp-wp-* DR strategy facts of chapter 27, backup facts). If an entail run verifies them before the prose stage, the orchestrator can add them to subsection 1 (objective step) and to q008 (key justification) without changing any heading or slot.",
+  "4. STARTUP trade-off grounded: 'a second policy layer' rests on backup-native-relationship-varies-by-service; 'storage cost of seven-year copies' rests on backup-feature-row-aurora (no cold storage for Aurora) and backup-vault-lock-locked-backups-persist-until-lifecycle-ends. No change to the story bible is needed.",
+  "5. Traps: 7, equal to brief_traps_max (medium). Every brief trap has a home in a hand file (3 in the fast Traps list, 4 Exam trap callouts in 2-deep.md), so L905 is satisfiable.",
+  "6. Twin pairs: 2 strict pairs (q002/q006, q004/q009), one more than the template needs (orchestrator note). Multiple-response: 2 (q005, q011), so one rejection keeps the template minimum.",
+  "7. In the real world is planned as required (Games24x7, 2024; the year comes from the AWS customer-references entry in _build/corpus/cases/index.jsonl, date 2024-11-21). The case fact is ebs-case-games24x7-aws-backup-rpo-rto (chapter 22, verified).",
+  "8. Volatile topics kept out of question keys: logically air-gapped vault as primary target (2025-11-17), multi-party approval (2025-06-17), GuardDuty malware scanning (2025-11-19), S3 backup tiering (2025-11-18), backup search (2024-12-17), EKS backups (2025-11-10), single-action snapshot copy (2025-10-30).",
+  "9. backup-t03 is optional (needs a T108-conforming verify); backup-t02 is the required Try (pass_route true). No fetch was made for this brief; the corpus was not refreshed."
+ ]
+}

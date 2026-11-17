@@ -1,0 +1,218 @@
+{
+ "lens": "technical",
+ "chapter": "10",
+ "reviewer": "review-10-technical",
+ "reviewed": "2026-10-12",
+ "scope_note": "Ran 'saa.py sync 10' first (written=0, unchanged=6). 3-do.md and 4-say.md still print 'Nothing here yet.' (items are not status ready), so tasks, spoken answers, questions and cards were reviewed in data/10-vpc/*.json. Read 1-fast.md, 2-deep.md (edit pass 2), questions.json (22), cards.json (32), speak.json (4), tasks.json (4) and the labels of the vpc-* diagram specs. About 40 statements were tested against saved AWS pages (search, show) and verified facts; the findings below are the ones that did not hold. Findings that overlap an older finding of another lens name it, because the text is still present after the edit pass. Statements checked and found correct include: the NACL first-match and ephemeral-port examples, the security group chaining tables, the 251-of-256 /24 arithmetic, zonal versus regional NAT billing and the 60-minute expansion, the flow-log ACCEPT/REJECT diagnosis, the secondary-CIDR restriction for 10.0.0.0/8, q018 (Amazon Linux 32768-61000), q015 (regional NAT automatic mode), q011 (endpoint route beats 0.0.0.0/0), and every cleanup order in vpc-t02 and vpc-t03.",
+ "findings": [
+  {
+   "id": "technical-01",
+   "file": "10-vpc/2-deep.md",
+   "section": "a-nat-gateway-lets-private-instances-start-connections-and-charges-hourly-and-per-gigabyte",
+   "quote": "A **gateway endpoint** for Amazon S3 takes that traffic off the NAT path",
+   "type": "condition-dropped",
+   "severity": "blocking",
+   "evidence": "No hand file says that a gateway endpoint serves only buckets in its own Region (grep for 'same Region' / 'another Region' in 1-fast.md and 2-deep.md finds only the Elastic IP example). This sentence, the Stop-and-answer answer 'A gateway endpoint for Amazon S3 removes both' (its stem never says the bucket is in the same Region), and the endpoint section ('a gateway endpoint for S3 and DynamoDB, an interface endpoint otherwise') all teach the endpoint as unconditional. Source docs/vpc/latest/privatelink/vpc-endpoints-s3 (Considerations): \"A gateway endpoint is available only in the Region where you created it. Be sure to create your gateway endpoint in the same Region as your S3 buckets.\" Fact vpc-gateway-endpoint-beats-igw-default-route: \"Traffic that's destined for the service (Amazon S3 or DynamoDB) in a different Region goes to the internet gateway because prefix lists are specific to a Region.\" Cross-Region S3 traffic from a private subnet still goes through the NAT gateway and is still billed for processing. Fix: add one sentence in the endpoint section with a link to the display 'prefix lists are specific to a Region', and say 'in the same Region' in this sentence and in the Stop-and-answer stem.",
+   "status": "fixed",
+   "resolution": "fix-10: the NAT subsection now reads 'A gateway endpoint for Amazon S3 in the same Region takes S3 traffic off the NAT path ... Other Regions still use the NAT gateway: [prefix lists are specific to a Region].' The Stop-and-answer stem says 'to an Amazon S3 bucket in the same Region'. The endpoint subsection's 'Why two kinds?' paragraph links the same display, and its Say it names the Region as the thing to watch. 1-fast trap, signals row, Check 3 and Predict 3 are scoped too (technical-02)."
+  },
+  {
+   "id": "technical-02",
+   "file": "10-vpc/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "**Wrong belief:** Private instances need a NAT gateway to reach Amazon S3. **Truth:** A gateway endpoint reaches it",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The 'Truth' is false for a bucket in another Region, and the signals row 'private instances send large data to Amazon S3, MOST cost-effective', Check 3 and the Predict 3 answer drop the same condition. Source docs/vpc/latest/privatelink/vpc-endpoints-s3: \"A gateway endpoint is available only in the Region where you created it. Be sure to create your gateway endpoint in the same Region as your S3 buckets.\" Fact vpc-gateway-endpoint-beats-igw-default-route (display 'prefix lists are specific to a Region'). Fix: 'A gateway endpoint reaches it in the same Region'. Same root cause as technical-01.",
+   "status": "fixed",
+   "resolution": "fix-10: the trap Truth now starts 'In the same Region, a gateway endpoint reaches it'. The signals Think cell says 'a gateway endpoint for Amazon S3 in the same Region'. Check 3 now tests the other-Region case with the link [Prefix lists are specific to a Region]. The Predict 3 answer starts 'Not for a bucket in the same Region'."
+  },
+  {
+   "id": "technical-03",
+   "file": "data/10-vpc/speak.json",
+   "section": "vpc-s01",
+   "quote": "If the worker talks to S3 alone, it needs no NAT gateway.",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The spoken answer, kp4 and kp5 never say 'same Region'. A worker that writes to a bucket in another Region still needs the NAT gateway for that traffic. Source docs/vpc/latest/privatelink/vpc-endpoints-s3: \"A gateway endpoint is available only in the Region where you created it. Be sure to create your gateway endpoint in the same Region as your S3 buckets.\" Fact vpc-gateway-endpoint-beats-igw-default-route: \"Traffic that's destined for the service (Amazon S3 or DynamoDB) in a different Region goes to the internet gateway because prefix lists are specific to a Region.\" The reader will say this to customers in the week of Oct 13. Fix: 'If the worker talks only to S3 in the same Region, it needs no NAT gateway', and add the fact to the item.",
+   "status": "fixed",
+   "resolution": "fix-10: vpc-s01 now says 'If the worker calls S3 in its own Region alone, it needs no NAT gateway.' kp5 reads 'A gateway endpoint reaches Amazon S3 and DynamoDB in its own Region; software updates, and S3 traffic to another Region, still go through the NAT gateway.', with fact vpc-gateway-endpoint-beats-igw-default-route. speak lint clean."
+  },
+  {
+   "id": "technical-04",
+   "file": "data/10-vpc/speak.json",
+   "section": "vpc-s01",
+   "quote": "In your case, I'd add the endpoint to the private route table today.",
+   "type": "unsafe-advice",
+   "severity": "should",
+   "evidence": "Adding the endpoint route breaks open connections and can break bucket policies, and the follow-up answer to 'Do we have to change the worker's code?' is a flat 'No.' Source docs/vpc/latest/privatelink/vpc-endpoints-s3 (Considerations): \"The source IPv4 or IPv6 addresses from instances in your affected subnets as received by Amazon S3 change from public addresses to the private addresses in your VPC. An endpoint switches network routes, and disconnects open TCP connections.\" and \"We recommend that you do not have any critical tasks running when you create or modify an endpoint\" and \"You can't use the `aws:SourceIp` condition in an identity policy or a bucket policy for requests to Amazon S3 that traverse a VPC endpoint. Instead, use the `aws:VpcSourceIp` condition.\" The CTO's large uploads run while the advice says 'today', and a bucket policy that allows only the NAT gateway's public address would start denying the worker. Fix: 'between upload runs', and in the follow-up: 'No code change, but check bucket policies that use aws:SourceIp' (needs a fact from the quote above).",
+   "status": "fixed",
+   "resolution": "fix-10: the advice now says 'I'd add the endpoint to the private route table between uploads.' The aws:SourceIp caveat was not added. No verified fact in the canon holds the vpc-endpoints-s3 Considerations quotes, and hard rule 1 bars it from memory. Fact request for chapter 11, which owns endpoint policies: 'An endpoint switches network routes, and disconnects open TCP connections' and the aws:SourceIp sentence."
+  },
+  {
+   "id": "technical-05",
+   "file": "10-vpc/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "**FAQ 9.** Can users on the internet reach a VPC whose primary block is publicly routable?",
+   "type": "wrong-claim",
+   "severity": "blocking",
+   "evidence": "The answer 'No.' is wrong for the question as written: a VPC with a publicly routable primary block serves internet users like any other VPC, through an internet gateway and public IPv4 or Elastic IP addresses. The FAQ sentence only says that the block's own addresses are not reachable through the internet gateway. Source full:vpc-userguide (Private IPv4 addresses): \"Regardless of the IP address range of your VPC, we do not support direct access to the internet from your VPC's CIDR block, including a publicly-routable CIDR block. You must set up internet access through a gateway; for example, an internet gateway, virtual private gateway, a AWS Site-to-Site VPN connection, or Direct Connect.\" Fact vpc-igw-requires-attach-and-route (instance needs a public IPv4 address or Elastic IP plus the route). Fix: ask 'Are the addresses of a publicly routable VPC block reachable from the internet through the internet gateway?' or drop the FAQ. Also raised as exam-09 and reader-17 (should); still present after the edit pass.",
+   "status": "removed",
+   "resolution": "fix-10: FAQ 9 on the publicly routable primary block was removed. FAQ 9 now asks which gateway gives IPv6 traffic outbound-only access and quotes the FAQ definition of the egress-only internet gateway."
+  },
+  {
+   "id": "technical-06",
+   "file": "10-vpc/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "**FAQ 6.** Do instances pay data transfer to reach Amazon S3 through the internet gateway?",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The flat 'No.' drops two conditions. 1) Same Region: fact vpc-data-transfer-ec2-to-s3-same-region-free has the condition 'same Region' (\"There was no charge for the data transfer from the EC2 instance to S3, as it is Data Transfer Out to Amazon EC2 to S3 in the same region.\"). 2) The path through the internet gateway needs a public IPv4 address on each instance, and fact vpc-public-ipv4-charge-2024: \"AWS charges for all public IPv4 addresses, including public IPv4 addresses associated with running instances and Elastic IP addresses.\" The 2-deep section on public addresses teaches the opposite design. Fix: 'No, for a bucket in the same Region; the public IPv4 address of the instance is still billed', or remove this FAQ. Also raised as claims-12; still present.",
+   "status": "fixed",
+   "resolution": "fix-10: the FAQ 6 prompt is now scoped 'to reach Amazon S3 in the same Region through the internet gateway'. A line on the instance's public IPv4 charge was written and then cut for the 5,500-word file limit. The 'Every public IPv4 address is billed' subsection and its exam trap teach that charge."
+  },
+  {
+   "id": "technical-07",
+   "file": "10-vpc/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "[No charge for an egress-only internet gateway](../facts/vpc.md#vpc-eigw-stateful-no-security-group)",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The row is 'What does it charge?', and the cell says no charge, which reads as free IPv6 egress. The same AWS sentence continues: source docs/vpc/latest/userguide/egress-only-internet-gateway (fact vpc-eigw-stateful-no-security-group): \"There is no charge for an egress-only internet gateway, but there are data transfer charges for EC2 instances that use internet gateways.\" The NAT gateway cell in the same row lists only its own charges too, but its data processing charge is named; the egress-only cell names none. Fix: 'No gateway charge; data transfer out is still billed', or rename the row 'What does the device itself charge?'. Also raised as exam-20; still present.",
+   "status": "fixed",
+   "resolution": "fix-10: the row is now 'What does the device itself charge?' and the cell reads '[No charge for an egress-only internet gateway], but data transfer is billed'."
+  },
+  {
+   "id": "technical-08",
+   "file": "10-vpc/2-deep.md",
+   "section": "a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+   "quote": "Two needs still point to a NAT instance.",
+   "type": "contradicts-best-practice",
+   "severity": "should",
+   "evidence": "The Go-deeper block presents 'a bastion' as a valid reason to choose a NAT instance. Five sections earlier the chapter teaches the opposite: 'points to AWS Systems Manager Session Manager, not a bastion host in a public subnet', with fact vpc-wa-sec06-no-ssh-rdp-use-session-manager: \"Verify that the security group ingress rules applicable to your EC2 instances do not permit access on port 22/tcp (SSH) or port 3389/tcp (RDP).\" and \"Use AWS Systems Manager Session Manager to provide interactive access to instances when necessary.\" RULINGS hard rule 9 also says 'Session Manager instead of bastions'. A NAT instance used as a bastion also puts SSH on an internet-facing device that forwards traffic for every private subnet. Fix: keep the comparison-table fact, but say 'AWS lists bastion use for a NAT instance; for shell access, prefer Session Manager'. Card vpc-c020 repeats the bastion point without the caveat (reader-13).",
+   "status": "fixed",
+   "resolution": "fix-10: the Go deeper block now reads 'Port forwarding still points to a NAT instance ... AWS also lists [Use as a bastion server] for a NAT instance, but for shell access, prefer Session Manager.' Card vpc-c020 now asks about port forwarding."
+  },
+  {
+   "id": "technical-09",
+   "file": "data/10-vpc/questions.json",
+   "section": "vpc-q014",
+   "quote": "Prefer a NAT gateway to a NAT instance unless the design needs port forwarding or a bastion.",
+   "type": "contradicts-best-practice",
+   "severity": "should",
+   "evidence": "The takeaway tells the reader to keep a NAT instance when the design 'needs a bastion'. The chapter's own best practice and fact vpc-wa-sec06-no-ssh-rdp-use-session-manager say: \"Use AWS Systems Manager Session Manager to provide interactive access to instances when necessary.\" A bastion need is a reason for Session Manager, not for a NAT instance. Fix: 'unless the design needs port forwarding' (the twin already covers port forwarding with fact vpc-natgw-vs-instance-port-forwarding).",
+   "status": "fixed",
+   "resolution": "fix-10: the vpc-q014 takeaway now reads 'Prefer a NAT gateway to a NAT instance unless the design needs port forwarding.' Takeaway only; the key is unchanged."
+  },
+  {
+   "id": "technical-10",
+   "file": "10-vpc/2-deep.md",
+   "section": "a-route-table-sends-subnet-traffic-and-the-most-specific-route-wins",
+   "quote": "To the firewall. You can [add a route to your route tables that is more specific than the local route](../facts/vpc.md#vpc-route-more-specific-than-local), and /24 is the longest match.",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The fact carries two conditions that the answer and the stem leave out. Fact vpc-route-more-specific-than-local: \"You can add a route to your route tables that is more specific than the local route. The destination must match the entire IPv4 or IPv6 CIDR block of a subnet in your VPC. The target must be a NAT gateway, network interface, or Gateway Load Balancer endpoint.\" The stem never says that 10.20.100.0/24 is a subnet of the VPC, so the reader learns that any longer prefix overrides the local route (for example a /25 inside a subnet, or a single host /32), which the API rejects. Fix: in the stem, '10.20.100.0/24 (a subnet of the VPC) to a firewall's network interface', and in the answer add the display 'The destination must match the entire IPv4 or IPv6 CIDR block of a subnet in your VPC'.",
+   "status": "fixed",
+   "resolution": "fix-10: the stem says '10.20.100.0/24 (a subnet of the VPC) to a firewall's network interface', and the answer links [The destination must match the entire IPv4 or IPv6 CIDR block of a subnet in your VPC]."
+  },
+  {
+   "id": "technical-11",
+   "file": "data/10-vpc/tasks.json",
+   "section": "vpc-t02",
+   "quote": "The subnet now uses the custom route table, with 10.0.0.0/16 to local and 0.0.0.0/0 to the internet gateway, so it is public.",
+   "type": "unverified-step",
+   "severity": "should",
+   "evidence": "The task exists to let the reader watch the subnet become public ('watch the subnet stay private until its own route table has one route to the gateway', 2-deep Try it), but the fix is never observed: the last step is associate-route-table with the capture form, whose Expect is 'No output.', and the text then asserts the result. No command reads the route table that the subnet now uses, so a wrong association (for example the wrong RTB_ID, or a create-route that failed) passes unnoticed. Rule: STYLE section 8 and CONVENTIONS task fields (each step has an 'expect' that the reader can check). Fix: add a step 'aws ec2 describe-route-tables --filters Name=association.subnet-id,Values=$SUBNET_ID --query \"RouteTables[].Routes[].[DestinationCidrBlock,GatewayId]\"' with Expect: '10.0.0.0/16 local, and 0.0.0.0/0 with the igw- ID'; the filter association.subnet-id is documented on the describe-route-tables page that the task already cites.",
+   "status": "rejected",
+   "resolution": "fix-10: tried; the extra step gives vpc-t02 nine steps, and tasks lint T102 allows 3 to 8 for a Try. Every existing step is needed: the break-it read, and the create, route and associate steps of the fix. The association step's Expect states the resulting routes. Reported to the orchestrator: allow a ninth step, or let a Try end with a read-only check step."
+  },
+  {
+   "id": "technical-12",
+   "file": "data/10-vpc/tasks.json",
+   "section": "vpc-t02",
+   "quote": "aws ec2 describe-vpcs --filters Name=tag:task,Values=vpc-t02",
+   "type": "weak-verify",
+   "severity": "note",
+   "evidence": "The verify proves only that the VPC is gone. delete-vpc fails while the subnet or the custom route table exists, so those are covered, but an internet gateway that was detached and then not deleted (delete-internet-gateway skipped, or run after the CloudShell variables were lost) does not block delete-vpc, so the verify returns an empty list while a tagged internet gateway stays in the account. It costs nothing (fact vpc-igw-no-charge), so this is a note. Rule: STYLE section 8 item 5 ('a verify command that filters by task=<task-id> and must return nothing'). Fix: add to still_costs, or to the cleanup, 'aws ec2 describe-internet-gateways --filters Name=tag:task,Values=vpc-t02 --query \"InternetGateways[].InternetGatewayId\"' with Expect: an empty list.",
+   "status": "fixed",
+   "resolution": "fix-10: still_costs of vpc-t02 now says that a detached internet gateway does not stop delete-vpc. It gives the describe-internet-gateways check filtered by tag task=vpc-t02, which must return an empty list. tasks lint and check-cli are clean."
+  },
+  {
+   "id": "technical-13",
+   "file": "data/10-vpc/tasks.json",
+   "section": "vpc-t02",
+   "quote": "Find the IDs again with describe-vpcs, describe-subnets, describe-route-tables and describe-internet-gateways filtered by the tag task=vpc-t02.",
+   "type": "missing-permission",
+   "severity": "note",
+   "evidence": "The recovery path names describe-subnets and describe-internet-gateways, but the permissions list of vpc-t02 has neither ec2:DescribeSubnets nor ec2:DescribeInternetGateways. vpc-t03 still_costs names describe-vpc-endpoints, and its permissions list has no ec2:DescribeVpcEndpoints entry. A reader with a least-privilege role cannot run the recovery commands that the cleanup depends on. Rule: CONVENTIONS task field 'permissions' (the permissions the task needs). Fix: add ec2:DescribeSubnets and ec2:DescribeInternetGateways to vpc-t02, and ec2:DescribeVpcEndpoints to vpc-t03.",
+   "status": "fixed",
+   "resolution": "fix-10: vpc-t02 permissions now include ec2:DescribeSubnets and ec2:DescribeInternetGateways; vpc-t03 includes ec2:DescribeVpcEndpoints."
+  },
+  {
+   "id": "technical-14",
+   "file": "10-vpc/2-deep.md",
+   "section": "every-default-subnet-is-public-so-production-tiers-belong-in-private-subnets",
+   "quote": "A team launches a database instance into a default subnet with default settings.",
+   "type": "ambiguous-scope",
+   "severity": "note",
+   "evidence": "The answer 'Yes' rests on fact vpc-default-subnet-public-ip-and-dns, which is about EC2 instances (\"Instances that you launch into a default subnet receive both a public IPv4 address and a private IPv4 address\"). 'Database instance' is also the Amazon RDS term (DB instance), and for RDS public reachability is a separate setting. Source full:securityhub-userguide (RDS.2): \"The `PubliclyAccessible` value in the RDS instance configuration indicates whether the DB instance is publicly accessible.\" Fix: 'launches a database on an EC2 instance into a default subnet'.",
+   "status": "fixed",
+   "resolution": "fix-10: the Stop-and-answer now names 'A database runs on an EC2 instance' (see claims-24)."
+  },
+  {
+   "id": "technical-15",
+   "file": "10-vpc/2-deep.md",
+   "section": "a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+   "quote": "and it sits in no public subnet",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "Correct, but neither this sentence nor speak vpc-s03 ('A regional NAT gateway needs no public subnet.') nor card vpc-c025 says that the VPC still needs an internet gateway, so 'no public subnet' can read as 'no internet gateway'. Source full:vpc-userguide (Regional NAT gateways): \"Once you create your regional NAT Gateway, AWS automatically creates a route table for it, which comes with a pre-configured route to the internet gateway.\" The diagram vpc-nat-zonal-vs-regional does show the internet gateway. Fix: 'it sits in no public subnet, and its own route table sends traffic to the internet gateway' (needs a fact from the quote above).",
+   "status": "rejected",
+   "resolution": "fix-10: no verified fact holds the regional NAT gateway's pre-configured route to the internet gateway, and hard rule 1 bars it from memory. The sentence as written ('it sits in no public subnet') is grounded and correct. The diagram vpc-nat-zonal-vs-regional shows the internet gateway. Fact request reported: the 'pre-configured route to the internet gateway' sentence of the regional NAT gateway page."
+  },
+  {
+   "id": "technical-16",
+   "file": "10-vpc/2-deep.md",
+   "section": "faq-quick-fire",
+   "quote": "**FAQ 5.** Can an instance behind a NAT gateway use an Elastic IP address?",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "'No' reads as 'you cannot associate one', but question vpc-q022 describes an administrator who did associate an Elastic IP address with each instance in a private subnet. What fails is internet access through that address. Fact vpc-public-vs-private-subnet-by-igw-route: \"Because there is no route to the internet gateway, instances in the private subnet can't communicate with the internet, even if they have public IP addresses.\" Fix: ask 'Does an Elastic IP address give internet access to an instance in a subnet that routes through a NAT gateway?'",
+   "status": "fixed",
+   "resolution": "fix-10: FAQ 5 now asks 'Does an Elastic IP address give internet access to an instance in a subnet that routes through a NAT gateway?'"
+  },
+  {
+   "id": "technical-17",
+   "file": "10-vpc/2-deep.md",
+   "section": "data-transfer-is-free-inside-one-availability-zone-but-charged-across-zones",
+   "quote": "| To Amazon S3 through a NAT gateway in the same zone | None | Per GB |",
+   "type": "condition-dropped",
+   "severity": "note",
+   "evidence": "The 'None' in the data transfer column (here and in the gateway endpoint row) holds only for a bucket in the same Region. Fact vpc-data-transfer-ec2-to-s3-same-region-free has the condition 'same Region; NAT gateway processing is a separate charge' (\"There was no charge for the data transfer from the EC2 instance to S3, as it is Data Transfer Out to Amazon EC2 to S3 in the same region.\"). Fix: 'To Amazon S3 in the same Region ...' in the three S3 rows.",
+   "status": "fixed",
+   "resolution": "fix-10: the three S3 rows now start 'To Amazon S3 in the same Region, through ...', and step 3 says 'even for Amazon S3 in the same Region'."
+  },
+  {
+   "id": "technical-18",
+   "file": "10-vpc/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "| [2 Elastic IP addresses](../facts/vpc.md#vpc-quota-eips-per-public-nat-gateway) | Per public NAT gateway, [up to 8](../facts/vpc.md#vpc-quota-eips-per-public-nat-gateway) |",
+   "type": "condition-dropped",
+   "severity": "note",
+   "evidence": "The fact vpc-quota-eips-per-public-nat-gateway has the condition 'zonal NAT gateway (a regional NAT gateway supports up to 32 IP addresses per Availability Zone: vpc-regional-nat-ip-per-az)'. Source full:vpc-userguide: \"Your regional NAT Gateways support up to 32 IP addresses per Availability Zone (compared to 8 for zonal NAT gateways).\" The chapter teaches regional NAT gateways and speak vpc-s03 states the 32, so this row reads as a limit on every NAT gateway. Fix: 'Per zonal public NAT gateway'.",
+   "status": "fixed",
+   "resolution": "fix-10: the cell now reads 'Default quota per zonal public NAT gateway; [up to 8] on request'."
+  },
+  {
+   "id": "technical-19",
+   "file": "10-vpc/2-deep.md",
+   "section": "aws-service-endpoints-are-public-but-a-vpc-endpoint-reaches-them-privately",
+   "quote": "A gateway endpoint is a route table entry.",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "A gateway endpoint is a VPC resource (vpce- ID) that is the target of a route; the route is added for each route table that you give it. Fact vpc-gateway-endpoint-route-auto-added: \"A route is automatically added to each of the route tables with a destination that specifies the prefix list ID of the service (`pl-{{xxxxxxxx}}`), and a target with the endpoint ID (`vpce-{{xxxxxxxxxxxxxxxxx}}`). You cannot explicitly delete or modify the endpoint route, but you can change the route tables that are used by the endpoint.\" Task vpc-t03 shows the endpoint still existing after its route is gone, which contradicts 'is a route table entry'. Fix: 'A gateway endpoint is a target that you add to route tables.'",
+   "status": "fixed",
+   "resolution": "fix-10: step 3 now reads 'A gateway endpoint is a target that you add to route tables, so no code changes.' The 'Why two kinds?' paragraph says it 'works through the VPC's own route tables'."
+  }
+ ]
+}

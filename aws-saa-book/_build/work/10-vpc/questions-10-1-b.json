@@ -1,0 +1,181 @@
+[
+ {
+  "id": "vpc-q005",
+  "section": "2-deep.md#a-security-group-rule-can-name-another-security-group-as-its-source",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": [
+   "1.2.K3"
+  ],
+  "topics": [
+   "networking",
+   "security"
+  ],
+  "services": [
+   "vpc",
+   "ec2",
+   "elb"
+  ],
+  "concept": "sg-vs-nacl-block-or-allow",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances behind an internet-facing Application Load Balancer. The load balancer and the instances run in the same public subnets, and the instances have public IP addresses. The security groups of the load balancer and of the instances allow HTTPS from 0.0.0.0/0. The security team finds malicious requests that come from one known range of IP addresses. The company must allow only requests from the load balancer to reach the instances. Which solution will meet this requirement with the LEAST operational overhead?",
+  "keywords": [
+   "allow only requests from the load balancer",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Change the source of the inbound HTTPS rule in the security group of the instances to the private IP addresses of the load balancer nodes.",
+    "correct": false,
+    "why": "It works, but [a security group can have a rule that allows traffic from another security group by its identifier, minimizing updates as resources within the group change over time](../facts/vpc.md#vpc-wa-sec05-bp02-sg-references-sg), unlike node addresses.",
+    "concept": "sg-source-lb-addresses",
+    "trap": null,
+    "misconception": "lists addresses by hand where a security group reference keeps itself current",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Add an inbound rule that denies the IP address range to the network ACL of the public subnets where the load balancer runs.",
+    "correct": false,
+    "why": "The deny rule stops one range, but every other address on the internet can still reach the public IP addresses of the instances.",
+    "concept": "nacl-deny-rule",
+    "trap": null,
+    "misconception": "blocks one bad range when the requirement is to allow one trusted source",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Replace the HTTPS rules for 0.0.0.0/0 in both security groups with allow rules for every address range except the malicious range.",
+    "correct": false,
+    "why": "The new rules still let every other address range reach the instances directly, so requests that bypass the load balancer are accepted.",
+    "concept": "sg-allow-list-to-block",
+    "trap": null,
+    "misconception": "treats removing one bad range as allowing one trusted source",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Change the source of the inbound HTTPS rule in the security group of the instances to the security group of the load balancer.",
+    "correct": true,
+    "why": "A rule source can be [the ID of a security group](../facts/vpc.md#vpc-sg-rule-sources), so the instances accept HTTPS from the load balancer and no longer from the internet.",
+    "concept": "sg-reference-lb",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The instances should accept requests from the load balancer alone. A security group rule can take [the ID of a security group](../facts/vpc.md#vpc-sg-rule-sources) as its source, and the example web tier [allows inbound HTTPS access from the load balancer](../facts/vpc.md#vpc-sg-chain-web-allows-lb-sg) this way. After the 0.0.0.0/0 source is replaced, direct requests from the internet match no allow rule.",
+  "takeaway": "To accept traffic from one tier alone, name the security group of that tier as the source of the rule.",
+  "twin": "If the stem said \"The company must prevent all requests from that range from reaching the application.\" instead: add a deny rule to the network ACL, because [network ACLs can be used to set both Allow and Deny rules](../facts/vpc.md#vpc-sg-allow-rules-only).",
+  "say": "I'd make the load balancer's security group the only source in the instances' security group.",
+  "facts": [
+   "vpc-sg-rule-sources",
+   "vpc-sg-chain-web-allows-lb-sg",
+   "vpc-wa-sec05-bp02-sg-references-sg",
+   "vpc-sg-allow-rules-only"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-restrict",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": "vpc-q001"
+ },
+ {
+  "id": "vpc-q007",
+  "section": "2-deep.md#a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.S1"
+  ],
+  "topics": [
+   "networking",
+   "resilience",
+   "cost"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "natgw-per-az-ha",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs an application on Amazon EC2 instances in private subnets in two Availability Zones. The instances download small daily updates from partner websites on the internet. The route tables of both private subnets send 0.0.0.0/0 to one NAT gateway in a public subnet in the first Availability Zone. This is a test environment, and an outage of one Availability Zone is acceptable. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "This is a test environment",
+   "an outage of one Availability Zone is acceptable",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a NAT gateway in each zone, add a standby NAT gateway next to each one, and route each private subnet to its own zone.",
+    "correct": false,
+    "why": "It works, but [each NAT gateway is created in a specific Availability Zone and implemented with redundancy in that zone](../facts/vpc.md#vpc-natgw-one-az-redundant-in-zone), so the standbys add cost.",
+    "concept": "standby-natgw",
+    "trap": null,
+    "misconception": "adds a standby NAT gateway, not knowing that each NAT gateway is already redundant inside its zone",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Keep the one NAT gateway in the first Availability Zone, and keep the routes of both private subnets pointed at that NAT gateway.",
+    "correct": true,
+    "why": "The stem accepts a zone outage, and for test you can [save money by deploying your resources in only one Availability Zone](../facts/vpc.md#vpc-dev-test-one-az-saves-money), so one gateway is enough.",
+    "concept": "single-shared-natgw",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Replace the NAT gateway with an egress-only internet gateway, and route 0.0.0.0/0 from both private subnets to the egress-only internet gateway.",
+    "correct": false,
+    "why": "An egress-only internet gateway is [for use with IPv6 traffic only](../facts/vpc.md#vpc-eigw-ipv6-outbound-only), so the IPv4 traffic of the instances gets no path to the internet.",
+    "concept": "egress-only-for-ipv4",
+    "trap": "vpc-trap-eigw-ipv4",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Create a NAT gateway in a public subnet in the second Availability Zone, and route each private subnet to the NAT gateway in its own zone.",
+    "correct": false,
+    "why": "It works, but a second gateway adds a second hourly charge, because a NAT gateway is [charged for each hour that your NAT gateway is available](../facts/vpc.md#vpc-natgw-pricing-dimensions).",
+    "concept": "natgw-per-az",
+    "trap": null,
+    "misconception": "builds zone redundancy into a test environment that accepts a zone outage",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The stem accepts the loss of one zone and asks for the lowest cost. A NAT gateway is [charged for each hour that your NAT gateway is available](../facts/vpc.md#vpc-natgw-pricing-dimensions) and for [each gigabyte of data that it processes](../facts/vpc.md#vpc-natgw-pricing-dimensions), so every extra gateway adds an hourly charge. The traffic is small, so the existing gateway is the cheapest design that works.",
+  "takeaway": "In a test environment that accepts a zone outage, one shared NAT gateway is the cheapest working design.",
+  "twin": "If the stem said \"Outbound internet access must stay highly available during an Availability Zone failure.\" instead: add a second NAT gateway, because [resources in the other Availability Zones lose internet access](../facts/vpc.md#vpc-natgw-shared-across-azs-loses-internet).",
+  "say": "It's a test environment and a zone outage is fine, so one NAT gateway is the cheapest choice.",
+  "facts": [
+   "vpc-natgw-pricing-dimensions",
+   "vpc-dev-test-one-az-saves-money",
+   "vpc-natgw-one-az-redundant-in-zone",
+   "vpc-eigw-ipv6-outbound-only",
+   "vpc-natgw-shared-across-azs-loses-internet"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-acceptable",
+   "ee-most-cost-effective",
+   "ee-across-availability-zones"
+  ],
+  "twin_of": "vpc-q003"
+ }
+]

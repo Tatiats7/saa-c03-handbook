@@ -1,0 +1,263 @@
+{
+ "v": 1,
+ "chapter": "hybrid-networking",
+ "items": [
+  {
+   "id": "hybrid-networking-t01",
+   "type": "look",
+   "title": "List the Direct Connect locations of a Region",
+   "kills": "\"AWS brings the Direct Connect line into your building.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "directconnect:DescribeLocations"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. List the Direct Connect locations of the Region that CloudShell uses: the code, the name and the Region of each location.",
+     "command": "aws directconnect describe-locations --query \"locations[].[locationCode,locationName,region]\" --output table",
+     "expect": "One row for each location. Each name holds a colocation partner and a building in a city. The Region column shows the Region of CloudShell in every row. None of these buildings is yours: your local service provider carries the line from your building to the location.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Pick a Region other than the one CloudShell uses as <OTHER_REGION>, for example us-west-2 or eu-west-1. Run the same list for that Region.",
+     "command": "aws directconnect describe-locations --region <OTHER_REGION> --query \"locations[].[locationCode,locationName,region]\" --output table",
+     "expect": "A different list of buildings, each with the Region that you chose. A location gives access to AWS in the Region with which it is associated, so you choose a location near your data center and its Region.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Back in the Region of CloudShell, read the port speeds of each location and the port speeds that support MACsec.",
+     "command": "aws directconnect describe-locations --query \"locations[].[locationCode,availablePortSpeeds,availableMacSecPortSpeeds]\"",
+     "expect": "For each location code: a list of port speeds, then the list of MACsec port speeds, which can be empty. A dedicated connection comes at 1 Gbps, 10 Gbps, 100 Gbps or 400 Gbps, and the MACsec list holds no 1 Gbps speed.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "direct-connect-aws-is-not-first-or-last-mile-provider",
+    "direct-connect-components-connection-and-virtual-interface",
+    "direct-connect-location-gives-access-to-associated-region-and-all-public-regions",
+    "direct-connect-limit-dedicated-port-speeds",
+    "direct-connect-macsec-not-on-1gbps-or-hosted"
+   ],
+   "sources": [
+    {
+     "title": "Use the Direct Connect CLI (Step 1: Create a connection, describe the Direct Connect locations)",
+     "url": "https://docs.aws.amazon.com/directconnect/latest/UserGuide/using-cli.html"
+    },
+    {
+     "title": "describe-locations (AWS CLI Command Reference, output fields locationName, region, availablePortSpeeds and availableMacSecPortSpeeds)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/directconnect/describe-locations.html"
+    }
+   ]
+  },
+  {
+   "id": "hybrid-networking-t02",
+   "type": "try",
+   "title": "Create the AWS side of a VPN and attach a second gateway",
+   "kills": "\"A VPC can take several virtual private gateways.\"",
+   "trap": null,
+   "section": "2-deep.md#a-site-to-site-vpn-joins-your-network-to-aws-through-two-ipsec-tunnels",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0 in VPN connection-hours: the task creates no VPN connection, and Site-to-Site VPN bills connection-hours for the time a VPN connection is in the available state. The VPC itself has no additional charge.",
+   "cost_if_forgotten": "$0 a day in VPN connection-hours, because no VPN connection exists. Run the cleanup anyway, so that no unused gateway stays in the account.",
+   "cost_facts": [
+    "site-to-site-vpn-billing-connection-hour-while-available",
+    "vpc-faq-no-charge-for-vpc-itself"
+   ],
+   "permissions": [
+    "ec2:CreateVpc",
+    "ec2:CreateTags",
+    "ec2:CreateCustomerGateway",
+    "ec2:CreateVpnGateway",
+    "ec2:AttachVpnGateway",
+    "ec2:DescribeVpnGateways",
+    "ec2:DetachVpnGateway",
+    "ec2:DeleteVpnGateway",
+    "ec2:DeleteCustomerGateway",
+    "ec2:DeleteVpc",
+    "ec2:DescribeCustomerGateways",
+    "ec2:DescribeVpcs"
+   ],
+   "read_only_alternative": "These commands create nothing. First list the virtual private gateways of the Region, each with its Amazon-side ASN and the VPC it is attached to: aws ec2 describe-vpn-gateways --query \"VpnGateways[].[VpnGatewayId,AmazonSideAsn,VpcAttachments[?State=='attached'].VpcId]\" No VPC ID appears next to two gateways. Then list the customer gateways: aws ec2 describe-customer-gateways --query \"CustomerGateways[].[CustomerGatewayId,IpAddress,BgpAsn]\" Each one is a record of an IP address and an ASN, with no router settings. Empty lists mean that this Region has no VPN gateways.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a test VPC with the IPv4 CIDR block 10.99.0.0/16, tagged for this book and this task.",
+     "command": "aws ec2 create-vpc --cidr-block 10.99.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=saa-hybrid-networking-t02},{Key=book,Value=saa},{Key=task,Value=hybrid-networking-t02}]'",
+     "capture": {
+      "name": "VPC_ID",
+      "query": "Vpc.VpcId"
+     },
+     "expect": "No output. VPC_ID now holds the ID of the new VPC.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a customer gateway: the AWS record of a router in your data center. 203.0.113.10 is an address reserved for documentation, and 65000 is a private ASN.",
+     "command": "aws ec2 create-customer-gateway --type ipsec.1 --ip-address 203.0.113.10 --bgp-asn 65000 --tag-specifications 'ResourceType=customer-gateway,Tags=[{Key=Name,Value=saa-hybrid-networking-t02},{Key=book,Value=saa},{Key=task,Value=hybrid-networking-t02}]'",
+     "capture": {
+      "name": "CGW_ID",
+      "query": "CustomerGateway.CustomerGatewayId"
+     },
+     "expect": "No output. CGW_ID now holds an ID that starts with cgw-. AWS sent nothing to any router: the record does not configure or create a device. You configure your device yourself.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a virtual private gateway, the AWS side of the VPN. Do not choose an ASN for the Amazon side.",
+     "command": "aws ec2 create-vpn-gateway --type ipsec.1 --tag-specifications 'ResourceType=vpn-gateway,Tags=[{Key=Name,Value=saa-hybrid-networking-t02-a},{Key=book,Value=saa},{Key=task,Value=hybrid-networking-t02}]'",
+     "capture": {
+      "name": "VGW1_ID",
+      "query": "VpnGateway.VpnGatewayId"
+     },
+     "expect": "No output. VGW1_ID now holds an ID that starts with vgw-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Attach the virtual private gateway to the test VPC.",
+     "command": "aws ec2 attach-vpn-gateway --vpn-gateway-id $VGW1_ID --vpc-id $VPC_ID",
+     "expect": "A VpcAttachment with the ID of the test VPC and the state attaching.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the Amazon-side ASN of the gateway and the state of its attachment.",
+     "command": "aws ec2 describe-vpn-gateways --vpn-gateway-ids $VGW1_ID --query \"VpnGateways[0].[AmazonSideAsn,VpcAttachments[0].State]\"",
+     "expect": "64512 and attached. You chose no ASN, so the gateway got the default ASN, and you cannot change it later. If the state is still attaching, wait one minute and run the command again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "A second partner network needs a VPN to the same VPC. Create a second virtual private gateway for it.",
+     "command": "aws ec2 create-vpn-gateway --type ipsec.1 --tag-specifications 'ResourceType=vpn-gateway,Tags=[{Key=Name,Value=saa-hybrid-networking-t02-b},{Key=book,Value=saa},{Key=task,Value=hybrid-networking-t02}]'",
+     "capture": {
+      "name": "VGW2_ID",
+      "query": "VpnGateway.VpnGatewayId"
+     },
+     "expect": "No output. VGW2_ID now holds the ID of the second gateway.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Attach the second gateway to the same VPC.",
+     "command": "aws ec2 attach-vpn-gateway --vpn-gateway-id $VGW2_ID --vpc-id $VPC_ID",
+     "expect": "An error with the code InvalidVpcState. The EC2 error list describes this code as a VPC that already has a virtual private gateway attached. The second gateway stays detached.",
+     "break_it": true,
+     "predict": "The VPC has one virtual private gateway. Can it take a second one for the second partner?",
+     "explain": "You can attach [one virtual private gateway to a VPC](../facts/site-to-site-vpn.md#site-to-site-vpn-vgw-attaches-to-single-vpc) at a time. The second partner gets a second VPN connection on the first gateway, which takes [10 Site-to-Site VPN connections](../facts/site-to-site-vpn.md#site-to-site-vpn-quota-connections-per-vgw) by default."
+    },
+    {
+     "text": "Fix it: keep one gateway for the VPC. Find the gateway that the VPC uses by its attachment. Both partners' VPN connections belong on this gateway.",
+     "command": "aws ec2 describe-vpn-gateways --filters Name=attachment.vpc-id,Values=$VPC_ID Name=attachment.state,Values=attached --query \"VpnGateways[].VpnGatewayId\"",
+     "expect": "One ID: the value of VGW1_ID. The second gateway is not in the list.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Detach the first gateway from the VPC. Repeat the read command of step 5 until the state shows detached or null, then go on.",
+     "command": "aws ec2 detach-vpn-gateway --vpn-gateway-id $VGW1_ID --vpc-id $VPC_ID"
+    },
+    {
+     "text": "Delete the second gateway. It was never attached.",
+     "command": "aws ec2 delete-vpn-gateway --vpn-gateway-id $VGW2_ID"
+    },
+    {
+     "text": "Delete the first gateway. If the command reports that the gateway is still attached, wait one minute and run it again.",
+     "command": "aws ec2 delete-vpn-gateway --vpn-gateway-id $VGW1_ID"
+    },
+    {
+     "text": "Delete the customer gateway.",
+     "command": "aws ec2 delete-customer-gateway --customer-gateway-id $CGW_ID"
+    },
+    {
+     "text": "Delete the VPC.",
+     "command": "aws ec2 delete-vpc --vpc-id $VPC_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ec2 describe-vpn-gateways --filters Name=tag:task,Values=hybrid-networking-t02 Name=state,Values=pending,available --query \"VpnGateways[].VpnGatewayId\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "A Site-to-Site VPN connection bills connection-hours while it is available. This task creates none, so do not add one to these gateways.",
+    "This book has not yet confirmed from an AWS page whether a virtual private gateway or a customer gateway without a VPN connection has a charge. Delete both gateways and the customer gateway within the task time.",
+    "Check the customer gateway and the VPC on their own. Each of these commands must return an empty list: aws ec2 describe-customer-gateways --filters Name=tag:task,Values=hybrid-networking-t02 Name=state,Values=available --query \"CustomerGateways[].CustomerGatewayId\" and aws ec2 describe-vpcs --filters Name=tag:task,Values=hybrid-networking-t02 --query \"Vpcs[].VpcId\"",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the IDs again with describe-vpcs, describe-customer-gateways and describe-vpn-gateways filtered by the tag task=hybrid-networking-t02."
+   ],
+   "facts": [
+    "site-to-site-vpn-cgw-resource-does-not-configure-device",
+    "site-to-site-vpn-cgw-asn-ranges-private-16-and-32-bit",
+    "site-to-site-vpn-vgw-amazon-side-asn-default-64512-not-changeable",
+    "site-to-site-vpn-vgw-attaches-to-single-vpc",
+    "site-to-site-vpn-quota-connections-per-vgw",
+    "site-to-site-vpn-billing-connection-hour-while-available",
+    "vpc-faq-no-charge-for-vpc-itself"
+   ],
+   "sources": [
+    {
+     "title": "Get started with Site-to-Site VPN (Step 1: Create a customer gateway; Step 2: Create a target gateway)",
+     "url": "https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html"
+    },
+    {
+     "title": "create-vpc (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc.html"
+    },
+    {
+     "title": "create-customer-gateway (AWS CLI Command Reference, options --ip-address and --bgp-asn)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-customer-gateway.html"
+    },
+    {
+     "title": "create-vpn-gateway (AWS CLI Command Reference, example output with AmazonSideAsn)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpn-gateway.html"
+    },
+    {
+     "title": "attach-vpn-gateway (AWS CLI Command Reference: one virtual private gateway to one VPC at a time)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/attach-vpn-gateway.html"
+    },
+    {
+     "title": "describe-vpn-gateways (AWS CLI Command Reference, filters attachment.vpc-id, attachment.state, state and tag)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpn-gateways.html"
+    },
+    {
+     "title": "Error codes for the Amazon EC2 API (InvalidVpcState)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html"
+    },
+    {
+     "title": "detach-vpn-gateway (AWS CLI Command Reference: wait for the state detached)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/detach-vpn-gateway.html"
+    },
+    {
+     "title": "delete-vpn-gateway (AWS CLI Command Reference: detach before you delete)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpn-gateway.html"
+    },
+    {
+     "title": "delete-customer-gateway (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-customer-gateway.html"
+    },
+    {
+     "title": "describe-customer-gateways (AWS CLI Command Reference, filters state and tag)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-customer-gateways.html"
+    },
+    {
+     "title": "delete-vpc (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc.html"
+    }
+   ]
+  }
+ ]
+}

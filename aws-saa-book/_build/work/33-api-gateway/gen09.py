@@ -1,0 +1,182 @@
+import sys; sys.path.insert(0, "/Users/tatiatsmindashvili/Desktop/tatia/2026-plans/aws-saa-book/_build/work/33-api-gateway")
+from fh import *
+WO = "apigateway-websocket-api-overview"; WA = "apigateway-websocket-api-control-access"; WC = "apigateway-how-to-call-websocket-api-connections"
+CD = "how-to-custom-domains"; CO = "how-to-cors"
+B = ["2.1.K1"]
+fs = []
+fs.append(F("websocket-stateful-frontend-for-backends", "behavior",
+ "A WebSocket API in API Gateway is a stateful frontend for an AWS service such as Lambda or DynamoDB, or for an HTTP endpoint, and it invokes the backend based on the content of the messages it receives from client apps.",
+ "What is an API Gateway WebSocket API a frontend for, and what decides which backend is invoked?",
+ ["stateful frontend for an AWS service", "based on the content of the messages it receives from client apps"],
+ [ev(WO, "In API Gateway you can create a WebSocket API as a stateful frontend for an AWS service (such as Lambda or DynamoDB) or for an HTTP endpoint. The WebSocket API invokes your backend based on the content of the messages it receives from client apps.")],
+ scope="WebSocket APIs", bullets=B, tier0=True))
+fs.append(F("websocket-two-way-vs-rest-request-response", "behavior",
+ "Unlike a REST API, which receives and responds to requests, a WebSocket API supports two-way communication between client apps and your backend, and the backend can send callback messages to connected clients.",
+ "How does a WebSocket API differ from a REST API in communication direction?",
+ ["supports two-way communication between client apps and your backend", "send callback messages to connected clients"],
+ [ev(WO, "Unlike a REST API, which receives and responds to requests, a WebSocket API supports two-way communication between client apps and your backend. The backend can send callback messages to connected clients.")],
+ scope="WebSocket APIs", bullets=B, tier0=True))
+fs.append(F("websocket-json-routes-default-for-non-json", "behavior",
+ "In a WebSocket API, incoming JSON messages are directed to backend integrations based on routes that you configure, and non-JSON messages are directed to a $default route that you configure.",
+ "How are incoming WebSocket messages routed to integrations?",
+ ["incoming JSON messages are directed to backend integrations based on routes", "Non-JSON messages are directed to a `$default` route"],
+ [ev(WO, "In your WebSocket API, incoming JSON messages are directed to backend integrations based on routes that you configure. (Non-JSON messages are directed to a `$default` route that you configure.)")],
+ scope="WebSocket APIs", bullets=B))
+fs.append(F("websocket-route-key-selection-expression", "behavior",
+ "A WebSocket route includes a route key, which is the value expected once a route selection expression is evaluated; the routeSelectionExpression is an attribute defined at the API level that specifies a JSON property expected to be present in the message payload.",
+ "How is a WebSocket route selected for a message?",
+ ["route selection expression", "JSON property that is expected to be present in the message payload"],
+ [ev(WO, "A route includes a route key, which is the value that is expected once a route selection expression is evaluated. The `routeSelectionExpression` is an attribute defined at the API level. It specifies a JSON property that is expected to be present in the message payload.")],
+ scope="WebSocket APIs", bullets=B, tier0=True))
+fs.append(F("websocket-three-predefined-routes", "behavior",
+ "A WebSocket API has three predefined routes, $connect, $disconnect and $default, and you can also create custom routes.",
+ "What are the predefined routes of a WebSocket API?",
+ ["three predefined routes", "`$connect`, `$disconnect`, and `$default`"],
+ [ev(WO, "There are three predefined routes that can be used: `$connect`, `$disconnect`, and `$default`. In addition, you can create custom routes.")],
+ scope="WebSocket APIs", bullets=B, tier0=True))
+fs.append(F("websocket-connect-route-called-on-initiation", "behavior",
+ "API Gateway calls the $connect route when a persistent connection between the client and a WebSocket API is being initiated.",
+ "When does API Gateway call the $connect route?",
+ ["persistent connection between the client and a WebSocket API is being initiated", "calls the `$connect` route"],
+ [ev(WO, "API Gateway calls the `$connect` route when a persistent connection between the client and a WebSocket API is being initiated.")],
+ scope="WebSocket APIs", bullets=B))
+fs.append(F("websocket-disconnect-route-called-on-disconnect", "behavior",
+ "API Gateway calls the $disconnect route when the client or the server disconnects from the API.",
+ "When does API Gateway call the $disconnect route?",
+ ["when the client or the server disconnects from the API", "calls the `$disconnect` route"],
+ [ev(WO, "API Gateway calls the `$disconnect` route when the client or the server disconnects from the API.")],
+ scope="WebSocket APIs", bullets=B))
+fs.append(F("websocket-default-route-fallback", "behavior",
+ "API Gateway calls the $default route if the route selection expression cannot be evaluated against the message or if no matching route is found.",
+ "When does API Gateway call the $default route?",
+ ["no matching route is found", "calls the `$default` route"],
+ [ev(WO, "API Gateway calls the `$default` route if the route selection expression cannot be evaluated against the message or if no matching route is found.")],
+ scope="WebSocket APIs", bullets=B))
+fs.append(F("websocket-send-data-via-route-response-or-connections-api", "capability",
+ "Backend services can send data to connected client apps either by using an integration to send a response that a defined route response returns to the client, or by using the @connections API to send a POST request.",
+ "How can a backend send data to a connected WebSocket client?",
+ ["use the `@connections` API to send a POST request", "route response that you have defined"],
+ [ev(WO, "Backend services can send data to connected client apps. You can send data by doing the following:"),
+  ev(WO, "Use an integration to send a response, which is returned to the client by a route response that you have defined."),
+  ev(WO, "You can use the `@connections` API to send a POST request.")],
+ scope="WebSocket APIs", bullets=B, tier0=True))
+fs.append(F("websocket-connections-api-callback-status-disconnect", "capability",
+ "Your backend service can use WebSocket connection HTTP requests (the @connections commands) to send a callback message to a connected client, get connection information, or disconnect the client.",
+ "What can the @connections API do for a connected WebSocket client?",
+ ["send a callback message to a connected client, get connection information, or disconnect the client", "WebSocket connection HTTP requests"],
+ [ev(WC, "Your backend service can use the following WebSocket connection HTTP requests to send a callback message to a connected client, get connection information, or disconnect the client.")],
+ scope="WebSocket APIs", bullets=B, tier0=True))
+fs.append(F("websocket-connections-api-requires-sigv4-iam", "restriction",
+ "@connections requests use IAM authorization, so you must sign them with Signature Version 4 (SigV4), for example by using the API Gateway Management API.",
+ "How must a backend sign @connections requests?",
+ ["sign them with Signature Version 4 (SigV4)", "use IAM authorization"],
+ [ev(WC, "These requests use IAM authorization, so you must sign them with Signature Version 4 (SigV4). To do this, you can use the API Gateway Management API.")],
+ scope="WebSocket APIs, @connections", bullets=B+["1.2.K4"], tier0=True))
+fs.append(F("websocket-connections-lambda-needs-management-api-permission", "restriction",
+ "When sending a callback message, your Lambda function must have permission to call the API Gateway Management API, and you might receive a GoneException error if you post a message before the connection is established or after the client has disconnected.",
+ "What permission does a Lambda function need to send a callback message, and when does GoneException occur?",
+ ["permission to call the API Gateway Management API", "GoneException"],
+ [ev(WC, "When sending a callback message, your Lambda function must have permission to call the API Gateway Management API. You might receive an error that contains `GoneException` if you post a message before the connection is established, or after the client has disconnected.")],
+ scope="WebSocket APIs, @connections", bullets=B+["1.2.K4"], exam="extended"))
+fs.append(F("websocket-binary-media-types-not-supported", "restriction",
+ "Binary media types are not supported for WebSocket APIs; API Gateway returns status code 1003 when an endpoint receives a binary media type.",
+ "Do WebSocket APIs support binary media types?",
+ ["Binary media types aren't supported for WebSocket APIs", "when an endpoint receives a binary media type"],
+ [ev(WO, "API Gateway returns this status code when an endpoint receives a binary media type. Binary media types aren't supported for WebSocket APIs.")],
+ scope="WebSocket APIs", bullets=B, exam="extended"))
+fs.append(F("websocket-access-iam-and-lambda-authorizers", "capability",
+ "AWS lists standard IAM roles and policies, IAM tags and Lambda authorizers as the authentication and authorization mechanisms for WebSocket APIs.",
+ "Which access-control options does a WebSocket API support?",
+ ["Standard AWS IAM roles and policies", "Lambda authorizers"],
+ [ev(WA, "You can use the following mechanisms for authentication and authorization:"),
+  ev(WA, "Standard AWS IAM roles and policies offer flexible and robust access controls. You can use IAM roles and policies for controlling who can create and manage your APIs, as well as who can invoke them."),
+  ev(WA, "Lambda authorizers are Lambda functions that control access to APIs. For more information, see Control access to WebSocket APIs with AWS Lambda REQUEST authorizers.")],
+ scope="WebSocket APIs", bullets=B+["1.2.K4"], tier0=True))
+fs.append(F("websocket-recommend-authorizer-on-connect-route", "behavior",
+ "To improve your security posture, AWS recommends that you configure an authorizer for the $connect route on all your WebSocket APIs.",
+ "On which WebSocket route should you configure an authorizer?",
+ ["configure an authorizer for the `$connect` route", "on all your WebSocket APIs"],
+ [ev(WA, "To improve your security posture, we recommend that you configure an authorizer for the `$connect` route on all your WebSocket APIs.")],
+ scope="WebSocket APIs", bullets=B+["1.2.K4"], tier0=True))
+fs.append(F("custom-domain-not-shared-rest-and-websocket", "restriction",
+ "API Gateway does not support sharing a custom domain name across REST and WebSocket APIs.",
+ "Can one custom domain name be shared by a REST API and a WebSocket API?",
+ ["does not support sharing a custom domain name across REST and WebSocket APIs", "custom domain name across REST and WebSocket APIs"],
+ [ev("api-gateway-known-issues", "API Gateway does not support sharing a custom domain name across REST and WebSocket APIs.")],
+ scope="REST APIs and WebSocket APIs", bullets=B, exam="extended"))
+fs.append(F("custom-domain-friendlier-url-base-path", "capability",
+ "Custom domain names are simpler and more intuitive URLs than the default base URL; you can set up your API's hostname and choose a base path to map the alternative URL to your API.",
+ "What does a custom domain name give you, and what is a base path?",
+ ["set up your API's hostname, and choose a base path", "simpler and more intuitive URLs"],
+ [ev(CD, "Custom domain names are simpler and more intuitive URLs that you can provide to your API users."),
+  ev(CD, "With custom domain names, you can set up your API's hostname, and choose a base path (for example, `myservice`) to map the alternative URL to your API. For example, a more user-friendly API base URL can become:")],
+ scope="REST APIs", bullets=B, tier0=True))
+fs.append(F("custom-domain-disable-default-endpoint-403", "capability",
+ "You can disable the default endpoint for your API; clients can still connect to the default endpoint, but they receive a 403 Forbidden status code.",
+ "Can the default execute-api endpoint be disabled, and what do clients get?",
+ ["disable the default endpoint for your API", "receive a `403 Forbidden` status code"],
+ [ev(CD, "You can disable the default endpoint for your API. Clients can still connect to your default endpoint, but they will receive a `403 Forbidden` status code.")],
+ scope="REST APIs", bullets=B, tier0=True))
+fs.append(F("custom-domain-regional-for-rest-and-http", "capability",
+ "A Regional custom domain name can be associated with REST APIs and HTTP APIs, and you can use the API Gateway Version 2 APIs to create and manage Regional custom domain names for REST APIs.",
+ "Which API types can use a Regional custom domain name?",
+ ["Regional custom domain name can be associated with REST APIs and HTTP APIs", "API Gateway Version 2 APIs"],
+ [ev(CD, "A Regional custom domain name can be associated with REST APIs and HTTP APIs. You can use the API Gateway Version 2 APIs to create and manage Regional custom domain names for REST APIs.")],
+ scope="custom domain names", bullets=B))
+fs.append(F("custom-domain-unique-per-region-across-accounts", "restriction",
+ "A custom domain name must be unique within a Region across all AWS accounts.",
+ "Does a custom domain name have to be unique across accounts?",
+ ["must be unique within a Region across all AWS accounts", "custom domain name"],
+ [ev(CD, "A custom domain name must be unique within a Region across all AWS accounts.")],
+ scope="per Region, all AWS accounts", bullets=B, exam="extended"))
+fs.append(F("custom-domain-migrate-edge-regional-not-private", "restriction",
+ "You can migrate a custom domain name between edge-optimized and Regional endpoints, but you cannot migrate a public custom domain to a private custom domain name.",
+ "Can a public custom domain name be migrated to a private custom domain name?",
+ ["migrate your custom domain name between edge-optimized and Regional endpoints", "can't migrate a public custom domain to a private custom domain name"],
+ [ev(CD, "You can migrate your custom domain name between edge-optimized and Regional endpoints, but you can't migrate a public custom domain to a private custom domain name.")],
+ scope="custom domain names", bullets=B, exam="extended"))
+fs.append(F("custom-domain-dns-record-required", "restriction",
+ "You must create or update your DNS provider's resource record to map to your API endpoint; without such a mapping, API requests bound for the custom domain name cannot reach API Gateway.",
+ "What DNS record is needed for a custom domain name?",
+ ["create or update your DNS provider's resource record", "cannot reach API Gateway"],
+ [ev(CD, "You must create or update your DNS provider's resource record to map to your API endpoint. Without such a mapping, API requests bound for the custom domain name cannot reach API Gateway.")],
+ scope="custom domain names", bullets=B))
+fs.append(F("custom-domain-certificate-in-acm-or-import", "restriction",
+ "Before setting up a custom domain name for an API you must have an SSL/TLS certificate ready in ACM; if ACM is not available in the Region where you create the custom domain name, you must import a certificate to API Gateway in that Region.",
+ "What certificate do you need before creating a custom domain name?",
+ ["SSL/TLS certificate ready in ACM", "import a certificate to API Gateway in that Region"],
+ [ev(CD, "Before setting up a custom domain name for an API, you must have an SSL/TLS certificate ready in ACM. If ACM is not available in the AWS Region where you are creating your custom domain name, you must import a certificate to API Gateway in that Region.")],
+ scope="custom domain names", bullets=B))
+fs.append(F("custom-domain-multi-level-mappings-regional-tls12", "restriction",
+ "To configure API mappings with multiple levels, you must use a Regional custom domain name and the TLS 1.2 security policy.",
+ "What do multi-level API mappings require?",
+ ["must use a Regional custom domain name", "TLS 1.2 security policy"],
+ [ev(CD, "To configure API mappings with multiple levels, you must use a Regional custom domain name and use the TLS 1.2 security policy.")],
+ scope="custom domain names", bullets=B, exam="reference"))
+fs.append(F("custom-domain-wildcard-acm-validated", "capability",
+ "With a wildcard custom domain name you can support an almost infinite number of domain names without exceeding the default quota, and creating one requires an ACM-issued certificate validated by the DNS or email validation method.",
+ "How can you support many customer subdomains with one custom domain name?",
+ ["almost infinite number of domain names", "validated using either the DNS or the email validation method"],
+ [ev(CD, "With wildcard custom domain names, you can support an almost infinite number of domain names without exceeding the default quota. For example, you could give each of your customers their own domain name, `customername.example.com`."),
+  ev(CD, "To create a wildcard custom domain name, you must provide a certificate issued by ACM that has been validated using either the DNS or the email validation method.")],
+ scope="custom domain names", bullets=B, exam="extended"))
+fs.append(F("cors-enable-when-cross-origin-blocked", "behavior",
+ "If you cannot access your API and receive an error message that contains Cross-Origin Request Blocked, you might need to enable CORS.",
+ "When must CORS be enabled on a REST API?",
+ ["Cross-Origin Request Blocked", "you might need to enable CORS"],
+ [ev(CO, "If you cannot access your API and receive an error message that contains `Cross-Origin Request Blocked`, you might need to enable CORS.")],
+ scope="REST APIs", bullets=B, tier0=True))
+fs.append(F("cors-non-simple-needs-preflight-options-mock", "behavior",
+ "For non-proxy integrations, the CORS protocol requires the browser to send a preflight request and wait for approval before the actual request, so you must configure your API to answer the preflight request, for example with an OPTIONS method that uses a mock integration.",
+ "What must a non-proxy REST API provide so browsers can send non-simple cross-origin requests?",
+ ["send a preflight request to the server", "Create an `OPTIONS` method with a mock integration"],
+ [ev(CO, "For these integrations, the CORS protocol requires the browser to send a preflight request to the server and wait for approval (or a request for credentials) from the server before sending the actual request. You must configure your API to send an appropriate response to the preflight request."),
+  ev(CO, "Create an `OPTIONS` method with a mock integration.")],
+ scope="REST APIs, non-proxy integrations", bullets=B, exam="extended"))
+fs.append(F("cors-proxy-integration-backend-returns-headers", "restriction",
+ "For a Lambda proxy integration or HTTP proxy integration, your backend is responsible for returning the Access-Control-Allow-Origin, Access-Control-Allow-Methods, and Access-Control-Allow-Headers headers, because a proxy integration does not return an integration response.",
+ "With a proxy integration, who must return the Access-Control-Allow-Origin header?",
+ ["your backend is responsible for returning the `Access-Control-Allow-Origin`", "a proxy integration doesn't return an integration response"],
+ [ev(CO, "For a Lambda proxy integration or HTTP proxy integration, your backend is responsible for returning the `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, and `Access-Control-Allow-Headers` headers, because a proxy integration doesn't return an integration response.")],
+ scope="REST APIs, proxy integrations", bullets=B, tier0=True))
+write("facts-behavior-09.json", fs)

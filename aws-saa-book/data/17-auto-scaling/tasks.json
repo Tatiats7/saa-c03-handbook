@@ -1,0 +1,559 @@
+{
+ "v": 1,
+ "chapter": "auto-scaling",
+ "items": [
+  {
+   "id": "auto-scaling-t01",
+   "type": "look",
+   "title": "List the termination policies and the processes of EC2 Auto Scaling",
+   "kills": "\"On scale in, the group terminates its oldest instance first.\"",
+   "trap": "auto-scaling-trap-oldest-terminated-first",
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 4,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "autoscaling:DescribeTerminationPolicyTypes",
+    "autoscaling:DescribeScalingProcessTypes",
+    "autoscaling:DescribeAccountLimits",
+    "autoscaling:DescribeAutoScalingGroups"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. List the termination policies that EC2 Auto Scaling offers. A termination policy picks the instance that goes first when a group scales in.",
+     "command": "aws autoscaling describe-termination-policy-types",
+     "expect": "Seven names: AllocationStrategy, ClosestToNextInstanceHour, Default, NewestInstance, OldestInstance, OldestLaunchConfiguration and OldestLaunchTemplate. Default and OldestInstance are two different entries: OldestInstance is a policy that you choose for a group, not the default.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the scaling processes of a group. You can suspend each process, for example to investigate a problem without the group launching or replacing instances.",
+     "command": "aws autoscaling describe-scaling-process-types --query \"Processes[].ProcessName\" --output text",
+     "expect": "One line of names, among them Launch, Terminate, HealthCheck, ReplaceUnhealthy, AZRebalance, AlarmNotification and ScheduledActions.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the Auto Scaling quotas of this account in this Region.",
+     "command": "aws autoscaling describe-account-limits",
+     "expect": "Four numbers. NumberOfAutoScalingGroups is how many groups this account has in this Region now, and MaxNumberOfAutoScalingGroups is how many it can have. Compare MaxNumberOfAutoScalingGroups with the default quota in the chapter. The quota is adjustable, so your account can show a different value.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the groups of this Region with their minimum, desired and maximum sizes and their first termination policy.",
+     "command": "aws autoscaling describe-auto-scaling-groups --query \"AutoScalingGroups[].[AutoScalingGroupName,MinSize,DesiredCapacity,MaxSize,TerminationPolicies[0]]\" --output table",
+     "expect": "A table, or nothing if this Region has no group. A group whose termination policy nobody changed shows Default in the last column, not OldestInstance.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "ec2-auto-scaling-termination-default-outdated-first",
+    "ec2-auto-scaling-termination-az-balance-first",
+    "ec2-auto-scaling-termination-policy-oldest-instance",
+    "ec2-auto-scaling-suspend-processes-purpose",
+    "ec2-auto-scaling-quota-groups-per-region"
+   ],
+   "sources": [
+    {
+     "title": "describe-termination-policy-types (AWS CLI Command Reference, example output)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-termination-policy-types.html"
+    },
+    {
+     "title": "describe-scaling-process-types (AWS CLI Command Reference, example output)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-scaling-process-types.html"
+    },
+    {
+     "title": "describe-account-limits (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-account-limits.html"
+    },
+    {
+     "title": "describe-auto-scaling-groups (AWS CLI Command Reference, TerminationPolicies in the output)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-auto-scaling-groups.html"
+    },
+    {
+     "title": "Configure termination policies for Amazon EC2 Auto Scaling",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-termination-policies.html"
+    },
+    {
+     "title": "Suspend and resume Amazon EC2 Auto Scaling processes",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-suspend-resume-processes.html"
+    },
+    {
+     "title": "Quotas for Amazon EC2 Auto Scaling",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-quotas.html"
+    }
+   ],
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "auto-scaling-t02",
+   "type": "try",
+   "title": "Terminate an instance by hand and watch the group replace it",
+   "kills": "\"An instance that someone terminates by hand is gone until someone launches a new one.\"",
+   "trap": null,
+   "section": "2-deep.md#an-auto-scaling-group-holds-its-desired-capacity-between-a-minimum-and-maximum",
+   "pass_route": false,
+   "minutes": 15,
+   "cost": "More than $0: one t3.micro instance at a time for about 15 minutes, at the On-Demand rate of your Region. Each instance is billed from launch, per second with a 60-second minimum, so the replacement adds its own minimum. Each instance has a public IPv4 address at $0.005 per hour. EC2 Auto Scaling adds no additional fees.",
+   "cost_if_forgotten": "More than $0 a day: the group keeps one t3.micro instance running 24 hours a day at the On-Demand rate of your Region, and launches a new one when it is terminated, plus $0.005 per hour for its public IPv4 address.",
+   "cost_facts": [
+    "ec2-on-demand-billing-per-second-60s-minimum",
+    "ec2-auto-scaling-billed-from-launch",
+    "vpc-public-ipv4-charge-2024",
+    "ec2-auto-scaling-pricing-page-no-additional-fees"
+   ],
+   "permissions": [
+    "ec2:CreateSecurityGroup",
+    "ec2:CreateTags",
+    "ec2:DescribeSubnets",
+    "ec2:CreateLaunchTemplate",
+    "ssm:GetParameters",
+    "autoscaling:CreateAutoScalingGroup",
+    "autoscaling:CreateOrUpdateTags",
+    "iam:CreateServiceLinkedRole",
+    "ec2:RunInstances",
+    "autoscaling:DescribeAutoScalingGroups",
+    "ec2:TerminateInstances",
+    "autoscaling:DescribeScalingActivities",
+    "autoscaling:UpdateAutoScalingGroup",
+    "autoscaling:DeleteAutoScalingGroup",
+    "ec2:DeleteLaunchTemplate",
+    "ec2:DescribeInstances",
+    "ec2:DeleteSecurityGroup"
+   ],
+   "read_only_alternative": "These commands create nothing. List the groups of this Region with their sizes: aws autoscaling describe-auto-scaling-groups --query \"AutoScalingGroups[].[AutoScalingGroupName,MinSize,DesiredCapacity,MaxSize]\" --output table Then read the recent activities of one group, with its name in place of NAME: aws autoscaling describe-scaling-activities --auto-scaling-group-name NAME --max-items 5 A launch shortly after an instance left the group is the group at work. If the Region has no group, answer the predict question of step 6 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a security group in the default VPC. A new security group has no inbound rules, so nothing on the internet can open a connection to the instances.",
+     "command": "aws ec2 create-security-group --group-name saa-auto-scaling-t02 --description \"saa-auto-scaling-t02 no inbound rules\" --tag-specifications 'ResourceType=security-group,Tags=[{Key=book,Value=saa},{Key=task,Value=auto-scaling-t02}]'",
+     "capture": {
+      "name": "SG_ID",
+      "query": "GroupId"
+     },
+     "expect": "No output. SG_ID now holds an ID that starts with sg-. If the command fails because the Region has no default VPC, use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the IDs of two default subnets, with a comma between them. Each default subnet is in a different Availability Zone, so the group can use two zones.",
+     "command": "aws ec2 describe-subnets --filters Name=default-for-az,Values=true",
+     "capture": {
+      "name": "SUBNETS",
+      "query": "\"join(',', Subnets[0:2].SubnetId)\""
+     },
+     "expect": "No output. SUBNETS now holds two subnet IDs with a comma between them and no space.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a launch template: the latest Amazon Linux 2023 AMI through its public Systems Manager parameter, t3.micro, the new security group, IMDSv2 required, no key pair, and both tags on the volumes.",
+     "command": "aws ec2 create-launch-template --launch-template-name saa-auto-scaling-t02 --version-description v1 --launch-template-data \"ImageId=resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64,InstanceType=t3.micro,SecurityGroupIds=[$SG_ID],MetadataOptions={HttpTokens=required},TagSpecifications=[{ResourceType=volume,Tags=[{Key=book,Value=saa},{Key=task,Value=auto-scaling-t02}]}]\" --tag-specifications 'ResourceType=launch-template,Tags=[{Key=book,Value=saa},{Key=task,Value=auto-scaling-t02}]'",
+     "expect": "A JSON block with a LaunchTemplateId that starts with lt- and a DefaultVersionNumber of 1.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create the group in the two subnets, with a minimum, a maximum and a desired capacity of 1. The group copies its tags to each instance at launch. From here, an instance is billed.",
+     "command": "aws autoscaling create-auto-scaling-group --auto-scaling-group-name saa-auto-scaling-t02 --launch-template LaunchTemplateName=saa-auto-scaling-t02 --min-size 1 --max-size 1 --desired-capacity 1 --vpc-zone-identifier $SUBNETS --tags \"ResourceId=saa-auto-scaling-t02,ResourceType=auto-scaling-group,Key=book,Value=saa,PropagateAtLaunch=true\" \"ResourceId=saa-auto-scaling-t02,ResourceType=auto-scaling-group,Key=task,Value=auto-scaling-t02,PropagateAtLaunch=true\"",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the ID of the instance that the group launched. If INSTANCE_ID holds None, the group has not launched it yet: wait 30 seconds and run this step again.",
+     "command": "aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names saa-auto-scaling-t02",
+     "capture": {
+      "name": "INSTANCE_ID",
+      "query": "AutoScalingGroups[0].Instances[0].InstanceId"
+     },
+     "expect": "No output. INSTANCE_ID now holds an ID that starts with i-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Terminate that instance with the EC2 API, the way a person or a script outside the group would do it.",
+     "command": "aws ec2 terminate-instances --instance-ids $INSTANCE_ID --query \"TerminatingInstances[0].CurrentState.Name\"",
+     "expect": "\"shutting-down\". The next step shows what the group does about it.",
+     "break_it": true,
+     "predict": "The group has a desired capacity of 1, and you removed its only instance. Does the group stay empty until someone launches a new instance?",
+     "explain": "No. If you set a desired capacity, EC2 Auto Scaling [ensures that your group has this many instances](../facts/ec2-auto-scaling.md#ec2-auto-scaling-desired-capacity-maintained). A manual termination is one way an instance [terminates unexpectedly](../facts/ec2-auto-scaling.md#ec2-auto-scaling-health-unexpected-termination-replaced), and EC2 Auto Scaling will then [automatically launch a replacement instance](../facts/ec2-auto-scaling.md#ec2-auto-scaling-health-unexpected-termination-replaced) to keep the desired capacity."
+    },
+    {
+     "text": "Read the latest scaling activities of the group. If no new launch shows yet, wait one minute and run the step again.",
+     "command": "aws autoscaling describe-scaling-activities --auto-scaling-group-name saa-auto-scaling-t02 --max-items 3 --query \"Activities[].[StatusCode,Description]\" --output table",
+     "expect": "A row that says Launching a new EC2 instance, with an instance ID that differs from INSTANCE_ID. That instance is the replacement: nobody asked for it.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Fix it: to remove an instance for good, change the group, not the instance. Set the minimum and the desired capacity to 0. The group then terminates its instance and launches no new one.",
+     "command": "aws autoscaling update-auto-scaling-group --auto-scaling-group-name saa-auto-scaling-t02 --min-size 0 --desired-capacity 0",
+     "expect": "No output. Run the command of step 7 again after a minute: a new row is about terminating the replacement, and no launch follows it.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the group. With --force-delete, any instance that the group still has is terminated with it.",
+     "command": "aws autoscaling delete-auto-scaling-group --auto-scaling-group-name saa-auto-scaling-t02 --force-delete"
+    },
+    {
+     "text": "Delete the launch template with all its versions.",
+     "command": "aws ec2 delete-launch-template --launch-template-name saa-auto-scaling-t02"
+    },
+    {
+     "text": "Wait until every instance of this task is terminated, so that no instance uses the security group any more. If the wait fails, wait one minute and run it again.",
+     "command": "aws ec2 wait instance-terminated --filters Name=tag:task,Values=auto-scaling-t02"
+    },
+    {
+     "text": "Delete the security group.",
+     "command": "aws ec2 delete-security-group --group-id $SG_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws autoscaling describe-auto-scaling-groups --filters Name=tag:task,Values=auto-scaling-t02 --query \"AutoScalingGroups[].AutoScalingGroupName\"",
+    "expect": "An empty list. If saa-auto-scaling-t02 still shows, its deletion is still in progress: wait one minute and run the command again. Then run the security group and launch template commands under What still costs: each must also return an empty list."
+   },
+   "still_costs": [
+    "The Auto Scaling group, until delete-auto-scaling-group has run: it keeps one instance running and launches a new one when that instance is terminated. Find it with aws autoscaling describe-auto-scaling-groups --filters Name=tag:task,Values=auto-scaling-t02 --query \"AutoScalingGroups[].AutoScalingGroupName\" and delete it with the first cleanup command.",
+    "An instance of the group, until the group is deleted. Do not terminate it on its own while the group exists: the group launches a new one. List it with aws ec2 describe-instances --filters Name=tag:task,Values=auto-scaling-t02 Name=instance-state-name,Values=pending,running --query \"Reservations[].Instances[].InstanceId\"",
+    "The security group has no running charge. Delete it and the launch template anyway, so that no unused resource stays in the account. If the CloudShell session ended, SG_ID is empty: find the group with aws ec2 describe-security-groups --filters Name=tag:task,Values=auto-scaling-t02 --query \"SecurityGroups[].GroupId\"",
+    "The launch template has no running charge. Check that it is gone with aws ec2 describe-launch-templates --filters Name=tag:task,Values=auto-scaling-t02 --query \"LaunchTemplates[].LaunchTemplateName\" The list must be empty."
+   ],
+   "facts": [
+    "ec2-auto-scaling-desired-capacity-maintained",
+    "ec2-auto-scaling-health-unexpected-termination-replaced",
+    "ec2-auto-scaling-faq-delete-group-terminates-instances",
+    "ec2-auto-scaling-min-max-never-crossed",
+    "ec2-auto-scaling-desired-within-min-max",
+    "ec2-auto-scaling-ssm-parameter-sources",
+    "ec2-auto-scaling-ssm-parameter-needs-getparameters",
+    "ec2-auto-scaling-require-imdsv2-launch-template",
+    "vpc-sg-new-no-inbound-rules",
+    "vpc-sg-no-charge",
+    "vpc-default-subnet-public-ip-and-dns",
+    "ec2-on-demand-billing-per-second-60s-minimum",
+    "ec2-auto-scaling-billed-from-launch",
+    "vpc-public-ipv4-charge-2024",
+    "ec2-auto-scaling-pricing-page-no-additional-fees"
+   ],
+   "sources": [
+    {
+     "title": "Create a security group for your Amazon EC2 instance (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-security-group.html"
+    },
+    {
+     "title": "describe-subnets (AWS CLI Command Reference, filter default-for-az)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html"
+    },
+    {
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates (resolve:ssm with a public parameter)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html"
+    },
+    {
+     "title": "Examples for creating and managing launch templates with the AWS CLI",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/examples-launch-templates-aws-cli.html"
+    },
+    {
+     "title": "create-launch-template (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-launch-template.html"
+    },
+    {
+     "title": "create-auto-scaling-group (AWS CLI Command Reference, examples 1, 4 and 5)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/create-auto-scaling-group.html"
+    },
+    {
+     "title": "Tag Auto Scaling groups and instances (tags reach instances, not volumes)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-tagging.html"
+    },
+    {
+     "title": "describe-auto-scaling-groups (AWS CLI Command Reference, tag filters)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-auto-scaling-groups.html"
+    },
+    {
+     "title": "terminate-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/terminate-instances.html"
+    },
+    {
+     "title": "Health checks for instances in an Auto Scaling group (manual termination is replaced)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-health-checks.html"
+    },
+    {
+     "title": "Verify a scaling activity for an Auto Scaling group",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-verify-scaling-activity.html"
+    },
+    {
+     "title": "describe-scaling-activities (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-scaling-activities.html"
+    },
+    {
+     "title": "update-auto-scaling-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/update-auto-scaling-group.html"
+    },
+    {
+     "title": "Delete your Auto Scaling infrastructure (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-process-shutdown.html"
+    },
+    {
+     "title": "delete-auto-scaling-group (AWS CLI Command Reference, --force-delete)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/delete-auto-scaling-group.html"
+    },
+    {
+     "title": "delete-launch-template (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-launch-template.html"
+    },
+    {
+     "title": "describe-launch-templates (AWS CLI Command Reference, filter tag:<key>)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-launch-templates.html"
+    },
+    {
+     "title": "wait instance-terminated (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-terminated.html"
+    },
+    {
+     "title": "delete-security-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-security-group.html"
+    }
+   ],
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "auto-scaling-t03",
+   "type": "try",
+   "title": "Attach a target tracking policy and a scheduled action to an empty group",
+   "kills": "\"You create the CloudWatch alarms of a target tracking policy yourself.\"",
+   "trap": null,
+   "section": "2-deep.md#a-target-tracking-policy-keeps-one-metric-near-the-value-you-choose",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0 for EC2: the group has no instance at any time. The policy creates two CloudWatch alarms for about 10 minutes; CloudWatch fees apply to alarms and are billed separately. EC2 Auto Scaling adds no additional fees.",
+   "cost_if_forgotten": "$0 a day for EC2 while the group stays empty, but the two alarms stay until you delete the policy or the group, and CloudWatch alarm fees apply to them every day. Neither scheduled action launches an instance: both set the desired capacity to 0.",
+   "cost_facts": [
+    "ec2-auto-scaling-faq-no-additional-fees",
+    "ec2-auto-scaling-pricing-page-no-additional-fees"
+   ],
+   "permissions": [
+    "ec2:DescribeSubnets",
+    "ec2:CreateLaunchTemplate",
+    "ec2:CreateTags",
+    "ssm:GetParameters",
+    "autoscaling:CreateAutoScalingGroup",
+    "autoscaling:CreateOrUpdateTags",
+    "iam:CreateServiceLinkedRole",
+    "autoscaling:PutScalingPolicy",
+    "cloudwatch:DescribeAlarms",
+    "autoscaling:PutScheduledUpdateGroupAction",
+    "autoscaling:DeleteScheduledAction",
+    "autoscaling:DeletePolicy",
+    "autoscaling:DeleteAutoScalingGroup",
+    "autoscaling:DescribeAutoScalingGroups",
+    "ec2:DeleteLaunchTemplate"
+   ],
+   "read_only_alternative": "These commands create nothing. List the target tracking policies of this Region with their alarm names: aws autoscaling describe-policies --query \"ScalingPolicies[?PolicyType=='TargetTrackingScaling'].[AutoScalingGroupName,PolicyName,Alarms[].AlarmName]\" Each alarm name starts with TargetTracking-: EC2 Auto Scaling created it, not a person. Then list the scheduled actions with their start times: aws autoscaling describe-scheduled-actions --query \"ScheduledUpdateGroupActions[].[AutoScalingGroupName,ScheduledActionName,StartTime]\" If the Region has no policy, answer the predict question of step 7 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Store the IDs of two default subnets, with a comma between them. The group is created in these subnets, although it launches no instance in this task.",
+     "command": "aws ec2 describe-subnets --filters Name=default-for-az,Values=true",
+     "capture": {
+      "name": "SUBNETS",
+      "query": "\"join(',', Subnets[0:2].SubnetId)\""
+     },
+     "expect": "No output. SUBNETS now holds two subnet IDs with a comma between them and no space. If it is empty, this Region has no default subnets: use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a launch template: the latest Amazon Linux 2023 AMI through its public Systems Manager parameter, t3.micro and IMDSv2 required. The group needs a template, but it stays empty in this task.",
+     "command": "aws ec2 create-launch-template --launch-template-name saa-auto-scaling-t03 --version-description v1 --launch-template-data 'ImageId=resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64,InstanceType=t3.micro,MetadataOptions={HttpTokens=required}' --tag-specifications 'ResourceType=launch-template,Tags=[{Key=book,Value=saa},{Key=task,Value=auto-scaling-t03}]'",
+     "expect": "A JSON block with a LaunchTemplateId that starts with lt-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create the group with a minimum of 0, a maximum of 1 and a desired capacity of 0. It has no instance, so it has no EC2 charge.",
+     "command": "aws autoscaling create-auto-scaling-group --auto-scaling-group-name saa-auto-scaling-t03 --launch-template LaunchTemplateName=saa-auto-scaling-t03 --min-size 0 --max-size 1 --desired-capacity 0 --vpc-zone-identifier $SUBNETS --tags \"ResourceId=saa-auto-scaling-t03,ResourceType=auto-scaling-group,Key=book,Value=saa,PropagateAtLaunch=true\" \"ResourceId=saa-auto-scaling-t03,ResourceType=auto-scaling-group,Key=task,Value=auto-scaling-t03,PropagateAtLaunch=true\"",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Attach a target tracking policy that keeps the average CPU utilization of the group at 50 percent. You give a metric and a target value, and nothing about alarms.",
+     "command": "aws autoscaling put-scaling-policy --auto-scaling-group-name saa-auto-scaling-t03 --policy-name saa-cpu-50 --policy-type TargetTrackingScaling --target-tracking-configuration '{\"TargetValue\":50.0,\"PredefinedMetricSpecification\":{\"PredefinedMetricType\":\"ASGAverageCPUUtilization\"}}' --query \"Alarms[].AlarmName\"",
+     "expect": "Two alarm names that start with TargetTracking-saa-auto-scaling-t03-. One holds AlarmHigh, the other AlarmLow. You did not create either of them.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the two alarms that EC2 Auto Scaling created for the policy, with their state.",
+     "command": "aws cloudwatch describe-alarms --alarm-name-prefix TargetTracking-saa-auto-scaling-t03 --query \"MetricAlarms[].[AlarmName,StateValue]\" --output table",
+     "expect": "Two rows, both INSUFFICIENT_DATA. No instance runs, so no CPU data reaches the alarms, and the policy does not scale the group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Add a one-time scheduled action. Replace <FUTURE_TIME> with a UTC time at least one day ahead, in the form 2026-12-01T09:00:00Z, and write it down.",
+     "command": "aws autoscaling put-scheduled-update-group-action --auto-scaling-group-name saa-auto-scaling-t03 --scheduled-action-name saa-once-a --start-time \"<FUTURE_TIME>\" --min-size 0 --max-size 1 --desired-capacity 0",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Add a second action, saa-once-b, with the same <FUTURE_TIME> as in step 6.",
+     "command": "aws autoscaling put-scheduled-update-group-action --auto-scaling-group-name saa-auto-scaling-t03 --scheduled-action-name saa-once-b --start-time \"<FUTURE_TIME>\" --min-size 0 --max-size 1 --desired-capacity 0",
+     "expect": "An error that says a scheduled action with this start time already exists. saa-once-b is not created.",
+     "break_it": true,
+     "predict": "saa-once-b has a different name from saa-once-a, but the same start time. Does the group accept both actions?",
+     "explain": "No. A scheduled action [must have a unique time value](../facts/ec2-auto-scaling.md#ec2-auto-scaling-scheduled-unique-start-time). If you schedule an action at a time when another action is already scheduled, [the call is rejected](../facts/ec2-auto-scaling.md#ec2-auto-scaling-scheduled-unique-start-time) with an error. The name of the action does not change this; the start time decides."
+    },
+    {
+     "text": "Fix it: give saa-once-b its own time. Replace <LATER_TIME> with the time of step 6 plus one hour, in the same form.",
+     "command": "aws autoscaling put-scheduled-update-group-action --auto-scaling-group-name saa-auto-scaling-t03 --scheduled-action-name saa-once-b --start-time \"<LATER_TIME>\" --min-size 0 --max-size 1 --desired-capacity 0",
+     "expect": "No output. The group now has two scheduled actions, one hour apart.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the scheduled action saa-once-b.",
+     "command": "aws autoscaling delete-scheduled-action --auto-scaling-group-name saa-auto-scaling-t03 --scheduled-action-name saa-once-b"
+    },
+    {
+     "text": "Delete the scheduled action saa-once-a.",
+     "command": "aws autoscaling delete-scheduled-action --auto-scaling-group-name saa-auto-scaling-t03 --scheduled-action-name saa-once-a"
+    },
+    {
+     "text": "Delete the policy. Deleting a target tracking policy also deletes its alarms, so do not delete the alarms yourself.",
+     "command": "aws autoscaling delete-policy --auto-scaling-group-name saa-auto-scaling-t03 --policy-name saa-cpu-50"
+    },
+    {
+     "text": "Delete the group. It has no instance, and --force-delete also covers the case that one was launched.",
+     "command": "aws autoscaling delete-auto-scaling-group --auto-scaling-group-name saa-auto-scaling-t03 --force-delete"
+    },
+    {
+     "text": "Delete the launch template with all its versions.",
+     "command": "aws ec2 delete-launch-template --launch-template-name saa-auto-scaling-t03"
+    }
+   ],
+   "verify": {
+    "command": "aws autoscaling describe-auto-scaling-groups --filters Name=tag:task,Values=auto-scaling-t03 --query \"AutoScalingGroups[].AutoScalingGroupName\"",
+    "expect": "An empty list. If saa-auto-scaling-t03 still shows, its deletion is still in progress: wait one minute and run the command again. Then run the alarm command under What still costs: the two alarms are the part that costs, and that list must also be empty."
+   },
+   "still_costs": [
+    "The two CloudWatch alarms of the policy, until delete-policy or delete-auto-scaling-group has run: CloudWatch alarm fees apply to them. Check with aws cloudwatch describe-alarms --alarm-name-prefix TargetTracking-saa-auto-scaling-t03 --query \"MetricAlarms[].AlarmName\" The list must be empty.",
+    "The group, its scheduled actions and the launch template have no EC2 charge while the group has no instance. Delete them anyway, so that a forgotten scheduled action does not change the group later."
+   ],
+   "facts": [
+    "ec2-auto-scaling-target-tracking-predefined-metrics",
+    "ec2-auto-scaling-target-tracking-no-manual-alarms",
+    "ec2-auto-scaling-target-tracking-service-manages-alarms",
+    "ec2-auto-scaling-target-tracking-creates-two-alarms",
+    "ec2-auto-scaling-target-tracking-insufficient-data-no-scaling",
+    "ec2-auto-scaling-target-tracking-do-not-edit-alarms",
+    "ec2-auto-scaling-scheduled-one-time-or-recurring",
+    "ec2-auto-scaling-scheduled-action-sets-capacities",
+    "ec2-auto-scaling-scheduled-unique-start-time",
+    "ec2-auto-scaling-ssm-parameter-sources",
+    "ec2-auto-scaling-require-imdsv2-launch-template",
+    "ec2-auto-scaling-faq-no-additional-fees",
+    "ec2-auto-scaling-pricing-page-no-additional-fees"
+   ],
+   "sources": [
+    {
+     "title": "describe-subnets (AWS CLI Command Reference, filter default-for-az)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-subnets.html"
+    },
+    {
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates (resolve:ssm with a public parameter)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html"
+    },
+    {
+     "title": "create-launch-template (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-launch-template.html"
+    },
+    {
+     "title": "create-auto-scaling-group (AWS CLI Command Reference, examples 1 and 5)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/create-auto-scaling-group.html"
+    },
+    {
+     "title": "Create a target tracking scaling policy (AWS CLI: ASGAverageCPUUtilization at 50 percent, two alarms in the output)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/policy_creating.html"
+    },
+    {
+     "title": "put-scaling-policy (AWS CLI Command Reference, target tracking example)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/put-scaling-policy.html"
+    },
+    {
+     "title": "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html"
+    },
+    {
+     "title": "describe-alarms (AWS CLI Command Reference, --alarm-name-prefix)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/describe-alarms.html"
+    },
+    {
+     "title": "Create a scheduled action (AWS CLI: scale one time only)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/scheduled-scaling-create-scheduled-action.html"
+    },
+    {
+     "title": "put-scheduled-update-group-action (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/put-scheduled-update-group-action.html"
+    },
+    {
+     "title": "Scheduled scaling for Amazon EC2 Auto Scaling (unique start time)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-scheduled-scaling.html"
+    },
+    {
+     "title": "Delete a scheduled action (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/scheduled-scaling-delete-scheduled-action.html"
+    },
+    {
+     "title": "delete-scheduled-action (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/delete-scheduled-action.html"
+    },
+    {
+     "title": "Delete a scaling policy for an Auto Scaling group (deleting a target tracking policy deletes its alarms)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/deleting-scaling-policy.html"
+    },
+    {
+     "title": "delete-policy (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/delete-policy.html"
+    },
+    {
+     "title": "Delete your Auto Scaling infrastructure (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-process-shutdown.html"
+    },
+    {
+     "title": "delete-auto-scaling-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/autoscaling/delete-auto-scaling-group.html"
+    },
+    {
+     "title": "delete-launch-template (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-launch-template.html"
+    }
+   ],
+   "chapter": "auto-scaling",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

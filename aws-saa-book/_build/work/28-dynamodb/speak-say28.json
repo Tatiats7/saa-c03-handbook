@@ -1,0 +1,253 @@
+[
+ {
+  "id": "dynamodb-s01",
+  "chapter": "dynamodb",
+  "kind": "decide",
+  "prompt": "On-demand or provisioned capacity? I do not know my traffic yet.",
+  "persona": "Ben, CTO of Callvale",
+  "ten_second": "Start in on-demand mode. It bills each request and needs no forecast. Move to provisioned capacity when traffic is steady and predictable.",
+  "sixty_second": [
+   "The short answer is: start in on-demand mode, and decide again later.",
+   "It works like this. On-demand is the default, and AWS recommends it for most workloads.",
+   "You don't set any capacity. You pay for each read and write request.",
+   "A table with no traffic pays nothing for throughput.",
+   "With provisioned capacity, you set the reads and writes per second. You pay for that capacity every hour, used or not.",
+   "Provisioned suits steady traffic that you can forecast.",
+   "The thing to watch is a very big spike.",
+   "On-demand instantly handles up to double your previous peak.",
+   "Before a launch far above that, you pre-warm the table.",
+   "You can switch modes later, so this choice is not final.",
+   "In your case, on-demand fits a new pipeline with unknown traffic.",
+   "What does your busiest hour look like after the launch?"
+  ],
+  "skeleton": [
+   "on-demand first",
+   "pay per request",
+   "double the previous peak",
+   "provisioned when traffic is steady"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "On-demand mode is the default and recommended throughput option for most DynamoDB workloads.", "accept": ["on-demand is the default", "AWS recommends on-demand for most workloads"], "facts": ["dynamodb-on-demand-default-recommended"]},
+   {"id": "kp2", "kind": "must", "point": "On-demand mode bills per read or write request, and a table with zero traffic is not charged for throughput.", "accept": ["you pay per request", "an idle table pays nothing for throughput"], "facts": ["dynamodb-ondemand-billed-per-request-zero-traffic-free", "dynamodb-on-demand-no-capacity-planning"]},
+   {"id": "kp3", "kind": "must", "point": "Provisioned mode charges for the hourly capacity you provision, not what you consume, and suits consistent or predictable traffic.", "accept": ["you pay for what you set, used or not", "provisioned for steady traffic"], "facts": ["dynamodb-provisioned-billing-basis", "dynamodb-faq-provisioned-for-predictable"]},
+   {"id": "kp4", "kind": "must", "point": "On-demand instantly accommodates up to double the previous peak traffic; pre-warm the table before a bigger event.", "accept": ["up to double the previous peak", "pre-warm before a big launch"], "facts": ["dynamodb-on-demand-previous-peak-double", "dynamodb-warm-throughput-prewarm-for-peak-events"]},
+   {"id": "kp5", "kind": "nice", "point": "Reserved capacity gives a discount on provisioned capacity in exchange for a one-year commitment.", "accept": ["reserved capacity lowers the provisioned rate"], "facts": ["dynamodb-reserved-capacity-terms-and-discount"]},
+   {"id": "kp6", "kind": "nice", "point": "You can switch a table from on-demand back to provisioned mode at any time.", "accept": ["you can switch modes later"], "facts": ["dynamodb-capacity-mode-switch-four-per-24h"]}
+  ],
+  "must_not_say": [
+   {"error": "On-demand has no limits, so it absorbs any spike.", "correct": "On-demand instantly accommodates up to double the previous peak traffic on a table. For a bigger event, pre-warm the table.", "fact": "dynamodb-on-demand-previous-peak-double"},
+   {"error": "Provisioned capacity is always cheaper.", "correct": "Provisioned capacity suits consistent or predictable traffic. For spiky traffic that you cannot forecast, on-demand is the better choice.", "fact": "dynamodb-ondemand-better-for-fluctuating-traffic"},
+   {"error": "After you choose a mode, you can never switch back.", "correct": "You can switch from on-demand back to provisioned at any time. Switches from provisioned to on-demand are limited per rolling day.", "fact": "dynamodb-capacity-mode-switch-four-per-24h"}
+  ],
+  "terms": [
+   {"say": "on-demand capacity mode", "avoid": ["On-Demand Instance"]},
+   {"say": "provisioned capacity mode", "avoid": ["Reserved Instance"]},
+   {"say": "pre-warm", "avoid": ["warm up"]}
+  ],
+  "follow_ups": [
+   {"question": "How often can we switch between the two modes?", "answer": "From on-demand back to provisioned, at any time. From provisioned to on-demand, up to four times in a 24-hour rolling window.", "facts": ["dynamodb-capacity-mode-switch-four-per-24h"]},
+   {"question": "Doesn't auto scaling make provisioned capacity safe for spikes?", "answer": "Not fully. Throttling can occur even with auto scaling, because auto scaling does not respond instantly and stops at the maximum capacity you configure.", "facts": ["dynamodb-throttling-with-autoscaling-possible"]}
+  ],
+  "facts": [
+   "dynamodb-on-demand-default-recommended",
+   "dynamodb-on-demand-no-capacity-planning",
+   "dynamodb-ondemand-billed-per-request-zero-traffic-free",
+   "dynamodb-provisioned-billing-basis",
+   "dynamodb-faq-provisioned-for-predictable",
+   "dynamodb-on-demand-previous-peak-double",
+   "dynamodb-warm-throughput-prewarm-for-peak-events",
+   "dynamodb-reserved-capacity-terms-and-discount",
+   "dynamodb-capacity-mode-switch-four-per-24h",
+   "dynamodb-ondemand-better-for-fluctuating-traffic",
+   "dynamodb-throttling-with-autoscaling-possible"
+  ],
+  "section": "2-deep.md#on-demand-mode-bills-each-request-and-needs-no-capacity-plan",
+  "layer": "core",
+  "pass_route": true,
+  "pack": false
+ },
+ {
+  "id": "dynamodb-s02",
+  "chapter": "dynamodb",
+  "kind": "compare",
+  "prompt": "DynamoDB or PostgreSQL: which database should our new app start with?",
+  "persona": "a startup founder in office hours",
+  "ten_second": "Both work well on AWS. DynamoDB fits known key lookups at any scale. PostgreSQL fits joins and queries you can't predict yet.",
+  "sixty_second": [
+   "Both are good databases on AWS. The difference is how you ask for your data.",
+   "It works like this. DynamoDB is a key-value database with no servers to manage.",
+   "It gives single-digit millisecond performance at any scale. In on-demand mode, you pay for each request.",
+   "But it has no joins. You design the table from the questions it must answer.",
+   "PostgreSQL is relational. It runs SQL with joins, so you can ask new questions later.",
+   "On AWS, that's Amazon RDS or Aurora.",
+   "The thing to watch is a new access pattern in DynamoDB.",
+   "A question you didn't plan for can need a new index or a redesign.",
+   "In your case, list the queries your app runs most often.",
+   "If each one looks up items by a key, DynamoDB is a strong fit.",
+   "Which of your screens needs data from several tables at once?"
+  ],
+  "skeleton": [
+   "how you ask for data",
+   "key lookups at any scale",
+   "no joins, design for questions",
+   "list your top queries"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "DynamoDB is a key-value, serverless, fully managed NoSQL database with single-digit millisecond performance at any scale.", "accept": ["key-value database", "fast at any scale"], "facts": ["dynamodb-decision-guide-key-value-session-store"]},
+   {"id": "kp2", "kind": "must", "point": "DynamoDB doesn't support a JOIN operator, unlike relational databases.", "accept": ["DynamoDB has no joins"], "facts": ["dynamodb-no-join-operator"]},
+   {"id": "kp3", "kind": "must", "point": "In DynamoDB, know the questions the table must answer before you design the schema.", "accept": ["design from the access patterns", "know your queries first"], "facts": ["dynamodb-nosql-design-access-patterns-first-few-tables"]},
+   {"id": "kp4", "kind": "must", "point": "A relational database such as Aurora fits less predictable query patterns and complex queries through joins.", "accept": ["relational for joins", "relational when queries are not predictable"], "facts": ["dynamodb-decision-guide-aurora-relational-joins", "dynamodb-wa-oltp-dynamodb-vs-rds-joins"]},
+   {"id": "kp5", "kind": "nice", "point": "DynamoDB is serverless: you provision no servers and operate no software.", "accept": ["no servers to manage"], "facts": ["dynamodb-serverless-no-servers"]},
+   {"id": "kp6", "kind": "nice", "point": "On-demand mode bills per read or write request, so an idle table pays nothing for throughput.", "accept": ["pay per request"], "facts": ["dynamodb-ondemand-billed-per-request-zero-traffic-free"]}
+  ],
+  "must_not_say": [
+   {"error": "DynamoDB supports joins, like SQL.", "correct": "DynamoDB doesn't support a JOIN operator, unlike relational databases.", "fact": "dynamodb-no-join-operator"},
+   {"error": "With DynamoDB, you don't need to plan your queries up front.", "correct": "Know the questions the table must answer before you design the schema, and design it to make the most common queries fast.", "fact": "dynamodb-nosql-design-access-patterns-first-few-tables"}
+  ],
+  "terms": [
+   {"say": "key-value database", "avoid": ["key store"]},
+   {"say": "access pattern", "avoid": ["query plan"]},
+   {"say": "partition key", "avoid": ["hash key"]}
+  ],
+  "follow_ups": [
+   {"question": "Can we use both in one product?", "answer": "Yes, per workload. DynamoDB for key-value lookups at any scale. A relational database such as Aurora for joins and less predictable query patterns.", "facts": ["dynamodb-decision-guide-key-value-session-store", "dynamodb-decision-guide-aurora-relational-joins"]},
+   {"question": "What if we need a new query on an existing DynamoDB table?", "answer": "You can add a global secondary index to an existing table to query by another key. A local secondary index can be created only together with the table.", "facts": ["dynamodb-index-online-operations-gsi-vs-lsi"]}
+  ],
+  "facts": [
+   "dynamodb-decision-guide-key-value-session-store",
+   "dynamodb-no-join-operator",
+   "dynamodb-decision-guide-aurora-relational-joins",
+   "dynamodb-nosql-design-access-patterns-first-few-tables",
+   "dynamodb-serverless-no-servers",
+   "dynamodb-ondemand-billed-per-request-zero-traffic-free",
+   "dynamodb-wa-oltp-dynamodb-vs-rds-joins",
+   "dynamodb-index-online-operations-gsi-vs-lsi"
+  ],
+  "section": "1-fast.md#choose-it-or-not",
+  "layer": "core",
+  "pass_route": false,
+  "pack": false
+ },
+ {
+  "id": "dynamodb-s03",
+  "chapter": "dynamodb",
+  "kind": "explain",
+  "prompt": "Our DynamoDB table shows spare capacity, but some writes are throttled. Why?",
+  "persona": "a startup CTO you advise",
+  "ten_second": "One partition key gets most of the writes. Each partition has its own ceiling, so that partition throttles while the others sit idle.",
+  "sixty_second": [
+   "The short answer is: one hot key is hitting the ceiling of one partition.",
+   "It works like this. DynamoDB hashes the partition key to choose a partition.",
+   "Each partition has a fixed ceiling of reads and writes per second.",
+   "When most writes go to one key, they all land on one partition.",
+   "That partition is throttled, while the others stay underused.",
+   "The thing to watch is the key design, not the table total.",
+   "Choose a key with many distinct values, so writes spread out evenly.",
+   "Or add a random suffix to a busy key, to split its writes.",
+   "The throttle reason in the error shows when one partition is the cause.",
+   "In your case, we can check which key values get the most writes.",
+   "Is there one customer or one item that is much busier than the rest?"
+  ],
+  "skeleton": [
+   "hash picks the partition",
+   "each partition has a ceiling",
+   "hot key throttles alone",
+   "spread the key"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "DynamoDB feeds the partition key value into an internal hash function, and the output decides the partition of the item.", "accept": ["the key is hashed to pick a partition"], "facts": ["dynamodb-partition-key-hash-decides-partition"]},
+   {"id": "kp2", "kind": "must", "point": "Every partition delivers at most 3,000 read units per second and 1,000 write units per second.", "accept": ["each partition has its own ceiling", "a per-partition limit"], "facts": ["dynamodb-partition-max-throughput"]},
+   {"id": "kp3", "kind": "must", "point": "Concentrated traffic above the partition limits is throttled while other partitions stay underutilized: a hot partition.", "accept": ["a hot partition", "one partition throttles while others are idle"], "facts": ["dynamodb-hot-partitions-throttle-while-others-underutilized"]},
+   {"id": "kp4", "kind": "must", "point": "Spread the writes with a partition key that has many distinct values, or add a random suffix to the key values.", "accept": ["choose a key with many values", "write sharding with a random suffix"], "facts": ["dynamodb-uniform-distribution-distinct-keys", "dynamodb-write-sharding-random-suffix"]},
+   {"id": "kp5", "kind": "nice", "point": "Adaptive capacity rebalances partitions so that frequently accessed items don't reside on the same partition.", "accept": ["adaptive capacity moves hot items apart"], "facts": ["dynamodb-adaptive-capacity-isolates-hot-items"]},
+   {"id": "kp6", "kind": "nice", "point": "The throttling exception returns the reason KeyRangeThroughputExceeded when individual partitions exceed their throughput limits.", "accept": ["the error names a key range limit"], "facts": ["dynamodb-throttling-key-range-hot-partitions"]}
+  ],
+  "must_not_say": [
+   {"error": "Raise the table's capacity and the throttling stops.", "correct": "A hot partition is throttled at the partition limit while other partitions stay underutilized. Spread the key instead.", "fact": "dynamodb-hot-partitions-throttle-while-others-underutilized"},
+   {"error": "Switch to on-demand mode and the throttling goes away.", "correct": "Every partition is designed to deliver at most 3,000 read units per second and 1,000 write units per second.", "fact": "dynamodb-partition-max-throughput"}
+  ],
+  "terms": [
+   {"say": "partition key", "avoid": ["hash key"]},
+   {"say": "hot partition", "avoid": ["hot shard"]},
+   {"say": "throttling", "avoid": ["rate limiting"]}
+  ],
+  "follow_ups": [
+   {"question": "Doesn't DynamoDB fix a hot key by itself?", "answer": "Partly. Adaptive capacity rebalances partitions so that frequently accessed items don't reside on the same partition. A key with many distinct values is still the main fix.", "facts": ["dynamodb-adaptive-capacity-isolates-hot-items", "dynamodb-uniform-distribution-distinct-keys"]},
+   {"question": "How do I know that one partition is the problem?", "answer": "The throttling exception gives the reason type KeyRangeThroughputExceeded when individual partitions exceed their throughput limits.", "facts": ["dynamodb-throttling-key-range-hot-partitions"]}
+  ],
+  "facts": [
+   "dynamodb-partition-key-hash-decides-partition",
+   "dynamodb-partition-max-throughput",
+   "dynamodb-hot-partitions-throttle-while-others-underutilized",
+   "dynamodb-uniform-distribution-distinct-keys",
+   "dynamodb-write-sharding-random-suffix",
+   "dynamodb-adaptive-capacity-isolates-hot-items",
+   "dynamodb-throttling-key-range-hot-partitions"
+  ],
+  "section": "2-deep.md#a-hash-of-the-partition-key-picks-the-partition-so-hot-keys-throttle",
+  "layer": "core",
+  "pass_route": false,
+  "pack": false
+ },
+ {
+  "id": "dynamodb-s04",
+  "chapter": "dynamodb",
+  "kind": "explain",
+  "prompt": "If the AWS Region we use goes down, do we lose our job records?",
+  "persona": "Ana, CEO of Callvale",
+  "ten_second": "Each record is copied to three Availability Zones before DynamoDB confirms it. A full Region outage needs a second copy in another Region.",
+  "sixty_second": [
+   "The short answer is: one failed data center loses nothing, but a Region outage stops access.",
+   "It works like this. A Region is one AWS location with several separate data centers.",
+   "Each group of data centers is called an Availability Zone.",
+   "DynamoDB copies every write to three Availability Zones in our Region.",
+   "When DynamoDB says a write succeeded, it's stored durably.",
+   "We can also turn on continuous backups, so we can restore a table.",
+   "The thing to watch is a whole Region going down.",
+   "Then we wait for it to come back.",
+   "A global table keeps a live copy in a second Region that takes reads and writes.",
+   "That second copy costs extra every month.",
+   "In your case, I'd add the second Region when a customer contract requires it.",
+   "How many minutes of downtime can your customers accept?"
+  ],
+  "skeleton": [
+   "three Availability Zones",
+   "a write is durable",
+   "Region outage stops access",
+   "global table for a second Region"
+  ],
+  "key_points": [
+   {"id": "kp1", "kind": "must", "point": "DynamoDB synchronously replicates data across three Availability Zones in an AWS Region.", "accept": ["copied to three Availability Zones", "three separate data center sites"], "facts": ["dynamodb-faq-sync-replication-three-azs"]},
+   {"id": "kp2", "kind": "must", "point": "A write that returns HTTP 200 (OK) has completed and been durably persisted.", "accept": ["a confirmed write is stored durably"], "facts": ["dynamodb-successful-write-http-200-durable"]},
+   {"id": "kp3", "kind": "must", "point": "Point-in-time recovery gives automatic continuous backups of a table.", "accept": ["continuous backups", "point-in-time recovery"], "facts": ["dynamodb-pitr-automatic-continuous-backups"]},
+   {"id": "kp4", "kind": "must", "point": "In a global table, any replica table can serve reads and writes, and no database failover is needed.", "accept": ["a live copy in a second Region", "no failover needed"], "facts": ["dynamodb-global-table-any-replica-serves-reads-writes", "dynamodb-faq-global-tables-no-failover-needed"]},
+   {"id": "kp5", "kind": "nice", "point": "MREC global tables can achieve an RPO of a few seconds and an RTO of zero.", "accept": ["a few seconds of data at risk"], "facts": ["dynamodb-dr-global-tables-mrec-rto-zero"]}
+  ],
+  "must_not_say": [
+   {"error": "DynamoDB copies our data to another Region automatically.", "correct": "DynamoDB replicates data across three Availability Zones in one Region. A copy in another Region needs a global table.", "fact": "dynamodb-faq-sync-replication-three-azs"},
+   {"error": "Our backups keep us running during a Region outage.", "correct": "Backups let you restore a table. To keep serving during a Region outage, a replica table in another Region serves reads and writes.", "fact": "dynamodb-global-table-any-replica-serves-reads-writes"}
+  ],
+  "terms": [
+   {"say": "global table", "avoid": ["global database"]},
+   {"say": "replica table", "avoid": ["backup table"]},
+   {"say": "point-in-time recovery", "avoid": ["point in time recovery"]}
+  ],
+  "follow_ups": [
+   {"question": "How fast would the second Region take over?", "answer": "With a multi-Region eventual consistency global table, you can achieve an RPO of a few seconds and an RTO of zero. A global table has no primary Region, so no database failover is needed.", "facts": ["dynamodb-dr-global-tables-mrec-rto-zero", "dynamodb-faq-global-tables-no-failover-needed"]},
+   {"question": "Can a backup bring back records that someone deleted?", "answer": "Yes. Point-in-time recovery keeps automatic continuous backups. A restore creates a new table, because you can't overwrite an existing table during a restore.", "facts": ["dynamodb-pitr-automatic-continuous-backups", "dynamodb-restore-cannot-overwrite-existing-table"]}
+  ],
+  "facts": [
+   "dynamodb-faq-sync-replication-three-azs",
+   "dynamodb-successful-write-http-200-durable",
+   "dynamodb-pitr-automatic-continuous-backups",
+   "dynamodb-global-table-any-replica-serves-reads-writes",
+   "dynamodb-faq-global-tables-no-failover-needed",
+   "dynamodb-dr-global-tables-mrec-rto-zero",
+   "dynamodb-restore-cannot-overwrite-existing-table"
+  ],
+  "section": "2-deep.md#in-a-global-table-every-replica-accepts-reads-and-writes",
+  "layer": "extended",
+  "pass_route": false,
+  "pack": false
+ }
+]

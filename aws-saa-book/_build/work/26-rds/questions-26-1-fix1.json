@@ -1,0 +1,182 @@
+[
+ {
+  "id": "rds-q017",
+  "section": "2-deep.md#the-instance-class-sets-compute-and-the-storage-type-sets-iops",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": [
+   "4.3.S2"
+  ],
+  "topics": [
+   "databases",
+   "cost"
+  ],
+  "services": [
+   "rds"
+  ],
+  "concept": "dev-database-stop-start-cost",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective way",
+  "stem": "A development team uses an Amazon RDS for PostgreSQL DB instance for testing from 08:00 to 18:00 on weekdays. The schedule is predictable, and nobody uses the DB instance at night or on weekends. The data in the database must stay between working days, and the team wants no manual steps each day. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "nobody uses the DB instance at night or on weekends",
+   "The data in the database must stay",
+   "MOST cost-effective way"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Stop the DB instance every Friday evening and start it every Monday morning, and keep it running on weekday nights.",
+    "correct": false,
+    "why": "It removes the weekend hours. A stopped DB instance is billed for storage [but not for DB instance hours](../facts/rds.md#rds-faq-billing-stopped-instance), and this design still pays for every weekday night.",
+    "concept": "weekend-stop",
+    "trap": null,
+    "misconception": "stopping the DB instance at weekends removes most of the idle cost",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Use an automated schedule that stops the DB instance every evening and starts it again every working morning.",
+    "correct": true,
+    "why": "While it is stopped, [you're not charged for DB instance hours](../facts/rds.md#rds-stop-billing), and each stop lasts far less than [7 consecutive days](../facts/rds.md#rds-stop-max-seven-days).",
+    "concept": "scheduled-stop-start",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Buy a three-year Reserved DB instance for the instance class, and keep the DB instance running all day, every day.",
+    "correct": false,
+    "why": "A reservation is a [one or three year term](../facts/rds.md#rds-faq-ri-terms-one-or-three-year) commitment that pays for every hour, but this DB instance is idle most hours of each week.",
+    "concept": "reserved-db-instance",
+    "trap": null,
+    "misconception": "a commitment discount is cheaper than stopping an instance that is idle most of the week",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Delete the DB instance every evening without a final snapshot, and restore it every morning from its automated backups.",
+    "correct": false,
+    "why": "Without a final snapshot, [all automated backups are deleted](../facts/rds.md#rds-delete-instance-automated-backups-deleted) with the DB instance, so nothing is left to restore in the morning.",
+    "concept": "delete-and-restore",
+    "trap": "rds-trap-automated-backups-survive-delete",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The DB instance is idle every night and every weekend. RDS bills a stopped DB instance for storage [but not for DB instance hours](../facts/rds.md#rds-faq-billing-stopped-instance), so a daily stop and start removes the instance cost of every idle period. A schedule does this with no manual steps, and the data stays in the stopped DB instance.",
+  "takeaway": "Idle every night and weekend on a known schedule: stop and start the DB instance automatically.",
+  "twin": "If the stem said \"the database serves production traffic all day, every day\" instead: a Reserved DB instance, a [one or three year term](../facts/rds.md#rds-faq-ri-terms-one-or-three-year) commitment for steady use.",
+  "say": "A database that sits idle every night should be stopped on a schedule, because a stopped instance pays no instance hours.",
+  "facts": [
+   "rds-faq-billing-stopped-instance",
+   "rds-stop-billing",
+   "rds-stop-max-seven-days",
+   "rds-faq-ri-terms-one-or-three-year",
+   "rds-delete-instance-automated-backups-deleted"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-predictable"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "rds-q021",
+  "section": "2-deep.md#rds-proxy-keeps-client-connections-open-while-the-database-fails-over",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.3",
+  "bullets": [
+   "4.3.K6"
+  ],
+  "topics": [
+   "databases",
+   "cost",
+   "performance"
+  ],
+  "services": [
+   "rds-proxy",
+   "rds",
+   "lambda"
+  ],
+  "concept": "proxy-not-needed-with-app-pool",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective way",
+  "stem": "A company runs a latency-sensitive application on two Amazon EC2 instances. The application reads and writes orders through its own pool of 20 long-lived connections to an Amazon RDS for PostgreSQL DB instance. The number of connections stays far below the limit of the DB instance. An architect proposes Amazon RDS Proxy for every database of the company. The application needs low latency for every query. Which solution will meet these requirements in the MOST cost-effective way?",
+  "keywords": [
+   "its own pool of 20 long-lived connections",
+   "low latency for every query",
+   "MOST cost-effective way"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Keep the application connected directly to the DB instance endpoint, and keep using the connection pool of the application.",
+    "correct": true,
+    "why": "The application already pools its connections, so a direct connection avoids the average of [5 milliseconds](../facts/rds-proxy.md#rds-proxy-faq-adds-5-ms-connect-directly) that a proxy can add, and the proxy charge.",
+    "concept": "direct-connection",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Put Amazon RDS Proxy in front of the DB instance, because every RDS database needs a proxy to pool its connections.",
+    "correct": false,
+    "why": "A proxy would work, but it is [priced per vCPU per hour](../facts/rds-proxy.md#rds-proxy-pricing-per-vcpu) and adds latency for an application that already pools.",
+    "concept": "rds-proxy",
+    "trap": "rds-trap-proxy-for-every-database",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Move the application to AWS Lambda functions that open a new database connection in each invocation, and remove the EC2 instances.",
+    "correct": false,
+    "why": "Many concurrent functions can [exhaust database connection limits](../facts/lambda.md#lambda-vpc-db-connections-rds-proxy), and a new connection for each invocation adds setup time to each request.",
+    "concept": "lambda-connection-per-invocation",
+    "trap": "lambda-trap-connection-per-invocation",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Create a read replica of the DB instance, and move the connection pool of the application to the read replica endpoint.",
+    "correct": false,
+    "why": "The application also writes orders, and clients have [read-only access to the replica](../facts/rds.md#rds-read-replica-async-read-only); the replica is also a second DB instance to pay for.",
+    "concept": "read-replica-writes",
+    "trap": "rds-trap-replica-accepts-writes",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "RDS Proxy helps applications that [don't have built-in connection pooling mechanisms](../facts/rds-proxy.md#rds-proxy-candidate-no-builtin-pool). This application already keeps its own pool far below the connection limit. AWS notes that the proxy can add [5 milliseconds](../facts/rds-proxy.md#rds-proxy-faq-adds-5-ms-connect-directly) on average, so an application that needs no connection management can connect directly.",
+  "takeaway": "An application with its own pool and few connections connects directly; RDS Proxy would add cost and latency.",
+  "twin": "If the stem said \"thousands of short-lived Lambda invocations open new connections\" instead: RDS Proxy, because functions make [frequent short database connections](../facts/rds-proxy.md#rds-proxy-lambda-connection-pooling).",
+  "say": "This application already pools its connections, so it connects directly and avoids the proxy's latency and cost.",
+  "facts": [
+   "rds-proxy-faq-adds-5-ms-connect-directly",
+   "rds-proxy-pricing-per-vcpu",
+   "lambda-vpc-db-connections-rds-proxy",
+   "rds-read-replica-async-read-only",
+   "rds-proxy-candidate-no-builtin-pool",
+   "rds-proxy-lambda-connection-pooling"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-most-cost-effective",
+   "ee-lowest-latency"
+  ],
+  "twin_of": null
+ }
+]

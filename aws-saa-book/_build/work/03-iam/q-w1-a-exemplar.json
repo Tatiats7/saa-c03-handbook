@@ -1,0 +1,162 @@
+[
+  {
+   "id": "iam-q001",
+   "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.S3"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "sts"],
+   "concept": "role-for-ec2-vs-roles-anywhere",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs an order-processing application on Amazon EC2 instances in one AWS Region. The application reads and writes objects in an Amazon S3 bucket. Company policy requires that no long-term credentials are stored where the application runs. The company also runs a private certificate authority that issues certificates to its servers. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["Amazon EC2 instances in one AWS Region", "no long-term credentials are stored", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Attach an IAM role through an instance profile, and let the AWS SDK load the temporary credentials from the instance metadata.",
+     "correct": true,
+     "why": "The instance profile passes the role to the instances, and code can [get automatic temporary security credentials from the instance metadata](../facts/iam.md#iam-instance-profile-one-role-and-metadata-credentials), so no key is stored.",
+     "concept": "instance-profile",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Use IAM Roles Anywhere with certificates from the private certificate authority, and exchange each certificate for temporary role credentials.",
+     "correct": false,
+     "why": "It works, but it [requires PKI, the ability to issue and manage certificates](../facts/iam.md#iam-roles-anywhere-for-on-premises-and-hybrid-workloads), for instances that already get role credentials from AWS.",
+     "concept": "roles-anywhere",
+     "trap": null,
+     "misconception": "uses the method for servers outside AWS on EC2 instances",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Create an IAM user for the application, store its access key in an encrypted file where the application runs, and rotate it monthly.",
+     "correct": false,
+     "why": "Access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), so a stored key breaks the company policy, even when it is encrypted.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Move the application to new Amazon EC2 instances, and attach an IAM role to the new instances through an instance profile.",
+     "correct": false,
+     "why": "The application already runs on EC2, so a role on the current instances does the same job without a migration.",
+     "concept": "migrate-to-ec2",
+     "trap": null,
+     "misconception": "moves a workload to solve a credentials problem",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The application runs on EC2, so the shortest path is a role. [AWS delivers the temporary credentials of an IAM role to that compute resource](../facts/iam.md#iam-compute-services-receive-role-credentials-no-keys-needed), and the credentials are [temporary and updated automatically](../facts/iam.md#iam-ec2-role-credentials-rotate-automatically). Nothing is stored, and no key needs rotation by hand.",
+   "takeaway": "Code on EC2 gets credentials from an instance profile role, not from a stored key.",
+   "twin": "If the stem said \"servers in the company's data center\" instead: IAM Roles Anywhere, because it [extends the capabilities of IAM to on-premises and hybrid cloud workloads](../facts/iam.md#iam-roles-anywhere-for-on-premises-and-hybrid-workloads).",
+   "say": "On EC2 I'd attach a role through an instance profile, so no key is stored.",
+   "facts": [
+    "iam-instance-profile-one-role-and-metadata-credentials",
+    "iam-roles-anywhere-for-on-premises-and-hybrid-workloads",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-compute-services-receive-role-credentials-no-keys-needed",
+    "iam-ec2-role-credentials-rotate-automatically"
+   ],
+   "sources": [],
+   "exam_english": ["ee-least-operational-overhead", "ee-mandates"],
+   "twin_of": null,
+   "worked": {
+    "steps": [
+     "I read the last sentence first: it asks for the solution with the LEAST operational overhead.",
+     "I mark the constraints: the application runs on Amazon EC2 instances, no long-term credentials can be stored where it runs, and a private certificate authority exists.",
+     "Before I look at the options, I predict an IAM role through an instance profile, because AWS delivers the temporary credentials of a role to an EC2 instance.",
+     "I remove the IAM user, because its access key stays valid until someone revokes it. I remove the move to new instances, because the application already runs on EC2.",
+     "Between the instance profile and IAM Roles Anywhere the difference is where the code runs; the stem says EC2 instances, so the certificate authority is bait, and Roles Anywhere would only add certificates to manage.",
+     "Check: the instance profile meets every constraint, stores no key and needs no certificates. Time: 90 seconds."
+    ],
+    "wrong_path": false
+   }
+  },
+  {
+   "id": "iam-q003",
+   "section": "2-deep.md#aws-allows-a-request-only-when-nothing-denies-and-something-allows",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.K1"],
+   "topics": ["identity", "security"],
+   "services": ["iam"],
+   "concept": "scp-guardrail-root",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations with all features enabled. The company adds new member accounts every month. Administrators in each member account can edit the IAM policies of that account. The security team must ensure that no principal in any member account, including the root user, can stop or delete the AWS CloudTrail trail of the account. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["adds new member accounts every month", "including the root user", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Create an SCP that denies the actions that stop or delete CloudTrail trails, and attach the SCP to the root of the organization.",
+     "correct": true,
+     "why": "Attached [to the root of your organization](../facts/iam.md#iam-scp-faq-attach-at-root-ou-or-account), the SCP reaches every member account, new ones too, and it applies [including the member account's root user](../facts/iam.md#iam-scp-applies-to-member-root-user).",
+     "concept": "scp-guardrail-root",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "b",
+     "text": "Create an SCP that denies the actions that stop or delete CloudTrail trails, and attach it to each member account when the account is created.",
+     "correct": false,
+     "why": "It works, but every new account needs one more attachment, which is more work than one SCP on the root of the organization.",
+     "concept": "scp-per-account",
+     "trap": null,
+     "misconception": "attaches an organization guardrail account by account",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Remove the actions that stop or delete CloudTrail trails from the identity-based policies of every IAM user and IAM role in the member accounts.",
+     "correct": false,
+     "why": "Administrators can add the actions back, and you [cannot attach identity-based policies to the root user](../facts/iam.md#iam-root-user-no-identity-policies-or-boundary).",
+     "concept": "identity-policy-removal",
+     "trap": null,
+     "misconception": "believes that removing an allow inside an account stops the administrators of that account",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "d",
+     "text": "Set a permissions boundary that leaves out the actions that stop or delete CloudTrail trails on every IAM user and IAM role.",
+     "correct": false,
+     "why": "A boundary does not reach the root user, because you [cannot set a permissions boundary for the root user](../facts/iam.md#iam-root-user-no-identity-policies-or-boundary).",
+     "concept": "permissions-boundary-scope",
+     "trap": "iam-trap-boundary-limits-root",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The stem asks for a guardrail that holds against administrators and the root user. Member account principals [cannot remove or change SCPs that are applied to that account](../facts/iam.md#iam-scp-faq-member-principals-cannot-change-scps), and an SCP limits principals [including the member account's root user](../facts/iam.md#iam-scp-applies-to-member-root-user). Its Deny wins, because [an explicit deny overrides an explicit allow](../facts/iam.md#iam-eval-explicit-deny-overrides-allow).",
+   "takeaway": "To stop everyone in member accounts, the root user too, put a Deny in an SCP on the organization root.",
+   "twin": "If the stem said \"the trail of the management account\" instead: an SCP does not help, because SCPs [do not affect users or roles in the management account](../facts/iam.md#iam-scp-no-effect-on-management-account).",
+   "say": "A Deny in an SCP sits above every member account, so administrators and the root user lose the action.",
+   "facts": [
+    "iam-scp-faq-attach-at-root-ou-or-account",
+    "iam-scp-applies-to-member-root-user",
+    "iam-root-user-no-identity-policies-or-boundary",
+    "iam-scp-faq-member-principals-cannot-change-scps",
+    "iam-eval-explicit-deny-overrides-allow",
+    "iam-scp-no-effect-on-management-account"
+   ],
+   "sources": [],
+   "exam_english": ["ee-ensure", "ee-least-operational-overhead", "ee-must"],
+   "twin_of": null
+  }
+]

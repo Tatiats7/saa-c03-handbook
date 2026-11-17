@@ -1,0 +1,1610 @@
+{
+ "batch": "17-entail-011",
+ "lens": "entail",
+ "instructions": "For each fact, read only the quotes and their context. Verdict `support` when the quotes alone state every part of the claim and of each value, with the same scope and qualifiers; `partial` when a part is missing; `not-supported` when the quotes say something else; `unsure` otherwise. A quote with a `heading` is the value line under that heading on the page: read the two together. Do not use what you remember.",
+ "facts": [
+  {
+   "id": "ec2-auto-scaling-sqs-acceptable-backlog-per-instance-target",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "For queue workers, the target tracking target is the acceptable backlog per instance: the acceptable latency divided by the average time one instance needs to process a message; for example 10 seconds of latency and 0.1 seconds per message give a target of 100 messages.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "divide it by the average time"
+    },
+    {
+     "key": "example",
+     "display": "10 / 0.1, which equals 100 messages"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an Amazon SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "The solution is to use a *backlog per instance* metric with the target value being the *acceptable backlog per instance* to maintain.",
+     "table_header": null,
+     "context": "\nThe issue with using a CloudWatch Amazon SQS metric like `ApproximateNumberOfMessagesVisible` for target tracking is that the number of messages in the queue might not change proportionally to the size of the Auto Scaling group that processes messages from the queue. That's because the number of messages in your SQS queue does not solely define the number of instances needed. The number of instances in your Auto Scaling group can be driven by multiple factors, including how long it takes to process a message and the acceptable amount of latency (queue delay). \n\nThe solution is to use a *backlog per instance* metric with the target value being the *acceptable backlog per instance* to maintain. You can calculate these numbers as follows:\n+ **Backlog per instance**: To calculate your backlog per instance, start with the `ApproximateNumberOfMessages` queue attribute to determine the length of the SQS queue (number of messages available for retrieval from the queue). Divide that number by the fleet's running capacity, which for an Auto Scaling group is the number of instances in the `InService` state, to get the backlog per instance.\n+ **Acceptable backlog per instance**: To calculate your target value, first determine what your application can accept in terms of latency. Then, take the acceptable latency value and divide it by the average time that an EC2 instance takes to process a message. \n",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Use target tracking with the right metric"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "Then, take the acceptable latency value and divide it by the average time that an EC2 instance takes to process a message.",
+     "table_header": null,
+     "context": "+ **Backlog per instance**: To calculate your backlog per instance, start with the `ApproximateNumberOfMessages` queue attribute to determine the length of the SQS queue (number of messages available for retrieval from the queue). Divide that number by the fleet's running capacity, which for an Auto Scaling group is the number of instances in the `InService` state, to get the backlog per instance.\n+ **Acceptable backlog per instance**: To calculate your target value, first determine what your application can accept in terms of latency. Then, take the acceptable latency value and divide it by the average time that an EC2 instance takes to process a message. \n",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Use target tracking with the right metric"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "If the average processing time is 0.1 seconds for each message and the longest acceptable latency is 10 seconds, then the acceptable backlog per instance is 10 / 0.1, which equals 100 messages.",
+     "table_header": null,
+     "context": "+ **Acceptable backlog per instance**: To calculate your target value, first determine what your application can accept in terms of latency. Then, take the acceptable latency value and divide it by the average time that an EC2 instance takes to process a message. \n\nAs an example, let's say that you currently have an Auto Scaling group with 10 instances and the number of visible messages in the queue (`ApproximateNumberOfMessages`) is 1500. If the average processing time is 0.1 seconds for each message and the longest acceptable latency is 10 seconds, then the acceptable backlog per instance is 10 / 0.1, which equals 100 messages. This means that 100 is the target value for your target tracking policy. When the backlog per instance reaches the target value, a scale-out event will happen. Because the backlog per instance is already 150 messages (1500 messages / 10 instances), your group scales out, and it scales out by five instances to maintain proportion to the target value.\n\nThe following procedures demonstrate how to publish the custom metric and create the target tracking scaling policy that configures your Auto Scaling group to scale based on these calculations.",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Use target tracking with the right metric"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-sqs-backlog-per-instance",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Backlog per instance is the queue length (ApproximateNumberOfMessages) divided by the number of InService instances; the target tracking target is the acceptable backlog per instance.",
+   "values": [
+    {
+     "key": "v",
+     "display": "backlog per instance"
+    },
+    {
+     "key": "w",
+     "display": "Divide that number by the fleet's running capacity"
+    },
+    {
+     "key": "x",
+     "display": "acceptable backlog per instance"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an Amazon SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "The solution is to use a *backlog per instance* metric with the target value being the *acceptable backlog per instance* to maintain.",
+     "table_header": null,
+     "context": "\nThe issue with using a CloudWatch Amazon SQS metric like `ApproximateNumberOfMessagesVisible` for target tracking is that the number of messages in the queue might not change proportionally to the size of the Auto Scaling group that processes messages from the queue. That's because the number of messages in your SQS queue does not solely define the number of instances needed. The number of instances in your Auto Scaling group can be driven by multiple factors, including how long it takes to process a message and the acceptable amount of latency (queue delay). \n\nThe solution is to use a *backlog per instance* metric with the target value being the *acceptable backlog per instance* to maintain. You can calculate these numbers as follows:\n+ **Backlog per instance**: To calculate your backlog per instance, start with the `ApproximateNumberOfMessages` queue attribute to determine the length of the SQS queue (number of messages available for retrieval from the queue). Divide that number by the fleet's running capacity, which for an Auto Scaling group is the number of instances in the `InService` state, to get the backlog per instance.\n+ **Acceptable backlog per instance**: To calculate your target value, first determine what your application can accept in terms of latency. Then, take the acceptable latency value and divide it by the average time that an EC2 instance takes to process a message. \n",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Use target tracking with the right metric"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "To calculate your backlog per instance, start with the `ApproximateNumberOfMessages` queue attribute to determine the length of the SQS queue (number of messages available for retrieval from the queue). Divide that number by the fleet's running capacity, which for an Auto Scaling group is the number of instances in the `InService` state, to get the backlog per instance.",
+     "table_header": null,
+     "context": "\nThe solution is to use a *backlog per instance* metric with the target value being the *acceptable backlog per instance* to maintain. You can calculate these numbers as follows:\n+ **Backlog per instance**: To calculate your backlog per instance, start with the `ApproximateNumberOfMessages` queue attribute to determine the length of the SQS queue (number of messages available for retrieval from the queue). Divide that number by the fleet's running capacity, which for an Auto Scaling group is the number of instances in the `InService` state, to get the backlog per instance.\n+ **Acceptable backlog per instance**: To calculate your target value, first determine what your application can accept in terms of latency. Then, take the acceptable latency value and divide it by the average time that an EC2 instance takes to process a message. \n",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Use target tracking with the right metric"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-sqs-backlog-per-instance-metric-math",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "The SQS backlog per instance is the approximate number of visible messages in the queue divided by the group's running capacity (the InService instances); with metric math this is ApproximateNumberOfMessagesVisible divided by GroupInServiceInstances, and a target tracking policy keeps it at the target value.",
+   "values": [
+    {
+     "key": "metric",
+     "display": "ApproximateNumberOfMessagesVisible"
+    },
+    {
+     "key": "capacity",
+     "display": "GroupInServiceInstances"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an Amazon SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-target-tracking-metric-math.html",
+     "title": "Create a target tracking scaling policy using metric math",
+     "quote": "To calculate the Amazon SQS queue backlog per instance, take the approximate number of messages available for retrieval from the queue and divide that number by the Auto Scaling group's running capacity, which is the number of instances in the `InService` state.",
+     "table_header": null,
+     "context": "+ You can verify that a metric math expression is valid by using the CloudWatch console or the CloudWatch [GetMetricData](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html) API.\n\n## Example: Amazon SQS queue backlog per instance\n<a name=\"metric-math-sqs-queue-backlog\"></a>\n\nTo calculate the Amazon SQS queue backlog per instance, take the approximate number of messages available for retrieval from the queue and divide that number by the Auto Scaling group's running capacity, which is the number of instances in the `InService` state. For more information, see [Scaling policy based on Amazon SQS](as-using-sqs-queue.md).\n\nThe logic for the expression is this:\n\n `sum of (number of messages in the queue)/(number of InService instances)`\n",
+     "headings": [
+      "Create a target tracking scaling policy using metric math",
+      "Example: Amazon SQS queue backlog per instance"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-target-tracking-metric-math.html",
+     "title": "Create a target tracking scaling policy using metric math",
+     "quote": "| m1 | ApproximateNumberOfMessagesVisible | Sum | 1 minute | ",
+     "table_header": "| ID | CloudWatch metric | Statistic | Period | ",
+     "context": "Then your CloudWatch metric information is the following.\n\n\n| ID | CloudWatch metric | Statistic | Period | \n| --- | --- | --- | --- | \n| m1 | ApproximateNumberOfMessagesVisible | Sum | 1 minute | \n| m2 | GroupInServiceInstances | Average | 1 minute | \n\nYour metric math ID and expression are the following.\n\n",
+     "headings": [
+      "Create a target tracking scaling policy using metric math",
+      "Example: Amazon SQS queue backlog per instance"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-target-tracking-metric-math.html",
+     "title": "Create a target tracking scaling policy using metric math",
+     "quote": "| m2 | GroupInServiceInstances | Average | 1 minute | ",
+     "table_header": "| ID | CloudWatch metric | Statistic | Period | ",
+     "context": "\n\n| ID | CloudWatch metric | Statistic | Period | \n| --- | --- | --- | --- | \n| m1 | ApproximateNumberOfMessagesVisible | Sum | 1 minute | \n| m2 | GroupInServiceInstances | Average | 1 minute | \n\nYour metric math ID and expression are the following.\n\n\n| ID | Expression | ",
+     "headings": [
+      "Create a target tracking scaling policy using metric math",
+      "Example: Amazon SQS queue backlog per instance"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-sqs-dynamic-scaling-when-load-varies",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "In the AWS example of an Auto Scaling group that processes images from an SQS queue, a fixed-size group works if the upload rate does not vary; if the number of uploads changes over time, AWS suggests dynamic scaling of the group.",
+   "values": [
+    {
+     "key": "advice",
+     "display": "you might consider using dynamic scaling"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "the number of uploads changes over time"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "The architecture for this scenario works well if the number of image uploads doesn't vary over time.",
+     "table_header": null,
+     "context": "\nYou can scale your Auto Scaling group in response to changes in system load in an Amazon Simple Queue Service (Amazon SQS) queue. To learn more about how you can use Amazon SQS, see the [Amazon Simple Queue Service Developer Guide](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/).\n\nThere are some scenarios where you might think about scaling in response to activity in an Amazon SQS queue. For example, suppose that you have a web app that lets users upload images and use them online. In this scenario, each image requires resizing and encoding before it can be published. The app runs on EC2 instances in an Auto Scaling group, and it's configured to handle your typical upload rates. Unhealthy instances are terminated and replaced to maintain current instance levels at all times. The app places the raw bitmap data of the images in an SQS queue for processing. It processes the images and then publishes the processed images where they can be viewed by users. The architecture for this scenario works well if the number of image uploads doesn't vary over time. But if the number of uploads changes over time, you might consider using dynamic scaling to scale the capacity of your Auto Scaling group.\n\n**Topics**\n+ [Use target tracking with the right metric](#scale-sqs-queue-custom-metric)",
+     "headings": [
+      "Scaling policy based on Amazon SQS"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "But if the number of uploads changes over time, you might consider using dynamic scaling to scale the capacity of your Auto Scaling group.",
+     "table_header": null,
+     "context": "\nYou can scale your Auto Scaling group in response to changes in system load in an Amazon Simple Queue Service (Amazon SQS) queue. To learn more about how you can use Amazon SQS, see the [Amazon Simple Queue Service Developer Guide](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/).\n\nThere are some scenarios where you might think about scaling in response to activity in an Amazon SQS queue. For example, suppose that you have a web app that lets users upload images and use them online. In this scenario, each image requires resizing and encoding before it can be published. The app runs on EC2 instances in an Auto Scaling group, and it's configured to handle your typical upload rates. Unhealthy instances are terminated and replaced to maintain current instance levels at all times. The app places the raw bitmap data of the images in an SQS queue for processing. It processes the images and then publishes the processed images where they can be viewed by users. The architecture for this scenario works well if the number of image uploads doesn't vary over time. But if the number of uploads changes over time, you might consider using dynamic scaling to scale the capacity of your Auto Scaling group.\n\n**Topics**\n+ [Use target tracking with the right metric](#scale-sqs-queue-custom-metric)",
+     "headings": [
+      "Scaling policy based on Amazon SQS"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-sqs-metric-math-instead-of-custom",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Instead of publishing a custom backlog-per-instance metric, you can compute it with CloudWatch metric math (queue messages divided by GroupInServiceInstances), which saves the cost and effort of a custom metric.",
+   "values": [
+    {
+     "key": "v",
+     "display": "save the cost and effort"
+    },
+    {
+     "key": "w",
+     "display": "metric math"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an Amazon SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "However, you can now save the cost and effort put into publishing your own metric by using metric math.",
+     "table_header": null,
+     "context": "<a name=\"as-using-sqs-queue\"></a>\n\n**Important**  \nThe following information and steps shows you how to calculate the Amazon SQS queue backlog per instance using the `ApproximateNumberOfMessages` queue attribute before publishing it as a custom metric to CloudWatch. However, you can now save the cost and effort put into publishing your own metric by using metric math. For more information, see [Create a target tracking scaling policy using metric math](ec2-auto-scaling-target-tracking-metric-math.md).\n\nYou can scale your Auto Scaling group in response to changes in system load in an Amazon Simple Queue Service (Amazon SQS) queue. To learn more about how you can use Amazon SQS, see the [Amazon Simple Queue Service Developer Guide](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/).\n",
+     "headings": [
+      "Scaling policy based on Amazon SQS"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-target-tracking-metric-math.html",
+     "title": "Create a target tracking scaling policy using metric math",
+     "quote": "To calculate the Amazon SQS queue backlog per instance, take the approximate number of messages available for retrieval from the queue and divide that number by the Auto Scaling group's running capacity, which is the number of instances in the `InService` state.",
+     "table_header": null,
+     "context": "+ You can verify that a metric math expression is valid by using the CloudWatch console or the CloudWatch [GetMetricData](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html) API.\n\n## Example: Amazon SQS queue backlog per instance\n<a name=\"metric-math-sqs-queue-backlog\"></a>\n\nTo calculate the Amazon SQS queue backlog per instance, take the approximate number of messages available for retrieval from the queue and divide that number by the Auto Scaling group's running capacity, which is the number of instances in the `InService` state. For more information, see [Scaling policy based on Amazon SQS](as-using-sqs-queue.md).\n\nThe logic for the expression is this:\n\n `sum of (number of messages in the queue)/(number of InService instances)`\n",
+     "headings": [
+      "Create a target tracking scaling policy using metric math",
+      "Example: Amazon SQS queue backlog per instance"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-sqs-queue-length-not-proportional",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Scaling on ApproximateNumberOfMessagesVisible alone is wrong because the number of messages in the queue does not change in proportion to the size of the group that processes them.",
+   "values": [
+    {
+     "key": "v",
+     "display": "might not change proportionally"
+    },
+    {
+     "key": "w",
+     "display": "ApproximateNumberOfMessagesVisible"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an Amazon SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "The issue with using a CloudWatch Amazon SQS metric like `ApproximateNumberOfMessagesVisible` for target tracking is that the number of messages in the queue might not change proportionally to the size of the Auto Scaling group that processes messages from the queue.",
+     "table_header": null,
+     "context": "\nIf you use a target tracking scaling policy based on a custom Amazon SQS queue metric, dynamic scaling can adjust to the demand curve of your application more effectively. For more information about choosing metrics for target tracking, see [Choose metrics](as-scaling-target-tracking.md#target-tracking-choose-metrics).\n\nThe issue with using a CloudWatch Amazon SQS metric like `ApproximateNumberOfMessagesVisible` for target tracking is that the number of messages in the queue might not change proportionally to the size of the Auto Scaling group that processes messages from the queue. That's because the number of messages in your SQS queue does not solely define the number of instances needed. The number of instances in your Auto Scaling group can be driven by multiple factors, including how long it takes to process a message and the acceptable amount of latency (queue delay). \n\nThe solution is to use a *backlog per instance* metric with the target value being the *acceptable backlog per instance* to maintain. You can calculate these numbers as follows:\n+ **Backlog per instance**: To calculate your backlog per instance, start with the `ApproximateNumberOfMessages` queue attribute to determine the length of the SQS queue (number of messages available for retrieval from the queue). Divide that number by the fleet's running capacity, which for an Auto Scaling group is the number of instances in the `InService` state, to get the backlog per instance.",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Use target tracking with the right metric"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-sqs-unprocessed-messages-return",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Messages not yet processed when a worker instance is terminated return to the SQS queue for another instance; scale-in protection can keep long-running workers from being terminated.",
+   "values": [
+    {
+     "key": "v",
+     "display": "returned to the SQS queue"
+    },
+    {
+     "key": "w",
+     "display": "use instance scale-in protection"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group that processes an Amazon SQS queue",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html",
+     "title": "Scaling policy based on Amazon SQS",
+     "quote": "Messages that have not been processed at the time an instance is terminated are returned to the SQS queue where they can be processed by another instance that is still running. For applications where long running tasks are performed, you can optionally use instance scale-in protection to have control over which queue workers are terminated when your Auto Scaling group scales in.",
+     "table_header": null,
+     "context": "In the following sections you use the AWS CLI for the tasks you need to perform. For example, to get metric data that reflects the present use of the queue, you use the SQS [get-queue-attributes](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/sqs/get-queue-attributes.html) command. \n\n## Amazon SQS and instance scale-in protection\n<a name=\"scale-sqs-queue-scale-in-protection\"></a>\n\nMessages that have not been processed at the time an instance is terminated are returned to the SQS queue where they can be processed by another instance that is still running. For applications where long running tasks are performed, you can optionally use instance scale-in protection to have control over which queue workers are terminated when your Auto Scaling group scales in.\n\nThe following pseudocode shows one way to protect long-running, queue-driven worker processes from scale-in termination.\n\n```\nwhile (true)",
+     "headings": [
+      "Scaling policy based on Amazon SQS",
+      "Amazon SQS and instance scale-in protection"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-ssm-parameter-api-cost",
+   "rev": 2,
+   "kind": "pricing-dimension",
+   "claim": "Auto Scaling resolves the Systems Manager parameter on each create or update call for the group; with advanced parameters or higher throughput limits, these GetParameters calls can raise Systems Manager cost, which is charged per Parameter Store API interaction.",
+   "values": [
+    {
+     "key": "cost",
+     "display": "charges are incurred per Parameter Store API interaction"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per launch template used by an Auto Scaling group",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "advanced parameters or higher throughput limits"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "On each call to create or update your Auto Scaling group, Amazon EC2 Auto Scaling will resolve the Systems Manager parameter in the launch template.",
+     "table_header": null,
+     "context": "When working with Systems Manager parameters, note the following limitations:\n+ Amazon EC2 Auto Scaling only supports specifying AMI IDs as parameters.\n+ Creating or updating [mixed instances groups](ec2-auto-scaling-mixed-instances-groups.md) with [attribute-based instance type selection](create-mixed-instances-group-attribute-based-instance-type-selection.md) using a launch template that specifies a Systems Manager parameter is not supported.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, you will not be able to start an instance refresh with a desired configuration or using skip matching.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, warm pools are not supported.\n+ On each call to create or update your Auto Scaling group, Amazon EC2 Auto Scaling will resolve the Systems Manager parameter in the launch template. If you are using advanced parameters or higher throughput limits, the frequent calls to the Parameter Store (that is, the `GetParameters` operation) can increase your costs for Systems Manager because charges are incurred per Parameter Store API interaction. For more information, see [AWS Systems Manager pricing](https://aws.amazon.com/systems-manager/pricing/). ",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+      "Limitations"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "If you are using advanced parameters or higher throughput limits, the frequent calls to the Parameter Store (that is, the `GetParameters` operation) can increase your costs for Systems Manager because charges are incurred per Parameter Store API interaction.",
+     "table_header": null,
+     "context": "When working with Systems Manager parameters, note the following limitations:\n+ Amazon EC2 Auto Scaling only supports specifying AMI IDs as parameters.\n+ Creating or updating [mixed instances groups](ec2-auto-scaling-mixed-instances-groups.md) with [attribute-based instance type selection](create-mixed-instances-group-attribute-based-instance-type-selection.md) using a launch template that specifies a Systems Manager parameter is not supported.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, you will not be able to start an instance refresh with a desired configuration or using skip matching.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, warm pools are not supported.\n+ On each call to create or update your Auto Scaling group, Amazon EC2 Auto Scaling will resolve the Systems Manager parameter in the launch template. If you are using advanced parameters or higher throughput limits, the frequent calls to the Parameter Store (that is, the `GetParameters` operation) can increase your costs for Systems Manager because charges are incurred per Parameter Store API interaction. For more information, see [AWS Systems Manager pricing](https://aws.amazon.com/systems-manager/pricing/). ",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+      "Limitations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-ssm-parameter-for-ami",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "A launch template can reference an AMI through a Systems Manager parameter, so the group picks up new AMI IDs without new launch templates or new template versions.",
+   "values": [
+    {
+     "key": "v",
+     "display": "use new AMI IDs"
+    },
+    {
+     "key": "w",
+     "display": "Systems Manager parameters"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per launch template used by an Auto Scaling group",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "With Systems Manager parameters, you can update your Auto Scaling groups to use new AMI IDs without needing to create new launch templates or new versions of launch templates each time an AMI ID changes.",
+     "table_header": null,
+     "context": "\nThis section shows you how to create a launch template that specifies an AWS Systems Manager parameter that references an Amazon Machine Image (AMI) ID. You can use a parameter stored in your same AWS account, a parameter shared from another AWS account, or a public parameter for a public AMI maintained by AWS.\n\nWith Systems Manager parameters, you can update your Auto Scaling groups to use new AMI IDs without needing to create new launch templates or new versions of launch templates each time an AMI ID changes. These IDs can change regularly, such as when an AMI is updated with the latest operating system or software updates.\n\nYou can create, update, or delete your own Systems Manager parameters using the [Parameter Store, a capability of AWS Systems Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html). You must create a Systems Manager parameter before you can use it in a launch template. To get started, create a parameter with the data type `aws:ec2:image`, and for its value, enter the ID of an AMI. The AMI ID has the form `ami-{{<identifier>}}`, for example, `ami-123example456`. The correct AMI ID depends on the instance type and AWS Region that you're launching your Auto Scaling group in. \n",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-ssm-parameter-needs-getparameters",
+   "rev": 2,
+   "kind": "restriction",
+   "claim": "To specify a Parameter Store parameter in a launch template you need ssm:GetParameters on that parameter, and anyone who uses the launch template also needs it so the value can be validated.",
+   "values": [
+    {
+     "key": "permission",
+     "display": "ssm:GetParameters"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per launch template used by an Auto Scaling group",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "To specify a parameter from the Parameter Store in a launch template, you must have the `ssm:GetParameters` permission for the specified parameter.",
+     "table_header": null,
+     "context": "}\n```\n\n------\n\nTo specify a parameter from the Parameter Store in a launch template, you must have the `ssm:GetParameters` permission for the specified parameter. Anyone who uses the launch template also needs the `ssm:GetParameters` permission in order for the parameter value to be validated. For more information, see [Restricting access to Systems Manager parameters using IAM policies](https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-paramstore-access.html) in the *AWS Systems Manager User Guide*.\n\n## Verify a launch template gets the correct AMI ID\n<a name=\"using-systems-manager-parameters-verify-launch-template\"></a>\n\nUse the [describe-launch-template-versions](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-launch-template-versions.html) command and include the `--resolve-alias` option to resolve the parameter to the actual AMI ID.",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+      "Create a launch template that specifies a parameter for the AMI",
+      "[ AWS CLI ]"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "Anyone who uses the launch template also needs the `ssm:GetParameters` permission in order for the parameter value to be validated.",
+     "table_header": null,
+     "context": "}\n```\n\n------\n\nTo specify a parameter from the Parameter Store in a launch template, you must have the `ssm:GetParameters` permission for the specified parameter. Anyone who uses the launch template also needs the `ssm:GetParameters` permission in order for the parameter value to be validated. For more information, see [Restricting access to Systems Manager parameters using IAM policies](https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-paramstore-access.html) in the *AWS Systems Manager User Guide*.\n\n## Verify a launch template gets the correct AMI ID\n<a name=\"using-systems-manager-parameters-verify-launch-template\"></a>\n\nUse the [describe-launch-template-versions](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ec2/describe-launch-template-versions.html) command and include the `--resolve-alias` option to resolve the parameter to the actual AMI ID.",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+      "Create a launch template that specifies a parameter for the AMI",
+      "[ AWS CLI ]"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-ssm-parameter-no-warm-pools",
+   "rev": 1,
+   "kind": "restriction",
+   "claim": "If an Auto Scaling group uses a launch template that specifies a Systems Manager parameter for the AMI, warm pools are not supported, and you cannot start an instance refresh with a desired configuration or skip matching.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "warm pools are not supported"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": "launch template specifies a Systems Manager parameter"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, warm pools are not supported.",
+     "table_header": null,
+     "context": "\nWhen working with Systems Manager parameters, note the following limitations:\n+ Amazon EC2 Auto Scaling only supports specifying AMI IDs as parameters.\n+ Creating or updating [mixed instances groups](ec2-auto-scaling-mixed-instances-groups.md) with [attribute-based instance type selection](create-mixed-instances-group-attribute-based-instance-type-selection.md) using a launch template that specifies a Systems Manager parameter is not supported.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, you will not be able to start an instance refresh with a desired configuration or using skip matching.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, warm pools are not supported.\n+ On each call to create or update your Auto Scaling group, Amazon EC2 Auto Scaling will resolve the Systems Manager parameter in the launch template. If you are using advanced parameters or higher throughput limits, the frequent calls to the Parameter Store (that is, the `GetParameters` operation) can increase your costs for Systems Manager because charges are incurred per Parameter Store API interaction. For more information, see [AWS Systems Manager pricing](https://aws.amazon.com/systems-manager/pricing/). ",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+      "Limitations"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, you will not be able to start an instance refresh with a desired configuration or using skip matching.",
+     "table_header": null,
+     "context": "<a name=\"using-systems-manager-parameters-limitations\"></a>\n\nWhen working with Systems Manager parameters, note the following limitations:\n+ Amazon EC2 Auto Scaling only supports specifying AMI IDs as parameters.\n+ Creating or updating [mixed instances groups](ec2-auto-scaling-mixed-instances-groups.md) with [attribute-based instance type selection](create-mixed-instances-group-attribute-based-instance-type-selection.md) using a launch template that specifies a Systems Manager parameter is not supported.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, you will not be able to start an instance refresh with a desired configuration or using skip matching.\n+ If your Auto Scaling group uses a launch template that specifies a Systems Manager parameter, warm pools are not supported.\n+ On each call to create or update your Auto Scaling group, Amazon EC2 Auto Scaling will resolve the Systems Manager parameter in the launch template. If you are using advanced parameters or higher throughput limits, the frequent calls to the Parameter Store (that is, the `GetParameters` operation) can increase your costs for Systems Manager because charges are incurred per Parameter Store API interaction. For more information, see [AWS Systems Manager pricing](https://aws.amazon.com/systems-manager/pricing/). ",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+      "Limitations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-ssm-parameter-sources",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "The AMI parameter in a launch template can be a parameter in your own account, a parameter shared from another account, or an AWS public parameter for a public AMI.",
+   "values": [
+    {
+     "key": "v",
+     "display": "a parameter shared from another AWS account"
+    },
+    {
+     "key": "w",
+     "display": "a public parameter for a public AMI"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per launch template used by an Auto Scaling group",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/using-systems-manager-parameters.html",
+     "title": "Use AWS Systems Manager parameters instead of AMI IDs in launch templates",
+     "quote": "You can use a parameter stored in your same AWS account, a parameter shared from another AWS account, or a public parameter for a public AMI maintained by AWS.",
+     "table_header": null,
+     "context": "\n\n# Use AWS Systems Manager parameters instead of AMI IDs in launch templates\n<a name=\"using-systems-manager-parameters\"></a>\n\nThis section shows you how to create a launch template that specifies an AWS Systems Manager parameter that references an Amazon Machine Image (AMI) ID. You can use a parameter stored in your same AWS account, a parameter shared from another AWS account, or a public parameter for a public AMI maintained by AWS.\n\nWith Systems Manager parameters, you can update your Auto Scaling groups to use new AMI IDs without needing to create new launch templates or new versions of launch templates each time an AMI ID changes. These IDs can change regularly, such as when an AMI is updated with the latest operating system or software updates.\n\nYou can create, update, or delete your own Systems Manager parameters using the [Parameter Store, a capability of AWS Systems Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html). You must create a Systems Manager parameter before you can use it in a launch template. To get started, create a parameter with the data type `aws:ec2:image`, and for its value, enter the ID of an AMI. The AMI ID has the form `ami-{{<identifier>}}`, for example, `ami-123example456`. The correct AMI ID depends on the instance type and AWS Region that you're launching your Auto Scaling group in. \n",
+     "headings": [
+      "Use AWS Systems Manager parameters instead of AMI IDs in launch templates"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-billed",
+   "rev": 2,
+   "kind": "pricing-dimension",
+   "claim": "You are billed for instances that are in a standby state.",
+   "values": [
+    {
+     "key": "v",
+     "display": "You are billed for instances"
+    },
+    {
+     "key": "w",
+     "display": "standby state"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per instance in Standby",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-enter-exit-standby.html",
+     "title": "Temporarily remove instances from your Auto Scaling group",
+     "quote": "You are billed for instances that are in a standby state.",
+     "table_header": null,
+     "context": "  + If you choose to decrement the desired capacity of the Auto Scaling group, this prevents the launch of an instance to replace the one on standby.\n+ After you put the instance back in service, the desired capacity is incremented to reflect how many instances are in the Auto Scaling group.\n+ To do the increment (and decrement), the new desired capacity must be between the minimum and maximum group size. Otherwise, the operation fails.\n+ If at anytime after putting an instance on standby, or returning the instance to service by exiting the standby state, your Auto Scaling group is found to not be balanced between Availability Zones, Amazon EC2 Auto Scaling compensates by rebalancing the Availability Zones unless you suspend the `AZRebalance` process. For more information, see [Suspend and resume Amazon EC2 Auto Scaling processes](as-suspend-resume-processes.md).\n+ You are billed for instances that are in a standby state.\n\n## Health status of an instance in a standby state\n<a name=\"standby-instance-health-status\"></a>\n",
+     "headings": [
+      "Temporarily remove instances from your Auto Scaling group",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-decrement-choice",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "When you put an instance on standby you choose whether to decrement desired capacity; if you do not, EC2 Auto Scaling launches a replacement instance, and if you do, no replacement is launched.",
+   "values": [
+    {
+     "key": "v",
+     "display": "launches an instance to replace the one"
+    },
+    {
+     "key": "w",
+     "display": "prevents the launch of an instance"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per instance in Standby",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-enter-exit-standby.html",
+     "title": "Temporarily remove instances from your Auto Scaling group",
+     "quote": "If you choose not to decrement the desired capacity of the Auto Scaling group, Amazon EC2 Auto Scaling launches an instance to replace the one on standby. The intention is to help you maintain capacity for your application while one or more instances are on standby.\n  + If you choose to decrement the desired capacity of the Auto Scaling group, this prevents the launch of an instance to replace the one on standby.",
+     "table_header": null,
+     "context": "## Considerations\n<a name=\"standby-instance-considerations\"></a>\n\nThe following are considerations when moving instances in and out of the standby state:\n+ When you put an instance on standby, you can either decrement the desired capacity through this operation, or keep it the same value.\n  + If you choose not to decrement the desired capacity of the Auto Scaling group, Amazon EC2 Auto Scaling launches an instance to replace the one on standby. The intention is to help you maintain capacity for your application while one or more instances are on standby.\n  + If you choose to decrement the desired capacity of the Auto Scaling group, this prevents the launch of an instance to replace the one on standby.\n+ After you put the instance back in service, the desired capacity is incremented to reflect how many instances are in the Auto Scaling group.\n+ To do the increment (and decrement), the new desired capacity must be between the minimum and maximum group size. Otherwise, the operation fails.\n+ If at anytime after putting an instance on standby, or returning the instance to service by exiting the standby state, your Auto Scaling group is found to not be balanced between Availability Zones, Amazon EC2 Auto Scaling compensates by rebalancing the Availability Zones unless you suspend the `AZRebalance` process. For more information, see [Suspend and resume Amazon EC2 Auto Scaling processes](as-suspend-resume-processes.md).\n+ You are billed for instances that are in a standby state.\n",
+     "headings": [
+      "Temporarily remove instances from your Auto Scaling group",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-deregistration-delay-default",
+   "rev": 1,
+   "kind": "default",
+   "claim": "When an instance enters standby and connection draining is enabled on the load balancer, Elastic Load Balancing waits 300 seconds by default before it completes deregistration.",
+   "values": [
+    {
+     "key": "seconds",
+     "display": "300 seconds",
+     "spoken": "three hundred seconds"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per load balancer (deregistration delay)",
+    "default_or_max": "default",
+    "adjustable": true,
+    "condition": "connection draining is enabled"
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-enter-exit-standby.html",
+     "title": "Temporarily remove instances from your Auto Scaling group",
+     "quote": "If connection draining is enabled for the load balancer, Elastic Load Balancing waits 300 seconds by default before completing the deregistration process, which helps in-flight requests to complete.",
+     "table_header": null,
+     "context": "\nThe standby state works as follows to help you temporarily remove an instance from your Auto Scaling group:\n\n1. You put an instance into the standby state. The instance remains in this state until you exit the standby state.\n\n1. If there is a load balancer target group or Classic Load Balancer attached to your Auto Scaling group, the instance is deregistered from the load balancer. If connection draining is enabled for the load balancer, Elastic Load Balancing waits 300 seconds by default before completing the deregistration process, which helps in-flight requests to complete. \n\n1. You can update or troubleshoot the instance.\n\n1. You return the instance to service by exiting the standby state.\n",
+     "headings": [
+      "Temporarily remove instances from your Auto Scaling group",
+      "How the standby state works"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-no-health-checks",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "EC2 Auto Scaling does not perform health checks on an instance in Standby; its health status stays what it was before standby until you return it to service.",
+   "values": [
+    {
+     "key": "v",
+     "display": "does not perform health checks"
+    },
+    {
+     "key": "w",
+     "display": "health status reflects the status"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per instance in Standby",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-enter-exit-standby.html",
+     "title": "Temporarily remove instances from your Auto Scaling group",
+     "quote": "Amazon EC2 Auto Scaling does not perform health checks on instances that are in a standby state. While the instance is in a standby state, its health status reflects the status that it had before you put it on standby. Amazon EC2 Auto Scaling does not perform a health check on the instance until you put it back in service.",
+     "table_header": null,
+     "context": "+ You are billed for instances that are in a standby state.\n\n## Health status of an instance in a standby state\n<a name=\"standby-instance-health-status\"></a>\n\nAmazon EC2 Auto Scaling does not perform health checks on instances that are in a standby state. While the instance is in a standby state, its health status reflects the status that it had before you put it on standby. Amazon EC2 Auto Scaling does not perform a health check on the instance until you put it back in service.\n\nFor example, if you put a healthy instance on standby and then terminate it, Amazon EC2 Auto Scaling continues to report the instance as healthy. If you attempt to put a terminated instance that was on standby back in service, Amazon EC2 Auto Scaling performs a health check on the instance, determines that it is terminating and unhealthy, and launches a replacement instance. For more information, see [Health checks for instances in an Auto Scaling group](ec2-auto-scaling-health-checks.md).\n\n## Temporarily remove an instance by setting it to standby\n<a name=\"standby-state\"></a>",
+     "headings": [
+      "Temporarily remove instances from your Auto Scaling group",
+      "Health status of an instance in a standby state"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-no-lb-traffic",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "A Standby instance remains part of the group but does not handle load balancer traffic, and the group will not terminate it through health checks or scale-in events.",
+   "values": [
+    {
+     "key": "v",
+     "display": "do not actively handle load balancer traffic"
+    },
+    {
+     "key": "w",
+     "display": "during scale-in events"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per instance in Standby",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-enter-exit-standby.html",
+     "title": "Temporarily remove instances from your Auto Scaling group",
+     "quote": "Instances that are on standby are still part of the Auto Scaling group, but they do not actively handle load balancer traffic.\n\nThis feature helps you stop and start the instances or reboot them without worrying about Amazon EC2 Auto Scaling terminating the instances as part of its health checks or during scale-in events.",
+     "table_header": null,
+     "context": "# Temporarily remove instances from your Auto Scaling group\n<a name=\"as-enter-exit-standby\"></a>\n\nYou can put an instance that is in the `InService` state into the `Standby` state, update or troubleshoot the instance, and then return the instance to service. Instances that are on standby are still part of the Auto Scaling group, but they do not actively handle load balancer traffic.\n\nThis feature helps you stop and start the instances or reboot them without worrying about Amazon EC2 Auto Scaling terminating the instances as part of its health checks or during scale-in events.\n\nFor example, you can change the Amazon Machine Image (AMI) for an Auto Scaling group at any time by changing the launch template or launch configuration. Any subsequent instances that the Auto Scaling group launches use this AMI. However, the Auto Scaling group does not update the instances that are currently in service. You can terminate these instances and let Amazon EC2 Auto Scaling replace them, or use the instance refresh feature to terminate and replace the instances. Or, you can put the instances on standby, update the software, and then put the instances back in service.\n",
+     "headings": [
+      "Temporarily remove instances from your Auto Scaling group"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-preferred-over-detach",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "To take an instance out of a group temporarily, AWS recommends the standby procedure rather than detaching and re-attaching it to the same group.",
+   "values": [
+    {
+     "key": "v",
+     "display": "recommend using the standby procedure"
+    },
+    {
+     "key": "w",
+     "display": "Instead of detaching and re-attaching an instance"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per instance in Standby",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-detach-attach-instances.html",
+     "title": "Detach or attach instances from your Auto Scaling group",
+     "quote": "Instead of detaching and re-attaching an instance to the same group, we recommend using the standby procedure to temporarily remove the instance from the group.",
+     "table_header": null,
+     "context": "\nYou can detach instances from your Auto Scaling group. After an instance is detached, that instance becomes independent and can either be managed on its own or attached to a different Auto Scaling group, separate from the original group it belonged to. This can be useful, for example, when you want to perform testing using existing instances that are already running your application.\n\nThis topic provides instructions on how to detach and attach instances. When attaching instances, you can also use an existing instance rather than a detached one.\n\nInstead of detaching and re-attaching an instance to the same group, we recommend using the standby procedure to temporarily remove the instance from the group. For more information, see [Temporarily remove instances from your Auto Scaling group](as-enter-exit-standby.md). \n\n**Topics**\n+ [Considerations for detaching instances](#detach-instances-considerations)\n+ [Considerations for attaching instances](#attach-instances-considerations)\n+ [Move an instance to a different group using detach and attach](#detach-attach-instances)",
+     "headings": [
+      "Detach or attach instances from your Auto Scaling group"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-standby-still-managed",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "An instance in Standby is still managed by the Auto Scaling group but is not an active part of the application until you return it to service.",
+   "values": [
+    {
+     "key": "v",
+     "display": "continue to be managed"
+    },
+    {
+     "key": "w",
+     "display": "not an active part of your application"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per instance in Standby",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle.html",
+     "title": "Amazon EC2 Auto Scaling instance lifecycle",
+     "quote": "Instances in a `Standby` state continue to be managed by the Auto Scaling group. However, they are not an active part of your application until you put them back into service.",
+     "table_header": null,
+     "context": "## Enter and exit standby\n<a name=\"as-lifecycle-standby\"></a>\n\nYou can put any instance that is in an `InService` state into a `Standby` state. This enables you to remove the instance from service, troubleshoot or make changes to it, and then put it back into service.\n\nInstances in a `Standby` state continue to be managed by the Auto Scaling group. However, they are not an active part of your application until you put them back into service.\n\nFor more information, see [Temporarily remove instances from your Auto Scaling group](as-enter-exit-standby.md).",
+     "headings": [
+      "Amazon EC2 Auto Scaling instance lifecycle",
+      "Enter and exit standby"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-stateful-drain-or-transfer",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "To shut down a stateful instance gracefully, its workload should be drained (finish its assigned jobs) or transferred to another active instance.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "either drained (completing all currently assigned jobs)"
+    },
+    {
+     "key": "v1",
+     "display": "transferred (moving jobs, data, or configuration"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per stateful instance",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/gracefully-handle-instance-termination.html",
+     "title": "Design your applications to gracefully handle instance termination",
+     "quote": "To gracefully shut down a stateful instance, its workload should be either drained (completing all currently assigned jobs) or transferred (moving jobs, data, or configuration to another active instance).",
+     "table_header": null,
+     "context": "<a name=\"gracefully-handle-instance-termination\"></a>\n\n This topic describes features that you can use to prevent your Amazon EC2 Auto Scaling group from terminating Amazon EC2 instances that aren't yet ready to terminate. By default, Auto Scaling has no visibility into the applications running on your instances. It can terminate instances before your application is able to gracefully shut down or complete its assigned jobs. These features give your application time to complete in-progress work, transfer state, or perform cleanup before instance terminations. You can use them individually or in combination depending on your application's requirements. \n\n These features are particularly useful for stateful workloads, where each instance in your fleet holds different data, jobs, or state than other instances. Terminating stateful instances without graceful shutdown could result in long-running jobs restarting from the beginning, reduced data redundancy or data loss, and interrupted in-progress transactions or computations. To gracefully shut down a stateful instance, its workload should be either drained (completing all currently assigned jobs) or transferred (moving jobs, data, or configuration to another active instance). \n\n**Topics**\n+ [Termination lifecycle hooks](#gracefully-handle-instance-termination-lifecycle-hooks)\n+ [Instance scale-in protection](#gracefully-handle-instance-termination-scale-in-protection)",
+     "headings": [
+      "Design your applications to gracefully handle instance termination"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-status-check-failure-waits-few-minutes",
+   "rev": 3,
+   "kind": "behavior",
+   "claim": "When a status check fails, Amazon EC2 Auto Scaling waits a few minutes for AWS to fix the issue.",
+   "values": [
+    {
+     "key": "v",
+     "display": "waits a few minutes",
+     "spoken": "waits a few minutes"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group (health checks)",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/health-checks-overview.html",
+     "title": "About the health checks for your Auto Scaling group",
+     "quote": "When a status check fails, Amazon EC2 Auto Scaling waits a few minutes for AWS to fix the issue.",
+     "table_header": null,
+     "context": "The Amazon EC2 status checks do not require any special configuration and are always enabled. For more information, see [Types of status checks](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html#types-of-instance-status-checks) in the *Amazon EC2 User Guide*. \n\n**Important**  \nAmazon EC2 Auto Scaling lets the status checks fail occasionally, without taking any action. When a status check fails, Amazon EC2 Auto Scaling waits a few minutes for AWS to fix the issue. It does not immediately mark an instance `Unhealthy` when its status for the status checks becomes `impaired`. Additionally, EC2 Auto Scaling doesn't mark the instance as `Unhealthy` if a status check returns `insufficient-data`.  \nHowever, if Amazon EC2 Auto Scaling detects that an instance is no longer in the `running` state, this situation is treated as an immediate failure. In this case, it immediately marks the instance as `Unhealthy` and replaces it. \n\n**Application status checks**  ",
+     "headings": [
+      "About the health checks for your Auto Scaling group",
+      "Amazon EC2 health checks"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-adjustment-types",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "Step and simple scaling support three adjustment types: ChangeInCapacity, ExactCapacity and PercentChangeInCapacity.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "ChangeInCapacity"
+    },
+    {
+     "key": "v1",
+     "display": "ExactCapacity"
+    },
+    {
+     "key": "v2",
+     "display": "PercentChangeInCapacity"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "Amazon EC2 Auto Scaling supports the following adjustment types for step scaling and simple scaling:",
+     "table_header": null,
+     "context": "You can define a scaling policy that performs the optimal scaling action, based on the scaling adjustment type that you choose. You can specify the adjustment type as a percentage of the current capacity of your Auto Scaling group, or in capacity units. Normally a capacity unit means one instance, unless you are using the instance weights feature. \n\nAmazon EC2 Auto Scaling supports the following adjustment types for step scaling and simple scaling:\n+ `ChangeInCapacity` — Increment or decrement the current capacity of the group by the specified value. A positive value increases the capacity and a negative adjustment value decreases the capacity. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we add 5 capacity units to the capacity for a total of 8 capacity units. \n+ `ExactCapacity` — Change the current capacity of the group to the specified value. Specify a non-negative value with this adjustment type. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we change the capacity to 5 capacity units. ",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Scaling adjustment types"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "`ChangeInCapacity` — Increment or decrement the current capacity of the group by the specified value.",
+     "table_header": null,
+     "context": "\nAmazon EC2 Auto Scaling supports the following adjustment types for step scaling and simple scaling:\n+ `ChangeInCapacity` — Increment or decrement the current capacity of the group by the specified value. A positive value increases the capacity and a negative adjustment value decreases the capacity. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we add 5 capacity units to the capacity for a total of 8 capacity units. \n+ `ExactCapacity` — Change the current capacity of the group to the specified value. Specify a non-negative value with this adjustment type. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we change the capacity to 5 capacity units. \n+ `PercentChangeInCapacity` — Increment or decrement the current capacity of the group by the specified percentage. A positive value increases the capacity and a negative value decreases the capacity. For example: If the current capacity is 10 and the adjustment is 10 percent, then when this policy is performed, we add 1 capacity unit to the capacity for a total of 11 capacity units. ",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Scaling adjustment types"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "`ExactCapacity` — Change the current capacity of the group to the specified value.",
+     "table_header": null,
+     "context": "\nAmazon EC2 Auto Scaling supports the following adjustment types for step scaling and simple scaling:\n+ `ChangeInCapacity` — Increment or decrement the current capacity of the group by the specified value. A positive value increases the capacity and a negative adjustment value decreases the capacity. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we add 5 capacity units to the capacity for a total of 8 capacity units. \n+ `ExactCapacity` — Change the current capacity of the group to the specified value. Specify a non-negative value with this adjustment type. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we change the capacity to 5 capacity units. \n+ `PercentChangeInCapacity` — Increment or decrement the current capacity of the group by the specified percentage. A positive value increases the capacity and a negative value decreases the capacity. For example: If the current capacity is 10 and the adjustment is 10 percent, then when this policy is performed, we add 1 capacity unit to the capacity for a total of 11 capacity units. \n**Note**  \nIf the resulting value is not an integer, it is rounded as follows:  ",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Scaling adjustment types"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "`PercentChangeInCapacity` — Increment or decrement the current capacity of the group by the specified percentage.",
+     "table_header": null,
+     "context": "\nAmazon EC2 Auto Scaling supports the following adjustment types for step scaling and simple scaling:\n+ `ChangeInCapacity` — Increment or decrement the current capacity of the group by the specified value. A positive value increases the capacity and a negative adjustment value decreases the capacity. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we add 5 capacity units to the capacity for a total of 8 capacity units. \n+ `ExactCapacity` — Change the current capacity of the group to the specified value. Specify a non-negative value with this adjustment type. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we change the capacity to 5 capacity units. \n+ `PercentChangeInCapacity` — Increment or decrement the current capacity of the group by the specified percentage. A positive value increases the capacity and a negative value decreases the capacity. For example: If the current capacity is 10 and the adjustment is 10 percent, then when this policy is performed, we add 1 capacity unit to the capacity for a total of 11 capacity units. \n**Note**  \nIf the resulting value is not an integer, it is rounded as follows:  \nValues greater than 1 are rounded down. For example, `12.7` is rounded to `12`.\nValues between 0 and 1 are rounded to 1. For example, `.67` is rounded to `1`.",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Scaling adjustment types"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-bounds-console-absolute-cli-relative",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Step adjustment bounds are absolute values in the console but relative to the breach threshold in the AWS CLI or an SDK.",
+   "values": [
+    {
+     "key": "console",
+     "display": "as absolute values",
+     "spoken": "as absolute values"
+    },
+    {
+     "key": "cli",
+     "display": "relative to the breach threshold",
+     "spoken": "relative to the breach threshold"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "If you use the AWS Management Console, you specify the upper and lower bounds as absolute values. If you use the AWS CLI or an SDK, you specify the upper and lower bounds relative to the breach threshold.",
+     "table_header": null,
+     "context": "+ If the metric value gets to 40, the desired capacity of the group decreases by 1 instance, to 13 instances, based on the second step adjustment of the scale-in policy (remove 10 percent of 14 instances, 1.4 instances, rounded down to 1 instance). If the metric value falls to 30 even after this decrease in capacity, the desired capacity of the group decreases by another 3 instances, to 10 instances. This is based on the third step adjustment of the scale-in policy (remove 30 percent of 13 instances, 3.9 instances, rounded down to 3 instances).\n\nWhen you specify the step adjustments for your scaling policy, note the following:\n+ If you use the AWS Management Console, you specify the upper and lower bounds as absolute values. If you use the AWS CLI or an SDK, you specify the upper and lower bounds relative to the breach threshold. \n+ The ranges of your step adjustments can't overlap or have a gap.\n+ Only one step adjustment can have a null lower bound (negative infinity). If one step adjustment has a negative lower bound, then there must be a step adjustment with a null lower bound.\n+ Only one step adjustment can have a null upper bound (positive infinity). If one step adjustment has a positive upper bound, then there must be a step adjustment with a null upper bound.",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Step adjustments for step scaling"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-continues-until-ok",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "A step scaling policy applies its step adjustments when the alarm is breached for the set number of evaluation periods, and the adjustments can continue for further breaches until the alarm returns to OK.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "can continue for additional alarm breaches"
+    },
+    {
+     "key": "v1",
+     "display": "until the alarm state returns to"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "When the alarm threshold is breached for the specified number of evaluation periods, Amazon EC2 Auto Scaling will apply the step adjustments defined in the policy. The adjustments can continue for additional alarm breaches until the alarm state returns to `OK`.",
+     "table_header": null,
+     "context": "Add the step adjustments in the policy. You can define different step adjustments based on the breach size of the alarm. For example:\n+ Scale out by 10 instances if the alarm metric reaches 60 percent\n+ Scale out by 30 instances if the alarm metric reaches 75 percent\n+ Scale out by 40 instances if the alarm metric reaches 85 percent\n\nWhen the alarm threshold is breached for the specified number of evaluation periods, Amazon EC2 Auto Scaling will apply the step adjustments defined in the policy. The adjustments can continue for additional alarm breaches until the alarm state returns to `OK`. \n\nEach instance has a warmup period to prevent scaling activities from being too reactive to changes that occur over short periods of time. You can optionally configure the warmup period for your scaling policy. However, we recommend using the default instance warmup to make it easier to update all scaling policies when the warmup time changes. For more information, see [Set the default instance warmup for an Auto Scaling group](ec2-auto-scaling-default-instance-warmup.md).\n\nSimple scaling policies are similar to step scaling policies, except they're based on a single scaling adjustment, with a cooldown period between each scaling activity. For more information, see [Simple scaling policies](simple-scaling-policies.md).\n",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "How step scaling policies work"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-flapping-margin",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Leave an adequate margin between the scale-out and scale-in thresholds to prevent flapping, an infinite loop of scaling in and scaling out.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "to prevent flapping"
+    },
+    {
+     "key": "v1",
+     "display": "infinite loop of scaling in and scaling out"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "Make sure to choose an adequate margin between the scale-out and scale-in thresholds to prevent flapping. Flapping is an infinite loop of scaling in and scaling out.",
+     "table_header": null,
+     "context": "## Considerations\n<a name=\"step-scaling-considerations\"></a>\n\nThe following considerations apply when working with step and simple scaling policies:\n+ Consider whether you can predict the step adjustments on the application accurately enough to use step scaling. If your scaling metric increases or decreases proportionally to the capacity of the scalable target, we recommend that you use a target tracking scaling policy instead. You still have the option to use step scaling as an additional policy for a more advanced configuration. For example, you can configure a more aggressive response when utilization reaches a certain level.\n+ Make sure to choose an adequate margin between the scale-out and scale-in thresholds to prevent flapping. Flapping is an infinite loop of scaling in and scaling out. That is, if a scaling action is taken, the metric value would change and start another scaling action in the reverse direction.",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-percent-rounding",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "With PercentChangeInCapacity, a result greater than 1 is rounded down, and a result between 0 and 1 is rounded to 1.",
+   "values": [
+    {
+     "key": "big",
+     "display": "rounded down",
+     "spoken": "rounded down"
+    },
+    {
+     "key": "small",
+     "display": "rounded to 1",
+     "spoken": "rounded to one"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "Values greater than 1 are rounded down.",
+     "table_header": null,
+     "context": "+ `ExactCapacity` — Change the current capacity of the group to the specified value. Specify a non-negative value with this adjustment type. For example: If the current capacity of the group is 3 and the adjustment is 5, then when this policy is performed, we change the capacity to 5 capacity units. \n+ `PercentChangeInCapacity` — Increment or decrement the current capacity of the group by the specified percentage. A positive value increases the capacity and a negative value decreases the capacity. For example: If the current capacity is 10 and the adjustment is 10 percent, then when this policy is performed, we add 1 capacity unit to the capacity for a total of 11 capacity units. \n**Note**  \nIf the resulting value is not an integer, it is rounded as follows:  \nValues greater than 1 are rounded down. For example, `12.7` is rounded to `12`.\nValues between 0 and 1 are rounded to 1. For example, `.67` is rounded to `1`.\nValues between 0 and -1 are rounded to -1. For example, `-.58` is rounded to `-1`.\nValues less than -1 are rounded up. For example, `-6.67` is rounded to `-6`.\n",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Scaling adjustment types"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "Values between 0 and 1 are rounded to 1.",
+     "table_header": null,
+     "context": "+ `PercentChangeInCapacity` — Increment or decrement the current capacity of the group by the specified percentage. A positive value increases the capacity and a negative value decreases the capacity. For example: If the current capacity is 10 and the adjustment is 10 percent, then when this policy is performed, we add 1 capacity unit to the capacity for a total of 11 capacity units. \n**Note**  \nIf the resulting value is not an integer, it is rounded as follows:  \nValues greater than 1 are rounded down. For example, `12.7` is rounded to `12`.\nValues between 0 and 1 are rounded to 1. For example, `.67` is rounded to `1`.\nValues between 0 and -1 are rounded to -1. For example, `-.58` is rounded to `-1`.\nValues less than -1 are rounded up. For example, `-6.67` is rounded to `-6`.\n\nWith `PercentChangeInCapacity`, you can also specify the minimum number of instances to scale using the `MinAdjustmentMagnitude` parameter. For example, suppose that you create a policy that adds 25 percent and you specify a minimum increment of 2 instances. If you have an Auto Scaling group with 4 instances and the scaling policy is executed, 25 percent of 4 is 1 instance. However, because you specified a minimum increment of 2, there are 2 instances added.",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Scaling adjustment types"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-ranges-no-overlap-or-gap",
+   "rev": 2,
+   "kind": "restriction",
+   "claim": "The ranges of the step adjustments in a step scaling policy cannot overlap or leave a gap.",
+   "values": [
+    {
+     "key": "v",
+     "display": "can't overlap or have a gap",
+     "spoken": "can't overlap or have a gap"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "The ranges of your step adjustments can't overlap or have a gap.",
+     "table_header": null,
+     "context": "\nWhen you specify the step adjustments for your scaling policy, note the following:\n+ If you use the AWS Management Console, you specify the upper and lower bounds as absolute values. If you use the AWS CLI or an SDK, you specify the upper and lower bounds relative to the breach threshold. \n+ The ranges of your step adjustments can't overlap or have a gap.\n+ Only one step adjustment can have a null lower bound (negative infinity). If one step adjustment has a negative lower bound, then there must be a step adjustment with a null lower bound.\n+ Only one step adjustment can have a null upper bound (positive infinity). If one step adjustment has a positive upper bound, then there must be a step adjustment with a null upper bound.\n+ The upper and lower bound can't be null in the same step adjustment.",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Step adjustments for step scaling"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-simple-you-manage-alarms",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "With step scaling and simple scaling, you create and manage the CloudWatch alarms that start scaling.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "you create and manage the CloudWatch alarms"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "With step scaling and simple scaling, you create and manage the CloudWatch alarms that invoke the scaling process. When an alarm is breached, Amazon EC2 Auto Scaling initiates the scaling policy associated with that alarm.",
+     "table_header": null,
+     "context": "\nAuto Scaling group capacity is measured in terms of instances or capacity units if you are using [instance weights](ec2-auto-scaling-mixed-instances-groups-instance-weighting.md). Also, there is a difference between desired capacity and current capacity.\n+ Desired capacity – The number of instances (or capacity units) that you want to have in your group. Desired capacity can be adjusted manually or automatically using scaling policies.\n+ Current capacity – The number of instances (or capacity units) in your group that have passed their warmup and cooldown periods and are running and ready to be used.\n\nWith step scaling and simple scaling, you create and manage the CloudWatch alarms that invoke the scaling process. When an alarm is breached, Amazon EC2 Auto Scaling initiates the scaling policy associated with that alarm.\n\nWe strongly recommend that you use target tracking scaling policies to scale on metrics like average CPU utilization or average request count per target. Metrics that decrease when capacity increases and increase when capacity decreases can be used to proportionally scale out or in the number of instances using target tracking. This helps ensure that Amazon EC2 Auto Scaling follows the demand curve for your applications closely. For more information, see [Target tracking scaling policies](as-scaling-target-tracking.md).\n\n**Contents**\n+ [How step scaling policies work](#step-scaling-how-it-works)",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-step-warmup-single-activity",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "During step scaling, instances still warming up count toward desired capacity for the next scale-out, so several alarm breaches in the range of the same step adjustment produce a single scaling activity.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "result in a single scaling activity"
+    },
+    {
+     "key": "v1",
+     "display": "counted as part of the desired capacity"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per step scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html",
+     "title": "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "If the group scales out again, the instances that are still warming up are counted as part of the desired capacity for the next scale-out activity. Therefore, multiple alarm breaches that fall in the range of the same step adjustment result in a single scaling activity.",
+     "table_header": null,
+     "context": "\nIf the group scales out again, the instances that are still warming up are counted as part of the desired capacity for the next scale-out activity. Therefore, multiple alarm breaches that fall in the range of the same step adjustment result in a single scaling activity. The intention is to continuously (but not excessively) scale out.\n",
+     "headings": [
+      "Step and simple scaling policies for Amazon EC2 Auto Scaling",
+      "Instance warmup"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-suspend-processes-purpose",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "Suspending processes lets you investigate or troubleshoot without interference from scaling policies or scheduled actions, and stops EC2 Auto Scaling from marking instances unhealthy and replacing them while you change the group.",
+   "values": [
+    {
+     "key": "v",
+     "display": "investigate or troubleshoot an issue without interference"
+    },
+    {
+     "key": "w",
+     "display": "marking instances unhealthy and replacing them"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group (scaling processes)",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-suspend-resume-processes.html",
+     "title": "Suspend and resume Amazon EC2 Auto Scaling processes",
+     "quote": "Suspending processes can be useful when you need to investigate or troubleshoot an issue without interference from scaling policies or scheduled actions. It also helps prevent Amazon EC2 Auto Scaling from marking instances unhealthy and replacing them while you are making changes to your Auto Scaling group.",
+     "table_header": null,
+     "context": "# Suspend and resume Amazon EC2 Auto Scaling processes\n<a name=\"as-suspend-resume-processes\"></a>\n\nThis topic describes how to suspend and then resume one or more of the processes for your Auto Scaling group to temporarily disable certain operations. \n\nSuspending processes can be useful when you need to investigate or troubleshoot an issue without interference from scaling policies or scheduled actions. It also helps prevent Amazon EC2 Auto Scaling from marking instances unhealthy and replacing them while you are making changes to your Auto Scaling group.\n\n**Topics**\n+ [Types of processes](#process-types)\n+ [Considerations](suspend-resume-considerations.md)\n+ [Suspend processes](suspend-processes.md)",
+     "headings": [
+      "Suspend and resume Amazon EC2 Auto Scaling processes"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-suspend-terminate-full-control",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "Suspending the Terminate process stops Auto Scaling from attempting any terminations, except a user request through TerminateInstanceInAutoScalingGroup; AWS recommends it only when other options do not give enough control.",
+   "values": [
+    {
+     "key": "v",
+     "display": "complete control over all EC2 instance terminations"
+    },
+    {
+     "key": "w",
+     "display": "We only recommend using this option"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per Auto Scaling group during scale in",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/gracefully-handle-instance-termination.html",
+     "title": "Design your applications to gracefully handle instance termination",
+     "quote": "If you require complete control over all EC2 instance terminations within your Amazon EC2 Auto Scaling group, suspend the `Terminate` process. We only recommend using this option if the above options do not offer you the control you need for your service.",
+     "table_header": null,
+     "context": " For more information, see [Control instance retention with instance lifecycle policies](instance-lifecycle-policy.md). \n\n## Suspend terminations altogether\n<a name=\"gracefully-handle-instance-termination-suspend-terminate\"></a>\n\n If you require complete control over all EC2 instance terminations within your Amazon EC2 Auto Scaling group, suspend the `Terminate` process. We only recommend using this option if the above options do not offer you the control you need for your service. By calling [ SuspendProcesses ](https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_SuspendProcesses.html) to suspend the `Terminate` process, you prevent Auto Scaling from attempting terminations for any reason, except those initiated by a user request to the [ TerminateInstanceInAutoScalingGroup ](https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_TerminateInstanceInAutoScalingGroup.html) API. \n\n For more information, see [Suspend and resume Amazon EC2 Auto Scaling processes](as-suspend-resume-processes.md). \n\n## Limitations\n<a name=\"gracefully-handle-instance-termination-limitations\"></a>",
+     "headings": [
+      "Design your applications to gracefully handle instance termination",
+      "Suspend terminations altogether"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-synchronous-provisioning-launchinstances",
+   "rev": 2,
+   "kind": "change",
+   "claim": "Since November 18, 2025, the LaunchInstances API lets you request a specific number of instances in one Availability Zone synchronously and get immediate feedback on capacity, instead of waiting for asynchronous scaling.",
+   "values": [
+    {
+     "key": "api",
+     "display": "LaunchInstances API"
+    },
+    {
+     "key": "date",
+     "display": "November 18, 2025"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per LaunchInstances API call",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-instances-synchronously.html",
+     "title": "Launch instances synchronously",
+     "quote": "With synchronous provisioning, you use the LaunchInstances API to request a specific number of instances in a particular Availability Zone.",
+     "table_header": null,
+     "context": "# Launch instances synchronously\n<a name=\"launch-instances-synchronously\"></a>\n\nAmazon EC2 Auto Scaling provides two methods for launching instances in your Auto Scaling group: asynchronous scaling behavior and synchronous provisioning using the LaunchInstances API.\n\nWith synchronous provisioning, you use the LaunchInstances API to request a specific number of instances in a particular Availability Zone. Synchronous provisioning provides the following benefits:\n+ Immediate feedback on capacity availability in specific Availability Zones\n+ Precise control over which Availability Zone instances launch in\n+ Deterministic instance IDs for immediate use in orchestration systems\n+ Real-time scaling decisions based on actual capacity constraints\n+ Faster scaling by eliminating wait times for asynchronous Auto Scaling launches",
+     "headings": [
+      "Launch instances synchronously"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-instances-synchronously.html",
+     "title": "Launch instances synchronously",
+     "quote": "With asynchronous Auto Scaling, when you change the desired capacity or when a scaling policy triggers, Amazon EC2 Auto Scaling processes the scaling request and launches instances in the background.",
+     "table_header": null,
+     "context": "+ Precise control over which Availability Zone instances launch in\n+ Deterministic instance IDs for immediate use in orchestration systems\n+ Real-time scaling decisions based on actual capacity constraints\n+ Faster scaling by eliminating wait times for asynchronous Auto Scaling launches\n\nWith asynchronous Auto Scaling, when you change the desired capacity or when a scaling policy triggers, Amazon EC2 Auto Scaling processes the scaling request and launches instances in the background. You must monitor scaling activities or describe your Auto Scaling group to determine when instances are successfully launched.\n\n**Note**  \nThe LaunchInstances API only works with Auto Scaling groups that use launch templates. Auto Scaling groups that use launch configurations are not supported. If your Auto Scaling group uses a launch configuration, you must migrate to a launch template before using synchronous provisioning.\nThe LaunchInstances API supports mixed instances policies with fully On-Demand or fully Spot purchasing options only. Mixed policies combining both On-Demand and Spot Instances are not supported.\nFor Auto Scaling groups covering multiple Availability Zones, you must specify the target Availability Zone or subnet. For single-AZ groups, this parameter is optional.",
+     "headings": [
+      "Launch instances synchronously"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/DocumentHistory.html",
+     "title": "Document history",
+     "quote": "| [Synchronous provisioning](#DocumentHistory) | You can now use the LaunchInstances API to synchronously launch instances with immediate feedback and have precise control over which Availability Zone instances launch in. For more information, see [Synchronous provisioning](https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-instances-synchronously). | November 18, 2025 |",
+     "table_header": "| Change | Description | Date |",
+     "context": "| [Instance lifecycle policies](#DocumentHistory) | Instance lifecycle policies give you control over what happens when termination lifecycle hooks don't complete successfully. For more information, see [ Replace root volumes during instance refresh](https://docs.aws.amazon.com/autoscaling/ec2/userguide/instance-lifecycle-policy). | November 20, 2025 | \n| [Synchronous provisioning](#DocumentHistory) | You can now use the LaunchInstances API to synchronously launch instances with immediate feedback and have precise control over which Availability Zone instances launch in. For more information, see [Synchronous provisioning](https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-instances-synchronously). | November 18, 2025 | \n| [Lambda notification target for lifecycle hooks](#DocumentHistory) | You can now route lifecycle hook notifications directly to AWS Lambda functions. For more information, see [ Route notifications to AWS Lambda directly](https://docs.aws.amazon.com/autoscaling/ec2/userguide/prepare-for-lifecycle-notifications.html#lambda-notification). | July 28, 2025 | ",
+     "headings": [
+      "Document history"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-alb-resource-label",
+   "rev": 2,
+   "kind": "restriction",
+   "claim": "To use the ALBRequestCountPerTarget metric you must specify the ResourceLabel parameter, which identifies the load balancer target group of the metric.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "ResourceLabel"
+    },
+    {
+     "key": "v1",
+     "display": "identify the load balancer target group"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html",
+     "title": "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "To use the `ALBRequestCountPerTarget` metric, you must specify the `ResourceLabel` parameter to identify the load balancer target group that is associated with the metric.",
+     "table_header": null,
+     "context": "  + The CloudWatch Amazon SQS queue metric `ApproximateNumberOfMessagesVisible`. The number of messages in a queue might not change proportionally to the size of the Auto Scaling group that processes messages from the queue. However, a custom metric that measures the number of messages in the queue per EC2 instance in the Auto Scaling group can work. For more information, see [Scaling policy based on Amazon SQS](as-using-sqs-queue.md).\n+ To use the `ALBRequestCountPerTarget` metric, you must specify the `ResourceLabel` parameter to identify the load balancer target group that is associated with the metric. For an example that specifies the `ResourceLabel` parameter for a target tracking scaling policy using the AWS CLI, see [Example scaling policies for the AWS CLI](examples-scaling-policies.md).\n+ When a metric emits real 0 values to CloudWatch (for example, `ALBRequestCountPerTarget`), an Auto Scaling group can scale in to 0 when there is no traffic to your application for a sustained period of time. To have your Auto Scaling group scale in to 0 when no requests are routed it, the group's minimum capacity must be set to 0.",
+     "headings": [
+      "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+      "Choose metrics"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-conservative-rounding",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Target tracking rounds conservatively when it decides how many instances to add or remove, so the metric can sit some distance from the target value, most visibly in small groups.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "rounding up or down"
+    },
+    {
+     "key": "v1",
+     "display": "act conservatively"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html",
+     "title": "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "You might see gaps between the target value and the actual metric data points. This is because we act conservatively by rounding up or down when determining how many instances to add or remove. This prevents us from adding an insufficient number of instances or removing too many instances.",
+     "table_header": null,
+     "context": "+ If the metric is sparsely reported by design, metric math can be helpful. For example, to use the most recent values, then use the `FILL(m1,REPEAT)` function where `m1` is the metric.\n+ You might see gaps between the target value and the actual metric data points. This is because we act conservatively by rounding up or down when determining how many instances to add or remove. This prevents us from adding an insufficient number of instances or removing too many instances. However, for smaller Auto Scaling groups with fewer instances, the utilization of the group might seem far from the target value.\n",
+     "headings": [
+      "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-creates-two-alarms",
+   "rev": 1,
+   "kind": "behavior",
+   "claim": "Creating a target tracking scaling policy creates two CloudWatch alarms: one for scaling out and one for scaling in.",
+   "values": [
+    {
+     "key": "alarms",
+     "display": "two alarms",
+     "spoken": "two alarms"
+    },
+    {
+     "key": "split",
+     "display": "one for scaling in"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/scale-sqs-queue-cli.html",
+     "title": "Configure scaling based on Amazon SQS",
+     "quote": "This creates two alarms: one for scaling out and one for scaling in.",
+     "table_header": null,
+     "context": "   aws autoscaling put-scaling-policy --policy-name {{sqs100-target-tracking-scaling-policy}} \\\n     --auto-scaling-group-name {{my-asg}} --policy-type TargetTrackingScaling \\\n     --target-tracking-configuration {{file://~/config.json}}\n   ```\n\n   This creates two alarms: one for scaling out and one for scaling in. It also returns the Amazon Resource Name (ARN) of the policy that is registered with CloudWatch, which CloudWatch uses to invoke scaling whenever the metric threshold is in breach. \n\n## Step 3: Test your scaling policy\n<a name=\"validate-sqs-scaling-cli\"></a>\n\nAfter your setup is complete, verify that your scaling policy is working. You can test it by increasing the number of messages in your SQS queue and then verifying that your Auto Scaling group has launched an additional EC2 instance. You can also test it by decreasing the number of messages in your SQS queue and then verifying that the Auto Scaling group has terminated an EC2 instance.",
+     "headings": [
+      "Configure scaling based on Amazon SQS",
+      "Step 2: Create a target tracking scaling policy"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-disable-scale-in",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "You can temporarily disable the scale-in portion of a target tracking policy, for example to keep a minimum number of instances during deployments.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "disable the scale-in portion"
+    },
+    {
+     "key": "v1",
+     "display": "successful deployments"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html",
+     "title": "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "You can temporarily disable the scale-in portion of a target tracking policy. This helps maintain a minimum number of instances for successful deployments.",
+     "table_header": null,
+     "context": "The following considerations apply when working with target tracking scaling policies:\n+ Do not create, edit, or delete the CloudWatch alarms that are used with a target tracking scaling policy. Amazon EC2 Auto Scaling creates and manages the CloudWatch alarms that are associated with your target tracking scaling policies and can edit, replace, or delete them when necessary to customize the scaling experience for your applications and their changing utilization patterns. \n+ A target tracking scaling policy prioritizes availability during periods of fluctuating traffic levels by scaling in more gradually when traffic is decreasing. If you want greater control, a step scaling policy might be the better option. You can temporarily disable the scale-in portion of a target tracking policy. This helps maintain a minimum number of instances for successful deployments. \n+ If the metric is missing data points, this causes the CloudWatch alarm state to change to `INSUFFICIENT_DATA`. When this happens, Amazon EC2 Auto Scaling cannot scale your group until new data points are found.\n+ If the metric is sparsely reported by design, metric math can be helpful. For example, to use the most recent values, then use the `FILL(m1,REPEAT)` function where `m1` is the metric.",
+     "headings": [
+      "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-do-not-edit-alarms",
+   "rev": 2,
+   "kind": "restriction",
+   "claim": "You should not create, edit or delete the CloudWatch alarms of a target tracking policy; EC2 Auto Scaling manages them and can edit, replace or delete them.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "Do not create, edit, or delete"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html",
+     "title": "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "Do not create, edit, or delete the CloudWatch alarms that are used with a target tracking scaling policy. Amazon EC2 Auto Scaling creates and manages the CloudWatch alarms that are associated with your target tracking scaling policies and can edit, replace, or delete them when necessary to customize the scaling experience for your applications and their changing utilization patterns.",
+     "table_header": null,
+     "context": "<a name=\"target-tracking-considerations\"></a>\n\nThe following considerations apply when working with target tracking scaling policies:\n+ Do not create, edit, or delete the CloudWatch alarms that are used with a target tracking scaling policy. Amazon EC2 Auto Scaling creates and manages the CloudWatch alarms that are associated with your target tracking scaling policies and can edit, replace, or delete them when necessary to customize the scaling experience for your applications and their changing utilization patterns. \n+ A target tracking scaling policy prioritizes availability during periods of fluctuating traffic levels by scaling in more gradually when traffic is decreasing. If you want greater control, a step scaling policy might be the better option. You can temporarily disable the scale-in portion of a target tracking policy. This helps maintain a minimum number of instances for successful deployments. \n+ If the metric is missing data points, this causes the CloudWatch alarm state to change to `INSUFFICIENT_DATA`. When this happens, Amazon EC2 Auto Scaling cannot scale your group until new data points are found.\n+ If the metric is sparsely reported by design, metric math can be helpful. For example, to use the most recent values, then use the `FILL(m1,REPEAT)` function where `m1` is the metric.",
+     "headings": [
+      "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-insufficient-data-no-scaling",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "When the target tracking metric is missing data points, the alarm goes to INSUFFICIENT_DATA and EC2 Auto Scaling cannot scale the group until new data points arrive.",
+   "values": [
+    {
+     "key": "v0",
+     "display": "cannot scale your group until new data points"
+    },
+    {
+     "key": "v1",
+     "display": "INSUFFICIENT_DATA"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html",
+     "title": "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+     "quote": "If the metric is missing data points, this causes the CloudWatch alarm state to change to `INSUFFICIENT_DATA`. When this happens, Amazon EC2 Auto Scaling cannot scale your group until new data points are found.",
+     "table_header": null,
+     "context": "+ A target tracking scaling policy prioritizes availability during periods of fluctuating traffic levels by scaling in more gradually when traffic is decreasing. If you want greater control, a step scaling policy might be the better option. You can temporarily disable the scale-in portion of a target tracking policy. This helps maintain a minimum number of instances for successful deployments. \n+ If the metric is missing data points, this causes the CloudWatch alarm state to change to `INSUFFICIENT_DATA`. When this happens, Amazon EC2 Auto Scaling cannot scale your group until new data points are found.\n+ If the metric is sparsely reported by design, metric math can be helpful. For example, to use the most recent values, then use the `FILL(m1,REPEAT)` function where `m1` is the metric.",
+     "headings": [
+      "Target tracking scaling policies for Amazon EC2 Auto Scaling",
+      "Considerations"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-metric-math-current",
+   "rev": 2,
+   "kind": "capability",
+   "claim": "A target tracking policy can track one CloudWatch metric or a metric math expression over several metrics that produces one time series.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "create new single time series"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/policy-creating-high-resolution-metrics.html",
+     "title": "Create a target tracking policy using high-resolution metrics for faster response",
+     "quote": "You can configure target tracking on a single CloudWatch metric or query multiple CloudWatch metrics and use math expressions to create new single time series based on these metrics.",
+     "table_header": null,
+     "context": "You create target tracking policies by defining the metric that you want to track and the target value that you want to maintain for the metric. To scale on a high-resolution metric, specify the name of the metric and set the metric period at which the target tracking observes this metric to a value lower than 60 seconds. Currently the lowest supported interval is 10 seconds. You can publish your metric at lower intervals than this.\n\n**Note**  \nA metric period greater than 60 isn't supported.\n\nYou can configure target tracking on a single CloudWatch metric or query multiple CloudWatch metrics and use math expressions to create new single time series based on these metrics. Both options allow you to define the metric period.\n\n## Examples\n<a name=\"high-resolution-metrics-examples\"></a>\n\n**Example 1**  ",
+     "headings": [
+      "Create a target tracking policy using high-resolution metrics for faster response",
+      "How target tracking policy with high-resolution metrics works"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ec2-auto-scaling-target-tracking-metric-must-fall-as-capacity-grows",
+   "rev": 2,
+   "kind": "behavior",
+   "claim": "Target tracking assumes the metric is inversely proportional to group capacity (when capacity grows the metric should fall by about the same proportion), so a total such as pending jobs must be converted to a per-instance average with metric math.",
+   "values": [
+    {
+     "key": "rule",
+     "display": "inversely proportional to the capacity"
+    },
+    {
+     "key": "use",
+     "display": "convert existing metrics into average per-instance"
+    }
+   ],
+   "qualifiers": {
+    "scope": "per target tracking scaling policy",
+    "default_or_max": "",
+    "adjustable": false,
+    "condition": ""
+   },
+   "derivation": null,
+   "evidence": [
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/policy-creating-high-resolution-metrics.html",
+     "title": "Create a target tracking policy using high-resolution metrics for faster response",
+     "quote": "Converting metrics is essential because target tracking assumes that the metric is inversely proportional to the capacity of the Auto Scaling group.",
+     "table_header": null,
+     "context": "  }\n}\n```\n\n**Example 2**  \nYou can use metric math expressions to combine multiple metrics into a single time series for scaling. Metric math is particularly useful to convert existing metrics into average per-instance. Converting metrics is essential because target tracking assumes that the metric is inversely proportional to the capacity of the Auto Scaling group. So when capacity increases, the metric should decrease by nearly the same proportion.\n\nFor example, suppose you have a metric that represents the pending jobs to be processed by your application. You can use metric math to divide the pending jobs by the running capacity of your Auto Scaling group. Auto Scaling publishes the capacity metric at 1-minute granularity, so there won't be any value for this metric for sub-minute intervals. If you want to use higher resolution for scaling, this can lead to a period mismatch between capacity and pending job metric. To avoid this mismatch, we recommend that you use the FILL expression to fill the missing values with the capacity number recorded in the previous minute timestamp. \n\nThe following example uses metric math to divide the pending jobs metric by the capacity. For period, we are setting both metrics at 10 seconds. Because the metric is published at 1-minute intervals, we are using the FILL operation on the capacity metric.\n",
+     "headings": [
+      "Create a target tracking policy using high-resolution metrics for faster response",
+      "Examples"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/policy-creating-high-resolution-metrics.html",
+     "title": "Create a target tracking policy using high-resolution metrics for faster response",
+     "quote": "So when capacity increases, the metric should decrease by nearly the same proportion.",
+     "table_header": null,
+     "context": "  }\n}\n```\n\n**Example 2**  \nYou can use metric math expressions to combine multiple metrics into a single time series for scaling. Metric math is particularly useful to convert existing metrics into average per-instance. Converting metrics is essential because target tracking assumes that the metric is inversely proportional to the capacity of the Auto Scaling group. So when capacity increases, the metric should decrease by nearly the same proportion.\n\nFor example, suppose you have a metric that represents the pending jobs to be processed by your application. You can use metric math to divide the pending jobs by the running capacity of your Auto Scaling group. Auto Scaling publishes the capacity metric at 1-minute granularity, so there won't be any value for this metric for sub-minute intervals. If you want to use higher resolution for scaling, this can lead to a period mismatch between capacity and pending job metric. To avoid this mismatch, we recommend that you use the FILL expression to fill the missing values with the capacity number recorded in the previous minute timestamp. \n\nThe following example uses metric math to divide the pending jobs metric by the capacity. For period, we are setting both metrics at 10 seconds. Because the metric is published at 1-minute intervals, we are using the FILL operation on the capacity metric.\n",
+     "headings": [
+      "Create a target tracking policy using high-resolution metrics for faster response",
+      "Examples"
+     ]
+    },
+    {
+     "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/policy-creating-high-resolution-metrics.html",
+     "title": "Create a target tracking policy using high-resolution metrics for faster response",
+     "quote": "Metric math is particularly useful to convert existing metrics into average per-instance.",
+     "table_header": null,
+     "context": "  }\n}\n```\n\n**Example 2**  \nYou can use metric math expressions to combine multiple metrics into a single time series for scaling. Metric math is particularly useful to convert existing metrics into average per-instance. Converting metrics is essential because target tracking assumes that the metric is inversely proportional to the capacity of the Auto Scaling group. So when capacity increases, the metric should decrease by nearly the same proportion.\n\nFor example, suppose you have a metric that represents the pending jobs to be processed by your application. You can use metric math to divide the pending jobs by the running capacity of your Auto Scaling group. Auto Scaling publishes the capacity metric at 1-minute granularity, so there won't be any value for this metric for sub-minute intervals. If you want to use higher resolution for scaling, this can lead to a period mismatch between capacity and pending job metric. To avoid this mismatch, we recommend that you use the FILL expression to fill the missing values with the capacity number recorded in the previous minute timestamp. \n\nThe following example uses metric math to divide the pending jobs metric by the capacity. For period, we are setting both metrics at 10 seconds. Because the metric is published at 1-minute intervals, we are using the FILL operation on the capacity metric.\n",
+     "headings": [
+      "Create a target tracking policy using high-resolution metrics for faster response",
+      "Examples"
+     ]
+    }
+   ]
+  }
+ ]
+}

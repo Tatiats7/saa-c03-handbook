@@ -1,0 +1,148 @@
+[
+ {
+  "id": "elb-q015",
+  "section": "2-deep.md#listener-rules-are-checked-in-priority-order-and-the-default-rule-comes-last",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K9"],
+  "topics": ["networking", "security"],
+  "services": ["elb"],
+  "concept": "http-to-https-redirect",
+  "difficulty": 1,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company serves a website through an Application Load Balancer that has an HTTPS listener on port 443 with an AWS Certificate Manager (ACM) certificate. The load balancer has no other listener. Users who enter the website address with HTTP in the browser receive an error. The company wants these users to reach the HTTPS site, so that all requests are encrypted in transit. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["The load balancer has no other listener", "receive an error", "reach the HTTPS site", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add an HTTP listener on port 80 that forwards requests to the instances, and change the application code to return a redirect to HTTPS.",
+    "correct": false,
+    "why": "It works, but the team writes, tests and deploys code for a redirect that the load balancer can return by itself.",
+    "concept": "redirect-in-code",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Add an HTTP listener on port 80 whose default action returns a fixed response that asks users to enter the HTTPS address in the browser.",
+    "correct": false,
+    "why": "A fixed-response action [returns a custom HTTP response](../facts/elb.md#elb-alb-fixed-response-action) and drops the request, so users still have to retype the address.",
+    "concept": "fixed-response-message",
+    "trap": null,
+    "misconception": "believes that a fixed response can move the user to HTTPS",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Add an HTTP listener on port 80 whose default action redirects every request to HTTPS on port 443 with a permanent HTTP 301 response.",
+    "correct": true,
+    "why": "A redirect action can send [HTTP to HTTPS](../facts/elb.md#elb-alb-redirect-http-to-https) as a [permanent (HTTP 301)](../facts/elb.md#elb-alb-redirect-http-to-https) redirect, so the browser repeats the request over TLS.",
+    "concept": "redirect-action",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create a second Application Load Balancer with an HTTP listener on port 80, and point a second DNS name for the website at that load balancer.",
+    "correct": false,
+    "why": "One load balancer can listen on [HTTP port 80](../facts/elb.md#elb-alb-faq-http-and-https-one-alb) and [HTTPS port 443](../facts/elb.md#elb-alb-faq-http-and-https-one-alb), and users would not type a second name anyway.",
+    "concept": "second-lb-for-http",
+    "trap": null,
+    "misconception": "believes that one load balancer cannot serve both HTTP and HTTPS",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "One Application Load Balancer can have listeners on [HTTP port 80](../facts/elb.md#elb-alb-faq-http-and-https-one-alb) and [HTTPS port 443](../facts/elb.md#elb-alb-faq-http-and-https-one-alb). A redirect action on the new port 80 listener sends [HTTP to HTTPS](../facts/elb.md#elb-alb-redirect-http-to-https), so the browser repeats the request over TLS. The load balancer does the work, and the application code stays unchanged.",
+  "takeaway": "An HTTP listener with a redirect action moves users to HTTPS without code changes.",
+  "twin": "If the stem said \"users of the HTTPS site must be sent to an old HTTP site\" instead: no redirect action fits, because [You cannot redirect HTTPS to HTTP](../facts/elb.md#elb-alb-redirect-http-to-https).",
+  "say": "Add a port 80 listener whose default action redirects to HTTPS; the load balancer does it, not the code.",
+  "facts": [
+   "elb-alb-faq-http-and-https-one-alb",
+   "elb-alb-redirect-http-to-https",
+   "elb-alb-fixed-response-action"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-in-transit"],
+  "twin_of": null
+ },
+ {
+  "id": "elb-q019",
+  "section": "2-deep.md#cross-zone-load-balancing-spreads-requests-over-the-targets-in-every-enabled-zone",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.S4"],
+  "topics": ["resilience", "networking"],
+  "services": ["elb"],
+  "concept": "zonal-shift",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs a web application on Amazon EC2 instances in three Availability Zones behind an Application Load Balancer. Cross-zone load balancing is turned off for the target group, and zonal shift is turned on for the load balancer. During an incident, responses from the instances in one Availability Zone become slow, but those instances still pass their health checks. The company must move traffic away from that Availability Zone as soon as possible. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["still pass their health checks", "move traffic away from that Availability Zone", "as soon as possible", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Start a zonal shift in Amazon Application Recovery Controller (ARC) for the load balancer, away from the Availability Zone with the slow instances.",
+    "correct": true,
+    "why": "Zonal shift moves the load balancer's traffic [away from an impaired Availability Zone](../facts/elb.md#elb-zonal-shift-what) to the healthy zones, and it takes one action.",
+    "concept": "start-zonal-shift",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Wait for the target group health checks to mark the slow instances as unhealthy, so that the load balancer stops routing requests to them.",
+    "correct": false,
+    "why": "The instances pass their checks, and the load balancer [routes traffic only to the healthy targets](../facts/elb.md#elb-routes-only-to-healthy-targets), so it keeps sending them requests.",
+    "concept": "wait-for-health-checks",
+    "trap": null,
+    "misconception": "believes that slow targets fail their health checks",
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "c",
+    "text": "Deregister the instances in that Availability Zone from the target group one at a time, and register them again after the incident ends.",
+    "correct": false,
+    "why": "It works, but every target is a manual step, and by default the load balancer [waits 300 seconds](../facts/elb.md#elb-alb-deregistration-waits-for-in-flight) before it completes each deregistration.",
+    "concept": "manual-deregistration",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create a new Application Load Balancer in the two healthy Availability Zones, register their instances, and point the DNS record of the website at it.",
+    "correct": false,
+    "why": "It works in the end, but a new load balancer, its listeners and a DNS change take longer than one action on the current load balancer.",
+    "concept": "new-lb-and-dns",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Zonal shift, a capability of [Amazon Application Recovery Controller (ARC)](../facts/elb.md#elb-zonal-shift-what), moves traffic [away from an impaired Availability Zone](../facts/elb.md#elb-zonal-shift-what) [with a single action](../facts/elb.md#elb-zonal-shift-what). For a load balancer with cross-zone load balancing turned off, AWS Well-Architected names ARC [to provide zonal shift capability](../facts/elb.md#elb-wa-rel10-cross-zone-off-use-zonal-shift). The two other zones keep serving. Health checks do not help, because the slow instances still pass them.",
+  "takeaway": "To drain one impaired Availability Zone fast, start a zonal shift on the load balancer.",
+  "twin": "If the stem said \"AWS should move the traffic when its own monitoring finds an impaired zone\" instead: zonal autoshift, because then [you authorize AWS to shift away resource traffic](../facts/elb.md#elb-zonal-autoshift-aws-shifts).",
+  "say": "Start a zonal shift on the load balancer; one action moves traffic out of the bad zone, even though health checks still pass.",
+  "facts": [
+   "elb-zonal-shift-what",
+   "elb-wa-rel10-cross-zone-off-use-zonal-shift",
+   "elb-routes-only-to-healthy-targets",
+   "elb-alb-deregistration-waits-for-in-flight",
+   "elb-zonal-autoshift-aws-shifts"
+  ],
+  "sources": [],
+  "exam_english": ["ee-as-soon-as-possible", "ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ }
+]

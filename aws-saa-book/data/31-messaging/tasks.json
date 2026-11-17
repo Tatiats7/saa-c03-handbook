@@ -1,0 +1,444 @@
+{
+ "v": 1,
+ "chapter": "messaging",
+ "items": [
+  {
+   "id": "messaging-t01",
+   "type": "look",
+   "title": "List your queues topics and event buses",
+   "kills": "\"An account has no event bus until you create one.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 3,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "sqs:ListQueues",
+    "sns:ListTopics",
+    "events:ListEventBuses"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. List the Amazon SQS queues of the current Region.",
+     "command": "aws sqs list-queues",
+     "expect": "The URLs of your queues under QueueUrls, or no output when this Region has no queue.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the Amazon SNS topics of the same Region.",
+     "command": "aws sns list-topics --query \"Topics[].TopicArn\"",
+     "expect": "A list of topic ARNs, or an empty list.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Predict first: you never created an event bus, so how many buses does the list hold? Then list the Amazon EventBridge event buses of the same Region.",
+     "command": "aws events list-event-buses --query \"EventBuses[].Name\"",
+     "expect": "A list that holds at least one bus, named default, although you never created it. AWS services send their events to this bus.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "eventbridge-default-bus-receives-aws-service-events",
+    "eventbridge-aws-service-events-go-to-default-bus"
+   ],
+   "sources": [
+    {
+     "title": "Event bus concepts in Amazon EventBridge",
+     "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is-how-it-works-concepts.html"
+    },
+    {
+     "title": "list-event-buses, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/events/list-event-buses.html"
+    },
+    {
+     "title": "list-queues, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/list-queues.html"
+    },
+    {
+     "title": "list-topics, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sns/list-topics.html"
+    },
+    {
+     "title": "Amazon SQS examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_sqs_code_examples.html"
+    },
+    {
+     "title": "Amazon SNS examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_sns_code_examples.html"
+    }
+   ],
+   "chapter": "messaging",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-15"
+  },
+  {
+   "id": "messaging-t02",
+   "type": "try",
+   "title": "Watch an unprocessed message come back",
+   "kills": "\"Receiving a message removes it from the queue.\"",
+   "trap": "messaging-trap-receive-deletes",
+   "section": "2-deep.md#a-received-message-stays-hidden-until-it-is-deleted-or-the-timeout-ends",
+   "pass_route": true,
+   "minutes": 10,
+   "cost": "$0 inside the Amazon SQS free tier: all customers can make 1 million Amazon SQS requests for free each month, and this task makes about 10 requests.",
+   "cost_if_forgotten": "$0 a day: Amazon SQS has no minimum fee and charges for API requests and data transferred. A queue that nobody uses makes no requests.",
+   "cost_facts": [
+    "sqs-pricing-free-tier-1-million-requests",
+    "sqs-pricing-no-minimum-fee",
+    "sqs-decision-pricing-dimensions-requests-and-data"
+   ],
+   "permissions": [
+    "sqs:CreateQueue",
+    "sqs:TagQueue",
+    "sqs:SendMessage",
+    "sqs:ReceiveMessage",
+    "sqs:DeleteMessage",
+    "sqs:DeleteQueue",
+    "sqs:GetQueueUrl",
+    "sqs:ListQueues",
+    "sqs:GetQueueAttributes"
+   ],
+   "read_only_alternative": "In an account where you cannot create a queue, find a queue URL with aws sqs list-queues and read two attributes of that queue: aws sqs get-queue-attributes --queue-url <QUEUE_URL> --attribute-names VisibilityTimeout ApproximateNumberOfMessagesNotVisible. The first is the visibility timeout in seconds. The second is the approximate number of messages that consumers received and did not delete yet. The command changes nothing. Do not receive messages from a queue that other people use: your receive hides those messages from their consumers.",
+   "steps": [
+    {
+     "text": "Create a standard queue with a short visibility timeout of 10 seconds, so that the test is quick.",
+     "command": "aws sqs create-queue --queue-name saa-messaging-t02 --attributes VisibilityTimeout=10 --tags book=saa,task=messaging-t02",
+     "capture": {
+      "name": "QUEUE_URL",
+      "query": "QueueUrl"
+     },
+     "expect": "No output: the shell keeps the queue URL in QUEUE_URL.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Send one message, job-1, to the queue.",
+     "command": "aws sqs send-message --queue-url $QUEUE_URL --message-body job-1",
+     "expect": "A MessageId and an MD5 digest of the message body.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Receive the message as a consumer that crashes before it finishes the job: read the body and do not delete the message.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 5 --query \"Messages[].Body\"",
+     "expect": "A list with job-1.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Receive again, and ask for the receive count of the message. The command waits for a message for as long as 20 seconds.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20 --message-system-attribute-names ApproximateReceiveCount --query \"Messages[].[Body,Attributes.ApproximateReceiveCount]\"",
+     "expect": "job-1 again, with the receive count 2. The command can wait several seconds before it prints the message.",
+     "break_it": true,
+     "predict": "The consumer received job-1 and never deleted it. Will a second receive get job-1 again, or is the queue empty now?",
+     "explain": "When you receive a message, [it remains in the queue](../facts/sqs.md#sqs-receive-keeps-message-hidden) and is [temporarily invisible to other consumers](../facts/sqs.md#sqs-receive-keeps-message-hidden). The consumer did not delete job-1, so after the visibility timeout of the queue the message [becomes visible again in the queue](../facts/sqs.md#sqs-undeleted-message-visible-again). The receive count shows that this is the second delivery of the same message."
+    },
+    {
+     "text": "Fix it: receive job-1 once more, as a consumer that finishes the job, and keep the receipt handle of this receive. It can take about 10 seconds.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20",
+     "capture": {
+      "name": "RECEIPT",
+      "query": "Messages[0].ReceiptHandle"
+     },
+     "expect": "No output: the shell keeps the receipt handle in RECEIPT.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Delete the message with that receipt handle. A consumer deletes a message after it finishes the job.",
+     "command": "aws sqs delete-message --queue-url $QUEUE_URL --receipt-handle $RECEIPT",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Receive one last time. The command waits for a message for 20 seconds.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20 --query \"Messages[].Body\"",
+     "expect": "After 20 seconds: no message. The deleted job does not come back.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the queue. If your CloudShell session ended, QUEUE_URL is empty: use the URL that aws sqs get-queue-url --queue-name saa-messaging-t02 prints.",
+     "command": "aws sqs delete-queue --queue-url $QUEUE_URL"
+    }
+   ],
+   "verify": {
+    "command": "aws sqs get-queue-url --queue-name saa-messaging-t02",
+    "expect": "An error that says the queue does not exist (AWS.SimpleQueueService.NonExistentQueue). The delete can take a short time: if the command still prints the URL, wait one minute and run it again."
+   },
+   "still_costs": [
+    "The queue saa-messaging-t02, if you skip the cleanup. It makes no requests while nobody uses it, but delete it so that no test queue stays in the account."
+   ],
+   "facts": [
+    "sqs-receive-keeps-message-hidden",
+    "sqs-undeleted-message-visible-again",
+    "sqs-manual-delete-after-processing",
+    "sqs-faq-receipt-handle-required-to-delete",
+    "sqs-long-polling-max-wait",
+    "sqs-visibility-timeout-range",
+    "sqs-pricing-free-tier-1-million-requests",
+    "sqs-pricing-no-minimum-fee",
+    "sqs-decision-pricing-dimensions-requests-and-data"
+   ],
+   "sources": [
+    {
+     "title": "Amazon SQS visibility timeout",
+     "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html"
+    },
+    {
+     "title": "Amazon SQS short and long polling",
+     "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html"
+    },
+    {
+     "title": "Creating an Amazon SQS standard queue and sending a message",
+     "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/creating-sqs-standard-queues.html"
+    },
+    {
+     "title": "Amazon SQS examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_sqs_code_examples.html"
+    },
+    {
+     "title": "create-queue, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/create-queue.html"
+    },
+    {
+     "title": "send-message, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/send-message.html"
+    },
+    {
+     "title": "receive-message, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/receive-message.html"
+    },
+    {
+     "title": "delete-message, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/delete-message.html"
+    },
+    {
+     "title": "delete-queue, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/delete-queue.html"
+    },
+    {
+     "title": "get-queue-url, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/get-queue-url.html"
+    }
+   ],
+   "chapter": "messaging",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-15"
+  },
+  {
+   "id": "messaging-t03",
+   "type": "try",
+   "title": "Send a message from a topic to a queue",
+   "kills": "\"Subscribing a queue to a topic is enough for messages to arrive.\"",
+   "trap": "messaging-trap-subscribe-without-queue-policy",
+   "section": "2-deep.md#queues-subscribed-to-a-topic-give-each-consumer-its-own-durable-copy",
+   "pass_route": false,
+   "minutes": 15,
+   "cost": "$0 inside the free tiers: the first 1 million Amazon SNS requests and 1 million Amazon SQS requests each month have no charge, and this task makes fewer than 20 requests. Amazon SNS does not charge for per-message notification delivery to Amazon SQS; it does charge for the amount of data transferred, here a few kilobytes.",
+   "cost_if_forgotten": "$0 a day: Amazon SNS charges for API requests, notifications delivered and data transferred, and Amazon SQS has no minimum fee. A topic and a queue that nobody uses make no requests.",
+   "cost_facts": [
+    "sns-faq-free-tier-1-million-requests-100000-http-1000-email",
+    "sns-pricing-sqs-lambda-no-delivery-charge",
+    "sns-decision-pricing-dimensions-requests-notifications-data",
+    "sqs-pricing-free-tier-1-million-requests",
+    "sqs-pricing-no-minimum-fee"
+   ],
+   "permissions": [
+    "sns:CreateTopic",
+    "sns:TagResource",
+    "sns:Subscribe",
+    "sns:Publish",
+    "sns:Unsubscribe",
+    "sns:DeleteTopic",
+    "sns:ListTopics",
+    "sns:ListSubscriptions",
+    "sns:ListSubscriptionsByTopic",
+    "sqs:CreateQueue",
+    "sqs:TagQueue",
+    "sqs:GetQueueAttributes",
+    "sqs:SetQueueAttributes",
+    "sqs:ReceiveMessage",
+    "sqs:DeleteQueue",
+    "sqs:GetQueueUrl"
+   ],
+   "read_only_alternative": "In an account where you cannot create resources, read how an existing queue lets a topic in. First list the queues that are subscribed to topics: aws sns list-subscriptions --query \"Subscriptions[?Protocol=='sqs'].[TopicArn,Endpoint]\". Then read the access policy of one of those queues: aws sqs get-queue-attributes --queue-url <QUEUE_URL> --attribute-names Policy. Look for a statement that allows the principal sns.amazonaws.com the action sqs:SendMessage, with an aws:SourceArn condition that names the topic. Both commands change nothing.",
+   "steps": [
+    {
+     "text": "Create a standard topic.",
+     "command": "aws sns create-topic --name saa-messaging-t03 --tags Key=book,Value=saa Key=task,Value=messaging-t03",
+     "capture": {
+      "name": "TOPIC_ARN",
+      "query": "TopicArn"
+     },
+     "expect": "No output: the shell keeps the topic ARN in TOPIC_ARN.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a standard queue. Do not change its access policy.",
+     "command": "aws sqs create-queue --queue-name saa-messaging-t03 --tags book=saa,task=messaging-t03",
+     "capture": {
+      "name": "QUEUE_URL",
+      "query": "QueueUrl"
+     },
+     "expect": "No output: the shell keeps the queue URL in QUEUE_URL.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the ARN of the queue. The subscription and the queue policy name the queue by this ARN.",
+     "command": "aws sqs get-queue-attributes --queue-url $QUEUE_URL --attribute-names QueueArn",
+     "capture": {
+      "name": "QUEUE_ARN",
+      "query": "Attributes.QueueArn"
+     },
+     "expect": "No output: the shell keeps the queue ARN in QUEUE_ARN.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Subscribe the queue to the topic. The topic and the queue are in the same account, so the subscription needs no confirmation step.",
+     "command": "aws sns subscribe --topic-arn $TOPIC_ARN --protocol sqs --notification-endpoint $QUEUE_ARN --return-subscription-arn",
+     "capture": {
+      "name": "SUB_ARN",
+      "query": "SubscriptionArn"
+     },
+     "expect": "No output: the shell keeps the subscription ARN in SUB_ARN.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Publish a message, order-1, to the topic.",
+     "command": "aws sns publish --topic-arn $TOPIC_ARN --message order-1",
+     "expect": "A MessageId: the topic accepted the message.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Look for the message in the queue. The command waits for a message for as long as 20 seconds.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20 --query \"Messages[].Body\"",
+     "expect": "After 20 seconds: no message from the topic.",
+     "break_it": true,
+     "predict": "The queue is subscribed to the topic, and the topic accepted order-1. The queue still has the access policy it got at creation. Will order-1 reach the queue?",
+     "explain": "A new queue has a default policy that [allows only the queue owner](../facts/sqs.md#sqs-default-access-policy-owner-only) [to send and receive messages](../facts/sqs.md#sqs-default-access-policy-owner-only). Amazon SNS is not the queue owner. To deliver from a topic to a queue, you must [set a policy on the Amazon SQS queue](../facts/sns.md#sns-sqs-queue-needs-policy-allowing-topic) that allows messages [sent from the Amazon SNS topic](../facts/sns.md#sns-sqs-queue-needs-policy-allowing-topic). In the fix, the [aws:SourceArn condition](../facts/sns.md#sns-queue-policy-sourcearn-limits-to-one-topic) limits that permission to your one topic."
+    },
+    {
+     "text": "Fix it: add a queue policy that lets this one topic send messages to this queue. Wait one minute for the policy to take effect. Then run the publish command of step 5 again.",
+     "command": "aws sqs set-queue-attributes --queue-url $QUEUE_URL --attributes \"Policy='{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":{\\\"Service\\\":\\\"sns.amazonaws.com\\\"},\\\"Action\\\":\\\"sqs:SendMessage\\\",\\\"Resource\\\":\\\"$QUEUE_ARN\\\",\\\"Condition\\\":{\\\"ArnEquals\\\":{\\\"aws:SourceArn\\\":\\\"$TOPIC_ARN\\\"}}}]}'\"",
+     "expect": "No output from the policy command. The publish prints a new MessageId.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Look for the message in the queue again.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20 --query \"Messages[].Body\"",
+     "expect": "One message body: a JSON document. Its Message field is order-1. The other fields, such as Type, TopicArn and Timestamp, are metadata that Amazon SNS added. If the queue is still empty, wait one more minute, publish again and repeat this step.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Remove the subscription. If your CloudShell session ended, the variables are empty: aws sns list-topics and aws sns list-subscriptions-by-topic print the ARNs again.",
+     "command": "aws sns unsubscribe --subscription-arn $SUB_ARN"
+    },
+    {
+     "text": "Delete the queue and the message in it. Without QUEUE_URL, use the URL that aws sqs get-queue-url --queue-name saa-messaging-t03 prints.",
+     "command": "aws sqs delete-queue --queue-url $QUEUE_URL"
+    },
+    {
+     "text": "Delete the topic.",
+     "command": "aws sns delete-topic --topic-arn $TOPIC_ARN"
+    }
+   ],
+   "verify": {
+    "command": "aws sqs get-queue-url --queue-name saa-messaging-t03",
+    "expect": "An error that says the queue does not exist (AWS.SimpleQueueService.NonExistentQueue). If it still prints the URL, wait one minute and run it again. Then run aws sns list-topics and expect no ARN that ends in saa-messaging-t03."
+   },
+   "still_costs": [
+    "The topic saa-messaging-t03 and the queue saa-messaging-t03, if you skip the cleanup. They make no requests while nobody uses them, but delete them so that no test resources stay in the account."
+   ],
+   "facts": [
+    "sns-sqs-queue-needs-policy-allowing-topic",
+    "sns-queue-policy-sourcearn-limits-to-one-topic",
+    "sqs-default-access-policy-owner-only",
+    "sns-publish-sends-message-to-each-subscribed-queue",
+    "sns-faq-same-account-sqs-subscription-needs-no-opt-in",
+    "sns-sqs-envelope-contains-subject-message-metadata",
+    "sns-faq-free-tier-1-million-requests-100000-http-1000-email",
+    "sns-pricing-sqs-lambda-no-delivery-charge",
+    "sns-decision-pricing-dimensions-requests-notifications-data",
+    "sqs-pricing-free-tier-1-million-requests",
+    "sqs-pricing-no-minimum-fee"
+   ],
+   "sources": [
+    {
+     "title": "Subscribing an Amazon SQS queue to an Amazon SNS topic",
+     "url": "https://docs.aws.amazon.com/sns/latest/dg/subscribe-sqs-queue-to-sns-topic.html"
+    },
+    {
+     "title": "Example cases for Amazon SNS access control",
+     "url": "https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-use-cases.html"
+    },
+    {
+     "title": "Fanout Amazon SNS notifications to Amazon SQS queues for asynchronous processing",
+     "url": "https://docs.aws.amazon.com/sns/latest/dg/sns-sqs-as-subscriber.html"
+    },
+    {
+     "title": "Amazon SNS examples using AWS CLI",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_sns_code_examples.html"
+    },
+    {
+     "title": "create-topic, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sns/create-topic.html"
+    },
+    {
+     "title": "subscribe, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sns/subscribe.html"
+    },
+    {
+     "title": "publish, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sns/publish.html"
+    },
+    {
+     "title": "set-queue-attributes, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/set-queue-attributes.html"
+    },
+    {
+     "title": "get-queue-attributes, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/get-queue-attributes.html"
+    },
+    {
+     "title": "unsubscribe, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sns/unsubscribe.html"
+    },
+    {
+     "title": "delete-topic, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sns/delete-topic.html"
+    }
+   ],
+   "chapter": "messaging",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-15"
+  }
+ ]
+}

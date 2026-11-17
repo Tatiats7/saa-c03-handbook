@@ -1,0 +1,1405 @@
+{
+  "chapter": "09",
+  "version": 1,
+  "by": "brief-09",
+  "date": "2026-10-12",
+  "angle": "follow one finding: the evidence it comes from (activity, software, data, configuration), the service that reads that evidence and writes the finding, the one place where findings meet (Security Hub), the investigation of one finding (Detective), the automatic response (EventBridge), and the proof an auditor gets (Artifact for the AWS side, retained findings and Config history for the company's side). The decision map is the core; per-service facts live in the service cards of 2-services.md.",
+  "template": "medium (no chapter override). Hand files 1-fast.md (at most 1,000 words), 2-deep.md (1,800 to 2,400 words; How it works 1,300 to 1,800 in 7 subsections of 150 to 400 words), 2-services.md (7 service cards of 150 to 220 words, at most 1,600 words; needs the registry cards list, see notes_for_orchestrator 1). Generated: 3-do.md, 4-say.md, 5-quiz.md, sources.md.",
+  "notes_for_writers": [
+    "Read the exemplar first (_build/style/exemplar/README.md): subsection order problem, numbered trace with bold step names, compressing table, one Why, Exam signal, Go deeper, Say it, Stop and answer (CONVENTIONS-2 U1).",
+    "The chapter teaches decisions and flows. A per-service feature list goes into the service card (2-services.md) or a Go deeper block, never into a How-it-works trace.",
+    "Security Hub naming: AWS now has two services. AWS Security Hub CSPM is the original service (findings aggregation, best practice checks, standards; it needs AWS Config). AWS Security Hub (generally available 2025-12-02) is the unified service that correlates signals into exposure findings. Say 'Security Hub' where both are true (findings in one place), 'Security Hub CSPM' for standards, controls, security scores and the AWS Config requirement. Explain the rename once per file, as in the Changed recently entry. Older exam questions say 'Security Hub' for what is now CSPM.",
+    "No sentence may say that Detective does not create findings, that Macie does not delete or mask data, or that GuardDuty never blocks traffic: no saved page says so (brief.v0 d005, d059, d025). Write the positive statements instead: GuardDuty writes findings and sends them to EventBridge, where a Lambda function can act (guardduty-automated-remediation-eventbridge-lambda); Macie hands findings to EventBridge and Security Hub CSPM for remediation (macie-remediate-via-eventbridge-security-hub); Detective helps investigate findings and identify the root cause (detective-dg-root-cause).",
+    "No count of Inspector member accounts and no Inspector Code Security repository names (GitHub, GitLab): the facts were rejected or never found (brief.v0 d045, d046). No Security Hub CSPM per-check or per-finding price: the saved pricing page shows only the Essentials plan (d073). No dollar amount in prose: pricing is named by dimension only (per GB analyzed, per event, per resource).",
+    "The Amazon Inspector EC2 default scan mode: the guide contradicts itself once (inspector-ec2-hybrid-default). Write only that Inspector scans EC2 with the SSM Agent or without an agent from EBS snapshots (inspector-ec2-agent-or-agentless), never which mode is the default.",
+    "Neighbour chapters (registry numbers): CloudTrail and CloudWatch are chapter 37; Organizations and SCPs chapter 04; IAM chapter 03; KMS chapter 06; WAF, Firewall Manager, Network Firewall chapter 08; S3 Object Lock and Block Public Access chapter 21; EventBridge chapter 31; Systems Manager chapter 38. Cross-references to chapters not written yet are xref markers.",
+    "Story numbers allowed in this chapter (data/startup.json chapters.09.uses_numbers): 43 'no' answers on the questionnaire, 7 AWS accounts, 1,300 transcripts with card numbers. Stage 3, month 19; Chen exists. No other Callvale number, no dollar amount. Question stems say 'A company' and never name Callvale.",
+    "Callvale stores audio in callvale-audio (.wav) and text in callvale-transcripts. Macie does not analyze audio (macie-no-images-audio-video): the 1,300 transcripts are text objects. Never write that Macie found card numbers in recordings.",
+    "Avoid 'file' for an S3 object (terms.json avoid list); 'uploaded files' may appear only inside an AWS quote block.",
+    "Each How-it-works subsection carries exactly one Exam signal; subsection 1 may use an Exam heuristic only if no dg fact fits, but the dg facts do fit. Spot the bug: exactly 1, in subsection 6. Go deeper: exactly 3 (subsections 2, 3, 6). Try it callouts: subsection 2 (detection-t02) and, only if the tasks writer ships it, subsection 5 (detection-t03).",
+    "Displays: link texts are verbatim displays of the fact (fact-cards.md). A display that the sentence needs and the fact lacks is a needs-display request (at most 8 words without a digit), not a paraphrase."
+  ],
+  "budgets": {
+    "1-fast.md": "at most 1,000 words; 12 minutes (Predict 1, Look first 3, In one breath 2, Words 1, Choose 2, Signals 2, Changed 1; Check and Recap fit the rest by the minutes formula)",
+    "2-deep.md": "1,800 to 2,400 words: How it works about 1,600 (7 subsections, about 230 each before reveals), Numbers at most 180, Decision record at most 150, FAQ at most 250, In the real world at most 110",
+    "2-services.md": "7 cards of 150 to 220 words each, at most 1,600 words in all",
+    "callouts_2-deep": "counted callouts at most 8: Exam trap x4, Try it x1 or x2 (Changed recently, Say it, Exam signal are not counted)"
+  },
+  "sections": [
+    {
+      "file": "1-fast.md",
+      "section": "predict",
+      "heading": "Predict",
+      "role": "predict",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "prompts": [
+          "Predict 1 (gist trap): A company turns on AWS Security Hub and no other security service. Will Security Hub now report an EC2 instance that talks to a known malicious IP address? <!-- gist-trap --> (common sense says yes; trap detection-trap-hub-or-detective-detects)",
+          "Predict 2: An AWS Config rule checks that no S3 bucket is public. An engineer makes a bucket public. Does the rule stop the change?"
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "look-first",
+      "heading": "Look first",
+      "role": "task",
+      "minutes": 3,
+      "bullets": ["1.2.K5"],
+      "facts": ["guardduty-regional-service-detector", "guardduty-faq-regional-service"],
+      "plan": {
+        "text": "One or two sentences: in AWS CloudShell, list the GuardDuty detectors in your Region, then in a second Region. A detector belongs to one Region.",
+        "task_region": "detection-t01"
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "in-one-breath",
+      "heading": "In one breath",
+      "role": "breath",
+      "minutes": 2,
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "guardduty-dg-continuous-malicious-activity",
+        "inspector-dg-vulnerabilities-exposure",
+        "macie-dg-discovers-sensitive-data",
+        "config-dg-assess-audit-evaluate",
+        "security-hub-cspm-receives-service-findings",
+        "detective-dg-root-cause",
+        "artifact-guide-on-demand-compliance-documents",
+        "guardduty-wa-detect-unexpected-behavior"
+      ],
+      "plan": {
+        "say_it": "At most 25 words, for speech: GuardDuty watches activity, Inspector scans software, Macie finds sensitive data in S3, Config records settings, and Security Hub gathers their findings.",
+        "problem_it_solves": "Bold field: a security team cannot read every log, scan every package and open every object by hand. These services watch the evidence and write findings that one team can triage. Link guardduty-wa-detect-unexpected-behavior if the field names the two parts of detection (configuration changes and unexpected behavior).",
+        "predict_the_picture": "Where do the findings of GuardDuty, Inspector and Macie end up: in each service only, or in one place?",
+        "hero": "detection-hero",
+        "startup_example": "The Problem of STARTUP.md 09, word for word: 'Callvale cannot answer the bank's questions about changes in production, card numbers in transcripts, software vulnerabilities and stolen credentials. Callvale needs continuous detection in all seven accounts. The findings must appear in one place.' (at most 60 words with its label)."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "words-that-go-together",
+      "heading": "Words that go together",
+      "role": "words",
+      "minutes": 1,
+      "bullets": ["1.2.K5", "1.3.K3"],
+      "facts": [],
+      "plan": {
+        "rows": [
+          {"term": "finding", "collocation": "**generate** a finding", "plain": "A report that a service writes when it detects a possible problem", "not": "an alarm (CloudWatch, chapter 37)", "term_status": "term request; write <!-- needs-term: finding --> until the orchestrator adds it"},
+          {"term": "vulnerability", "collocation": "**scan** for vulnerabilities", "plain": "A known weakness in a software package, listed as a CVE", "not": "a threat (activity that is happening)", "term_status": "term request"},
+          {"term": "sensitive data", "collocation": "**discover** sensitive data", "plain": "Data that harms people if others see it, such as card numbers", "not": "encrypted data", "term_status": "term request"},
+          {"term": "configuration item", "collocation": "**record** a configuration item", "plain": "A point-in-time view of one resource's settings", "not": "a CloudTrail event (who called the API)", "term_status": "term request"},
+          {"term": "delegated administrator", "collocation": "**designate** a delegated administrator", "plain": "A member account that manages a service for the whole organization", "not": "the management account", "term_status": "term request"}
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "choose-it-or-not",
+      "heading": "Choose it or not",
+      "role": "choose",
+      "minutes": 2,
+      "bullets": ["1.2.K5", "1.3.K3", "1.3.S1"],
+      "facts": [
+        "guardduty-foundational-sources-list",
+        "guardduty-finding-categories",
+        "inspector-faq-what-it-is",
+        "inspector-ec2-agent-or-agentless",
+        "macie-s3-data-estate-scope",
+        "macie-managed-data-identifiers",
+        "macie-policy-finding-public-bucket",
+        "guardduty-faq-no-need-to-enable-source-logs",
+        "security-hub-cspm-supported-standards",
+        "security-hub-cspm-no-compliance-guarantee",
+        "security-hub-faq-cspm-vs-conformance-packs",
+        "config-guide-conformance-pack",
+        "artifact-guide-on-demand-compliance-documents",
+        "artifact-guide-audit-artifacts-for-auditors"
+      ],
+      "plan": {
+        "compare_tables": [
+          {
+            "h3": "GuardDuty or Inspector or Macie",
+            "columns": ["Question", "Amazon GuardDuty", "Amazon Inspector", "Amazon Macie"],
+            "rows": [
+              "What does it read? (CloudTrail management events, VPC flow logs, DNS logs: guardduty-foundational-sources-list | EC2 instances, Lambda functions, container images: inspector-faq-what-it-is | S3 buckets and objects: macie-s3-data-estate-scope)",
+              "Typical finding (communication with a known malicious IP, cryptocurrency mining: guardduty-finding-categories | a package with a known CVE, network exposure | credit card numbers in an object, a bucket that becomes public: macie-managed-data-identifiers, macie-policy-finding-public-bucket)",
+              "What do you install or turn on first? (nothing for the foundational sources: guardduty-faq-no-need-to-enable-source-logs | the SSM Agent, or nothing for agentless scans: inspector-ec2-agent-or-agentless | nothing; Macie reads the buckets)"
+            ],
+            "deciding_question": "Does the stem describe suspicious activity, a vulnerable package, or sensitive data in S3?"
+          },
+          {
+            "h3": "Security Hub CSPM or Config or Artifact",
+            "columns": ["Question", "Security Hub CSPM", "AWS Config", "AWS Artifact"],
+            "rows": [
+              "Whose compliance does it show? (your resources against a standard such as CIS or PCI DSS: security-hub-cspm-supported-standards | your resources against your own rules and conformance packs: config-guide-conformance-pack, security-hub-faq-cspm-vs-conformance-packs | the AWS infrastructure: artifact-guide-audit-artifacts-for-auditors)",
+              "What do you get? (findings and a security score | compliance results and configuration history | downloadable reports such as SOC and PCI: artifact-guide-on-demand-compliance-documents)",
+              "Does a pass prove compliance? (No: security-hub-cspm-no-compliance-guarantee | No: config-faq-no-compliance-guarantee-remediation | it proves the AWS side only: artifact-guide-audit-artifacts-for-auditors)"
+            ],
+            "deciding_question": "Is the auditor asking about the company's own resources, or about the AWS data centers and services?"
+          }
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "signals-and-traps",
+      "heading": "Signals and traps",
+      "role": "signals",
+      "minutes": 2,
+      "bullets": ["1.2.K5", "1.3.K3", "1.3.S1"],
+      "facts": [
+        "guardduty-finding-categories",
+        "guardduty-dg-continuous-malicious-activity",
+        "detective-dg-root-cause",
+        "inspector-dg-vulnerabilities-exposure",
+        "macie-dg-discovers-sensitive-data",
+        "guardduty-malware-s3-scans-new-uploads",
+        "security-hub-cspm-receives-service-findings",
+        "config-faq-what-it-is",
+        "config-faq-vs-cloudtrail",
+        "artifact-guide-on-demand-compliance-documents",
+        "artifact-guide-audit-artifacts-for-auditors",
+        "security-hub-cspm-supported-standards",
+        "guardduty-faq-vs-macie",
+        "detective-vs-guardduty-vs-security-hub"
+      ],
+      "plan": {
+        "signal_rows": [
+          {"stem": "\"cryptocurrency mining\" or \"API calls from an unusual geolocation\"", "think": "Amazon GuardDuty", "because": "guardduty-finding-categories", "but_not_if": "the stem asks for the root cause of a finding that already exists: Amazon Detective (detective-dg-root-cause)"},
+          {"stem": "\"software vulnerabilities\" in EC2 instances, container images or Lambda functions", "think": "Amazon Inspector", "because": "inspector-dg-vulnerabilities-exposure", "but_not_if": "the instance already talks to a known malicious IP address: Amazon GuardDuty"},
+          {"stem": "\"personally identifiable information (PII)\" or \"credit card numbers\" in S3", "think": "Amazon Macie", "because": "macie-dg-discovers-sensitive-data", "but_not_if": "the stem says malware in newly uploaded objects: GuardDuty Malware Protection for S3 (guardduty-malware-s3-scans-new-uploads)"},
+          {"stem": "\"a single view of security findings\" across accounts", "think": "AWS Security Hub", "because": "security-hub-cspm-receives-service-findings", "but_not_if": "the stem asks why one finding happened: Amazon Detective"},
+          {"stem": "\"history of configuration changes\" or \"evaluate resources against desired settings\"", "think": "AWS Config", "because": "config-faq-what-it-is", "but_not_if": "the stem asks who made the change: AWS CloudTrail (config-faq-vs-cloudtrail)"},
+          {"stem": "\"the AWS SOC 2 report\" or \"AWS PCI compliance report\" for an auditor", "think": "AWS Artifact", "because": "artifact-guide-on-demand-compliance-documents", "but_not_if": "the auditor wants checks of the company's own resources: Security Hub CSPM standards (security-hub-cspm-supported-standards)"}
+        ],
+        "traps_list": [
+          "detection-trap-guardduty-inspector-same-job",
+          "detection-trap-macie-finds-threats",
+          "detection-trap-hub-or-detective-detects"
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "changed-recently",
+      "heading": "Changed recently",
+      "role": "changed",
+      "minutes": 1,
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "security-hub-renamed-cspm",
+        "security-hub-unified-ga-2025-12",
+        "guardduty-malware-protection-s3-ga-2024-06",
+        "inspector-classic-full-shutdown-2026-05",
+        "inspector-faq-uses-ssm-agent-not-standalone-agent"
+      ],
+      "plan": {
+        "entries": [
+          {
+            "date": "2025-12-02",
+            "what": "The name Security Hub now means a new unified service.",
+            "now_fact": "security-hub-renamed-cspm",
+            "old": "AWS Security Hub: findings aggregation, best practice checks and compliance monitoring (no link needed; no number)",
+            "now": "that service [is now available as Security Hub CSPM] (security-hub-renamed-cspm); the unified AWS Security Hub is generally available since [December 2, 2025] (security-hub-unified-ga-2025-12)",
+            "exam_expects": "an older question that says 'Security Hub' means Security Hub CSPM: findings in one place, standards, controls. Prefer an option that is right under both names.",
+            "status": "examinable"
+          },
+          {
+            "date": "2024-06-11",
+            "what": "GuardDuty Malware Protection for S3.",
+            "now_fact": "guardduty-malware-protection-s3-ga-2024-06",
+            "old": "not available.",
+            "now": "GuardDuty scans newly uploaded S3 objects for malware, [fully managed by AWS] (generally available [June 11, 2024])",
+            "exam_expects": "older questions build a scan with AWS Lambda and an antivirus engine; for 'scan uploaded objects for malware with the LEAST operational overhead', Malware Protection for S3 is the current answer.",
+            "status": "examinable"
+          },
+          {
+            "date": "2026-05-20",
+            "what": "Amazon Inspector Classic reached full shutdown.",
+            "now_fact": "inspector-classic-full-shutdown-2026-05",
+            "old": "Amazon Inspector Classic, with a standalone Inspector agent on each instance (no link; the contrast is in inspector-faq-uses-ssm-agent-not-standalone-agent)",
+            "now": "end of support [May 20, 2026]; the current Amazon Inspector uses the [AWS Systems Manager Agent (SSM Agent)] or no agent",
+            "exam_expects": "the current Amazon Inspector. A question about an Inspector agent or assessment runs describes Inspector Classic.",
+            "status": "examinable",
+            "optional": "Third entry only if the section stays at or under 130 words; otherwise move the Inspector Classic point into the Amazon Inspector card (Formerly field is not right for it: write it as One fact)."
+          }
+        ],
+        "not_examinable_entry": "guardduty-custom-detection-rules-2026-09 goes to 2-deep.md directly under the B-list (U3)."
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "check",
+      "heading": "Check",
+      "role": "check",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [
+        "security-hub-enables-cspm-not-macie",
+        "security-hub-cspm-receives-service-findings",
+        "config-guide-proactive-vs-detective",
+        "config-faq-rules-evaluate-after-change-not-prevent"
+      ],
+      "plan": {
+        "prompts": [
+          "Check 1 (parallel to Predict 1): A company enables the new AWS Security Hub. Is Amazon Macie now turned on, so that Security Hub shows card numbers found in S3? Reveal: No: Macie [is not automatically enabled] (security-hub-enables-cspm-not-macie); Security Hub receives findings from services that run. Ends with a 'Predict 1:' paragraph: No; GuardDuty must be enabled to find the malicious traffic, and Security Hub then shows its finding.",
+          "Check 2 (parallel to Predict 2): A Config rule in proactive mode marks a template as noncompliant before deployment. Does AWS Config block the deployment? Reveal: No: [proactive rules do not remediate resources] or prevent deployment (config-guide-proactive-vs-detective). Ends with a 'Predict 2:' paragraph: No; [AWS Config rules do not prevent the user] (config-faq-rules-evaluate-after-change-not-prevent)."
+        ]
+      }
+    },
+    {
+      "file": "1-fast.md",
+      "section": "recap-from-memory",
+      "heading": "Recap from memory",
+      "role": "recap",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "prompts": [
+          "Recap 1: Say the one-breath definition from 'In one breath'.",
+          "Recap 2: From the signals table: which service finds credit card numbers in S3, and which service do you choose instead when the stem says malware in uploaded objects?",
+          "Recap 3: Say the deciding question of the table 'Security Hub CSPM or Config or Artifact'."
+        ],
+        "rule": "Each prompt asks only for a sentence, row or cell that 1-fast.md states (U4)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "how-it-works",
+      "heading": "How it works",
+      "role": "how",
+      "minutes": 28,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "subsections_in_order": [
+          "four-services-detect-problems-and-each-reads-a-different-kind-of-evidence",
+          "guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+          "inspector-rescans-a-workload-when-a-new-vulnerability-is-published",
+          "macie-samples-s3-objects-for-sensitive-data-and-reports-exposed-buckets",
+          "config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+          "security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause",
+          "artifact-gives-the-aws-side-of-an-audit-and-you-keep-your-own-evidence"
+        ],
+        "pass_route_subsections": [
+          "four-services-detect-problems-and-each-reads-a-different-kind-of-evidence",
+          "guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+          "macie-samples-s3-objects-for-sensitive-data-and-reports-exposed-buckets",
+          "config-judges-a-change-against-your-rules-after-the-change-is-recorded"
+        ],
+        "causal_chain": "evidence -> the detector that reads it (activity: GuardDuty; software: Inspector; data: Macie; configuration: Config) -> the finding -> one place for all findings (Security Hub, delegated administrator, home Region) -> investigation of one finding (Detective) -> automatic response (EventBridge) -> proof for the auditor (Artifact for AWS, retained findings and Config history for the company)",
+        "file_devices": "Go deeper: exactly 3 (subsections 2, 3, 6). Spot the bug: exactly 1 (subsection 6). Exam trap callouts: 4 (subsection 2: detection-trap-guardduty-needs-log-setup; subsection 5: detection-trap-config-rule-prevents and detection-trap-config-shows-who; subsection 7: detection-trap-artifact-proves-your-compliance). Each subsection: problem, numbered trace with bold step names, compressing table, one Why, one Exam signal, Say it, Stop and answer (U1); 150 to 400 words; about 4 minutes each."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "four-services-detect-problems-and-each-reads-a-different-kind-of-evidence",
+      "heading": "Four services detect problems and each reads a different kind of evidence",
+      "parent": "how-it-works",
+      "order": 1,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "guardduty-wa-detect-unexpected-behavior",
+        "guardduty-dg-continuous-malicious-activity",
+        "inspector-dg-vulnerabilities-exposure",
+        "macie-dg-discovers-sensitive-data",
+        "config-dg-assess-audit-evaluate",
+        "security-hub-dg-overview-alerts-compliance",
+        "detective-dg-root-cause",
+        "detective-vs-guardduty-vs-security-hub",
+        "guardduty-faq-vs-macie",
+        "artifact-guide-on-demand-compliance-documents"
+      ],
+      "plan": {
+        "problem": "A security team asks four different questions: is someone attacking us, is our software out of date, where is our sensitive data, and did a setting change? Each answer hides in a different kind of evidence.",
+        "trace": [
+          "**Activity.** API calls, network flows and DNS queries show behavior; GuardDuty continuously monitors accounts and workloads [for malicious activity] (guardduty-dg-continuous-malicious-activity).",
+          "**Software.** The packages on instances, in images and in functions show weaknesses; Inspector scans workloads for [software vulnerabilities and unintended network exposure] (inspector-dg-vulnerabilities-exposure).",
+          "**Data.** The content of S3 objects shows what is stored; Macie [discovers sensitive data by using machine learning] (macie-dg-discovers-sensitive-data).",
+          "**Configuration.** Resource settings over time show drift; AWS Config gives [a detailed view of the configuration] and lets you assess and audit it (config-dg-assess-audit-evaluate).",
+          "**Then the findings meet.** Security Hub gives an overview of alerts and compliance status (security-hub-dg-overview-alerts-compliance), and Detective helps investigate a finding (detective-dg-root-cause). Artifact is not a detector: it gives AWS's own compliance reports (artifact-guide-on-demand-compliance-documents)."
+        ],
+        "table": "Truth table 'Evidence | Example finding | Service': activity | an instance talks to a known malicious IP | GuardDuty; software | a package with a published CVE | Inspector; data | card numbers in an S3 object | Macie; configuration | a security group changed to allow all traffic | AWS Config.",
+        "why": "The Well-Architected security pillar splits detection into two parts: unwanted configuration changes and unexpected behavior (guardduty-wa-detect-unexpected-behavior). Each part needs different evidence, so AWS gives each its own service.",
+        "exam_signal": "\"continuously monitor for malicious activity\" points to GuardDuty, and \"software vulnerabilities and unintended network exposure\" points to Inspector (guardduty-dg-continuous-malicious-activity, inspector-dg-vulnerabilities-exposure).",
+        "diagram": "detection-ladder (embed after the table, with caption and no steps; a ladder returns no steps)",
+        "say_it": "The short answer is: name the evidence, then pick the service. The thing to watch is the verb in the stem: detect, scan, discover or record.",
+        "stop_and_answer": "A stem says: the company must know when an IAM user's access key calls APIs from an unusual geolocation. Which service, and which kind of evidence? (GuardDuty: activity; account compromise includes API calls from an unusual geolocation, guardduty-finding-categories.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+      "heading": "GuardDuty analyzes its own copy of your logs and stores none of them",
+      "parent": "how-it-works",
+      "order": 2,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "guardduty-definition-threat-detection-service",
+        "guardduty-regional-service-detector",
+        "guardduty-enable-in-all-regions",
+        "guardduty-foundational-sources-list",
+        "guardduty-faq-no-need-to-enable-source-logs",
+        "guardduty-cloudtrail-independent-stream",
+        "guardduty-flow-logs-not-required",
+        "guardduty-does-not-change-cloudtrail-config",
+        "guardduty-dns-needs-aws-resolver",
+        "guardduty-uses-threat-intel-and-ml",
+        "guardduty-findings-console-and-eventbridge",
+        "guardduty-severity-four-levels",
+        "guardduty-does-not-retain-logs",
+        "guardduty-discards-source-logs",
+        "guardduty-faq-logs-no-separate-activation-or-charge",
+        "guardduty-no-performance-impact",
+        "guardduty-finding-categories",
+        "guardduty-protection-plans-optional",
+        "guardduty-s3-protection-data-events",
+        "guardduty-malware-s3-scans-new-uploads",
+        "guardduty-malware-s3-without-guardduty",
+        "guardduty-runtime-needs-security-agent",
+        "guardduty-extended-threat-detection-auto-no-cost",
+        "guardduty-own-threat-and-trusted-lists",
+        "guardduty-trusted-list-wins-over-threat-list"
+      ],
+      "plan": {
+        "problem": "Threats show up in activity: an API call from a strange place, an instance that talks to a known bad address. Collecting and reading those logs yourself is a pipeline to build and to run.",
+        "trace": [
+          "**Enable GuardDuty in a Region.** The account gets a detector ID for that Region (guardduty-regional-service-detector); AWS recommends all Regions, even Regions without resources (guardduty-enable-in-all-regions).",
+          "**GuardDuty pulls its own streams.** CloudTrail management events, VPC flow logs from EC2 instances and DNS logs (guardduty-foundational-sources-list) arrive as independent data streams (guardduty-faq-no-need-to-enable-source-logs, guardduty-cloudtrail-independent-stream); your own flow-log and trail settings stay as they are (guardduty-flow-logs-not-required, guardduty-does-not-change-cloudtrail-config).",
+          "**It compares the activity with threat intelligence.** Lists of malicious IP addresses and domains, plus machine learning models (guardduty-uses-threat-intel-and-ml).",
+          "**It writes a finding.** Category, affected resource and severity, to the console and to EventBridge (guardduty-findings-console-and-eventbridge, guardduty-severity-four-levels).",
+          "**It discards the logs.** [GuardDuty does not manage or retain your logs] (guardduty-does-not-retain-logs)."
+        ],
+        "table": "'Source | Do you turn it on? | Does GuardDuty keep it?': CloudTrail management events | No | No; VPC flow logs | No | No; DNS logs | No, but the instance must use the AWS DNS resolvers (guardduty-dns-needs-aws-resolver) | No.",
+        "why": "You get detection without a log pipeline: the logs GuardDuty analyzes are integrated directly, so you do not activate or pay for them separately (guardduty-faq-logs-no-separate-activation-or-charge), and there is no performance impact on the workloads (guardduty-no-performance-impact).",
+        "exam_signal": "\"cryptocurrency mining\" or \"attempts to deactivate CloudTrail logging\" points to GuardDuty, because these are its finding categories (guardduty-finding-categories).",
+        "exam_trap_callout": "detection-trap-guardduty-needs-log-setup",
+        "go_deeper": {
+          "title": "protection plans",
+          "content": "Optional plans add sources at any time (guardduty-protection-plans-optional): S3 Protection reads CloudTrail data events for S3 to find exfiltration (guardduty-s3-protection-data-events); Malware Protection for S3 scans each new upload (guardduty-malware-s3-scans-new-uploads) and is the one plan that works without the GuardDuty service (guardduty-malware-s3-without-guardduty); Runtime Monitoring uses a security agent (guardduty-runtime-needs-security-agent); Extended Threat Detection is on at no additional cost (guardduty-extended-threat-detection-auto-no-cost). A trusted list wins over a threat list for the same address (guardduty-own-threat-and-trusted-lists, guardduty-trusted-list-wins-over-threat-list). At most 150 words."
+        },
+        "try_it": "detection-t02",
+        "say_it": "The short answer is: turn on GuardDuty in every Region and it starts reading. The thing to watch is that it keeps findings, not your logs.",
+        "stop_and_answer": "A team's EC2 instances send DNS queries to the team's own DNS servers, not to the AWS DNS resolvers. Which GuardDuty evidence is missing for those instances, and which evidence still arrives? (DNS logs are missing, guardduty-dns-needs-aws-resolver; CloudTrail management events and VPC flow logs still arrive.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "inspector-rescans-a-workload-when-a-new-vulnerability-is-published",
+      "heading": "Inspector rescans a workload when a new vulnerability is published",
+      "parent": "how-it-works",
+      "order": 3,
+      "minutes": 4,
+      "route": "full",
+      "bullets": ["1.2.K5", "1.3.S1"],
+      "facts": [
+        "inspector-definition-vulnerability-management",
+        "inspector-first-activation-all-scan-types",
+        "inspector-ec2-agent-or-agentless",
+        "inspector-agent-based-needs-ssm-managed",
+        "inspector-faq-no-agent-required",
+        "inspector-ecr-continuous-rescan-triggers",
+        "inspector-lambda-standard-vs-code",
+        "inspector-ec2-network-reachability",
+        "inspector-no-scheduled-assessments",
+        "inspector-faq-rescans-event-based",
+        "inspector-risk-score-adjusts-nvd",
+        "inspector-faq-risk-score-contextual",
+        "inspector-auto-closes-remediated-findings",
+        "inspector-eventbridge-and-security-hub",
+        "inspector-ecr-enhanced-replaces-basic",
+        "inspector-faq-ecr-enhanced-vs-basic-frequency",
+        "inspector-faq-ecr-enhanced-vs-basic-packages",
+        "inspector-faq-ecr-enhanced-vs-basic-integrations",
+        "inspector-cis-scans",
+        "inspector-faq-exclude-ec2-by-tag"
+      ],
+      "plan": {
+        "problem": "A package that was safe last month can have a published CVE today. A scan that runs once a quarter misses that window.",
+        "trace": [
+          "**Activate Inspector.** The account is enrolled in EC2 scanning, ECR scanning and Lambda standard scanning at the first activation (inspector-first-activation-all-scan-types).",
+          "**It takes a software inventory.** EC2 through the SSM Agent, or without an agent from EBS snapshots (inspector-ec2-agent-or-agentless); agent-based scans need an instance managed by Systems Manager (inspector-agent-based-needs-ssm-managed); container images when pushed (inspector-ecr-continuous-rescan-triggers); Lambda dependencies (inspector-lambda-standard-vs-code).",
+          "**It matches the inventory with known CVEs** and checks network reachability of EC2 instances (inspector-ec2-network-reachability).",
+          "**It scores each finding in context.** The CVSS base score is adjusted with reachability and exploitability data (inspector-risk-score-adjusts-nvd).",
+          "**It rescans when something changes:** a new package, a patch, or a new CVE (inspector-no-scheduled-assessments), and closes the finding after you fix it (inspector-auto-closes-remediated-findings)."
+        ],
+        "table": "'Workload | How Inspector reads it | What starts a new scan': EC2 instance | SSM Agent or EBS snapshot | a new CVE, a changed package; ECR container image | the pushed image | a push, a new CVE; Lambda function | the function's dependencies | a new CVE.",
+        "why": "You do not schedule assessments: the scan follows the CVE database (inspector-no-scheduled-assessments, inspector-faq-rescans-event-based), so a new CVE reaches every affected workload without a person starting a run.",
+        "exam_signal": "\"vulnerabilities in container images in Amazon ECR\" with continuous scanning points to Inspector enhanced scanning (inspector-faq-ecr-enhanced-vs-basic-frequency).",
+        "go_deeper": {
+          "title": "ECR basic scanning and CIS scans",
+          "content": "ECR basic scanning offers only on-push scans of OS packages and has no built-in integrations; Inspector enhanced scanning adds continual scans, programming language packages and Security Hub and EventBridge integration, and activating it converts every repository of the registry (inspector-faq-ecr-enhanced-vs-basic-frequency, inspector-faq-ecr-enhanced-vs-basic-packages, inspector-faq-ecr-enhanced-vs-basic-integrations, inspector-ecr-enhanced-replaces-basic). For compliance (1.3.S1), CIS scans benchmark EC2 operating systems against Center for Internet Security recommendations, on demand or on a schedule, and need SSM-managed instances (inspector-cis-scans). A tag InspectorEc2Exclusion excludes an instance (inspector-faq-exclude-ec2-by-tag). At most 150 words."
+        },
+        "say_it": "The short answer is: Inspector keeps an inventory and rescans when a new CVE appears. The thing to watch is the scan path for each instance.",
+        "stop_and_answer": "An EC2 instance is not managed by Systems Manager. Can Inspector still find package vulnerabilities on it? (Yes: agentless scanning reads the software inventory from EBS snapshots, inspector-ec2-agent-or-agentless, inspector-faq-no-agent-required.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "macie-samples-s3-objects-for-sensitive-data-and-reports-exposed-buckets",
+      "heading": "Macie samples S3 objects for sensitive data and reports exposed buckets",
+      "parent": "how-it-works",
+      "order": 4,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": ["1.3.K3", "1.2.K5"],
+      "facts": [
+        "macie-definition-data-security-service",
+        "macie-s3-data-estate-scope",
+        "macie-policy-finding-public-bucket",
+        "macie-finding-two-kinds",
+        "macie-automated-discovery-sampling",
+        "macie-discovery-jobs-targeted",
+        "macie-managed-data-identifiers",
+        "macie-custom-data-identifiers-regex",
+        "macie-allow-lists-ignore-text",
+        "macie-discovery-result-per-object",
+        "macie-findings-auto-to-eventbridge",
+        "macie-remediate-via-eventbridge-security-hub",
+        "macie-no-images-audio-video",
+        "macie-unsupported-storage-classes",
+        "macie-sra-move-other-data-to-s3",
+        "macie-sra-kms-key-user",
+        "macie-faq-regional-service"
+      ],
+      "plan": {
+        "problem": "Data classification starts with knowing where sensitive data lives. In many buckets, nobody knows which objects hold card numbers or health data. Story line allowed (at most 80 words): Callvale's first Macie job finds card numbers in 1,300 transcripts.",
+        "trace": [
+          "**Inventory the buckets.** Macie keeps an inventory of your S3 general purpose buckets and monitors them for security and access control (macie-s3-data-estate-scope).",
+          "**Flag an exposed bucket.** A bucket that becomes publicly accessible gets a policy finding (macie-policy-finding-public-bucket).",
+          "**Sample the objects.** Automated sensitive data discovery selects representative objects from all general purpose buckets by default (macie-automated-discovery-sampling); a sensitive data discovery job gives deeper, targeted analysis, once or on a schedule (macie-discovery-jobs-targeted).",
+          "**Match data identifiers.** Managed data identifiers find credentials, financial data and personal data (macie-managed-data-identifiers); a custom data identifier is a regular expression you define (macie-custom-data-identifiers-regex); an allow list names text to ignore (macie-allow-lists-ignore-text).",
+          "**Report.** A sensitive data finding per object, plus a discovery result for every object analyzed (macie-discovery-result-per-object); findings go to EventBridge automatically (macie-findings-auto-to-eventbridge), and remediation runs through EventBridge and Security Hub CSPM (macie-remediate-via-eventbridge-security-hub)."
+        ],
+        "table": "'Finding type | What triggers it | Example' (macie-finding-two-kinds): policy finding | a security or privacy issue with a bucket | the bucket became public; sensitive data finding | sensitive data in an object | card numbers in a transcript.",
+        "why": "Sampling gives broad visibility across the whole estate, and a job goes deep where you already suspect data (macie-automated-discovery-sampling, macie-discovery-jobs-targeted). Use the first to find where to look, the second to look closely.",
+        "exam_signal": "\"personally identifiable information (PII) in Amazon S3\" points to Macie, whose managed data identifiers include PII (macie-managed-data-identifiers).",
+        "body_extras": "One sentence, optional: data in RDS, Aurora or DynamoDB exports is evaluated after it is moved to S3 (macie-sra-move-other-data-to-s3). The storage-class and KMS details stay in the Macie card.",
+        "say_it": "The short answer is: Macie finds sensitive data in S3 and flags public buckets. The thing to watch is the data type: Macie reads text, not audio.",
+        "stop_and_answer": "Callvale's audio recordings in callvale-audio hold spoken card numbers. Will a Macie job on that bucket report them? (No: Macie does not analyze audio, video or images, macie-no-images-audio-video; it finds the card numbers in the text transcripts.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+      "heading": "Config judges a change against your rules after the change is recorded",
+      "parent": "how-it-works",
+      "order": 5,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": ["1.3.S1", "1.3.K3"],
+      "facts": [
+        "config-faq-what-it-is",
+        "config-guide-configuration-recorder",
+        "config-guide-records-all-supported-by-default",
+        "config-guide-configuration-item",
+        "config-guide-tracks-non-api-changes",
+        "config-guide-continuous-or-daily-recording",
+        "config-faq-rule-desired-configuration",
+        "config-guide-rule-types-managed-custom",
+        "config-guide-trigger-types",
+        "config-guide-rules-flag-noncompliant",
+        "config-faq-rules-evaluate-after-change-not-prevent",
+        "config-guide-proactive-vs-detective",
+        "config-guide-remediation-ssm-automation",
+        "config-faq-vs-cloudtrail",
+        "config-faq-cloudtrail-records-api-activity",
+        "config-guide-security-analysis-history",
+        "config-guide-conformance-pack",
+        "config-guide-aggregator-read-only",
+        "config-faq-per-region",
+        "control-tower-preventive-detective-proactive-defined"
+      ],
+      "plan": {
+        "problem": "An auditor asks two questions about one security group: what did it look like last March, and does it follow the company's rule today? A list of current settings answers neither.",
+        "trace": [
+          "**Record.** The configuration recorder stores changes of the in-scope resource types (config-guide-configuration-recorder), by default every supported resource in the Region (config-guide-records-all-supported-by-default).",
+          "**Store a configuration item.** A point-in-time view of the resource, created when Config detects a change (config-guide-configuration-item); Config also finds changes that no API call started (config-guide-tracks-non-api-changes).",
+          "**Evaluate.** A rule states the desired configuration (config-faq-rule-desired-configuration); it runs on a change, on a schedule, or both (config-guide-trigger-types).",
+          "**Flag.** A resource that breaks the rule is marked noncompliant, with a notification (config-guide-rules-flag-noncompliant), after the change is completed and recorded (config-faq-rules-evaluate-after-change-not-prevent).",
+          "**Remediate.** A Systems Manager Automation document fixes the resource, manually or automatically (config-guide-remediation-ssm-automation)."
+        ],
+        "table": "'Trigger type | When the rule runs' (config-guide-trigger-types): configuration change | when an in-scope resource changes; periodic | at a frequency you choose; hybrid | both. Do not restate the CloudTrail split or the prevention point here: the two Exam trap callouts carry them (STYLE 11.8).",
+        "why": "Config learns about a change by reading the resource configuration (config-guide-tracks-non-api-changes), so it can judge only a configuration that already exists. Prevention is a job for permissions; control-tower-preventive-detective-proactive-defined names the three kinds of control (preventive, detective, proactive) if the writer needs the vocabulary.",
+        "exam_signal": "\"a history of configuration changes\" for a resource points to AWS Config, which keeps configuration history (config-faq-what-it-is).",
+        "exam_trap_callouts": ["detection-trap-config-rule-prevents", "detection-trap-config-shows-who"],
+        "try_it": "detection-t03 (only if the tasks writer ships it)",
+        "body_extras": "One sentence each, optional: a conformance pack deploys rules and remediation actions as one entity, also across an organization (config-guide-conformance-pack); an aggregator gives a read-only view of many accounts and Regions (config-guide-aggregator-read-only). Config is turned on per Region (config-faq-per-region).",
+        "say_it": "The short answer is: Config records each change and checks it against your rules. The thing to watch is timing: it reports the change after it happens.",
+        "stop_and_answer": "A team turned on AWS Config two weeks ago. Can Config show the IAM policy that a role had last month? (No: Config shows the policy only for times when it was recording, config-guide-security-analysis-history.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause",
+      "heading": "Security Hub gathers findings in one place and Detective traces their cause",
+      "parent": "how-it-works",
+      "order": 6,
+      "minutes": 5,
+      "route": "full",
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "security-hub-sra-security-tooling-account",
+        "guardduty-delegated-admin-organizations",
+        "guardduty-member-cannot-see-other-members",
+        "security-hub-cspm-receives-service-findings",
+        "security-hub-cspm-integrations-auto-activated",
+        "security-hub-cspm-macie-policy-findings-default",
+        "inspector-eventbridge-and-security-hub",
+        "security-hub-cspm-standard-definition",
+        "security-hub-cspm-uses-config-rules",
+        "security-hub-cspm-security-score",
+        "security-hub-cspm-config-required-each-region",
+        "security-hub-cspm-cross-region-aggregation",
+        "security-hub-aggregation-no-cost-not-auto-enable",
+        "security-hub-faq-regional-with-aggregator-region",
+        "security-hub-automation-rules",
+        "security-hub-cspm-eventbridge-all-findings",
+        "guardduty-automated-remediation-eventbridge-lambda",
+        "detective-definition-root-cause",
+        "detective-core-sources",
+        "detective-pivot-from-guardduty-security-hub",
+        "detective-faq-behavior-graph",
+        "detective-no-queries-to-build",
+        "security-hub-sra-align-detective-admin",
+        "security-hub-renamed-cspm",
+        "security-hub-two-services-complement",
+        "security-hub-faq-cspm-requires-config",
+        "security-hub-exposure-finding-definition",
+        "security-hub-ocsf-format",
+        "security-hub-faq-does-not-replace-service-consoles"
+      ],
+      "plan": {
+        "problem": "Seven accounts, several Regions and four detectors produce findings in many consoles. A small team needs one queue to triage, and a way to see what happened around one finding.",
+        "trace": [
+          "**Delegate administration.** One account manages each service for the organization; in the AWS Security Reference Architecture this is the Security Tooling account (security-hub-sra-security-tooling-account, guardduty-delegated-admin-organizations).",
+          "**Send the findings.** GuardDuty, Inspector and Macie findings reach Security Hub CSPM; AWS service integrations are activated automatically (security-hub-cspm-receives-service-findings, security-hub-cspm-integrations-auto-activated).",
+          "**Add posture checks.** Security Hub CSPM maps the requirements of a standard to controls (security-hub-cspm-standard-definition) and runs most checks through AWS Config rules (security-hub-cspm-uses-config-rules); the results make a security score (security-hub-cspm-security-score).",
+          "**Aggregate the Regions.** Cross-Region aggregation brings findings into one home Region (security-hub-cspm-cross-region-aggregation).",
+          "**Act.** Automation rules update findings as they arrive (security-hub-automation-rules); every finding also goes to EventBridge (security-hub-cspm-eventbridge-all-findings), where a rule can start a Lambda function (guardduty-automated-remediation-eventbridge-lambda).",
+          "**Investigate.** From a GuardDuty finding you pivot into Detective (detective-pivot-from-guardduty-security-hub), whose behavior graph uses CloudTrail logs, VPC Flow Logs and GuardDuty findings (detective-core-sources) to find the root cause (detective-definition-root-cause)."
+        ],
+        "table": "'Need | Service | What it adds': every finding in one list | Security Hub | standards, priority, a security score; why one finding happened | Detective | a behavior graph over time; an automatic response | an EventBridge rule | a target such as a Lambda function.",
+        "why": "Triage needs one queue and one owner per finding. Security Hub is the single pane of glass (security-hub-cspm-receives-service-findings), and Detective saves the team from writing its own queries (detective-no-queries-to-build).",
+        "exam_signal": "\"a single view of security findings across all accounts\" points to Security Hub with a delegated administrator and cross-Region aggregation (security-hub-cspm-receives-service-findings, security-hub-cspm-cross-region-aggregation).",
+        "go_deeper": {
+          "title": "Security Hub and Security Hub CSPM",
+          "content": "The service once called Security Hub is now Security Hub CSPM (security-hub-renamed-cspm); the two services complement each other (security-hub-two-services-complement). Security Hub CSPM requires AWS Config; the new Security Hub does not (security-hub-faq-cspm-requires-config). The new Security Hub correlates signals into exposure findings (security-hub-exposure-finding-definition) and uses the OCSF format, while CSPM uses ASFF (security-hub-ocsf-format). Neither replaces the GuardDuty, Inspector or Macie consoles (security-hub-faq-does-not-replace-service-consoles). Align the Detective and Security Hub administrator accounts, or the pivot into Detective does not work (security-hub-sra-align-detective-admin). At most 150 words."
+        },
+        "spot_the_bug": "A team runs Security Hub CSPM with cross-Region aggregation: home Region us-east-1, linked Region us-west-2. It enabled Security Hub CSPM and AWS Config only in us-east-1, and expects control findings for its us-west-2 resources. What is wrong? (Aggregation collects only from Regions where Security Hub CSPM is enabled and does not enable it there, security-hub-aggregation-no-cost-not-auto-enable; control findings also need AWS Config in each Region, security-hub-cspm-config-required-each-region.)",
+        "say_it": "The short answer is: Security Hub is the one queue, and Detective explains one finding. The thing to watch is AWS Config, which the CSPM checks need.",
+        "stop_and_answer": "A GuardDuty finding says a role made unusual API calls. The team wants to see which IP addresses the role used during the past week and which resources it touched, without writing queries. Which service, and which data does it read? (Detective; its behavior graph uses CloudTrail logs, VPC Flow Logs and GuardDuty findings, detective-core-sources, detective-no-queries-to-build.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "artifact-gives-the-aws-side-of-an-audit-and-you-keep-your-own-evidence",
+      "heading": "Artifact gives the AWS side of an audit and you keep your own evidence",
+      "parent": "how-it-works",
+      "order": 7,
+      "minutes": 4,
+      "route": "full",
+      "bullets": ["1.3.S1", "1.3.K3"],
+      "facts": [
+        "artifact-guide-on-demand-compliance-documents",
+        "artifact-guide-audit-artifacts-for-auditors",
+        "artifact-guide-free-of-charge",
+        "artifact-guide-download-needs-permissions-terms",
+        "artifact-guide-watermark-confidential",
+        "artifact-guide-baa-for-hipaa",
+        "artifact-faq-account-vs-organization-agreements",
+        "security-hub-cspm-no-compliance-guarantee",
+        "security-hub-faq-checks-do-not-imply-audit-pass",
+        "security-hub-faq-cspm-vs-conformance-packs",
+        "guardduty-finding-retention-90-days",
+        "guardduty-longer-retention-via-eventbridge-s3",
+        "guardduty-export-findings-to-s3",
+        "guardduty-sra-export-findings-log-archive",
+        "macie-results-90-days-export-s3-kms",
+        "security-hub-finding-retention-90-days",
+        "config-retention-30-days-to-7-years",
+        "config-retention-separate-from-s3-delivery",
+        "config-guide-delivery-s3-history-sns",
+        "config-sra-delivery-to-log-archive"
+      ],
+      "plan": {
+        "problem": "An auditor wants two kinds of proof: that AWS runs its data centers to a standard, and that the company runs its own resources well. AWS supplies the first. The company must produce and keep the second.",
+        "trace": [
+          "**Download the AWS reports.** Artifact gives on-demand SOC, PCI and ISO documents (artifact-guide-on-demand-compliance-documents), free of charge (artifact-guide-free-of-charge); some reports need terms accepted first (artifact-guide-download-needs-permissions-terms), and confidential ones stay within the company, its regulators and its auditors (artifact-guide-watermark-confidential).",
+          "**Accept agreements.** A company under HIPAA typically needs a BAA with AWS, accepted in Artifact (artifact-guide-baa-for-hipaa); an organization agreement is accepted by the management account (artifact-faq-account-vs-organization-agreements).",
+          "**Check your own resources.** Security Hub CSPM runs a standard such as PCI DSS; for your own set of checks use Config conformance packs (security-hub-faq-cspm-vs-conformance-packs). These checks do not guarantee compliance (security-hub-cspm-no-compliance-guarantee).",
+          "**Keep the evidence long enough.** GuardDuty keeps findings [90 days] (guardduty-finding-retention-90-days) and Macie keeps discovery results [for only 90 days] (macie-results-90-days-export-s3-kms); export them to S3 (guardduty-longer-retention-via-eventbridge-s3, guardduty-sra-export-findings-log-archive). AWS Config keeps configuration items up to [7 years (2557 days)] by default (config-retention-30-days-to-7-years)."
+        ],
+        "table": "'Evidence | Kept in the service | For longer': GuardDuty findings | 90 days (guardduty-finding-retention-90-days) | EventBridge or export to an S3 bucket (guardduty-export-findings-to-s3); Macie discovery results | 90 days (macie-results-90-days-export-s3-kms) | an S3 bucket with a KMS key; Security Hub CSPM findings | 90 days after the last update (security-hub-finding-retention-90-days) | export through EventBridge; Config configuration items | 30 days to 7 years, default 7 years (config-retention-30-days-to-7-years) | history files in S3 (config-guide-delivery-s3-history-sns, config-retention-separate-from-s3-delivery). Every number in a cell is a fact link.",
+        "why": "Shared responsibility reaches audits too: Artifact documents show the security and compliance of the AWS infrastructure, and customers are responsible for documents that show their own (artifact-guide-audit-artifacts-for-auditors).",
+        "exam_signal": "\"download the AWS SOC 2 report\" or \"the AWS PCI attestation\" points to AWS Artifact (artifact-guide-on-demand-compliance-documents).",
+        "exam_trap_callout": "detection-trap-artifact-proves-your-compliance",
+        "say_it": "The short answer is: Artifact gives AWS's reports, and your controls give yours. The thing to watch is retention: export findings before they expire.",
+        "stop_and_answer": "In March, an auditor asks for a full year of GuardDuty findings. The team never exported them. What can the team give, and what does it change now? (Only the findings of the last 90 days, guardduty-finding-retention-90-days; from now on an EventBridge rule or the export sends findings to an S3 bucket, guardduty-longer-retention-via-eventbridge-s3.)"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "numbers-that-decide-answers",
+      "heading": "Numbers that decide answers",
+      "role": "numbers",
+      "minutes": 2,
+      "bullets": ["1.3.K3"],
+      "facts": [
+        "guardduty-finding-retention-90-days",
+        "macie-results-90-days-export-s3-kms",
+        "config-retention-30-days-to-7-years",
+        "guardduty-eventbridge-subsequent-occurrences-default-6-hours",
+        "guardduty-eventbridge-new-findings-near-real-time",
+        "guardduty-detector-one-per-region",
+        "guardduty-trusted-ip-list-1-per-region",
+        "guardduty-threat-ip-lists-6-per-region",
+        "security-hub-finding-retention-90-days",
+        "security-hub-archived-findings-30-days-2025-06",
+        "detective-pricing-per-gb-ingested",
+        "detective-faq-baselines-after-two-weeks",
+        "guardduty-free-trial-30-days-per-region",
+        "guardduty-custom-detection-rules-2026-09",
+        "guardduty-faq-no-custom-detections"
+      ],
+      "plan": {
+        "a_list": [
+          {"fact": "guardduty-finding-retention-90-days", "display": "90 days", "what": "How long GuardDuty keeps a finding (not adjustable)", "why_it_decides": "A longer retention requirement needs an export to S3"},
+          {"fact": "macie-results-90-days-export-s3-kms", "display": "for only 90 days", "what": "How long Macie keeps sensitive data discovery results", "why_it_decides": "Long-term retention needs a results repository in S3 with a KMS key"},
+          {"fact": "config-retention-30-days-to-7-years", "display": "7 years (2557 days)", "what": "Default and maximum retention of AWS Config configuration items (minimum 30 days)", "why_it_decides": "Config history can answer an audit question years later"},
+          {"fact": "guardduty-eventbridge-subsequent-occurrences-default-6-hours", "display": "6 hours", "what": "Default interval for EventBridge events about repeated occurrences of a finding (new findings go in near real-time)", "why_it_decides": "A faster alert on repeats needs the 15-minute setting in the administrator account"}
+        ],
+        "b_list": [
+          {"fact": "guardduty-detector-one-per-region", "display": "1", "what": "GuardDuty detectors per account per Region"},
+          {"fact": "guardduty-trusted-ip-list-1-per-region", "display": "1", "what": "Trusted IP address lists per account per Region"},
+          {"fact": "guardduty-threat-ip-lists-6-per-region", "display": "6", "what": "Threat IP address lists per account per Region"},
+          {"fact": "security-hub-finding-retention-90-days", "display": "90 days", "what": "Security Hub CSPM keeps a finding after its last update"},
+          {"fact": "security-hub-archived-findings-30-days-2025-06", "display": "30 days", "what": "Security Hub CSPM keeps archived findings (since 2025-06-20; was 90 days)"},
+          {"fact": "detective-pricing-per-gb-ingested", "display": "up to a year of aggregated data", "what": "History that Detective keeps for an investigation"},
+          {"fact": "detective-faq-baselines-after-two-weeks", "display": "after two weeks", "what": "Monitoring Detective needs before baseline comparisons"},
+          {"fact": "guardduty-free-trial-30-days-per-region", "display": "30-day free trial", "what": "GuardDuty trial for the first use in each Region"}
+        ],
+        "not_examinable_entry_under_b_list": {
+          "fact": "guardduty-custom-detection-rules-2026-09",
+          "date": "2026-09-01",
+          "what": "GuardDuty Custom Detection Rules, a curated library of detection rules.",
+          "old": "not available.",
+          "now": "[September 1, 2026] (guardduty-custom-detection-rules-2026-09)",
+          "exam_expects": "GuardDuty without custom rule sets: you customize it with your own threat lists and trusted IP address lists (guardduty-faq-no-custom-detections). Do not let this number decide an answer.",
+          "status": "not examinable yet"
+        },
+        "cards": "Each A-list row has one number card (c001, c002, c005, c006)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "decision-record",
+      "heading": "Decision record",
+      "role": "example",
+      "minutes": 3,
+      "bullets": ["1.2.K5", "1.3.S1"],
+      "facts": [
+        "guardduty-faq-no-need-to-enable-source-logs",
+        "inspector-no-scheduled-assessments",
+        "security-hub-cspm-receives-service-findings",
+        "security-hub-sra-security-tooling-account",
+        "guardduty-pricing-based-on-volume-analyzed",
+        "macie-pricing-three-dimensions"
+      ],
+      "plan": {
+        "context": "STARTUP 09 trigger (data/startup.json chapters.09.trigger): stage 3, month 19. Most of the 43 'no' answers on the bank's questionnaire ask one thing: can Callvale detect a problem and show evidence? Callvale has 7 accounts. Chen asks which service answers which question. At most 80 words.",
+        "requirement": "Exam English, qualifier from the JSON: Callvale must detect threats, software vulnerabilities, sensitive data and configuration changes in all seven accounts, with the findings in one place and with the LEAST operational overhead.",
+        "options": ["a weekly manual checklist", "open-source scanners that Callvale runs on EC2", "managed detection services for the whole organization"],
+        "decision": "The managed services, turned on for all accounts, with findings in AWS Security Hub in the security account.",
+        "trade_off": "Every finding needs an owner. Each service adds a cost that grows with data and events. If a field states the AWS behavior, link guardduty-pricing-based-on-volume-analyzed or macie-pricing-three-dimensions; the reason 'nothing to run' links guardduty-faq-no-need-to-enable-source-logs or inspector-no-scheduled-assessments.",
+        "diagrams": ["detection-before", "detection-after"],
+        "story_note": "The Macie event (1,300 transcripts with card numbers; from then on the analyze step removes card numbers before a transcript is stored) can close the Context field if words allow; it adds no AWS fact."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "faq-quick-fire",
+      "heading": "FAQ quick-fire",
+      "role": "faq",
+      "minutes": 2,
+      "bullets": ["1.2.K5", "1.3.S1"],
+      "facts": [
+        "guardduty-faq-no-need-to-enable-source-logs",
+        "inspector-faq-no-agent-required",
+        "security-hub-faq-does-not-replace-service-consoles",
+        "config-faq-rules-evaluate-after-change-not-prevent",
+        "artifact-faq-share-reports-per-terms"
+      ],
+      "plan": {
+        "items": [
+          {"n": 1, "question": "Do you have to turn on VPC Flow Logs or a CloudTrail trail before GuardDuty can analyze them?", "answer": "No", "fact": "guardduty-faq-no-need-to-enable-source-logs", "faq_page": "https://aws.amazon.com/guardduty/faqs/", "quote_hint": "the whole sentence 'No, GuardDuty pulls independent data streams directly from CloudTrail, VPC Flow Logs, DNS query logs, and Amazon EKS.'"},
+          {"n": 2, "question": "Do you need an agent for Amazon Inspector to scan EC2 instances for vulnerabilities?", "answer": "No", "fact": "inspector-faq-no-agent-required", "faq_page": "https://aws.amazon.com/inspector/faqs/", "quote_hint": "one or two whole sentences of the evidence quote, for example 'Amazon Inspector also offers agentless scanning if you don’t have the SSM Agent deployed or configured.'"},
+          {"n": 3, "question": "Does Security Hub replace the GuardDuty, Inspector and Macie consoles?", "answer": "No", "fact": "security-hub-faq-does-not-replace-service-consoles", "faq_page": "https://aws.amazon.com/security-hub/faqs/", "quote_hint": "a whole sentence of the evidence quote"},
+          {"n": 4, "question": "Can an AWS Config rule stop a noncompliant change before it happens?", "answer": "No", "fact": "config-faq-rules-evaluate-after-change-not-prevent", "faq_page": "https://aws.amazon.com/config/faqs/", "quote_hint": "'AWS Config rules do not prevent the user from making changes that could be non-compliant.'"},
+          {"n": 5, "question": "Can you share an AWS compliance report from Artifact with your own customers?", "answer": "Only if the terms of that report allow it; customers can also get it from their own AWS account", "fact": "artifact-faq-share-reports-per-terms", "faq_page": "https://aws.amazon.com/artifact/faq/", "quote_hint": "'You can share the AWS compliance reports with your customers directly if permitted by the terms and conditions applicable to the specific AWS compliance report.'"}
+        ],
+        "rule": "Each reveal quotes whole sentences of the evidence quote of that fact, with its URL (D12)."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "in-the-real-world",
+      "heading": "In the real world",
+      "role": "realworld",
+      "minutes": 1,
+      "bullets": ["1.2.K5"],
+      "facts": ["security-hub-case-smej-300-accounts", "security-hub-case-smej-standardized-levels"],
+      "plan": {
+        "case": "Sony Music Entertainment Japan built its SMEJ Guardrail framework on AWS Security Hub, with GuardDuty monitoring accounts; it runs across [more than 300 AWS accounts] (security-hub-case-smej-300-accounts). Quote block (18 words, a whole sentence of the evidence of security-hub-case-smej-standardized-levels): 'By performing centralized management and visualization using AWS Security Hub, we were able to standardize our security levels.' It shows: one place for findings gives many accounts one security level. Say it: two sentences.",
+        "year": "The case page states no publication year; the only year on it is 2018 (when the parent company issued new cloud governance guidelines). Ask the orchestrator before writing the bold company line (notes_for_orchestrator 3)."
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-guardduty",
+      "heading": "Amazon GuardDuty",
+      "role": "card",
+      "service": "guardduty",
+      "minutes": 1,
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "guardduty-definition-threat-detection-service",
+        "guardduty-finding-categories",
+        "guardduty-faq-vs-macie",
+        "guardduty-faq-regional-service",
+        "guardduty-suspend-keeps-findings",
+        "guardduty-disable-deletes-findings"
+      ],
+      "plan": {
+        "say_the_name": "GARD-doo-tee (only if the term bank adds a respelling; otherwise leave the field out)",
+        "what_it_is": "A threat detection service that continuously monitors and analyzes AWS data sources and logs in your environment (guardduty-definition-threat-detection-service).",
+        "stem_signals": ["\"compromised EC2 instance\" or \"cryptocurrency mining\"", "\"unusual API calls\" or \"credential exfiltration\"", "\"malware in newly uploaded S3 objects\" (Malware Protection for S3)"],
+        "do_not_confuse_with": "Amazon Macie: Macie finds sensitive data in S3; GuardDuty finds threats (guardduty-faq-vs-macie). Amazon Inspector: Inspector finds vulnerable software.",
+        "one_fact": "guardduty-faq-suspend-vs-disable or guardduty-disable-deletes-findings: suspending keeps findings, disabling deletes them.",
+        "say_it": "GuardDuty watches activity in your accounts and reports threats. Turn it on in every Region.",
+        "source": "Amazon GuardDuty User Guide (docs.aws.amazon.com/guardduty/latest/ug/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-inspector",
+      "heading": "Amazon Inspector",
+      "role": "card",
+      "service": "inspector",
+      "minutes": 1,
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "inspector-faq-what-it-is",
+        "inspector-faq-rebuilt-from-classic",
+        "inspector-faq-no-suspend",
+        "inspector-findings-removed-24-hours-after-disable",
+        "inspector-dg-vulnerabilities-exposure"
+      ],
+      "plan": {
+        "what_it_is": "An automated vulnerability management service that continually scans EC2 instances, Lambda functions and container images for software vulnerabilities and unintended network exposure (inspector-faq-what-it-is).",
+        "stem_signals": ["\"common vulnerabilities and exposures (CVEs)\" in EC2 instances", "\"scan container images in Amazon ECR continuously\"", "\"Lambda function dependencies with known vulnerabilities\""],
+        "do_not_confuse_with": "Amazon GuardDuty: GuardDuty watches activity; Inspector scans software. Inspector Classic: the earlier service, rebuilt as today's Amazon Inspector (inspector-faq-rebuilt-from-classic).",
+        "one_fact": "inspector-faq-no-suspend: Amazon Inspector does not support a suspended state (contrast with GuardDuty).",
+        "say_it": "Inspector finds known vulnerabilities in your instances, images and functions, and rescans when a new CVE appears.",
+        "source": "Amazon Inspector User Guide (docs.aws.amazon.com/inspector/latest/user/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-macie",
+      "heading": "Amazon Macie",
+      "role": "card",
+      "service": "macie",
+      "minutes": 1,
+      "bullets": ["1.3.K3"],
+      "facts": [
+        "macie-definition-data-security-service",
+        "macie-managed-data-identifiers",
+        "macie-unsupported-storage-classes",
+        "macie-sra-kms-key-user",
+        "macie-faq-regional-service",
+        "guardduty-faq-vs-macie"
+      ],
+      "plan": {
+        "what_it_is": "A data security service that discovers sensitive data in Amazon S3 by using machine learning and pattern matching (macie-definition-data-security-service).",
+        "stem_signals": ["\"personally identifiable information (PII)\" in S3 buckets", "\"classify\" sensitive data such as credit card numbers", "\"a bucket became publicly accessible\" (policy finding)"],
+        "do_not_confuse_with": "GuardDuty S3 Protection: it watches S3 API activity for threats, not the content of objects (guardduty-s3-protection-data-events, link only if used).",
+        "one_fact": "macie-unsupported-storage-classes (S3 Glacier Deep Archive is not analyzed) or macie-sra-kms-key-user (add the Macie service-linked role as a key user to scan objects under a customer managed key).",
+        "say_it": "Macie finds sensitive data, such as card numbers, in your S3 buckets. It reads objects, not activity.",
+        "source": "Amazon Macie User Guide (docs.aws.amazon.com/macie/latest/user/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "aws-security-hub",
+      "heading": "AWS Security Hub",
+      "role": "card",
+      "service": "security-hub",
+      "minutes": 1,
+      "bullets": ["1.2.K5", "1.3.S1"],
+      "facts": [
+        "security-hub-faq-unified-correlates-signals",
+        "security-hub-renamed-cspm",
+        "security-hub-faq-cspm-best-practice-checks",
+        "security-hub-faq-regional-with-aggregator-region",
+        "security-hub-recommend-enable-both"
+      ],
+      "plan": {
+        "formerly": "Write the rename once: the earlier service called Security Hub is now Security Hub CSPM (security-hub-renamed-cspm). This is not a 'formerly' of the same service: put it in What it is or One fact, not in the Formerly field.",
+        "what_it_is": "A unified cloud security service that prioritizes critical issues by correlating signals from Security Hub CSPM, Inspector, Macie and GuardDuty (security-hub-faq-unified-correlates-signals). Security Hub CSPM runs automated best practice checks across accounts (security-hub-faq-cspm-best-practice-checks).",
+        "stem_signals": ["\"a single view of security findings\" across accounts", "\"check accounts against AWS Foundational Security Best Practices or CIS\"", "\"aggregate findings from all Regions into one Region\""],
+        "do_not_confuse_with": "Amazon Detective: Security Hub gathers and prioritizes findings; Detective investigates one finding.",
+        "one_fact": "security-hub-recommend-enable-both: AWS recommends enabling both Security Hub and Security Hub CSPM.",
+        "say_it": "Security Hub is the one place where your security findings meet, with standards and priorities.",
+        "source": "AWS Security Hub User Guide (docs.aws.amazon.com/securityhub/latest/userguide/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-detective",
+      "heading": "Amazon Detective",
+      "role": "card",
+      "service": "detective",
+      "minutes": 1,
+      "bullets": ["1.2.K5"],
+      "facts": [
+        "detective-definition-root-cause",
+        "detective-faq-guardduty-not-required",
+        "detective-guardduty-requirement-removed",
+        "detective-faq-regional",
+        "detective-independent-streams-no-impact"
+      ],
+      "plan": {
+        "what_it_is": "A service that helps you analyze and investigate security findings and identify their root cause, with machine learning, statistical analysis and graph theory over collected log data (detective-definition-root-cause).",
+        "stem_signals": ["\"investigate\" or \"root cause\" of a GuardDuty finding", "\"visualize\" activity of an IAM role over time", "\"without writing queries\" over CloudTrail and VPC Flow Logs"],
+        "do_not_confuse_with": "Amazon GuardDuty: GuardDuty detects; Detective investigates.",
+        "one_fact": "detective-guardduty-requirement-removed: since February 2, 2024 GuardDuty is no longer required to enable Detective (older questions can assume it is). Or detective-independent-streams-no-impact.",
+        "say_it": "Detective shows what happened around a finding, so you find the root cause without writing queries.",
+        "source": "Amazon Detective User Guide (docs.aws.amazon.com/detective/latest/userguide/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "aws-config",
+      "heading": "AWS Config",
+      "role": "card",
+      "service": "config",
+      "minutes": 1,
+      "bullets": ["1.3.S1", "1.3.K3"],
+      "facts": [
+        "config-faq-what-it-is",
+        "config-faq-vs-cloudtrail",
+        "config-guide-conformance-pack",
+        "config-guide-aggregator-read-only",
+        "config-faq-aggregation-reporting-only-use-stacksets"
+      ],
+      "plan": {
+        "what_it_is": "A managed service that gives a resource inventory, configuration history and configuration change notifications (config-faq-what-it-is); rules evaluate resources against desired configurations.",
+        "stem_signals": ["\"history of configuration changes\" of a resource", "\"evaluate resources against desired configurations\"", "\"conformance pack\" deployed across an organization"],
+        "do_not_confuse_with": "AWS CloudTrail: CloudTrail answers who made an API call; Config answers what the resource looked like (config-faq-vs-cloudtrail).",
+        "one_fact": "config-guide-aggregator-read-only or config-faq-aggregation-reporting-only-use-stacksets: an aggregator only reports; to deploy rules across accounts use conformance packs or CloudFormation StackSets.",
+        "say_it": "Config records how each resource is configured over time and checks it against your rules.",
+        "source": "AWS Config Developer Guide (docs.aws.amazon.com/config/latest/developerguide/)"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "aws-artifact",
+      "heading": "AWS Artifact",
+      "role": "card",
+      "service": "artifact",
+      "minutes": 1,
+      "bullets": ["1.3.S1"],
+      "facts": [
+        "artifact-faq-what-it-is",
+        "artifact-faq-agreements-baa",
+        "artifact-faq-reports-soc-pci-iso",
+        "artifact-sra-no-delegated-admin",
+        "artifact-guide-free-of-charge"
+      ],
+      "plan": {
+        "what_it_is": "A self-service portal in the console for on-demand AWS compliance documents and AWS agreements (artifact-faq-what-it-is).",
+        "stem_signals": ["\"AWS SOC report\" or \"PCI attestation\" for an auditor", "\"Business Associate Addendum (BAA)\" for HIPAA", "\"evidence that the AWS infrastructure is compliant\""],
+        "do_not_confuse_with": "Security Hub CSPM standards and AWS Config conformance packs: they check your own resources; Artifact gives AWS's reports.",
+        "one_fact": "artifact-sra-no-delegated-admin: Artifact does not support delegated administration; restrict it to the IAM roles of the audit team.",
+        "say_it": "Artifact is where you download AWS's own compliance reports and accept agreements such as a BAA.",
+        "source": "AWS Artifact User Guide (docs.aws.amazon.com/artifact/latest/ug/)"
+      }
+    }
+  ],
+  "traps": [
+    {
+      "id": "detection-trap-guardduty-inspector-same-job",
+      "belief": "GuardDuty and Inspector look for the same problems, so either one finds a vulnerable package or a compromised instance.",
+      "truth": "Inspector scans workloads for software vulnerabilities and unintended network exposure; GuardDuty monitors activity for malicious behavior.",
+      "facts": ["inspector-dg-vulnerabilities-exposure", "guardduty-dg-continuous-malicious-activity"],
+      "where": "1-fast.md, Traps list"
+    },
+    {
+      "id": "detection-trap-macie-finds-threats",
+      "belief": "Macie watches S3 for threats such as suspicious access or malware, and GuardDuty can find personal data in objects.",
+      "truth": "Macie discovers sensitive data in S3; GuardDuty S3 Protection watches S3 data events for threats, and Malware Protection for S3 scans new uploads for malware.",
+      "facts": ["guardduty-faq-vs-macie", "guardduty-s3-protection-data-events", "guardduty-malware-s3-scans-new-uploads"],
+      "where": "1-fast.md, Traps list"
+    },
+    {
+      "id": "detection-trap-hub-or-detective-detects",
+      "belief": "Turning on Security Hub or Detective gives threat detection by itself.",
+      "truth": "GuardDuty monitors for malicious activity; Security Hub gathers and prioritizes findings from services such as GuardDuty, Inspector and Macie, which you enable; Detective investigates findings and their root cause.",
+      "facts": ["detective-vs-guardduty-vs-security-hub", "security-hub-enables-cspm-not-macie"],
+      "where": "1-fast.md, Traps list"
+    },
+    {
+      "id": "detection-trap-guardduty-needs-log-setup",
+      "belief": "Before GuardDuty works, you must turn on VPC Flow Logs, DNS logging and a CloudTrail trail, and GuardDuty then stores those logs.",
+      "truth": "GuardDuty pulls independent data streams directly from these sources and does not manage or retain your logs.",
+      "facts": ["guardduty-faq-no-need-to-enable-source-logs", "guardduty-does-not-retain-logs"],
+      "where": "2-deep.md, Exam trap callout in subsection 2"
+    },
+    {
+      "id": "detection-trap-config-rule-prevents",
+      "belief": "An AWS Config rule blocks a noncompliant change, and a proactive rule blocks the deployment.",
+      "truth": "Config rules evaluate after the change is recorded and do not prevent it; proactive rules do not prevent deployment either; use IAM policies or SCPs to prevent.",
+      "facts": ["config-faq-rules-evaluate-after-change-not-prevent", "config-guide-proactive-vs-detective"],
+      "where": "2-deep.md, Exam trap callout in subsection 5"
+    },
+    {
+      "id": "detection-trap-config-shows-who",
+      "belief": "AWS Config and AWS CloudTrail answer the same question: who changed a resource and what it looked like.",
+      "truth": "A Config configuration item answers what the resource looked like at a point in time; CloudTrail answers who made the API call.",
+      "facts": ["config-faq-vs-cloudtrail", "config-faq-cloudtrail-records-api-activity"],
+      "where": "2-deep.md, Exam trap callout in subsection 5"
+    },
+    {
+      "id": "detection-trap-artifact-proves-your-compliance",
+      "belief": "An AWS Artifact report, or a passing Security Hub CSPM standard, proves that the company's own workload is compliant.",
+      "truth": "Artifact documents show the compliance of the AWS infrastructure; the company is responsible for its own evidence, and CSPM standards do not guarantee compliance.",
+      "facts": ["artifact-guide-audit-artifacts-for-auditors", "security-hub-cspm-no-compliance-guarantee"],
+      "where": "2-deep.md, Exam trap callout in subsection 7"
+    },
+    {
+      "id": "detection-trap-findings-kept-forever",
+      "belief": "A security service keeps its findings for as long as an auditor needs them, or you can raise its retention period.",
+      "truth": "GuardDuty keeps a finding for at most 90 days and the quota cannot be increased; Security Hub CSPM keeps a finding 90 days after its last update; for longer retention, export findings to an S3 bucket.",
+      "facts": ["guardduty-finding-retention-90-days", "security-hub-finding-retention-90-days", "guardduty-longer-retention-via-eventbridge-s3"],
+      "where": "questions only (added by questions-09-1 for gate Q205); the orchestrator gives it a hand-file home or a reason before edit (L905)"
+    },
+    {
+      "id": "detection-trap-cspm-without-config",
+      "belief": "Security Hub CSPM runs its control checks without AWS Config, and cross-Region aggregation turns the checks on in linked Regions.",
+      "truth": "Security Hub CSPM uses service-linked AWS Config rules for most controls, so AWS Config must be enabled in each Region for every account; aggregation only collects findings into one home Region.",
+      "facts": ["security-hub-cspm-uses-config-rules", "security-hub-cspm-config-required-each-region", "security-hub-aggregation-no-cost-not-auto-enable"],
+      "where": "questions only (added by questions-09-1 for gate Q205); natural home: Spot the bug of 2-deep.md subsection 6"
+    },
+    {
+      "id": "detection-trap-config-collects-findings",
+      "belief": "An AWS Config aggregator, or the AWS Config history, collects and keeps the findings of GuardDuty, Inspector and Macie.",
+      "truth": "A Config aggregator collects configuration and compliance data, and Config retention covers configuration items; Security Hub CSPM is the service that receives the findings of GuardDuty, Inspector and Macie.",
+      "facts": ["config-guide-aggregator-read-only", "config-retention-30-days-to-7-years", "security-hub-cspm-receives-service-findings"],
+      "where": "questions only (added by questions-09-1 for gate Q205); the orchestrator gives it a hand-file home or a reason before edit (L905)"
+    },
+    {
+      "id": "detection-trap-guardduty-checks-settings",
+      "belief": "GuardDuty checks resource settings against desired values and keeps a history of them.",
+      "truth": "GuardDuty monitors accounts and workloads for malicious activity; AWS Config keeps the configuration history of resources and evaluates them against rules.",
+      "facts": ["guardduty-dg-continuous-malicious-activity", "config-faq-what-it-is", "config-faq-rule-desired-configuration"],
+      "where": "questions only (added by questions-09-1 for gate Q205); the orchestrator gives it a hand-file home or a reason before edit (L905)"
+    }
+  ],
+  "traps_note": "7 traps = brief_traps_max of the medium template (U5): 3 in the fast Traps list, 4 as Exam trap callouts in 2-deep.md. Misconceptions without a trap id (questions use a misconception sentence): 'GuardDuty is global: one switch covers every Region' (guardduty-faq-regional-service); 'findings stay in the service as long as you need them' (guardduty-finding-retention-90-days); 'Security Hub CSPM runs its checks without AWS Config' (security-hub-cspm-uses-config-rules); 'Inspector needs an agent on every instance' (inspector-faq-no-agent-required); 'Macie scans audio recordings' (macie-no-images-audio-video).",
+  "comparison_tables": [
+    {"where": "1-fast.md#choose-it-or-not", "h3": "GuardDuty or Inspector or Macie", "neighbours": ["Amazon GuardDuty", "Amazon Inspector", "Amazon Macie"], "deciding_question": "Does the stem describe suspicious activity, a vulnerable package, or sensitive data in S3?"},
+    {"where": "1-fast.md#choose-it-or-not", "h3": "Security Hub CSPM or Config or Artifact", "neighbours": ["Security Hub CSPM", "AWS Config", "AWS Artifact"], "deciding_question": "Is the auditor asking about the company's own resources, or about the AWS data centers and services?"},
+    {"where": "2-deep.md#security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause", "h3": null, "neighbours": ["AWS Security Hub", "Amazon Detective", "an EventBridge rule"], "deciding_question": "Does the team need every finding in one list, the cause of one finding, or an automatic response?"}
+  ],
+  "question_slots": [
+    {
+      "slot": 1,
+      "bullet": "1.2.K5",
+      "concept": "guardduty-for-malicious-activity",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-least-operational-overhead", "ee-monitor"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+      "services": ["guardduty", "inspector", "macie", "detective"],
+      "trap": "detection-trap-guardduty-inspector-same-job",
+      "other_traps": ["detection-trap-macie-finds-threats", "detection-trap-hub-or-detective-detects"],
+      "twin": "strict twin A of slot 7: stem ends '...must be alerted when an instance communicates with IP addresses that are known to be malicious.' Key: GuardDuty. Neutral option texts shared with slot 7.",
+      "plan": "A company runs workloads on EC2 instances in many accounts of an organization; the security team must be alerted when an instance communicates with known malicious IP addresses. Options (identical in slot 7): enable Amazon GuardDuty for the organization with a delegated administrator account and review its findings; activate Amazon Inspector the same way; enable Amazon Macie the same way; enable Amazon Detective the same way. Facts: guardduty-finding-categories, guardduty-uses-threat-intel-and-ml, guardduty-delegated-admin-organizations, inspector-dg-vulnerabilities-exposure, macie-dg-discovers-sensitive-data, detective-dg-root-cause."
+    },
+    {
+      "slot": 2,
+      "bullet": "1.3.K3",
+      "concept": "macie-card-numbers-in-s3",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-sensitive", "ee-least-operational-overhead"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#macie-samples-s3-objects-for-sensitive-data-and-reports-exposed-buckets",
+      "services": ["macie", "guardduty", "config", "lambda"],
+      "trap": "detection-trap-macie-finds-threats",
+      "plan": "A company stores call transcripts as text objects in many S3 buckets; auditors require it to find which objects contain credit card numbers. Key: Amazon Macie sensitive data discovery with managed data identifiers. Distractors: GuardDuty S3 Protection (trap detection-trap-macie-finds-threats); a Lambda function that runs a regular expression on every object (violates-qualifier; misconception 'a custom scanner is as cheap to run as a managed one'); an AWS Config rule that checks bucket encryption (different-problem; misconception 'encryption settings show what data an object holds'). Facts: macie-managed-data-identifiers, macie-automated-discovery-sampling, macie-discovery-jobs-targeted, guardduty-s3-protection-data-events."
+    },
+    {
+      "slot": 3,
+      "bullet": "1.3.S1",
+      "concept": "artifact-aws-compliance-reports",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-audit"],
+      "qualifier": "none",
+      "section": "2-deep.md#artifact-gives-the-aws-side-of-an-audit-and-you-keep-your-own-evidence",
+      "services": ["artifact", "security-hub", "config", "inspector"],
+      "trap": "detection-trap-artifact-proves-your-compliance",
+      "plan": "An auditor asks a company for the AWS SOC 2 report and the AWS PCI DSS attestation that cover the AWS data centers. Key: download them from AWS Artifact. Distractors: enable the PCI DSS standard in Security Hub CSPM (trap detection-trap-artifact-proves-your-compliance); deploy an AWS Config conformance pack for PCI DSS (same trap); run Amazon Inspector CIS scans (keyword-bait; misconception 'a benchmark scan of your instances is an AWS audit report'). Facts: artifact-guide-on-demand-compliance-documents, artifact-guide-audit-artifacts-for-auditors, security-hub-cspm-no-compliance-guarantee, config-guide-conformance-pack, inspector-cis-scans."
+    },
+    {
+      "slot": 4,
+      "bullet": "1.3.S1",
+      "concept": "config-configuration-history",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-point-in-time", "ee-audit"],
+      "qualifier": "none",
+      "section": "2-deep.md#config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+      "services": ["config", "cloudtrail", "guardduty", "security-hub"],
+      "trap": "detection-trap-config-shows-who",
+      "plan": "An auditor asks which inbound rules a security group had at a point in time three months ago. Key: AWS Config configuration history (configuration items). Distractors: AWS CloudTrail event history (trap detection-trap-config-shows-who: CloudTrail answers who called the API); GuardDuty findings (misconception 'GuardDuty keeps a history of resource settings'); Security Hub CSPM security score (misconception 'a score stores past configurations'). Facts: config-faq-vs-cloudtrail, config-guide-configuration-item, config-guide-security-analysis-history, guardduty-dg-continuous-malicious-activity."
+    },
+    {
+      "slot": 5,
+      "bullet": "1.2.K5",
+      "concept": "security-hub-single-view",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-centrally-manage", "ee-least-operational-overhead"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause",
+      "services": ["security-hub", "detective", "guardduty", "config", "eventbridge", "lambda"],
+      "trap": "detection-trap-hub-or-detective-detects",
+      "plan": "A company already runs GuardDuty, Inspector and Macie in all accounts and two Regions; the security team needs one prioritized view of all findings. Key: AWS Security Hub with a delegated administrator account and cross-Region aggregation to one home Region. Distractors: Amazon Detective in the security account (trap detection-trap-hub-or-detective-detects); EventBridge rules in every account and Region that call a Lambda function to write findings to a dashboard (violates-qualifier); an AWS Config aggregator (sibling-confusion; misconception 'a Config aggregator collects GuardDuty and Macie findings'). Facts: security-hub-cspm-receives-service-findings, security-hub-cspm-integrations-auto-activated, security-hub-cspm-cross-region-aggregation, security-hub-sra-security-tooling-account, detective-vs-guardduty-vs-security-hub, config-guide-aggregator-scopes."
+    },
+    {
+      "slot": 6,
+      "bullet": "1.3.S1",
+      "concept": "prevent-with-scp-detect-with-config",
+      "difficulty": 3,
+      "type": "multi",
+      "select": 2,
+      "layer": "extended",
+      "exam_english": ["ee-which-combination", "ee-select-two", "ee-ensure"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+      "services": ["config", "organizations", "systems-manager", "guardduty"],
+      "trap": "detection-trap-config-rule-prevents",
+      "plan": "A company uses AWS Organizations. It must ensure that no one in member accounts, including account administrators, can turn off S3 Block Public Access at the account level, and it must find and fix any bucket whose public access settings drift. Keys: an SCP that denies the action in member accounts (iam-scp-applies-to-member-root-user, iam-scp-faq-member-principals-cannot-change-scps, the strongest actor test of STYLE 11.4); an AWS Config rule with automatic remediation through a Systems Manager Automation document (config-guide-remediation-ssm-automation). Distractors: a Config rule in proactive mode to block the change (trap detection-trap-config-rule-prevents); a Config rule alone to stop the change (same trap); GuardDuty findings with an EventBridge rule (different-problem; misconception 'GuardDuty evaluates configuration settings'). Option words generic; the writer links only verified facts (chapter 03 SCP facts are verified). Facts: config-faq-rules-evaluate-after-change-not-prevent, config-guide-proactive-vs-detective, config-guide-remediation-ssm-automation, control-tower-preventive-detective-proactive-defined."
+    },
+    {
+      "slot": 7,
+      "bullet": "1.2.K5",
+      "concept": "inspector-for-known-cves",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": ["ee-least-operational-overhead", "ee-monitor"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#inspector-rescans-a-workload-when-a-new-vulnerability-is-published",
+      "services": ["inspector", "guardduty", "macie", "detective"],
+      "trap": "detection-trap-guardduty-inspector-same-job",
+      "other_traps": ["detection-trap-macie-finds-threats", "detection-trap-hub-or-detective-detects"],
+      "twin": "strict twin B of slot 1 (twin_of slot 1): the one changed phrase is '...must be alerted when an instance runs a software package that has a published CVE.' Options identical to slot 1; the key moves to Amazon Inspector. At least 3 other questions stand between the twins.",
+      "plan": "Same scenario and options as slot 1. Facts: inspector-dg-vulnerabilities-exposure, inspector-no-scheduled-assessments, inspector-delegated-admin-organizations, guardduty-dg-continuous-malicious-activity."
+    },
+    {
+      "slot": 8,
+      "bullet": "1.2.K5",
+      "concept": "detective-root-cause",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-least-development-effort"],
+      "qualifier": "LEAST development effort",
+      "section": "2-deep.md#security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause",
+      "services": ["detective", "security-hub", "guardduty", "athena", "cloudtrail"],
+      "trap": "detection-trap-hub-or-detective-detects",
+      "worked": {"think_aloud": true, "wrong_path": false},
+      "plan": "GuardDuty reports unusual API calls by an IAM role. A security engineer must find which IP addresses the role used in the past weeks and which resources it touched, to determine the root cause. Key: investigate the finding in Amazon Detective (behavior graph). Distractors: Security Hub CSPM insights (trap detection-trap-hub-or-detective-detects: Security Hub gathers findings, it does not trace activity); query CloudTrail logs in S3 with Amazon Athena (violates-qualifier; misconception 'writing queries is the least effort'); a GuardDuty suppression rule (wrong-configuration; misconception 'suppression explains a finding'). Facts: detective-definition-root-cause, detective-core-sources, detective-pivot-from-guardduty-security-hub, detective-no-queries-to-build, guardduty-suppression-rule-still-generates."
+    },
+    {
+      "slot": 9,
+      "bullet": "1.2.K5",
+      "concept": "guardduty-no-log-setup",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-least-operational-overhead", "ee-fully-managed"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+      "services": ["guardduty", "vpc", "cloudtrail", "inspector"],
+      "trap": "detection-trap-guardduty-needs-log-setup",
+      "plan": "A startup has no CloudTrail trail and no VPC flow logs. It must detect compromised instances and stolen credentials in one account and Region. Key: enable GuardDuty (nothing else to enable for the foundational sources). Distractors: turn on VPC Flow Logs, DNS query logging and a CloudTrail trail first, then enable GuardDuty (trap detection-trap-guardduty-needs-log-setup; violates-qualifier); send flow logs to CloudWatch Logs and write metric filters and alarms (violates-qualifier; misconception 'a home-built log pipeline is the managed answer'); activate Amazon Inspector network reachability scans (trap detection-trap-guardduty-inspector-same-job). Facts: guardduty-faq-no-need-to-enable-source-logs, guardduty-flow-logs-not-required, guardduty-foundational-nothing-else-to-enable, guardduty-does-not-retain-logs, inspector-ec2-network-reachability."
+    },
+    {
+      "slot": 10,
+      "bullet": "1.3.K3",
+      "concept": "retain-findings-beyond-90-days",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-retain", "ee-audit"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#artifact-gives-the-aws-side-of-an-audit-and-you-keep-your-own-evidence",
+      "services": ["guardduty", "s3", "eventbridge", "security-hub", "config"],
+      "trap": null,
+      "misconception": "A security service keeps its findings for as long as an auditor needs them, or its retention can be raised.",
+      "plan": "A regulator requires a company to keep all GuardDuty findings for 2 years. Key: export the findings to an S3 bucket (the GuardDuty export or an EventBridge rule), with an S3 Lifecycle rule. Distractors: raise the GuardDuty finding retention period (impossible-feature, guardduty-finding-retention-90-days says it cannot be increased); send the findings to Security Hub CSPM and keep them there (misconception; security-hub-finding-retention-90-days); rely on the AWS Config 7-year retention (misconception 'Config stores the findings of other services'; config-retention-30-days-to-7-years covers configuration items). Facts: guardduty-finding-retention-90-days, guardduty-export-findings-to-s3, guardduty-longer-retention-via-eventbridge-s3, guardduty-sra-export-findings-log-archive, security-hub-finding-retention-90-days, config-retention-30-days-to-7-years."
+    },
+    {
+      "slot": 11,
+      "bullet": "1.3.K3",
+      "concept": "malware-scan-and-pii-in-uploads",
+      "difficulty": 2,
+      "type": "multi",
+      "select": 2,
+      "layer": "extended",
+      "exam_english": ["ee-select-two", "ee-sensitive", "ee-fully-managed"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#macie-samples-s3-objects-for-sensitive-data-and-reports-exposed-buckets",
+      "services": ["guardduty", "macie", "inspector", "detective", "s3"],
+      "trap": "detection-trap-macie-finds-threats",
+      "other_traps": ["detection-trap-hub-or-detective-detects"],
+      "plan": "Customers upload documents to an S3 bucket. The company must scan each new upload for malware and must find personal data in the stored objects. Keys: GuardDuty Malware Protection for S3 on the upload bucket; Amazon Macie sensitive data discovery. Distractors: Macie to scan uploads for malware (trap detection-trap-macie-finds-threats); Amazon Inspector scans of the bucket (misconception 'Inspector scans S3 objects'; inspector-faq-what-it-is lists its resources); Amazon Detective on the bucket (trap detection-trap-hub-or-detective-detects). Facts: guardduty-malware-s3-scans-new-uploads, guardduty-malware-s3-scans-new-uploads-managed, macie-managed-data-identifiers, guardduty-faq-vs-macie, inspector-faq-what-it-is. The Malware Protection for S3 change (2024-06-11) is more than 24 months old at the exam window; the writer confirms the q lint volatile check."
+    },
+    {
+      "slot": 12,
+      "bullet": "1.3.S1",
+      "concept": "security-hub-cspm-needs-config",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": ["ee-currently", "ee-least-operational-overhead"],
+      "qualifier": "LEAST operational overhead",
+      "section": "2-deep.md#security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause",
+      "services": ["security-hub", "config", "detective", "guardduty"],
+      "trap": null,
+      "misconception": "Security Hub CSPM runs its control checks without AWS Config, or cross-Region aggregation turns the service on in linked Regions.",
+      "plan": "A company uses Security Hub CSPM only (state this: the new Security Hub creates a service-linked recorder, security-hub-cspm-service-linked-recorder, which would change the key). It enabled the AWS Foundational Security Best Practices standard; control findings appear for us-east-1 but not for us-west-2, where AWS Config is currently not enabled. Key: enable AWS Config with resource recording in us-west-2 for all accounts. Distractors: turn on cross-Region aggregation (misconception; security-hub-aggregation-no-cost-not-auto-enable); enable GuardDuty in us-west-2 (misconception 'GuardDuty produces the control findings'); enable Amazon Detective (trap detection-trap-hub-or-detective-detects). Facts: security-hub-cspm-uses-config-rules, security-hub-cspm-config-required-each-region, security-hub-aggregation-no-cost-not-auto-enable, security-hub-cspm-service-linked-recorder."
+    }
+  ],
+  "question_plan_summary": {
+    "write": 12,
+    "ship": "10 (core 5, extended 5)",
+    "core_slots": [1, 2, 3, 4, 5, 7],
+    "extended_slots": [6, 8, 9, 10, 11, 12],
+    "difficulty": {"1": [3, 4], "2": [1, 2, 5, 7, 8, 9, 11], "3": [6, 10, 12]},
+    "multi": [6, 11],
+    "twin_pairs": [[1, 7]],
+    "strict_twin": [1, 7],
+    "worked": [8],
+    "trap_based": [1, 2, 3, 4, 5, 6, 7, 8, 9, 11],
+    "trap_share": "10 of 12 slots; Q205 needs at least half of all wrong options with a trap id: slots 1 and 7 carry a trap on all three wrong options, the others on one or two.",
+    "note": "Core has 6 slots so that one weak core question can be cut and 5 core still ship; core questions are difficulty 1 or 2. Place slot 7 at least 4 positions after slot 1."
+  },
+  "terms": ["managed-service"],
+  "term_requests": [
+    "finding",
+    "vulnerability",
+    "common vulnerabilities and exposures (CVE)",
+    "sensitive data",
+    "managed data identifier",
+    "configuration item",
+    "configuration recorder",
+    "Config rule",
+    "conformance pack",
+    "aggregator",
+    "delegated administrator",
+    "security standard",
+    "control",
+    "behavior graph",
+    "protection plan",
+    "compliance report",
+    "Business Associate Addendum (BAA)"
+  ],
+  "tasks": [
+    {
+      "id": "detection-t01",
+      "type": "look",
+      "title": "List the GuardDuty detectors of two Regions",
+      "section": "1-fast.md#look-first",
+      "kills": "\"GuardDuty is a global service, so one switch covers every Region.\"",
+      "trap": null,
+      "pass_route": false,
+      "facts": ["guardduty-regional-service-detector", "guardduty-faq-regional-service", "guardduty-enable-in-all-regions"],
+      "plan": "CloudShell only, read-only, cost $0: aws guardduty list-detectors in the CloudShell Region, then the same command with --region for a second Region. She sees a detector ID per Region, or an empty list where GuardDuty is off. Commands from a corpus CLI example page."
+    },
+    {
+      "id": "detection-t02",
+      "type": "try",
+      "title": "Create a GuardDuty detector and read sample findings",
+      "section": "2-deep.md#guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them",
+      "kills": "\"GuardDuty needs VPC Flow Logs and a CloudTrail trail that you turn on first.\"",
+      "trap": "detection-trap-guardduty-needs-log-setup",
+      "pass_route": true,
+      "facts": ["guardduty-faq-no-need-to-enable-source-logs", "guardduty-free-trial-30-days-per-region", "guardduty-detector-one-per-region", "guardduty-disable-deletes-findings", "guardduty-findings-console-and-eventbridge"],
+      "plan": "Precondition step: aws guardduty list-detectors; if a detector already exists in the Region, stop and use the read-only alternative (list-findings and get-findings on the existing detector), because the cleanup deletes the detector and its findings (guardduty-disable-deletes-findings). Steps: aws ec2 describe-flow-logs (often empty: no flow logs needed); create-detector --enable with tags book=saa and task=detection-t02 (capture DetectorId); create-sample-findings; list-findings; get-findings. Break-it step: predict whether a second detector can be created in the same Region; run create-detector again; expect an error; explain with guardduty-detector-one-per-region; the fix step reuses the captured detector. Cleanup: delete-detector with the captured ID (the findings are deleted with it). Cost: $0 within the 30-day free trial of an account that is new to GuardDuty in this Region (guardduty-free-trial-30-days-per-region); state that an account past its trial pays by volume analyzed, without an amount. Verify: depends on fact request fr-0032 (does the Resource Groups Tagging API return GuardDuty detectors?); if it is unfillable, park the task and keep detection-t01 plus the read-only alternative. Commands from a corpus CLI example page."
+    },
+    {
+      "id": "detection-t03",
+      "type": "try",
+      "title": "Watch a Config rule flag a change it did not stop",
+      "section": "2-deep.md#config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+      "kills": "\"An AWS Config rule blocks a noncompliant change.\"",
+      "trap": "detection-trap-config-rule-prevents",
+      "pass_route": false,
+      "status": "optional",
+      "facts": ["config-faq-rules-evaluate-after-change-not-prevent", "config-guide-rules-flag-noncompliant", "config-price-continuous-ci-0-003", "config-price-rule-evaluation-0-001"],
+      "plan": "Only if the tasks writer can keep it safe and within the Try range (else a Lab with a template for the recorder and bucket, or drop it: the template allows 1 to 2 Try tasks). Precondition: if the Region already has a configuration recorder, use the read-only alternative (describe-configuration-recorders, describe-compliance-by-config-rule). Record only one resource type (security groups); create a security group with no inbound rules and the two tags; add a managed rule whose identifier comes from a corpus page; break-it: predict whether adding an inbound rule that breaks the rule succeeds; it succeeds; then the rule reports the group noncompliant; explain with config-faq-rules-evaluate-after-change-not-prevent. Cost line uses config-price-continuous-ci-0-003 and config-price-rule-evaluation-0-001 (US East (N. Virginia) example prices). Never open port 22 or 3389 to the world (T105): use a rule that a harmless change breaks."
+    }
+  ],
+  "speak": [
+    {
+      "id": "detection-s01",
+      "kind": "explain",
+      "persona": "Chen, security lead of Callvale",
+      "prompt": "Seven services with similar names. Which one answers which of the bank's questions?",
+      "section": "2-deep.md#four-services-detect-problems-and-each-reads-a-different-kind-of-evidence",
+      "layer": "core",
+      "pass_route": true,
+      "must_points": [
+        "GuardDuty watches activity for threats such as stolen credentials (guardduty-dg-continuous-malicious-activity)",
+        "Inspector scans software for vulnerabilities (inspector-dg-vulnerabilities-exposure)",
+        "Macie finds sensitive data such as card numbers in S3 (macie-dg-discovers-sensitive-data)",
+        "Config records configuration changes and checks them against rules (config-faq-what-it-is)",
+        "Security Hub puts the findings in one place (security-hub-cspm-receives-service-findings)"
+      ],
+      "nice_points": ["Detective helps investigate one finding (detective-dg-root-cause)", "Artifact gives the AWS audit reports (artifact-guide-on-demand-compliance-documents)"],
+      "check_back": "Which of the bank's questions worries you most?"
+    },
+    {
+      "id": "detection-s02",
+      "kind": "compare",
+      "persona": "a startup CTO you advise",
+      "prompt": "AWS Config or AWS CloudTrail: which one tells me who opened a port on a security group?",
+      "section": "2-deep.md#config-judges-a-change-against-your-rules-after-the-change-is-recorded",
+      "layer": "extended",
+      "pass_route": false,
+      "must_points": [
+        "CloudTrail records API activity with the caller identity (config-faq-cloudtrail-records-api-activity)",
+        "Config records what the resource looked like at a point in time (config-faq-vs-cloudtrail)",
+        "a Config rule flags the open port after the change, it does not prevent it (config-faq-rules-evaluate-after-change-not-prevent)"
+      ],
+      "nice_points": ["Config can show the port rules that were open at a specific time (config-guide-security-analysis-history)"],
+      "check_back": "Do you need to stop that change, or only to find it and fix it?"
+    }
+  ],
+  "cards": [
+    {"id_hint": "detection-c001", "type": "number", "deck": "core", "front": "In Amazon GuardDuty, a finding is kept for at most {{c1::90 days}}.", "facts": ["guardduty-finding-retention-90-days"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "detection-c002", "type": "number", "deck": "core", "front": "In AWS Config, configuration items are kept by default for {{c1::7 years (2557 days)}}.", "facts": ["config-retention-30-days-to-7-years"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "detection-c003", "type": "decide", "deck": "core", "front": "Find credit card numbers in S3 objects across many buckets, LEAST operational overhead?", "back": "Amazon Macie, with managed data identifiers", "facts": ["macie-managed-data-identifiers"], "section": "2-deep.md#macie-samples-s3-objects-for-sensitive-data-and-reports-exposed-buckets", "trap": "detection-trap-macie-finds-threats"},
+    {"id_hint": "detection-c004", "type": "differ", "deck": "core", "front": "GuardDuty or Inspector: which one finds a package with a known CVE on an EC2 instance?", "back": "Amazon Inspector", "facts": ["inspector-dg-vulnerabilities-exposure"], "section": "2-deep.md#inspector-rescans-a-workload-when-a-new-vulnerability-is-published", "trap": "detection-trap-guardduty-inspector-same-job"},
+    {"id_hint": "detection-c005", "type": "number", "deck": "extended", "front": "Amazon Macie stores sensitive data discovery results {{c1::for only 90 days}} unless you configure an S3 repository.", "facts": ["macie-results-90-days-export-s3-kms"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "detection-c006", "type": "number", "deck": "extended", "front": "In GuardDuty, EventBridge events for repeated occurrences of a finding are sent by default every {{c1::6 hours}}.", "facts": ["guardduty-eventbridge-subsequent-occurrences-default-6-hours"], "section": "2-deep.md#numbers-that-decide-answers"},
+    {"id_hint": "detection-c007", "type": "cannot", "deck": "extended", "front": "In AWS Config, can a rule stop a noncompliant change before it happens?", "back": "No", "extra": "Rules evaluate after the change is recorded; prevent with IAM policies or SCPs.", "facts": ["config-faq-rules-evaluate-after-change-not-prevent"], "section": "2-deep.md#config-judges-a-change-against-your-rules-after-the-change-is-recorded", "trap": "detection-trap-config-rule-prevents"},
+    {"id_hint": "detection-c008", "type": "differ", "deck": "extended", "front": "AWS Config or AWS CloudTrail: which one answers who made the API call that changed a resource?", "back": "AWS CloudTrail", "facts": ["config-faq-vs-cloudtrail"], "section": "2-deep.md#config-judges-a-change-against-your-rules-after-the-change-is-recorded", "trap": "detection-trap-config-shows-who"},
+    {"id_hint": "detection-c009", "type": "decide", "deck": "extended", "front": "Find the root cause of a GuardDuty finding without writing queries?", "back": "Amazon Detective", "facts": ["detective-dg-root-cause", "detective-no-queries-to-build"], "section": "2-deep.md#security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause", "trap": "detection-trap-hub-or-detective-detects"},
+    {"id_hint": "detection-c010", "type": "decide", "deck": "extended", "front": "One prioritized view of GuardDuty, Inspector and Macie findings across accounts?", "back": "AWS Security Hub, with a delegated administrator", "facts": ["security-hub-cspm-receives-service-findings"], "section": "2-deep.md#security-hub-gathers-findings-in-one-place-and-detective-traces-their-cause", "trap": "detection-trap-hub-or-detective-detects"},
+    {"id_hint": "detection-c011", "type": "decide", "deck": "extended", "front": "An auditor needs the AWS SOC report for the AWS data centers. Where do you get it?", "back": "AWS Artifact", "facts": ["artifact-guide-on-demand-compliance-documents"], "section": "2-deep.md#artifact-gives-the-aws-side-of-an-audit-and-you-keep-your-own-evidence", "trap": "detection-trap-artifact-proves-your-compliance"},
+    {"id_hint": "detection-c012", "type": "cannot", "deck": "extended", "front": "For GuardDuty, do you need to create VPC flow logs before it can analyze flow log data?", "back": "No", "extra": "GuardDuty pulls an independent stream and leaves your flow-log settings as they are.", "facts": ["guardduty-flow-logs-not-required"], "section": "2-deep.md#guardduty-analyzes-its-own-copy-of-your-logs-and-stores-none-of-them", "trap": "detection-trap-guardduty-needs-log-setup"}
+  ],
+  "cards_plan_summary": "12 written cards: core 4 (c001 to c004), extended 8; every A-list row has one number card (c001, c002, c005, c006).",
+  "diagrams": [
+    {
+      "id": "detection-hero",
+      "kind": "arch",
+      "where": "1-fast.md#in-one-breath (inside Predict the picture)",
+      "claim": "GuardDuty, Inspector, Macie and AWS Config each read one kind of evidence, and Security Hub gathers their findings in one place.",
+      "alt": "On the left, four kinds of evidence in an AWS account: activity logs, workloads, S3 buckets and resource configurations. Each feeds one service: Amazon GuardDuty, Amazon Inspector, Amazon Macie and AWS Config. Arrows carry their findings to AWS Security Hub. From Security Hub, findings go to Amazon EventBridge, and Amazon Detective investigates one finding.",
+      "say": [
+        "Amazon GuardDuty analyzes activity such as CloudTrail management events, VPC flow logs and DNS logs.",
+        "Amazon Inspector scans workloads for software vulnerabilities and unintended network exposure.",
+        "Amazon Macie discovers sensitive data in Amazon S3.",
+        "AWS Config records how each resource is configured over time.",
+        "AWS Security Hub receives the findings of these services in one place.",
+        "Findings go on to Amazon EventBridge, and Amazon Detective helps you find the root cause of one finding."
+      ],
+      "facts": [
+        "guardduty-foundational-sources-list",
+        "inspector-dg-vulnerabilities-exposure",
+        "macie-dg-discovers-sensitive-data",
+        "config-guide-definition-history-relationships",
+        "security-hub-cspm-receives-service-findings",
+        "security-hub-cspm-eventbridge-all-findings",
+        "detective-dg-root-cause"
+      ]
+    },
+    {
+      "id": "detection-ladder",
+      "kind": "ladder",
+      "where": "2-deep.md#four-services-detect-problems-and-each-reads-a-different-kind-of-evidence",
+      "claim": "The evidence in the stem decides which detection service answers it.",
+      "alt": "A ladder of six questions. Is it suspicious activity in logs or network traffic? Yes: Amazon GuardDuty. Is it a known vulnerability in software? Yes: Amazon Inspector. Is it sensitive data inside S3 objects? Yes: Amazon Macie. Is it a resource setting or its history? Yes: AWS Config. Must findings from many services appear together? Yes: AWS Security Hub. Must you find the root cause of one finding? Yes: Amazon Detective. Each no leads to the next question.",
+      "say": [],
+      "rungs": [
+        {"question": "Suspicious activity in logs or network traffic?", "outcome": "Amazon GuardDuty"},
+        {"question": "A known vulnerability in software?", "outcome": "Amazon Inspector"},
+        {"question": "Sensitive data inside S3 objects?", "outcome": "Amazon Macie"},
+        {"question": "A resource setting or its history?", "outcome": "AWS Config"},
+        {"question": "Findings from many services together?", "outcome": "AWS Security Hub"},
+        {"question": "The root cause of one finding?", "outcome": "Amazon Detective"}
+      ],
+      "facts": [
+        "guardduty-dg-continuous-malicious-activity",
+        "inspector-dg-vulnerabilities-exposure",
+        "macie-dg-discovers-sensitive-data",
+        "config-dg-assess-audit-evaluate",
+        "security-hub-dg-overview-alerts-compliance",
+        "detective-dg-root-cause"
+      ]
+    },
+    {
+      "id": "detection-before",
+      "kind": "arch",
+      "where": "2-deep.md#decision-record",
+      "claim": "At month 19, seven accounts run without detection services, and the bank's questions about threats and evidence stay unanswered.",
+      "alt": "Seven AWS accounts in three organizational units: management; log-archive and security; network; dev, staging and prod. No detection service is turned on. A weekly checklist by hand touches the prod account only. Four open questions from the bank: changes in production, card numbers in transcripts, software vulnerabilities, stolen credentials.",
+      "say": [],
+      "facts": []
+    },
+    {
+      "id": "detection-after",
+      "kind": "arch",
+      "where": "2-deep.md#decision-record",
+      "claim": "Detection services run in every account, and their findings flow into AWS Security Hub in the security account.",
+      "alt": "The same seven accounts. Amazon GuardDuty, Amazon Inspector, Amazon Macie and AWS Config run in each account. The security account is the delegated administrator and holds AWS Security Hub and Amazon Detective. Findings flow from every account into Security Hub. AWS Artifact supplies the AWS audit reports for the bank.",
+      "say": [],
+      "facts": []
+    }
+  ],
+  "fact_requests": [
+    {"id": "fr-0032", "service": "guardduty", "question": "Does the Resource Groups Tagging API GetResources operation return Amazon GuardDuty detectors, so that a verify command can filter detectors by the tag task=detection-t02?", "where": "detection-t02", "blocks": "the verify step of detection-t02 only; no prose sentence depends on it"}
+  ],
+  "fact_requests_note": "No other planned sentence lacks a verified fact. Gaps the plan avoids instead of filling (brief.v0): Detective does not create the original findings (d005, no page); Inspector Code Security repository providers (d045); Inspector member-account count (d046, fact rejected); Macie does not delete or mask data (d059); Security Hub CSPM per-check prices (d073); a Macie named-customer case (d110); whether Detective needs agents (d117). The words-table terms are term requests, not fact requests.",
+  "notes_for_orchestrator": [
+    "1. 2-services.md needs the registry cards list: python3 aws-saa-book/tools/saa.py registry set 09 --cards guardduty,inspector,macie,security-hub,detective,config,artifact (R5; lint L104 checks one card per key). The brief plans the seven cards because the orchestrator note puts the per-service facts there. If the cards list is not set, remove the seven 2-services.md sections from this brief before prose starts.",
+    "2. Traps: 7, equal to brief_traps_max (medium). Every brief trap has a home in a hand file (3 in the fast Traps list, 4 Exam trap callouts in 2-deep.md), so L905 is satisfiable.",
+    "3. The SMEJ case page states no publication year (only 2018, the year of the parent company's governance guidelines). Decide the bold company line (for example 'Sony Music Entertainment Japan' with no year, or with 2018) before the prose writer writes In the real world.",
+    "4. Term requests for the words table and the term list: finding, vulnerability, sensitive data, configuration item, delegated administrator (words table rows), and the rest of term_requests. Until they exist, the writer uses needs-term markers (W307).",
+    "5. Fact request fr-0032 is open; it blocks the counts gate (B09) at finalize. If the registrar finds no page, close it as unfillable and the tasks writer parks detection-t02 (detection-t01 still ships; the template needs at least 1 Try, so detection-t03 then becomes the required Try)."
+  ]
+}

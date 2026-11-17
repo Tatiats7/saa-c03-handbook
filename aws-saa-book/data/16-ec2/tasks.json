@@ -1,0 +1,563 @@
+{
+ "v": 1,
+ "chapter": "ec2",
+ "items": [
+  {
+   "id": "ec2-t01",
+   "type": "look",
+   "title": "Read the processor of three instance types and your metadata defaults",
+   "kills": "\"A Graviton instance can run the same AMI as an x86 instance.\"",
+   "trap": null,
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 5,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "ec2:DescribeInstanceTypes",
+    "ssm:GetParameters",
+    "ec2:GetInstanceMetadataDefaults"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read the processor architecture, vCPUs, memory in MiB, burstable flag and hibernation flag of three instance types. If AWS says a type is not offered in this Region, remove that type and run again.",
+     "command": "aws ec2 describe-instance-types --instance-types t3.micro t4g.micro r6g.large --query \"InstanceTypes[].[InstanceType,ProcessorInfo.SupportedArchitectures[0],VCpuInfo.DefaultVCpus,MemoryInfo.SizeInMiB,BurstablePerformanceSupported,HibernationSupported]\" --output table",
+     "expect": "Three rows, in any order. t3.micro shows x86_64. t4g.micro and r6g.large show arm64: the g after the generation number means AWS Graviton processors. The two t types show True for burstable, r6g.large shows False. All three show True for hibernation.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the two public parameters that point to the latest Amazon Linux 2023 AMI: one for x86_64 and one for arm64.",
+     "command": "aws ssm get-parameters --names /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 --query \"Parameters[].[Name,Value]\" --output table",
+     "expect": "Two rows with two different AMI IDs. One operating system has two AMIs, one for each processor architecture. An x86_64 AMI does not fit t4g.micro, and an arm64 AMI does not fit t3.micro.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List a few bare metal instance types and their hibernation flag.",
+     "command": "aws ec2 describe-instance-types --filters Name=bare-metal,Values=true --query \"InstanceTypes[].[InstanceType,HibernationSupported]\" --max-items 6 --output table",
+     "expect": "Six rows or fewer. In every name, the size after the period starts with metal, and every row shows False for hibernation.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the instance metadata defaults that this account sets for new instances in this Region.",
+     "command": "aws ec2 get-instance-metadata-defaults",
+     "expect": "An AccountLevel block. It is empty when nobody set an account default here: each new instance then takes its settings from its launch settings or its AMI. If it shows HttpTokens required, new instances require IMDSv2 unless their launch settings say otherwise.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "ec2-instance-type-name-structure",
+    "ec2-instance-type-option-letters",
+    "ec2-instance-type-series-letters",
+    "ec2-resize-same-processor-architecture",
+    "ec2-graviton-needs-arm64-ami",
+    "ec2-hibernate-supported-families-no-bare-metal",
+    "ec2-imds-account-default-v2-new-instances",
+    "ec2-imds-options-precedence"
+   ],
+   "sources": [
+    {
+     "title": "describe-instance-types (AWS CLI Command Reference, filters bare-metal and hibernation-supported)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instance-types.html"
+    },
+    {
+     "title": "Amazon EC2 instance type naming conventions",
+     "url": "https://docs.aws.amazon.com/ec2/latest/instancetypes/instance-type-names.html"
+    },
+    {
+     "title": "Reference the latest AMIs using Systems Manager public parameters (x86_64 and arm64 parameters)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami-parameter-store.html"
+    },
+    {
+     "title": "get-parameters (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/get-parameters.html"
+    },
+    {
+     "title": "Prerequisites for EC2 instance hibernation (instance families, bare metal)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/hibernating-prerequisites.html"
+    },
+    {
+     "title": "get-instance-metadata-defaults (AWS CLI Command Reference, AccountLevel output)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/get-instance-metadata-defaults.html"
+    },
+    {
+     "title": "Configure instance metadata options for new instances (account defaults)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-new-instances.html"
+    }
+   ],
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "ec2-t02",
+   "type": "try",
+   "title": "Stop and start an instance then watch the public address change",
+   "kills": "\"A stopped and started instance keeps its public IPv4 address.\"",
+   "trap": "ec2-trap-stop-keeps-public-ip",
+   "section": "2-deep.md#stop-reboot-and-terminate-keep-different-parts-of-an-instance",
+   "pass_route": true,
+   "minutes": 15,
+   "cost": "More than $0: one t3.micro instance for about 15 minutes, billed per second while it runs, with a 60-second minimum each time it starts, at the On-Demand rate of your Region. Each public IPv4 address, the Elastic IP address too, adds $0.005 per hour. While the instance is stopped, its root volume is still billed.",
+   "cost_if_forgotten": "More than $0 a day: a running t3.micro is billed 24 hours a day at the On-Demand rate of your Region, and each public IPv4 address or Elastic IP address adds $0.005 per hour, in use or idle, until you release it.",
+   "cost_facts": [
+    "ec2-on-demand-billing-per-second-60s-minimum",
+    "vpc-public-ipv4-charge-2024",
+    "ec2-eip-charged-in-use-and-idle",
+    "ec2-faq-stopped-instance-ebs-still-charged"
+   ],
+   "permissions": [
+    "ec2:CreateSecurityGroup",
+    "ec2:CreateTags",
+    "ec2:RunInstances",
+    "ssm:GetParameters",
+    "ec2:DescribeInstances",
+    "ec2:StopInstances",
+    "ec2:StartInstances",
+    "ec2:AllocateAddress",
+    "ec2:AssociateAddress",
+    "ec2:DisassociateAddress",
+    "ec2:ReleaseAddress",
+    "ec2:DescribeAddresses",
+    "ec2:TerminateInstances",
+    "ec2:DeleteSecurityGroup"
+   ],
+   "read_only_alternative": "These commands create nothing. List the instances of the Region with their state and both IPv4 addresses: aws ec2 describe-instances --query \"Reservations[].Instances[].[InstanceId,State.Name,PublicIpAddress,PrivateIpAddress]\" A stopped instance shows None as its public address and still shows its private address. Then list the Elastic IP addresses and the instance that each one belongs to: aws ec2 describe-addresses --query \"Addresses[].[PublicIp,InstanceId]\" If the Region has no instance, answer the predict question of step 6 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a security group in the default VPC. A new security group has no inbound rules, so nothing on the internet can open a connection to the instance.",
+     "command": "aws ec2 create-security-group --group-name saa-ec2-t02 --description \"saa-ec2-t02 no inbound rules\" --tag-specifications 'ResourceType=security-group,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t02}]'",
+     "capture": {
+      "name": "SG_ID",
+      "query": "GroupId"
+     },
+     "expect": "No output. SG_ID now holds an ID that starts with sg-. If the command fails because the Region has no default VPC, use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Launch one t3.micro instance from the latest Amazon Linux 2023 AMI, with the new security group and IMDSv2 required. There is no key pair: you do not log in. From here, the instance is billed.",
+     "command": "aws ec2 run-instances --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --instance-type t3.micro --security-group-ids $SG_ID --metadata-options HttpTokens=required --tag-specifications 'ResourceType=instance,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t02},{Key=Name,Value=saa-ec2-t02}]' 'ResourceType=volume,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t02}]'",
+     "capture": {
+      "name": "INSTANCE_ID",
+      "query": "Instances[0].InstanceId"
+     },
+     "expect": "No output. INSTANCE_ID now holds an ID that starts with i-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the state and both IPv4 addresses of the instance, and write the two addresses down. If the state is pending, wait 20 seconds and run the command again.",
+     "command": "aws ec2 describe-instances --instance-ids $INSTANCE_ID --query \"Reservations[0].Instances[0].[State.Name,PublicIpAddress,PrivateIpAddress]\"",
+     "expect": "Three values: running, a public IPv4 address and a private IPv4 address. The instance is in a default subnet, so it received both kinds of address.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Stop the instance. A stopped instance has no instance usage charge, but its root volume is still billed.",
+     "command": "aws ec2 stop-instances --instance-ids $INSTANCE_ID --query \"StoppingInstances[0].CurrentState.Name\"",
+     "expect": "\"stopping\"",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Start the instance again. If the command returns an error because the instance is still stopping, wait 20 seconds and run it again.",
+     "command": "aws ec2 start-instances --instance-ids $INSTANCE_ID --query \"StartingInstances[0].CurrentState.Name\"",
+     "expect": "\"pending\"",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the state and both addresses again. If the state is pending, wait 20 seconds and run the command again.",
+     "command": "aws ec2 describe-instances --instance-ids $INSTANCE_ID --query \"Reservations[0].Instances[0].[State.Name,PublicIpAddress,PrivateIpAddress]\"",
+     "expect": "running, a public IPv4 address that differs from step 3, and the same private IPv4 address as in step 3.",
+     "break_it": true,
+     "predict": "You wrote down both addresses in step 3. After a stop and a start, is the public address the same? Is the private address the same?",
+     "explain": "After a stop and start, the instance gets a [new public IPv4 address](../facts/ec2.md#ec2-state-diff-public-ipv4), and it [keeps its private IPv4 address](../facts/ec2.md#ec2-state-diff-private-ipv4). The old public address came from the pool of Amazon: it was [released back into the pool, and is no longer available for you to use](../facts/vpc.md#vpc-public-ip-from-amazon-pool-released). An Elastic IP address [remains associated with the instance](../facts/ec2.md#ec2-state-diff-elastic-ip) through a stop and start."
+    },
+    {
+     "text": "Fix it: allocate an Elastic IP address. It stays in your account until you release it, and it is billed from now on, in use or idle.",
+     "command": "aws ec2 allocate-address --domain vpc --tag-specifications 'ResourceType=elastic-ip,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t02}]'",
+     "capture": {
+      "name": "ALLOC_ID",
+      "query": "AllocationId"
+     },
+     "expect": "No output. ALLOC_ID now holds an ID that starts with eipalloc-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Associate the Elastic IP address with the instance. Then run the command of step 6 again.",
+     "command": "aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ALLOC_ID",
+     "capture": {
+      "name": "ASSOC_ID",
+      "query": "AssociationId"
+     },
+     "expect": "No output. ASSOC_ID now holds an ID that starts with eipassoc-. The command of step 6 now shows the Elastic IP address as the public address. A stop and start keeps it.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Remove the Elastic IP address from the instance.",
+     "command": "aws ec2 disassociate-address --association-id $ASSOC_ID"
+    },
+    {
+     "text": "Release the Elastic IP address. Until you release it, it is billed, also when no instance uses it.",
+     "command": "aws ec2 release-address --allocation-id $ALLOC_ID"
+    },
+    {
+     "text": "Terminate the instance. Its root volume is deleted with it.",
+     "command": "aws ec2 terminate-instances --instance-ids $INSTANCE_ID"
+    },
+    {
+     "text": "Wait until the instance is terminated, so that no instance uses the security group any more.",
+     "command": "aws ec2 wait instance-terminated --instance-ids $INSTANCE_ID"
+    },
+    {
+     "text": "Delete the security group.",
+     "command": "aws ec2 delete-security-group --group-id $SG_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ec2 describe-instances --filters Name=tag:task,Values=ec2-t02 Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped --query \"Reservations[].Instances[].InstanceId\"",
+    "expect": "An empty list. A terminated instance does not match the state filter. Then run the describe-addresses command of \"Still costs money if left\": it must also return an empty list, or the Elastic IP address is still billed."
+   },
+   "still_costs": [
+    "The Elastic IP address, until release-address has run: it is billed in use or idle. Find it with aws ec2 describe-addresses --filters Name=tag:task,Values=ec2-t02 --query \"Addresses[].[AllocationId,AssociationId]\" then disassociate it and release it.",
+    "The instance, until terminate-instances has run. If the CloudShell session ended before the cleanup, the variables are empty: find the instance with the verify command and terminate it by its ID.",
+    "The security group has no running charge. Delete it anyway, so that no unused group stays in the account: aws ec2 describe-security-groups --filters Name=tag:task,Values=ec2-t02 --query \"SecurityGroups[].GroupId\""
+   ],
+   "facts": [
+    "ec2-state-diff-public-ipv4",
+    "ec2-state-diff-private-ipv4",
+    "ec2-state-diff-elastic-ip",
+    "vpc-public-ip-from-amazon-pool-released",
+    "ec2-faq-public-ip-released-on-stop",
+    "ec2-eip-disassociated-stays-allocated",
+    "vpc-sg-new-no-inbound-rules",
+    "vpc-default-vpc-launch-without-subnet",
+    "vpc-default-subnet-public-ip-and-dns",
+    "ec2-imds-default-v1-or-v2",
+    "ec2-delete-on-termination-defaults",
+    "ec2-on-demand-billing-per-second-60s-minimum",
+    "vpc-public-ipv4-charge-2024",
+    "ec2-eip-charged-in-use-and-idle",
+    "ec2-faq-stopped-instance-ebs-still-charged"
+   ],
+   "sources": [
+    {
+     "title": "Create a security group for your Amazon EC2 instance (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-security-group.html"
+    },
+    {
+     "title": "Reference the latest AMIs using Systems Manager public parameters (run-instances with resolve:ssm)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami-parameter-store.html"
+    },
+    {
+     "title": "Stop and start Amazon EC2 instances (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html"
+    },
+    {
+     "title": "Amazon EC2 instance state changes (what a stop and start keeps)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html"
+    },
+    {
+     "title": "Associate an Elastic IP address with an instance (AWS CLI: allocate-address, associate-address)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/working-with-eips.html"
+    },
+    {
+     "title": "Terminate Amazon EC2 instances (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html"
+    },
+    {
+     "title": "create-security-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-security-group.html"
+    },
+    {
+     "title": "run-instances (AWS CLI Command Reference, example 4: tags on creation)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html"
+    },
+    {
+     "title": "describe-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html"
+    },
+    {
+     "title": "stop-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/stop-instances.html"
+    },
+    {
+     "title": "start-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/start-instances.html"
+    },
+    {
+     "title": "allocate-address (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/allocate-address.html"
+    },
+    {
+     "title": "associate-address (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/associate-address.html"
+    },
+    {
+     "title": "disassociate-address (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/disassociate-address.html"
+    },
+    {
+     "title": "release-address (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/release-address.html"
+    },
+    {
+     "title": "describe-addresses (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-addresses.html"
+    },
+    {
+     "title": "terminate-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/terminate-instances.html"
+    },
+    {
+     "title": "wait instance-terminated (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-terminated.html"
+    },
+    {
+     "title": "delete-security-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-security-group.html"
+    }
+   ],
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "ec2-t03",
+   "type": "try",
+   "title": "Hibernate an instance and see why another one cannot",
+   "kills": "\"You can hibernate any running instance whenever you want to keep its memory.\"",
+   "trap": "ec2-trap-hibernate-any-instance",
+   "section": "2-deep.md#hibernation-saves-the-memory-to-an-encrypted-ebs-root-volume",
+   "pass_route": false,
+   "minutes": 15,
+   "cost": "More than $0: two t3.micro instances for about 15 minutes at the On-Demand rate of your Region, billed per second with a 60-second minimum. Each running instance has a public IPv4 address at $0.005 per hour. While A is hibernated, it has no instance usage fee, and its root volume is billed at standard EBS storage rates.",
+   "cost_if_forgotten": "More than $0 a day: a running instance is billed 24 hours a day at the On-Demand rate of your Region, plus $0.005 per hour for its public IPv4 address. A hibernated or stopped instance has no instance usage fee, but its root volume is billed every day at standard EBS storage rates.",
+   "cost_facts": [
+    "ec2-on-demand-billing-per-second-60s-minimum",
+    "vpc-public-ipv4-charge-2024",
+    "ec2-hibernate-no-instance-fee-ebs-rates",
+    "ec2-faq-stopped-instance-ebs-still-charged"
+   ],
+   "permissions": [
+    "ec2:CreateSecurityGroup",
+    "ec2:CreateTags",
+    "ec2:RunInstances",
+    "ssm:GetParameters",
+    "ec2:DescribeInstances",
+    "ec2:DescribeInstanceStatus",
+    "ec2:StopInstances",
+    "ec2:TerminateInstances",
+    "ec2:DeleteSecurityGroup",
+    "kms:CreateGrant",
+    "kms:Decrypt",
+    "kms:DescribeKey",
+    "kms:GenerateDataKeyWithoutPlaintext",
+    "kms:ReEncrypt"
+   ],
+   "read_only_alternative": "These commands create nothing. List the instance types of the Region that support hibernation: aws ec2 describe-instance-types --filters Name=hibernation-supported,Values=true --query \"InstanceTypes[].InstanceType\" --max-items 10 Then list the instances that were launched with hibernation enabled: aws ec2 describe-instances --filters Name=hibernation-options.configured,Values=true --query \"Reservations[].Instances[].[InstanceId,State.Name]\" An instance that is not in the second list cannot be hibernated, even if its type is in the first list. Answer the predict question of step 6 on paper.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a security group with no inbound rules in the default VPC.",
+     "command": "aws ec2 create-security-group --group-name saa-ec2-t03 --description \"saa-ec2-t03 no inbound rules\" --tag-specifications 'ResourceType=security-group,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t03}]'",
+     "capture": {
+      "name": "SG_ID",
+      "query": "GroupId"
+     },
+     "expect": "No output. SG_ID now holds an ID that starts with sg-. If the command fails because the Region has no default VPC, use another Region, or stop here.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Launch instance B: t3.micro, the latest Amazon Linux 2023 AMI, IMDSv2 required, and no hibernation option. Most instances are launched like this.",
+     "command": "aws ec2 run-instances --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --instance-type t3.micro --security-group-ids $SG_ID --metadata-options HttpTokens=required --tag-specifications 'ResourceType=instance,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t03},{Key=Name,Value=saa-ec2-t03-b}]' 'ResourceType=volume,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t03}]'",
+     "capture": {
+      "name": "B_ID",
+      "query": "Instances[0].InstanceId"
+     },
+     "expect": "No output. B_ID now holds an ID that starts with i-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Store the root device name of the AMI that B uses. Instance A needs this name to ask for an encrypted root volume.",
+     "command": "aws ec2 describe-instances --instance-ids $B_ID",
+     "capture": {
+      "name": "ROOT_DEVICE",
+      "query": "Reservations[0].Instances[0].RootDeviceName"
+     },
+     "expect": "No output. ROOT_DEVICE now holds a device name that starts with /dev/.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Launch instance A like B, with two changes: the hibernation option, and an encrypted root volume. Before the instance launches, EC2 checks that the root volume is encrypted.",
+     "command": "aws ec2 run-instances --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --instance-type t3.micro --security-group-ids $SG_ID --metadata-options HttpTokens=required --hibernation-options Configured=true --block-device-mappings \"DeviceName=$ROOT_DEVICE,Ebs={Encrypted=true,DeleteOnTermination=true}\" --tag-specifications 'ResourceType=instance,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t03},{Key=Name,Value=saa-ec2-t03-a}]' 'ResourceType=volume,Tags=[{Key=book,Value=saa},{Key=task,Value=ec2-t03}]'",
+     "capture": {
+      "name": "A_ID",
+      "query": "Instances[0].InstanceId"
+     },
+     "expect": "No output. A_ID now holds an ID that starts with i-.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Wait until both instances pass their status checks. This takes a few minutes. A Linux instance needs a short time after launch before it can hibernate.",
+     "command": "aws ec2 wait instance-status-ok --instance-ids $A_ID $B_ID",
+     "expect": "No output. The prompt comes back when both instances pass their status checks.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Try to hibernate instance B.",
+     "command": "aws ec2 stop-instances --instance-ids $B_ID --hibernate",
+     "expect": "An error: UnsupportedHibernationConfiguration. B is not hibernated, and it keeps running. Step 8 shows it.",
+     "break_it": true,
+     "predict": "B runs the same AMI and the same instance type as A. Can you hibernate B now and keep its memory?",
+     "explain": "You can enable hibernation for an instance [when you launch it](../facts/ec2.md#ec2-hibernate-enable-only-at-launch), and you [can't enable hibernation on an existing instance](../facts/ec2.md#ec2-hibernate-enable-only-at-launch), whether it is running or stopped. B was launched without the hibernation option, so a hibernate request does not save its memory. In a normal stop, [RAM is cleared](../facts/ec2.md#ec2-faq-hibernate-vs-stop-ram)."
+    },
+    {
+     "text": "Fix it: hibernate instance A, which you launched with the hibernation option and an encrypted root volume. No command adds the hibernation option to B.",
+     "command": "aws ec2 stop-instances --instance-ids $A_ID --hibernate --query \"StoppingInstances[0].CurrentState.Name\"",
+     "expect": "\"stopping\". It can take a few minutes for A to reach the stopped state.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read, for both instances, the hibernation option, the state and the state reason. While A shows stopping, wait 30 seconds and run the command again.",
+     "command": "aws ec2 describe-instances --instance-ids $A_ID $B_ID --query \"Reservations[].Instances[].[InstanceId,HibernationOptions.Configured,State.Name,StateReason.Code]\" --output table",
+     "expect": "A shows True, stopped and Client.UserInitiatedHibernate: its memory is saved on its encrypted root volume. B shows False, running, and no Client.UserInitiatedHibernate.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Terminate instance A. Its root volume, with the saved memory, is deleted with it.",
+     "command": "aws ec2 terminate-instances --instance-ids $A_ID"
+    },
+    {
+     "text": "Terminate instance B.",
+     "command": "aws ec2 terminate-instances --instance-ids $B_ID"
+    },
+    {
+     "text": "Wait until both instances are terminated, so that no instance uses the security group any more.",
+     "command": "aws ec2 wait instance-terminated --instance-ids $A_ID $B_ID"
+    },
+    {
+     "text": "Delete the security group.",
+     "command": "aws ec2 delete-security-group --group-id $SG_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ec2 describe-instances --filters Name=tag:task,Values=ec2-t03 Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped --query \"Reservations[].Instances[].InstanceId\"",
+    "expect": "An empty list. A terminated instance does not match the state filter."
+   },
+   "still_costs": [
+    "Instance A or B, until terminate-instances has run. A hibernated or stopped instance has no instance usage fee, but its root volume is still billed. If the CloudShell session ended before the cleanup, find the instances with the verify command and terminate them by their IDs.",
+    "The security group has no running charge. Delete it anyway, so that no unused group stays in the account: aws ec2 describe-security-groups --filters Name=tag:task,Values=ec2-t03 --query \"SecurityGroups[].GroupId\""
+   ],
+   "facts": [
+    "ec2-hibernate-enable-only-at-launch",
+    "ec2-faq-hibernate-trigger-stopinstances",
+    "ec2-hibernate-root-volume-requirements",
+    "ec2-faq-hibernate-vs-stop-ram",
+    "ec2-faq-hibernate-state-reason",
+    "ec2-faq-hibernated-state-is-stopped",
+    "ec2-hibernate-saves-ram-to-root-volume",
+    "ec2-hibernate-supported-families-no-bare-metal",
+    "vpc-sg-new-no-inbound-rules",
+    "ec2-delete-on-termination-defaults",
+    "ec2-on-demand-billing-per-second-60s-minimum",
+    "vpc-public-ipv4-charge-2024",
+    "ec2-hibernate-no-instance-fee-ebs-rates",
+    "ec2-faq-stopped-instance-ebs-still-charged"
+   ],
+   "sources": [
+    {
+     "title": "Enable hibernation for an Amazon EC2 instance (AWS CLI: run-instances with --hibernation-options and an encrypted root volume)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enabling-hibernation.html"
+    },
+    {
+     "title": "Prerequisites for EC2 instance hibernation (AMIs, root volume encryption checked before launch)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/hibernating-prerequisites.html"
+    },
+    {
+     "title": "Hibernate an Amazon EC2 instance (AWS CLI: stop-instances --hibernate, state reason)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/hibernating-instances.html"
+    },
+    {
+     "title": "Troubleshoot Amazon EC2 instance hibernation (wait after launch before hibernating)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/troubleshoot-instance-hibernate.html"
+    },
+    {
+     "title": "StopInstances (Amazon EC2 API Reference, Hibernate parameter)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_StopInstances.html"
+    },
+    {
+     "title": "Reference the latest AMIs using Systems Manager public parameters (run-instances with resolve:ssm)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami-parameter-store.html"
+    },
+    {
+     "title": "Requirements for Amazon EBS encryption (KMS permissions for users)",
+     "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-encryption-requirements.html"
+    },
+    {
+     "title": "Create a security group for your Amazon EC2 instance (AWS CLI)",
+     "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-security-group.html"
+    },
+    {
+     "title": "run-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html"
+    },
+    {
+     "title": "describe-instances (AWS CLI Command Reference, filter hibernation-options.configured)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html"
+    },
+    {
+     "title": "wait instance-status-ok (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-status-ok.html"
+    },
+    {
+     "title": "stop-instances (AWS CLI Command Reference, --hibernate)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/stop-instances.html"
+    },
+    {
+     "title": "terminate-instances (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/terminate-instances.html"
+    },
+    {
+     "title": "wait instance-terminated (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/wait/instance-terminated.html"
+    },
+    {
+     "title": "delete-security-group (AWS CLI Command Reference)",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-security-group.html"
+    }
+   ],
+   "chapter": "ec2",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

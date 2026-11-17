@@ -1,0 +1,571 @@
+[
+ {
+  "id": "dynamodb-q006",
+  "section": "2-deep.md#dax-answers-repeated-eventually-consistent-reads-from-memory-in-microseconds",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.K2"],
+  "topics": ["databases", "performance"],
+  "services": ["dax", "dynamodb", "elasticache"],
+  "concept": "dax-for-microsecond-repeated-reads",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST development effort",
+  "stem": "A gaming company stores player profiles in an Amazon DynamoDB table. The game reads the same small set of profile items thousands of times each second, and every read is eventually consistent. Reads take a few milliseconds today, and the company wants them to return in microseconds. The company accepts minimal code changes, but it wants no new caching logic in the application. Which solution meets these requirements with the LEAST development effort?",
+  "keywords": ["same small set of profile items", "return in microseconds", "no new caching logic", "LEAST development effort"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create an Amazon ElastiCache cluster, and add code that reads each profile from the cache first and writes it to the cache after a miss.",
+    "correct": false,
+    "why": "It works, but it adds the cache-aside logic that the company wants to avoid, while DAX needs [only minimal functional changes](../facts/dax.md#dax-api-compatible-minimal-changes) for the same reads.",
+    "concept": "elasticache-cache-aside",
+    "trap": null,
+    "misconception": "chooses a general cache that needs new caching code for DynamoDB reads",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Raise the provisioned read capacity of the table to twice the current peak so that each profile read has more capacity to use.",
+    "correct": false,
+    "why": "Capacity sets how many reads the table accepts, not how fast each one returns, and DynamoDB alone gives [single-digit millisecond performance](../facts/dax.md#dax-modest-needs-use-dynamodb-alone).",
+    "concept": "capacity-for-latency",
+    "trap": null,
+    "misconception": "believes that more read capacity makes each read faster",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Create a DynamoDB Accelerator (DAX) cluster for the table, and replace the DynamoDB client in the game with the DAX client.",
+    "correct": true,
+    "why": "DAX is [API-compatible with DynamoDB](../facts/dax.md#dax-api-compatible-minimal-changes) and returns [eventually consistent data](../facts/dax.md#dax-eventually-consistent-microsecond-latency) [with microsecond latency](../facts/dax.md#dax-eventually-consistent-microsecond-latency), so the game changes its client, not its calls.",
+    "concept": "dax-client",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Move the player profiles into an Amazon ElastiCache cluster, and delete the DynamoDB table so that every read comes from memory.",
+    "correct": false,
+    "why": "ElastiCache is an [ephemeral cache for frequently accessed data](../facts/dynamodb.md#dynamodb-decision-guide-elasticache-caching-layer), so with the table deleted, the profiles lose their durable store.",
+    "concept": "cache-as-only-store",
+    "trap": "aurora-trap-cache-as-database",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "The reads repeat, are eventually consistent and need microseconds, which is the DAX pattern. DAX fits applications that [read a small number of items more frequently](../facts/dax.md#dax-ideal-fastest-reads-hot-keys) than others. It is [API-compatible with DynamoDB](../facts/dax.md#dax-api-compatible-minimal-changes), so the game keeps its data access calls and swaps the client.",
+  "takeaway": "Repeated eventually consistent DynamoDB reads that need microseconds: add DAX and swap the client.",
+  "twin": "If the stem said \"every profile read must be strongly consistent\" instead: DAX does not help, because [DAX passes strongly consistent read requests to DynamoDB](../facts/dax.md#dax-passes-through-strong-reads-and-transactions).",
+  "say": null,
+  "facts": [
+   "dax-api-compatible-minimal-changes",
+   "dax-modest-needs-use-dynamodb-alone",
+   "dax-eventually-consistent-microsecond-latency",
+   "dynamodb-decision-guide-elasticache-caching-layer",
+   "dax-ideal-fastest-reads-hot-keys",
+   "dax-passes-through-strong-reads-and-transactions"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-development-effort", "ee-minimal-code-changes"],
+  "twin_of": null
+ },
+ {
+  "id": "dynamodb-q011",
+  "section": "1-fast.md#choose-it-or-not",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.S4", "3.3.K8"],
+  "topics": ["databases"],
+  "services": ["dynamodb", "rds", "elasticache", "ec2", "lambda"],
+  "concept": "dynamodb-for-key-value-sessions",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A startup with a small team is building a serverless backend for a mobile app. AWS Lambda functions handle every request. Each request reads or writes one user session by its session ID, and no request joins session data with other data. Traffic swings from almost nothing at night to millions of requests at peak. Session data must be stored durably. Which database solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["reads or writes one user session by its session ID", "Session data must be stored durably", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Amazon RDS for PostgreSQL in a Multi-AZ deployment, with each Lambda invocation opening its own database connection",
+    "correct": false,
+    "why": "Unlike RDS, [DynamoDB uses an HTTP API](../facts/lambda.md#lambda-ddb-http-api-no-connections); a connection per invocation at peak needs pooling, and the team still sizes DB instances.",
+    "concept": "rds-for-sessions",
+    "trap": "lambda-trap-connection-per-invocation",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Amazon DynamoDB in on-demand capacity mode, with the session ID as the partition key of the session table",
+    "correct": true,
+    "why": "DynamoDB fits [session stores or shopping carts](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store), and you [don't need to provision any servers](../facts/dynamodb.md#dynamodb-serverless-no-servers); on-demand mode can [handle fluctuating traffic](../facts/dynamodb.md#dynamodb-ondemand-better-for-fluctuating-traffic).",
+    "concept": "dynamodb-on-demand-sessions",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "A self-managed NoSQL database on Amazon EC2 instances in an Auto Scaling group across three Availability Zones",
+    "correct": false,
+    "why": "DynamoDB, instead of a self-hosted NoSQL database, [can reduce operational overhead](../facts/dynamodb.md#dynamodb-wa-managed-nosql-reduces-overhead); here the team patches and scales the instances.",
+    "concept": "self-managed-nosql",
+    "trap": null,
+    "misconception": "A NoSQL database on your own instances costs the team about the same effort as a managed one.",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "A node-based Amazon ElastiCache for Memcached cluster as the only store of session data, keyed by session ID",
+    "correct": false,
+    "why": "Memcached [node-based clusters do not support replication](../facts/elasticache.md#elasticache-memcached-node-based-no-replication-data-loss), so a node failure [will always result in some data loss](../facts/elasticache.md#elasticache-memcached-node-based-no-replication-data-loss), which fails the need to store sessions durably.",
+    "concept": "cache-as-session-store",
+    "trap": "aurora-trap-cache-as-database",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "Each request reads one item by its key, with no joins, which fits a key-value database for [session stores or shopping carts](../facts/dynamodb.md#dynamodb-decision-guide-key-value-session-store). With DynamoDB you [don't need to provision any servers](../facts/dynamodb.md#dynamodb-serverless-no-servers). Lambda calls it without connection pools, because [DynamoDB uses an HTTP API](../facts/lambda.md#lambda-ddb-http-api-no-connections).",
+  "takeaway": "Key-value sessions, spiky traffic and a small team: DynamoDB in on-demand mode.",
+  "twin": "If the stem said \"the app joins sessions with orders in ad hoc SQL reports\" instead: a relational database such as Amazon Aurora, because DynamoDB [doesn't support a JOIN operator](../facts/dynamodb.md#dynamodb-no-join-operator).",
+  "say": "One session per key, no joins and spiky traffic point to DynamoDB in on-demand mode, with no servers to manage.",
+  "facts": [
+   "dynamodb-decision-guide-key-value-session-store",
+   "dynamodb-serverless-no-servers",
+   "dynamodb-ondemand-better-for-fluctuating-traffic",
+   "lambda-ddb-http-api-no-connections",
+   "dynamodb-wa-managed-nosql-reduces-overhead",
+   "elasticache-memcached-node-based-no-replication-data-loss",
+   "dynamodb-no-join-operator"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-serverless", "ee-small-team"],
+  "twin_of": null
+ },
+ {
+  "id": "dynamodb-q002",
+  "section": "2-deep.md#a-hash-of-the-partition-key-picks-the-partition-so-hot-keys-throttle",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.K3"],
+  "topics": ["databases", "performance"],
+  "services": ["dynamodb"],
+  "concept": "hot-partition-key-design",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "BEST",
+  "stem": "A company runs a voting application that stores each vote as an item in an Amazon DynamoDB table in provisioned capacity mode. The partition key is the contest ID, and the application shows the running total of each contest. During a televised final, almost every vote is for one contest, at about 4,000 votes each second. Each vote item is smaller than 1 KB. Amazon CloudWatch shows that consumed write capacity is far below the provisioned write capacity of the table, but many writes are throttled. The company needs a scalable design. Which solution will BEST resolve the throttling?",
+  "keywords": ["almost every vote is for one contest", "about 4,000 votes each second", "far below the provisioned write capacity", "BEST"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Raise the provisioned write capacity of the table to several times the current peak, and keep the contest ID as the partition key of every vote.",
+    "correct": false,
+    "why": "The table already has spare capacity; the limit is one partition, which delivers at most [1,000 write units per second](../facts/dynamodb.md#dynamodb-partition-max-throughput) whatever the table total is.",
+    "concept": "raise-table-capacity",
+    "trap": "dynamodb-trap-spare-capacity-no-throttle",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Add a random number from a fixed range to the contest ID on each write, then query each suffix and sum the results to count the votes.",
+    "correct": true,
+    "why": "Random suffixes [randomize the writes across the larger space](../facts/dynamodb.md#dynamodb-write-sharding-random-suffix) of keys, and a total needs one query per suffix before you [merge the results](../facts/dynamodb.md#dynamodb-write-sharding-read-merge).",
+    "concept": "write-sharding",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Switch the table to on-demand capacity mode so that the table scales automatically with the burst of votes, and keep the contest ID as the partition key.",
+    "correct": false,
+    "why": "On-demand mode changes billing, not the partition ceiling of [1,000 write units per second](../facts/dynamodb.md#dynamodb-partition-max-throughput), so 4,000 small votes each second on one key are still throttled.",
+    "concept": "on-demand-for-hot-key",
+    "trap": "how-the-exam-asks-trap-keyword-bait",
+    "misconception": null,
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "d",
+    "text": "Make a unique vote ID the partition key of every item, and count the votes of a contest with a Scan that filters on the contest ID.",
+    "correct": false,
+    "why": "It ends the throttling, but in a Scan [DynamoDB reads every item](../facts/dynamodb.md#dynamodb-scan-reads-every-item), so each running total reads the whole table.",
+    "concept": "unique-key-scan-totals",
+    "trap": null,
+    "misconception": "fixes the writes with a design that makes every total a full table read",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "Consumed capacity is far below provisioned capacity, so the table is not short of capacity; one partition key is. A partition delivers at most [1,000 write units per second](../facts/dynamodb.md#dynamodb-partition-max-throughput), and [concentrated traffic that exceeds these limits](../facts/dynamodb.md#dynamodb-hot-partitions-throttle-while-others-underutilized) is throttled. Write sharding spreads one contest [across more distinct partition key values](../facts/dynamodb.md#dynamodb-few-partition-keys-spread-writes), so no single partition takes the whole burst.",
+  "takeaway": "Throttling with spare table capacity means a hot partition key: spread it with a random suffix.",
+  "twin": "If the stem said \"consumed write capacity equals the provisioned write capacity, and the votes are spread across many contests\" instead: raise the provisioned write capacity, because the table as a whole is short of capacity.",
+  "say": "Spare capacity plus throttling means one hot key, so I'd shard the key with a random suffix.",
+  "facts": [
+   "dynamodb-partition-max-throughput",
+   "dynamodb-write-sharding-random-suffix",
+   "dynamodb-write-sharding-read-merge",
+   "dynamodb-scan-reads-every-item",
+   "dynamodb-hot-partitions-throttle-while-others-underutilized",
+   "dynamodb-few-partition-keys-spread-writes"
+  ],
+  "sources": [],
+  "exam_english": ["ee-best", "ee-scalable"],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for the solution that BEST resolves the throttling.",
+    "I mark the constraints: almost every vote is for one contest at about 4,000 small writes each second, the contest ID is the partition key, consumed write capacity is far below the provisioned capacity, and the application shows a running total per contest.",
+    "Before I look at the options, I predict a change of the partition key, because throttling with spare table capacity points to one hot key, and a random suffix spreads that key.",
+    "I remove the higher provisioned capacity, because the table already has spare capacity and each partition has its own ceiling. I remove on-demand mode, because it changes billing, not the ceiling of one partition.",
+    "Between the random suffix and the unique vote ID the difference is how the totals are read; the stem needs a running total per contest, so a Scan of the whole table for each total is the weaker design.",
+    "Check: the random suffix spreads the writes, a total needs one query per suffix, and every constraint is met. Time: 90 seconds."
+   ],
+   "wrong_path": false
+  }
+ },
+ {
+  "id": "dynamodb-q010",
+  "section": "2-deep.md#secondary-indexes-give-the-same-items-a-second-key-to-query",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.K3"],
+  "topics": ["databases", "performance"],
+  "services": ["dynamodb"],
+  "concept": "gsi-for-new-access-pattern-existing-table",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "An online store uses Amazon DynamoDB for its orders table. The partition key of the table is CustomerId, and the sort key is OrderDate. A new screen in the application must list the orders of one customer sorted by OrderTotal. The table is being created now, and the new screen must use strongly consistent reads. The table will grow to millions of orders, and the screen must stay fast as the table grows. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": ["is being created now", "must use strongly consistent reads", "must stay fast as the table grows", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a global secondary index with CustomerId as the partition key and OrderTotal as the sort key, and query the index for the screen.",
+    "correct": false,
+    "why": "The screen needs strongly consistent reads, but queries on a global secondary index [support eventual consistency only](../facts/dynamodb.md#dynamodb-index-read-consistency-gsi-vs-lsi).",
+    "concept": "gsi-strong-read",
+    "trap": "dynamodb-trap-gsi-strong-read",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Define a local secondary index on the table with OrderTotal as the sort key, and query the index for the screen.",
+    "correct": true,
+    "why": "The table is new, so the index is [created when the table is created](../facts/dynamodb.md#dynamodb-lsi-created-with-table), and a query can use [either eventually consistent or strongly consistent reads](../facts/dynamodb.md#dynamodb-lsi-strongly-consistent-allowed).",
+    "concept": "lsi-at-creation",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Scan the table with a filter expression on CustomerId for each request, and sort the returned orders by OrderTotal in the application.",
+    "correct": false,
+    "why": "It needs no index, but a Scan [always scans the entire table or secondary index](../facts/dynamodb.md#dynamodb-scan-less-efficient-than-query), and it slows [as a table or index grows](../facts/dynamodb.md#dynamodb-scan-slows-as-table-grows), so the screen does not stay fast.",
+    "concept": "scan-with-filter",
+    "trap": "dynamodb-trap-filter-saves-capacity",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Copy each order into a second table keyed by CustomerId and OrderTotal through a Lambda function that reads the stream of the table.",
+    "correct": false,
+    "why": "The copy is written from the stream after each change, and [reads from GSIs and streams are eventually consistent](../facts/dynamodb.md#dynamodb-gsi-and-streams-reads-eventual), so the copy can miss the latest write.",
+    "concept": "stream-copy-table",
+    "trap": null,
+    "misconception": "treats a copy that is written after each change as current",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The screen needs strong reads on another sort key of the same customer. A local secondary index has the [same partition key as the base table](../facts/dynamodb.md#dynamodb-lsi-same-partition-key) and its own sort key. Strongly consistent reads are [only supported on tables and local secondary indexes](../facts/dynamodb.md#dynamodb-strong-reads-only-tables-and-lsi), and the table is new, so the index can be defined now.",
+  "takeaway": "Strong reads on another sort key of a new table: define a local secondary index at creation.",
+  "twin": "If the stem said \"The table currently holds two years of orders, and eventually consistent reads are acceptable.\" instead: a global secondary index, because you can [add a new global secondary index](../facts/dynamodb.md#dynamodb-index-online-operations-gsi-vs-lsi) later.",
+  "say": null,
+  "facts": [
+   "dynamodb-index-read-consistency-gsi-vs-lsi",
+   "dynamodb-lsi-created-with-table",
+   "dynamodb-lsi-strongly-consistent-allowed",
+   "dynamodb-scan-less-efficient-than-query",
+   "dynamodb-scan-slows-as-table-grows",
+   "dynamodb-gsi-and-streams-reads-eventual",
+   "dynamodb-lsi-same-partition-key",
+   "dynamodb-strong-reads-only-tables-and-lsi",
+   "dynamodb-index-online-operations-gsi-vs-lsi"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-must"],
+  "twin_of": "dynamodb-q004"
+ },
+ {
+  "id": "dynamodb-q005",
+  "section": "2-deep.md#a-query-reads-one-partition-key-but-a-scan-reads-every-item",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.K4"],
+  "topics": ["databases", "cost", "performance"],
+  "services": ["dynamodb", "lambda"],
+  "concept": "reduce-read-capacity-of-report-job",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs a mission-critical order API on an Amazon DynamoDB table in provisioned capacity mode. Every night, a report job scans the whole table with strongly consistent reads and a filter expression that keeps only orders with the status OPEN. A small share of the orders are open at any time, and the report can use data that is a few minutes old. The company wants no new tables or functions to operate. During the job, the order API is throttled. Which TWO actions will reduce the read capacity that the job consumes in the MOST cost-effective way? (Select TWO.)",
+  "keywords": ["a filter expression that keeps only orders with the status OPEN", "A small share of the orders are open", "the report can use data that is a few minutes old", "MOST cost-effective"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Make the filter expression of the scan more selective, so that the scan returns fewer order items to the report job.",
+    "correct": false,
+    "why": "A filter runs after the read, so the scan [consumes the same amount of read capacity](../facts/dynamodb.md#dynamodb-scan-filter-same-read-capacity) with or without it.",
+    "concept": "selective-filter",
+    "trap": "dynamodb-trap-filter-saves-capacity",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Add an attribute that only open orders carry, create a global secondary index on that attribute, and change the job to query the index.",
+    "correct": true,
+    "why": "The index [only tracks data items](../facts/dynamodb.md#dynamodb-gsi-only-items-with-key-attributes) that carry its key, so it is [faster and less expensive to query that index](../facts/dynamodb.md#dynamodb-sparse-index-faster-cheaper-than-scan).",
+    "concept": "sparse-gsi",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Add a projection expression to the scan, so that DynamoDB returns only the few attributes that the report needs.",
+    "correct": false,
+    "why": "Read capacity depends on [the number of items and the size](../facts/dynamodb.md#dynamodb-read-capacity-by-items-read-not-returned) of the items that the scan reads, not on the data it returns.",
+    "concept": "projection-expression",
+    "trap": "dynamodb-trap-projection-saves-capacity",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Change the scan of the report job from strongly consistent reads to eventually consistent reads, and keep the same filter expression.",
+    "correct": true,
+    "why": "Eventually consistent reads cost [half the cost of strongly consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost), and the report accepts data that is minutes old.",
+    "concept": "eventually-consistent-reads",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Copy each open order into a second DynamoDB table with a Lambda function on the stream of the table, and scan the second table.",
+    "correct": false,
+    "why": "It adds a second table and a Lambda function, which the company does not want to operate, and it also pays for every copied write.",
+    "concept": "copy-table-for-report",
+    "trap": null,
+    "misconception": "A copy that custom code keeps in sync is the cheapest way to isolate a report.",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "A filter does not help, because the scan still [consumes the same amount of read capacity](../facts/dynamodb.md#dynamodb-scan-filter-same-read-capacity). A sparse global secondary index [only tracks data items](../facts/dynamodb.md#dynamodb-gsi-only-items-with-key-attributes) that carry its key attribute, so the job reads far fewer items. Eventually consistent reads then cost [half the cost of strongly consistent reads](../facts/dynamodb.md#dynamodb-eventually-consistent-half-cost).",
+  "takeaway": "Filters and projections do not lower scan capacity; a sparse index and eventually consistent reads do.",
+  "twin": "If the stem said \"the report lists every order, open or closed\" instead: the sparse index stops helping, because the job reads every item, and eventually consistent reads still help.",
+  "say": "To cut the read capacity of a report, I query a sparse index and use eventually consistent reads; a filter saves nothing.",
+  "facts": [
+   "dynamodb-scan-filter-same-read-capacity",
+   "dynamodb-gsi-only-items-with-key-attributes",
+   "dynamodb-sparse-index-faster-cheaper-than-scan",
+   "dynamodb-read-capacity-by-items-read-not-returned",
+   "dynamodb-eventually-consistent-half-cost"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-cost-effective", "ee-select-two", "ee-mission-critical"],
+  "twin_of": null
+ },
+ {
+  "id": "dynamodb-q021",
+  "section": "2-deep.md#iam-controls-access-and-every-table-is-encrypted-at-rest",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.S2"],
+  "topics": ["databases", "networking", "cost"],
+  "services": ["dynamodb", "vpc-endpoints", "direct-connect", "vpc"],
+  "concept": "private-access-vpc-and-on-premises",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs applications in private subnets of a VPC and servers in its on-premises data center. The data center connects to the VPC through AWS Direct Connect. Both the applications and the servers read and write items in an Amazon DynamoDB table in the same Region. The applications exchange several terabytes of data with DynamoDB each day; the servers exchange much less. All traffic to DynamoDB must reach the service privately, without using the public internet. Which TWO actions will meet these requirements in the MOST cost-effective way? (Select TWO.)",
+  "keywords": ["private subnets of a VPC", "servers in its on-premises data center", "without using the public internet", "MOST cost-effective"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a NAT gateway in each Availability Zone, and route the DynamoDB traffic of the private subnets through the NAT gateways.",
+    "correct": false,
+    "why": "A gateway endpoint reaches DynamoDB [without requiring an internet gateway or NAT device](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-no-igw-nat), and NAT gateways charge per gigabyte [regardless of the traffic's source or destination](../facts/vpc.md#vpc-natgw-data-processing-any-destination).",
+    "concept": "nat-gateway-for-dynamodb",
+    "trap": null,
+    "misconception": "Private subnets need a NAT gateway to reach DynamoDB.",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Create a gateway endpoint for DynamoDB, and add the endpoint to the route tables of the private subnets of the applications.",
+    "correct": true,
+    "why": "A gateway endpoint reaches DynamoDB [without requiring an internet gateway or NAT device](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-no-igw-nat), and there is [no additional charge for using gateway endpoints](../facts/vpc-endpoints.md#vpc-endpoints-wp-gateway-endpoint-no-additional-charge).",
+    "concept": "gateway-endpoint",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Route the requests of the data center servers over Direct Connect to the gateway endpoint that the private subnets use.",
+    "correct": false,
+    "why": "Gateway endpoints do not allow access from on-premises networks; for that case [you must use AWS PrivateLink](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-limits-use-privatelink).",
+    "concept": "gateway-endpoint-from-on-premises",
+    "trap": "vpc-trap-endpoint-types-alike",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Create an interface endpoint for DynamoDB in the VPC, and send the requests of the data center servers to it over Direct Connect.",
+    "correct": true,
+    "why": "For on-premises access [you must use AWS PrivateLink](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-limits-use-privatelink), which uses [interface VPC endpoints and private IP addresses](../facts/dynamodb.md#dynamodb-faq-privatelink-interface-endpoints).",
+    "concept": "interface-endpoint-on-premises",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Create an interface endpoint for DynamoDB in the VPC, and send the requests of both the applications and the data center servers to it.",
+    "correct": false,
+    "why": "This works, but PrivateLink is [available for an additional cost](../facts/dynamodb.md#dynamodb-faq-gateway-vs-privatelink-cost-note), and the daily terabytes of the applications can use a gateway endpoint without that cost.",
+    "concept": "interface-endpoint-for-all",
+    "trap": "vpc-trap-endpoint-types-alike",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The two groups of callers need two endpoint types. In the VPC, a gateway endpoint has [no additional charge for using gateway endpoints](../facts/vpc-endpoints.md#vpc-endpoints-wp-gateway-endpoint-no-additional-charge). Gateway endpoints do not serve the data center, so [you must use AWS PrivateLink](../facts/dynamodb.md#dynamodb-faq-gateway-endpoint-limits-use-privatelink), which reaches DynamoDB through [interface VPC endpoints and private IP addresses](../facts/dynamodb.md#dynamodb-faq-privatelink-interface-endpoints).",
+  "takeaway": "VPC callers use the gateway endpoint at no extra charge; data center callers use an interface endpoint.",
+  "twin": "If the stem said \"only the applications in the VPC use the table\" instead: the gateway endpoint alone, because there is [no additional charge for using gateway endpoints](../facts/vpc-endpoints.md#vpc-endpoints-wp-gateway-endpoint-no-additional-charge).",
+  "say": "Inside the VPC I use the gateway endpoint at no extra charge; from the data center I use an interface endpoint.",
+  "facts": [
+   "dynamodb-faq-gateway-endpoint-no-igw-nat",
+   "vpc-endpoints-wp-gateway-endpoint-no-additional-charge",
+   "dynamodb-faq-gateway-endpoint-limits-use-privatelink",
+   "dynamodb-faq-privatelink-interface-endpoints",
+   "dynamodb-faq-gateway-vs-privatelink-cost-note",
+   "vpc-natgw-data-processing-any-destination"
+  ],
+  "sources": [],
+  "exam_english": ["ee-select-two", "ee-privately", "ee-most-cost-effective", "ee-on-premises"],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for two actions that keep all DynamoDB traffic private at the lowest cost.",
+    "I mark the constraints: applications in private subnets that move terabytes each day, servers in the data center behind Direct Connect, no public internet, and MOST cost-effectively.",
+    "Before I look at the options, I predict one interface endpoint for DynamoDB for everything, because PrivateLink serves both the VPC and the data center through private IP addresses.",
+    "I remove the NAT gateways, because a gateway endpoint reaches DynamoDB without a NAT device and NAT gateways charge for every gigabyte. I remove the data center route to the gateway endpoint, because gateway endpoints do not allow access from on-premises networks.",
+    "Between one interface endpoint for all callers and a gateway endpoint plus an interface endpoint, the difference is cost. My first idea breaks because the applications in the VPC can use a gateway endpoint at no additional charge, and PrivateLink is available for an additional cost.",
+    "Check: the gateway endpoint serves the applications at no extra charge, the interface endpoint serves the data center servers, and no request uses the public internet. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ },
+ {
+  "id": "dynamodb-q016",
+  "section": "2-deep.md#every-restore-from-a-backup-or-a-point-in-time-creates-a-new-table",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": ["2.2.S2", "2.2.S5"],
+  "topics": ["databases", "resilience", "cost"],
+  "services": ["dynamodb", "backup", "dax"],
+  "concept": "multi-region-recovery-choice",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs its order service in us-east-1 and stores the orders in an Amazon DynamoDB table in on-demand capacity mode in the same Region. The company is planning cross-Region disaster recovery for a failure of the whole Region. If us-east-1 fails, a restore in us-west-2 within hours is acceptable, and so is losing up to 2 hours of data. Which solution meets these requirements in the MOST cost-effective way?",
+  "keywords": ["a restore in us-west-2 within hours is acceptable", "losing up to 2 hours of data", "MOST cost-effective"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Convert the table into a global table, and add a replica table in us-west-2 that the application can read from and write to.",
+    "correct": false,
+    "why": "It works, but the replica table bills [one rWRU per replica table](../facts/dynamodb.md#dynamodb-gt-rwru-per-replica) for every write all day, for a recovery speed that the stem does not ask for.",
+    "concept": "global-table-one-replica",
+    "trap": "how-the-exam-asks-trap-always-max-availability",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Use AWS Backup to back up the table every hour, and copy each backup to a backup vault in us-west-2 for restores.",
+    "correct": true,
+    "why": "AWS Backup plans can copy backups across Regions [every hour, every 12 hours, daily, weekly, or monthly](../facts/dynamodb.md#dynamodb-dr-aws-backup-rpo-1-hour), and the hourly copy gives an [RPO of 1 hour](../facts/dynamodb.md#dynamodb-dr-aws-backup-rpo-1-hour), inside the 2 hours allowed.",
+    "concept": "cross-region-backup",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Convert the table into a global table, and add replica tables in us-west-2 and in eu-west-1 that the application can read from and write to.",
+    "correct": false,
+    "why": "It works, but two replica tables each bill [one rWRU per replica table](../facts/dynamodb.md#dynamodb-gt-rwru-per-replica) for every write, far more than hourly backups cost.",
+    "concept": "global-table-extra-replica",
+    "trap": "how-the-exam-asks-trap-always-max-availability",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Create a DynamoDB Accelerator (DAX) cluster in us-west-2 that caches the items of the table and serves them to the application during an outage.",
+    "correct": false,
+    "why": "A DAX cluster can work only with [tables that are in the same Region](../facts/dax.md#dax-same-region-as-tables), so a cluster in us-west-2 cannot serve this table.",
+    "concept": "dax-other-region",
+    "trap": null,
+    "misconception": "believes that a cache in another Region can stand in for the table",
+    "distractor_type": "impossible-feature"
+   }
+  ],
+  "explanation": "The stem accepts 2 hours of data loss and a restore that takes hours, so continuous replication is not needed. Hourly AWS Backup copies to us-west-2 give an [RPO of 1 hour](../facts/dynamodb.md#dynamodb-dr-aws-backup-rpo-1-hour), which leaves time for each copy to finish. After an outage, you restore the [entire table data to a new table](../facts/dynamodb.md#dynamodb-backup-restore-only-to-new-table) in us-west-2.",
+  "takeaway": "When hours of recovery and hours of data loss are acceptable, cross-Region backups cost less than a global table.",
+  "twin": "If the stem said \"If us-east-1 fails, users must keep reading and writing orders in us-west-2 immediately, with no restore step.\" instead: a global table, because it gives an [RTO of zero](../facts/dynamodb.md#dynamodb-dr-global-tables-mrec-rto-zero).",
+  "say": null,
+  "facts": [
+   "dynamodb-gt-rwru-per-replica",
+   "dynamodb-dr-aws-backup-rpo-1-hour",
+   "dax-same-region-as-tables",
+   "dynamodb-backup-restore-only-to-new-table",
+   "dynamodb-dr-global-tables-mrec-rto-zero"
+  ],
+  "sources": [],
+  "exam_english": ["ee-most-cost-effective", "ee-cross-region", "ee-acceptable"],
+  "twin_of": "dynamodb-q012"
+ }
+]

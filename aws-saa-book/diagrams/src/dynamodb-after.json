@@ -1,0 +1,101 @@
+{
+  "id": "dynamodb-after",
+  "kind": "arch",
+  "size": "s",
+  "chapter": "28",
+  "title": "Callvale after: the jobs table in DynamoDB",
+  "claim": "Pipeline steps read and write each job by call ID in the jobs table, and the dashboard lists jobs through the index by-customer.",
+  "alt": "After: the S3 upload event starts the start-job function, which starts the state machine call-pipeline. Each step reads and writes the job item by call ID in the DynamoDB table jobs. The dashboard queries the global secondary index by-customer. Time to live removes old job items.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "groups": [
+    {
+      "id": "ddb",
+      "type": "generic",
+      "label": "DynamoDB",
+      "cells": "A4:B4"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "uploads",
+      "icon": "s3",
+      "label": "Uploads",
+      "at": "A1"
+    },
+    {
+      "id": "start",
+      "icon": "lambda-function",
+      "label": "start-job",
+      "at": "A2"
+    },
+    {
+      "id": "pipe",
+      "icon": "step-functions",
+      "label": "call-pipeline",
+      "at": "A3"
+    },
+    {
+      "id": "dash",
+      "icon": "client",
+      "label": "Dashboard",
+      "at": "B2"
+    },
+    {
+      "id": "jobs",
+      "icon": "table",
+      "label": "jobs table",
+      "at": "A4",
+      "emph": true
+    },
+    {
+      "id": "gsi",
+      "icon": "global-secondary-index",
+      "label": "by-customer\nindex",
+      "at": "B4"
+    },
+    {
+      "id": "ttl",
+      "label": "Time to live",
+      "at": "A5"
+    }
+  ],
+  "edges": [
+    {
+      "from": "uploads",
+      "to": "start",
+      "label": "event"
+    },
+    {
+      "from": "start",
+      "to": "pipe",
+      "label": "starts",
+      "step": 1,
+      "say": "The start-job function starts the state machine call-pipeline for each upload."
+    },
+    {
+      "from": "pipe",
+      "to": "jobs",
+      "label": "by call ID",
+      "step": 2,
+      "say": "Each step reads and writes the job item by its call ID in the jobs table."
+    },
+    {
+      "from": "dash",
+      "to": "gsi",
+      "label": "by customer",
+      "step": 3,
+      "say": "The dashboard lists one customer's jobs through the global secondary index by-customer."
+    },
+    {
+      "from": "ttl",
+      "to": "jobs",
+      "label": "deletes old",
+      "step": 4,
+      "dashed": true,
+      "say": "Time to live deletes old job items without consuming any write throughput."
+    }
+  ],
+  "notes": "Brief 28 story pair, after (pipeline state P3); 2-deep.md#decision-record (after Decision). Title, claim, alt and steps from brief.json. Same cells as dynamodb-before for uploads, start-job, the pipeline and the dashboard (B2); the table group replaces RDS Proxy and PostgreSQL. Step 4 fact: dynamodb-faq-ttl-no-write-throughput; steps 1 to 3 are story. No second Region (stage 4). No number drawn."
+}

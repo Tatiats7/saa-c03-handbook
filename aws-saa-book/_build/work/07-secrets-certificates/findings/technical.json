@@ -1,0 +1,185 @@
+{
+ "lens": "technical",
+ "chapter": "07",
+ "reviewer": "review-07-technical",
+ "reviewed": "2026-10-12",
+ "scope_note": "Ran 'saa.py sync 07' first (written=0, unchanged=8). 3-do.md and 4-say.md still print 'Nothing here yet.' (task and spoken items are status candidate), although 2-deep.md says 'See 3-do.md'; so the task, the spoken answers and the cards were reviewed in data/07-secrets-certificates/{tasks,speak,cards}.json, and the questions in 5-quiz.md plus questions.json. Read 1-fast.md, 2-deep.md and 5-quiz.md in full. About 45 statements were tested against saved AWS pages (search, show) and verified facts; the findings below are the ones that did not hold. Statements checked and found correct include: the us-east-1 rule for CloudFront and edge-optimized API Gateway, Regional API Gateway and ELB same-Region rule, 'you cannot copy a certificate between regions', reimport keeps the ARN, HTTP validation only through CloudFront Distribution Tenants, 198-day validity and the 45-day renewal window (2026-02-18), the email-to-DNS switch (2026-08-13, not examinable yet), the four rotation steps, rotation retries in the window, every four hours / one-hour window, managed rotation without Lambda, the cross-account policy table and q007 (customer managed key plus role-scoped resource policy), 4 KB / 8 KB, 10,000 / 100,000, 40 TPS shared by three Get APIs, advanced-only parameter policies, Expiration deletes the parameter, q010 (interface endpoint, no gateway endpoint for Secrets Manager), the task's describe-parameters tag filter syntax (docs parameter-search) and the expected KeyId 'alias/aws/ssm' (CLI reference describe-parameters), and the task cleanup (both parameters deleted, verify can fail if one remains).",
+ "findings": [
+  {
+   "id": "technical-01",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "cross-account-access-to-a-secret-needs-a-customer-managed-kms-key",
+   "quote": "Use [aws:SourceVpce](../facts/secrets-manager.md#secrets-manager-source-vpce-condition) with an endpoint in a **virtual private cloud** (vee-pee-SEE), or VPC, instead.",
+   "type": "unsafe-advice",
+   "severity": "blocking",
+   "evidence": "The 'Spot the bug' fix repeats the bug. A Deny on requests that do not come from one VPC endpoint denies the rotation function too, unless that function runs in the VPC and calls Secrets Manager through that endpoint; AWS gives the same warning for aws:SourceVpc/aws:SourceVpce as for aws:SourceIp. Source docs/secretsmanager/latest/userguide/best-practices (Limit requests with VPC endpoint conditions): \"If you use these condition keys in a resource policy statement that allows or denies access to Secrets Manager secrets, you can inadvertently deny access to services that use Secrets Manager to access secrets on your behalf. Only some AWS services can run with an endpoint within your VPC. If you restrict requests for a secret to a VPC or VPC endpoint, then calls to Secrets Manager from a service not configured for the service can fail.\" The reader would copy a policy that still breaks rotation (and, with Principal \"*\" and secretsmanager:*, also blocks administrators outside the endpoint from changing the policy). Fix: 'Use aws:SourceVpce only if the rotation function runs in the VPC and calls Secrets Manager through that endpoint (see the interface endpoint in Go deeper); otherwise scope the Deny so that it does not match the rotation function.' Needs a fact from the quote above.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The answer no longer offers aws:SourceVpce as the fix. It reads 'A Deny on [aws:SourceVpce] has the same risk: [you can inadvertently deny access to services](secrets-manager-vpc-condition-can-block-services).' (verified fact from the best-practices quote)."
+  },
+  {
+   "id": "technical-02",
+   "file": "data/07-secrets-certificates/tasks.json",
+   "section": "secrets-certificates-t01",
+   "quote": "\"kills\": \"\\\"A SecureString parameter returns its plain value to anyone who calls GetParameter.\\\"\"",
+   "type": "unsafe-advice",
+   "severity": "blocking",
+   "evidence": "The task 'kills' a belief that is in practice true for the setup it builds. Step 2 uses the default key aws/ssm, and that key gives kms:Decrypt to every IAM principal in the account, so anyone allowed ssm:GetParameter gets the plain value by adding --with-decryption (step 4). The break-it step (step 3) shows only that the default response is encrypted, and the reader learns a false sense of access control. Source docs/systems-manager/latest/userguide/parameter-store-setting-up (Denying permissions, Note): \"The default AWS Key Management Service (AWS KMS) key has `Decrypt` permission for all IAM principals within the AWS account. If you want different access levels to `SecureString` parameters in your account, we don't recommend that you use the default key. Restricting `kms:Decrypt` on a customer managed key prevents decryption of a `SecureString` value through any retrieval operation.\" The task's permissions list also omits kms:Decrypt, which works only because of this default-key behavior. Fix: rewrite 'kills' as 'WithDecryption is a security control', and add to the step 4 explain: 'With aws/ssm, every principal that can call GetParameter can decrypt; to limit who reads the value, use a customer managed key and grant kms:Decrypt narrowly.' Needs a fact from the quote above.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): kills now reads '\"Leaving out WithDecryption hides a SecureString value from the people who can call GetParameter.\"' Step 3 explain adds 'The flag is a request option, not a permission: the reader needs kms:Decrypt [regardless of which Parameter Store operation is used](parameter-store-securestring-needs-kms-decrypt).' Step 4 text: 'as the same caller ... No extra permission was added.' The aws/ssm 'Decrypt permission for all IAM principals' sentence is not stated: it is in the corpus (docs/systems-manager/latest/userguide/parameter-store-setting-up, line 122) but no verified fact holds it. For the registrar: mine that sentence for chapter 07."
+  },
+  {
+   "id": "technical-03",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Can another account read it? | Yes, with a resource-based policy and [a KMS key that you create](../facts/secrets-manager.md#secrets-manager-cross-account-no-aws-managed-key) | Advanced tier only: [it must be in the advanced parameter tier](../facts/parameter-store.md#parameter-store-sharing-advanced-ram) |",
+   "type": "condition-dropped",
+   "severity": "blocking",
+   "evidence": "The table compares the two services for secrets. The Secrets Manager cell names the customer managed key; the Parameter Store cell drops the same condition, so the reader concludes that an advanced SecureString parameter under aws/ssm can be shared. Verified fact parameter-store-share-securestring-cmk: \"To share a `SecureString` parameter, it must be encrypted with a customer managed key, and you must share the key separately through AWS Key Management Service. AWS managed keys cannot be shared.\" (docs/systems-manager/latest/userguide/parameter-store-shared-parameters, Prerequisites). Fix: 'Advanced tier only, shared through AWS RAM; a SecureString also needs a customer managed key' with a link to the display 'must be encrypted with a customer managed key'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): 1-fast cell now reads 'Advanced tier; a SecureString [must be encrypted with a customer managed key](parameter-store-share-securestring-cmk)'. 'shared through AWS RAM' did not fit the 15-word cell limit; the 2-deep Exam trap carries the AWS RAM link."
+  },
+  {
+   "id": "technical-04",
+   "file": "data/07-secrets-certificates/speak.json",
+   "section": "secrets-certificates-s01",
+   "quote": "A parameter, yes, if it is in the advanced tier: you share it through AWS RAM.",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "Same root cause as technical-03, in the follow-up the reader will say to a CTO. A shared SecureString parameter also needs a customer managed key that is shared separately. Fact parameter-store-share-securestring-cmk: \"To share a `SecureString` parameter, it must be encrypted with a customer managed key, and you must share the key separately through AWS Key Management Service. AWS managed keys cannot be shared.\" Fix: 'A parameter, yes, if it is in the advanced tier, shared through AWS RAM; an encrypted one also needs a customer managed key.' Add the fact to the follow-up's facts.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): s01 follow-up 2 adds 'An encrypted one also needs a customer managed key.'; parameter-store-share-securestring-cmk added to the follow-up facts and the item facts."
+  },
+  {
+   "id": "technical-05",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+   "quote": "The reader needs kms:Decrypt [regardless of which Parameter Store operation is used](../facts/parameter-store.md#parameter-store-securestring-needs-kms-decrypt).",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "The sentence comes right after step 3, which teaches the default key aws/ssm. Read together, they suggest that kms:Decrypt limits who can read a SecureString; with aws/ssm it does not, because that key already allows Decrypt for every principal in the account. Source docs/systems-manager/latest/userguide/parameter-store-setting-up (Note): \"The default AWS Key Management Service (AWS KMS) key has `Decrypt` permission for all IAM principals within the AWS account. If you want different access levels to `SecureString` parameters in your account, we don't recommend that you use the default key.\" Exam relevance (Domain 1, the reader's weakest): 'restrict which roles can read a SecureString' is answered by a customer managed key with a narrow key policy, not by aws/ssm. Fix: add 'With aws/ssm every principal in the account has it; to restrict readers, use a customer managed key.' Related to technical-02.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Step 4 now reads 'That flag is not a permission: the reader needs kms:Decrypt [regardless of which Parameter Store operation is used].' The aws/ssm 'all principals' clause is not added: no verified fact holds it (see technical-02, registrar note), and 2-deep.md is at its word cap (2,399 of 2,400)."
+  },
+  {
+   "id": "technical-06",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "acm-certificates-are-regional-and-cloudfront-reads-them-only-from-us-east-1",
+   "quote": "2. **CloudFront to the load balancer.** You can [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region) for the origin.",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "Out of context the display says the reverse of the section's rule. The CloudFront sentence means only that CloudFront does not force the origin certificate into us-east-1; the load balancer still needs a certificate in its own Region. Verified fact acm-faq-certificate-same-region-as-resource: \"ACM certificates must be in the same Region as the resource where they are being used.\" The table three lines lower says 'Its own: it must be in the same Region', so the step and the table disagree for a reader who skims. Fix: 'CloudFront to the load balancer. The certificate stays in the load balancer's Region: CloudFront does not need it in us-east-1.' and link the display 'must be in the same Region'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Step 2 now reads 'The origin certificate [must be in the same Region](acm-faq-certificate-same-region-as-resource) as the load balancer.'"
+  },
+  {
+   "id": "technical-07",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q002",
+   "quote": "The load balancer keeps its eu-west-1 certificate, because you can [import the certificate in any AWS Region](../facts/acm.md#acm-cloudfront-origin-certificate-any-region) for the origin.",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "Wrong reason, same root cause as technical-06 (5-quiz.md Question 3, Why). The load balancer keeps its eu-west-1 certificate because an ACM certificate must be in the Region of the resource that uses it, and the load balancer is in eu-west-1. Fact acm-faq-certificate-same-region-as-resource: \"ACM certificates must be in the same Region as the resource where they are being used.\" and \"The only exception is Amazon CloudFront, a global service that requires certificates in the US East (N. Virginia) region.\" Fix: 'The load balancer keeps its eu-west-1 certificate, because a load balancer's certificate [must be in the same Region](...).'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Done as suggested (explanation only; stem, options and key unchanged, so no new verification). q002 facts now list acm-faq-certificate-same-region-as-resource instead of acm-cloudfront-origin-certificate-any-region."
+  },
+  {
+   "id": "technical-08",
+   "file": "data/07-secrets-certificates/questions.json",
+   "section": "secrets-certificates-q003",
+   "quote": "a rotated password reaches the application on its next read. The code change is one SDK call, and [using a cache can reduce your costs](../facts/secrets-manager.md#secrets-manager-cache-cost-latency) and latency.",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "The correct option reads the secret 'through a cache', and the Why (5-quiz.md Question 1) and 2-deep.md ('so the next read gets the new password', next to 'A cache (KASH) helps') say the new password arrives on the next read. With the AWS caching component, a cached value is refreshed on a timer and is not invalidated by a rotation, and single-user rotation has a short window of denied calls. Source docs/secretsmanager/latest/userguide/retrieving-secrets_cache-python: \"By default, the cache refreshes secrets every hour.\" and \"The cache implementation does not include cache invalidation.\" Source docs/secretsmanager/latest/userguide/rotation-strategy: \"During this time, there is a low risk of the database denying calls that use the rotated credentials. You can mitigate this risk with an appropriate retry strategy.\" An application built as described can fail new connections for up to an hour after a rotation. Fix: 'a rotated password reaches the application at the next cache refresh; on an authentication error, the application reads the secret again', and the same in 2-deep 'Why a call?'. Needs facts from the quotes above.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): q003 explanation now says 'a rotation needs no deployment', then 'A cached value changes at the next refresh: for the Python caching client, [By default, the cache refreshes secrets every hour](secrets-manager-cache-refresh-hourly-default). After a failed login, the application reads the secret again.' Option d why: 'at the next read from Secrets Manager'. Worked step 6: 'when it next reads the secret'. Option texts, stem and key unchanged. 2-deep 'Why a call?' says 'the next read from Secrets Manager', and the Decision record Trade-off says the application retries its connection after a rotation."
+  },
+  {
+   "id": "technical-09",
+   "file": "07-secrets-certificates/1-fast.md",
+   "section": "check",
+   "quote": "Secrets Manager: it manages [third-party API keys](../facts/secrets-manager.md#secrets-manager-faq-kinds-of-secrets).",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "The question asks which service can rotate the key; the answer cites a fact about storing kinds of secrets, and implies that rotation of a third-party API key is built in. Except for listed partner integrations (managed external secrets), Secrets Manager rotates such a key only through a rotation function that you write. Verified fact secrets-manager-faq-custom-rotation-lambda: \"You can extend Secrets Manager to rotate other secrets, such as credentials for Oracle databases hosted on EC2 or custom applications generating tokens, by modifying sample AWS Lambda functions available in the Secrets Manager documentation.\" Fix: 'Secrets Manager, with a rotation function that you write [by modifying sample AWS Lambda functions](...); Parameter Store cannot rotate it.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Check 2 answer now reads 'Secrets Manager: you write the rotation function [by modifying sample AWS Lambda functions](secrets-manager-faq-custom-rotation-lambda).' Predict 2 keeps 'its credential rotation is [None]'."
+  },
+  {
+   "id": "technical-10",
+   "file": "data/07-secrets-certificates/speak.json",
+   "section": "secrets-certificates-s01",
+   "quote": "Secrets Manager rotates the password with a Lambda function.",
+   "type": "contradicts-chapter",
+   "severity": "should",
+   "evidence": "The chapter teaches managed rotation (2-deep 'Automatic rotation...': RDS rotates the master user secret without a Lambda function; the Stop-and-answer there says the old Lambda function is not called). The spoken answer says rotation always uses Lambda, and the reader would tell a CTO with RDS to build a function. Verified fact secrets-manager-managed-rotation-no-lambda: \"With managed rotation, you don't use an AWS Lambda function to update the secret and the credentials in the database.\" Fix: 'Secrets Manager rotates the password for you: Amazon RDS can manage it, and other databases use a rotation function.'",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): s01 line 5 now reads 'Secrets Manager rotates the password. For Amazon RDS, RDS can manage that for you.' (managed rotation facts added to s01)."
+  },
+  {
+   "id": "technical-11",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "parameter-store-stores-configuration-and-encrypted-values-but-does-not-rotate-them",
+   "quote": "**Stop and answer.** PutParameter fails for a 6 KB JSON document of feature flags as a standard parameter. What is the cheapest fix?",
+   "type": "wrong-claim",
+   "severity": "should",
+   "evidence": "The answer 'An advanced parameter' is not the cheapest fix: two standard parameters of 3 KB each have no storage charge, while an advanced parameter costs $0.05 per month (verified fact parameter-store-price-advanced-parameter: 'No additional charge' for standard, '$0.05 per advanced parameter per month'). The stem also uses feature flags, which AWS places in AWS AppConfig, not Parameter Store. Source docs/systems-manager/latest/userguide/systems-manager-parameter-store (comparison table, Typical data): Parameter Store \"Approved AMI IDs ... Endpoint URLs\"; AWS AppConfig \"Feature flags\". Fix: ask 'What is the simplest fix that keeps one parameter?' and use a non-flag value (for example a 6 KB certificate chain or JSON settings document).",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Stop and answer now reads 'PutParameter fails for a 6 KB JSON settings document as a standard parameter. What is the simplest fix that keeps one parameter?'"
+  },
+  {
+   "id": "technical-12",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "secrets-manager-replaces-a-stored-password-with-a-call-at-run-time",
+   "quote": "4. **Delete.** A deleted secret waits [from 7 to 30](../facts/secrets-manager.md#secrets-manager-recovery-window-range) days",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "Stated as unconditional. The verified fact's scope says 'ForceDeleteWithoutRecovery skips the window', and the default is 30 days. Source docs/secretsmanager/latest/apireference/API_DeleteSecret: \"If you don't use either, then by default Secrets Manager uses a 30 day recovery window.\" and \"If you delete a secret with the `ForceDeleteWithoutRecovery` parameter, then you have no opportunity to recover the secret. You lose the secret permanently.\" Card c003 repeats the unconditional form. Fix: 'A deleted secret waits 30 days by default (you can choose from 7 to 30), unless the call forces deletion without recovery.' Needs a fact for the default and the force option.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): Step 4 now adds 'A forced delete leaves [no opportunity to recover the secret](secrets-manager-force-delete-without-recovery).' The 30-day default is not added (word cap). Card c003 ('the recovery window of a deleted secret ... runs from 7 to 30') describes the window itself, so it stays true."
+  },
+  {
+   "id": "technical-13",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "| [every seven days](../facts/secrets-manager.md#secrets-manager-rds-managed-rotation-default) | Rotation of an RDS-managed master password |",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "The B-list states a default as a fixed value. Verified fact secrets-manager-rds-managed-rotation-default (scope: default; adjustable): \"RDS manages the settings for the secret and rotates the secret every seven days by default. You can modify some of the settings, such as the rotation schedule.\" A stem that needs 30-day rotation of an RDS-managed password is met by changing the schedule; the table suggests it cannot be. Fix: 'Default rotation of an RDS-managed master password (you can change it)'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): B-list row now reads 'Default rotation of an RDS-managed master password (changeable)'."
+  },
+  {
+   "id": "technical-14",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "automatic-rotation-changes-the-password-on-a-schedule-without-a-new-deployment",
+   "quote": "The exception is a secret that Amazon ECS injects at task start: [you must force a new deployment](../facts/secrets-manager.md#secrets-manager-ecs-redeploy-for-new-value) or launch a new task.",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "'The exception' reads as the only one. Any value read once at start-up keeps the old password after a rotation; the chapter's own Question 1 rejects the user-data option for exactly this reason ('An instance that reads the value once at launch keeps the old password after a rotation'). Fact secrets-manager-ecs-redeploy-for-new-value covers ECS only. Fix: 'The exception is any value read only at start, for example a secret that Amazon ECS injects at task start: ...'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Exam trap now reads 'A value read at start is the exception: for Amazon ECS, [you must force a new deployment] or launch a new task.'"
+  },
+  {
+   "id": "technical-15",
+   "file": "07-secrets-certificates/2-deep.md",
+   "section": "decision-record",
+   "quote": "**Requirement.** The database password must rotate every 30 days with no downtime and no new deployment, with the LEAST operational overhead.",
+   "type": "oversimplified",
+   "severity": "note",
+   "evidence": "The decision meets 'no downtime' only with retries or the alternating-users strategy; the default single-user strategy has a short window of denied calls. Source docs/secretsmanager/latest/userguide/rotation-strategy: \"While rotation is happening, there is a low risk of the database denying calls that use the rotated credentials. You can mitigate this risk with an appropriate retry strategy.\" Verified fact secrets-manager-alternating-users-high-availability: \"applications that require high availability\". Fix: in Trade-off, 'reconnects with retries after a rotation, or uses alternating-users rotation'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): The Trade-off now ends 'The application retries its connection after a rotation.'"
+  },
+  {
+   "id": "technical-16",
+   "file": "data/07-secrets-certificates/speak.json",
+   "section": "secrets-certificates-s01",
+   "quote": "It works like this. Parameter Store holds configuration, like feature flags and URLs.",
+   "type": "contradicts-source",
+   "severity": "note",
+   "evidence": "AWS's own comparison table lists feature flags as typical data for AWS AppConfig, not Parameter Store. Source docs/systems-manager/latest/userguide/systems-manager-parameter-store (Where should I store my application data?, Typical data): Parameter Store \"Approved AMI IDs ... Environment variables ... Endpoint URLs ... Resource identifiers ... Tuning parameters\"; AWS AppConfig \"Feature flags ... Operational toggles\". Fix: 'like AMI IDs and endpoint URLs'.",
+   "status": "fixed",
+   "resolution": "fix-07 (2026-10-13): s01 line 3 now reads 'Parameter Store holds configuration, like AMI IDs and endpoint URLs.'"
+  }
+ ]
+}

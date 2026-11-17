@@ -1,0 +1,210 @@
+[
+ {
+  "id": "rds-scaling-compute-brief-unavailability",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "Allocated storage can be increased while the DB instance stays available, but changing the DB instance class makes the database temporarily unavailable, typically for a few minutes, in the maintenance window unless applied immediately.",
+  "question": "Is an RDS DB instance available while you scale compute or storage?",
+  "values": [
+   {"key": "v1", "display": "can be increased while maintaining DB Instance availability"},
+   {"key": "v2", "display": "your database will be temporarily unavailable"}
+  ],
+  "qualifiers": {"scope": "Single-AZ DB instance scaling", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "The storage capacity allocated to your DB Instance can be increased while maintaining DB Instance availability. However, when you decide to scale the compute resources available to your DB instance up or down, your database will be temporarily unavailable while the DB instance class is modified. This period of unavailability typically lasts only a few minutes, and will occur during the maintenance window for your DB Instance, unless you specify that the modification should be applied immediately.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": true, "tier0": true, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["3.3.K4"]
+ },
+ {
+  "id": "rds-multi-az-scaling-standby-first",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "For Multi-AZ deployments, DB instance scaling and OS patching are applied first on the standby before an automatic failover, so the availability impact is limited to the failover time.",
+  "question": "How does Multi-AZ reduce downtime when you change the instance class?",
+  "values": [
+   {"key": "v1", "display": "applied first on the standby prior to automatic failover"},
+   {"key": "v2", "display": "limited only to the time required for automatic failover"}
+  ],
+  "qualifiers": {"scope": "Multi-AZ DB instance deployments", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Note: When operations such as DB instance scaling or system upgrades, like OS patching, are initiated for Multi-AZ deployments, for enhanced availability they are applied first on the standby prior to automatic failover. As a result, your availability impact is limited only to the time required for automatic failover to complete.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": true, "tier0": true, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["2.2.K6", "3.3.K4"]
+ },
+ {
+  "id": "rds-multi-az-no-failover-db-operations",
+  "service": "rds", "home_chapter": "26", "kind": "restriction",
+  "claim": "RDS Multi-AZ deployments do not fail over automatically in response to database operations such as long-running queries, deadlocks or database corruption errors.",
+  "question": "Does a deadlock or a long-running query trigger a Multi-AZ failover?",
+  "values": [
+   {"key": "v1", "display": "do not failover automatically in response to database operations"},
+   {"key": "v2", "display": "long running queries, deadlocks, or database corruption errors"}
+  ],
+  "qualifiers": {"scope": "Multi-AZ DB instance deployments", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Note that Amazon RDS Multi-AZ deployments do not failover automatically in response to database operations, such as long running queries, deadlocks, or database corruption errors.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": true, "tier0": true, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["2.2.K6"]
+ },
+ {
+  "id": "rds-multi-az-cname-flip-retry",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "During failover RDS flips the CNAME record of the DB instance to the standby, which is promoted to primary; AWS encourages connection retry logic in the application.",
+  "question": "How does the RDS endpoint move during a Multi-AZ failover, and what should the application do?",
+  "values": [
+   {"key": "v1", "display": "flips the canonical name record (CNAME)"},
+   {"key": "v2", "display": "implement database connection retry at the application layer"}
+  ],
+  "qualifiers": {"scope": "Multi-AZ DB instance deployments", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "When failing over, Amazon RDS simply flips the canonical name record (CNAME) for your DB instance to point at the standby, which is in turn promoted to become the new primary. We encourage you to follow best practices and implement database connection retry at the application layer.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": true, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["2.2.K6"]
+ },
+ {
+  "id": "rds-multi-az-endpoint-name-unchanged",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "Because the DB instance's name record stays the same after failover, the application can resume database operation without manual administrative intervention.",
+  "question": "Does the application need a new endpoint after a Multi-AZ failover?",
+  "values": [
+   {"key": "v1", "display": "the name record for your DB instance remains the same"}
+  ],
+  "qualifiers": {"scope": "Multi-AZ DB instance deployments", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Since the name record for your DB instance remains the same, your application can resume database operation without the need for manual administrative intervention.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": false, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["2.2.K6"]
+ },
+ {
+  "id": "rds-multi-az-standby-same-region",
+  "service": "rds", "home_chapter": "26", "kind": "restriction",
+  "claim": "A Multi-AZ standby is always provisioned in a different Availability Zone of the same Region as the primary; you cannot choose the standby's AZ or the number of standbys (one dedicated standby per primary).",
+  "question": "Can a Multi-AZ DB instance standby be in another Region, or can you choose its AZ?",
+  "values": [
+   {"key": "v1", "display": "a different Availability Zone of the same Region"},
+   {"key": "v2", "display": "one dedicated standby per DB instance primary"}
+  ],
+  "qualifiers": {"scope": "Multi-AZ DB instance deployments", "default_or_max": "fixed", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Yes. Your standby is automatically provisioned in a different Availability Zone of the same Region as your DB instance primary.", "table_header": null},
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "This means you cannot select the Availability Zone your standby is deployed in or alter the number of standbys available (Amazon RDS provisions one dedicated standby per DB instance primary).", "table_header": null}
+  ],
+  "source_tier": 2, "hard": true, "tier0": true, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["2.2.K6", "2.2.S2"]
+ },
+ {
+  "id": "rds-multi-az-durability-no-restore-needed",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "If a primary storage volume fails in a Multi-AZ deployment, RDS fails over to the standby with all updates intact, whereas a Single-AZ deployment needs a user-initiated restore and loses updates after the latest restorable time.",
+  "question": "Why does Multi-AZ give better data durability than Single-AZ?",
+  "values": [
+   {"key": "v1", "display": "all of your database updates are intact"},
+   {"key": "v2", "display": "a user-initiated restore operation would be required"}
+  ],
+  "qualifiers": {"scope": "", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "For example, if a storage volume on your primary fails, Amazon RDS automatically initiates a failover to the standby, where all of your database updates are intact. This provides additional data durability relative to standard deployments in a single AZ, where a user-initiated restore operation would be required and updates that occurred after the latest restorable time (typically within the last five minutes) would not be available.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": false, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["2.2.K6"]
+ },
+ {
+  "id": "rds-storage-choice-oltp-moderate",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "AWS maps high-performance OLTP workloads to Provisioned IOPS (SSD) storage and database workloads with moderate I/O requirements to General Purpose (SSD) storage; Provisioned IOPS provisions a chosen IOPS rate for the life of the instance.",
+  "question": "How do you choose between General Purpose and Provisioned IOPS storage for RDS?",
+  "values": [
+   {"key": "v1", "display": "High-performance OLTP workloads"},
+   {"key": "v2", "display": "moderate I/O requirements"},
+   {"key": "v3", "display": "fast, predictable, and consistent I/O performance"}
+  ],
+  "qualifiers": {"scope": "", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "High-performance OLTP workloads: Amazon RDS Provisioned IOPS (SSD) Storage", "table_header": null},
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Database workloads with moderate I/O requirements: Amazon RDS General Purpose (SSD) Storage", "table_header": null},
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Amazon RDS Provisioned IOPS (SSD) Storage is an SSD-backed storage option designed to deliver fast, predictable, and consistent I/O performance.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": true, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["3.3.K4"]
+ },
+ {
+  "id": "rds-scale-beyond-largest-partition",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "If an application needs more compute than the largest DB instance class or more storage than the maximum, you can partition the data across multiple DB instances.",
+  "question": "What can you do when one RDS DB instance is not big enough?",
+  "values": [
+   {"key": "v1", "display": "you can implement partitioning"}
+  ],
+  "qualifiers": {"scope": "", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "If your application requires more compute resources than the largest DB instance class or more storage than the maximum allocation, you can implement partitioning, thereby spreading your data across multiple DB instances.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": false, "volatility": "stable", "changed": null,
+  "exam_relevance": "extended", "bullets": ["3.3.K4"]
+ },
+ {
+  "id": "rds-storage-ebs-striping",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "Amazon RDS stores database and logs on EBS volumes and, depending on the storage size, stripes across multiple EBS volumes to improve IOPS performance.",
+  "question": "What storage does RDS use under the hood?",
+  "values": [
+   {"key": "v1", "display": "Amazon RDS uses EBS volumes"},
+   {"key": "v2", "display": "stripes across multiple EBS volumes"}
+  ],
+  "qualifiers": {"scope": "", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "Amazon RDS uses EBS volumes for database and log storage. Depending on the size of storage requested, Amazon RDS automatically stripes across multiple EBS volumes to enhance IOPS performance.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": false, "volatility": "stable", "changed": null,
+  "exam_relevance": "extended", "bullets": ["3.3.K4"]
+ },
+ {
+  "id": "rds-backup-window-io-suspension-faq",
+  "service": "rds", "home_chapter": "26", "kind": "behavior",
+  "claim": "During the backup window, storage I/O may be briefly suspended while the backup initializes and latency may briefly rise; Multi-AZ DB deployments have no I/O suspension because the backup is taken from the standby.",
+  "question": "Is the database available during the RDS backup window?",
+  "values": [
+   {"key": "v1", "display": "storage I/O may be briefly suspended"},
+   {"key": "v2", "display": "There is no I/O suspension for Multi-AZ DB deployments"}
+  ],
+  "qualifiers": {"scope": "automated backups", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "During the backup window, storage I/O may be briefly suspended while the backup process initializes (typically under a few seconds) and you may experience a brief period of elevated latency. There is no I/O suspension for Multi-AZ DB deployments, since the backup is taken from the standby.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": false, "volatility": "stable", "changed": null,
+  "exam_relevance": "core", "bullets": ["4.3.S1"]
+ },
+ {
+  "id": "rds-restore-standard-or-multi-az",
+  "service": "rds", "home_chapter": "26", "kind": "capability",
+  "claim": "A DB instance created by point-in-time restore or snapshot restore can be standard or Multi-AZ, regardless of the deployment the backup came from.",
+  "question": "Can you restore a Single-AZ backup as a Multi-AZ DB instance?",
+  "values": [
+   {"key": "v1", "display": "can be either standard or Multi-AZ"}
+  ],
+  "qualifiers": {"scope": "", "default_or_max": "", "adjustable": false, "condition": ""},
+  "evidence": [
+   {"source_id": "www/rds/faqs", "url": "https://aws.amazon.com/rds/faqs/",
+    "quote": "These new DB instance deployments can be either standard or Multi-AZ, regardless of whether the source backup was initiated on a standard or Multi-AZ deployment.", "table_header": null}
+  ],
+  "source_tier": 2, "hard": false, "tier0": false, "volatility": "stable", "changed": null,
+  "exam_relevance": "extended", "bullets": ["4.3.S1"]
+ }
+]

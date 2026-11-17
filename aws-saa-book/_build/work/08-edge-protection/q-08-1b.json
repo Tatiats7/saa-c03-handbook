@@ -1,0 +1,151 @@
+[
+ {
+  "id": "edge-protection-q002",
+  "section": "2-deep.md#each-resource-has-one-web-acl-in-the-same-region-as-the-resource",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": ["1.2.S3"],
+  "topics": ["security", "networking"],
+  "services": ["waf", "shield", "elb"],
+  "concept": "waf-supported-resource",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company serves a web application from Amazon EC2 instances in private subnets across two Availability Zones. A Network Load Balancer receives the HTTP requests from users on the internet and forwards them to the instances. The security team must block common web exploits, such as SQL injection and cross-site scripting. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["A Network Load Balancer receives the HTTP requests", "block common web exploits", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Associate an AWS WAF web ACL that uses AWS managed rule groups directly with the existing Network Load Balancer.",
+    "correct": false,
+    "why": "The list of resources that a web ACL protects names [Amazon CloudFront, Amazon API Gateway, Application Load Balancer](../facts/waf.md#waf-protected-resource-types) and others, and it does not name a Network Load Balancer.",
+    "concept": "web-acl-on-nlb",
+    "trap": "edge-protection-trap-waf-on-any-resource",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Subscribe to AWS Shield Advanced, and add the Elastic IP addresses of the Network Load Balancer as protected resources.",
+    "correct": false,
+    "why": "Shield Advanced protects against DDoS floods, but AWS Shield [does not inspect the contents](../facts/shield.md#shield-no-http-content-inspection) of HTTP requests, so SQL injection code passes.",
+    "concept": "shield-advanced-for-exploits",
+    "trap": "edge-protection-trap-shield-and-waf-swapped",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Move the traffic to an Application Load Balancer, and associate a web ACL that uses AWS managed rule groups with it.",
+    "correct": true,
+    "why": "On an Application Load Balancer, [your rules run in region](../facts/waf.md#waf-regional-rules-run-in-region-internal), and the managed rule groups block common exploits without rules that the team writes.",
+    "concept": "alb-with-web-acl",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Install an open source web application firewall on each EC2 instance, and update its detection rules from a public feed every week.",
+    "correct": false,
+    "why": "It can work, but the team installs, patches and updates software on every instance, which is far more work than a managed web ACL.",
+    "concept": "host-based-web-firewall",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "AWS WAF reads web requests on regional services such as an Application Load Balancer, where [your rules run in region](../facts/waf.md#waf-regional-rules-run-in-region-internal). The list of resource types for a web ACL does not name a Network Load Balancer, so the traffic moves to an Application Load Balancer. Managed rule groups are rules that [AWS and AWS Marketplace sellers write and maintain](../facts/waf.md#waf-managed-rule-groups-definition), and the core rule set is [generally applicable to web applications](../facts/waf.md#waf-core-rule-set-owasp).",
+  "takeaway": "A web ACL protects an Application Load Balancer; its list of resource types does not name a Network Load Balancer.",
+  "twin": "If the stem said \"behind an Amazon CloudFront distribution\" instead: associate the web ACL with the distribution, because AWS WAF is [available globally for CloudFront distributions](../facts/waf.md#waf-cloudfront-web-acl-us-east-1).",
+  "say": "AWS WAF doesn't sit on a Network Load Balancer, so I'd move the traffic to an Application Load Balancer with a web ACL.",
+  "facts": [
+   "waf-protected-resource-types",
+   "shield-no-http-content-inspection",
+   "waf-regional-rules-run-in-region-internal",
+   "waf-managed-rule-groups-definition",
+   "waf-core-rule-set-owasp",
+   "waf-cloudfront-web-acl-us-east-1"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-must"],
+  "twin_of": null
+ },
+ {
+  "id": "edge-protection-q005",
+  "section": "2-deep.md#network-firewall-inspects-vpc-traffic-only-when-route-tables-send-it-there",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.2",
+  "bullets": ["1.2.K3"],
+  "topics": ["security", "networking"],
+  "services": ["network-firewall", "waf", "vpc"],
+  "concept": "web-exploit-or-outbound-filter",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an internet-facing web application on Amazon EC2 instances in private subnets behind an Application Load Balancer. The instances reach the internet through NAT gateways. The operations team is small and does not write its own detection rules. A review finds that the instances can download files from any domain on the internet. The instances must reach only an approved list of software update domains. Which solution will meet this requirement with the LEAST operational overhead?",
+  "keywords": ["download files from any domain on the internet", "an approved list of software update domains", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Associate an AWS WAF web ACL that uses AWS managed rule groups with the Application Load Balancer.",
+    "correct": false,
+    "why": "A web ACL on the load balancer reads requests that arrive at the load balancer; the instances' outbound connections leave through the NAT gateways and do not pass the web ACL.",
+    "concept": "web-acl-managed-rules",
+    "trap": null,
+    "misconception": "believes that a web ACL on the load balancer filters the outbound traffic of the instances",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Deploy AWS Network Firewall with a stateful domain list rule group, and route the private subnets' traffic through the firewall endpoints.",
+    "correct": true,
+    "why": "The rule group holds the approved update domains as an allow list, and the route tables send the instances' traffic [through the Network Firewall firewall endpoints](../facts/network-firewall.md#network-firewall-route-tables-enable-protection).",
+    "concept": "network-firewall-domain-list",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Add security group rules and network ACL rules that inspect the domain names and the content of the traffic.",
+    "correct": false,
+    "why": "Security groups and network ACLs give [traffic control at a Layer 4 level (IP address and port ranges)](../facts/well-architected.md#well-architected-sec05-finer-control-services), so they do not read domain names.",
+    "concept": "sg-nacl-content-filter",
+    "trap": "edge-protection-trap-sg-filters-domains",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Run proxy software on a fleet of Amazon EC2 instances that inspects every inbound request and every outbound connection.",
+    "correct": false,
+    "why": "It can work, but the team builds, patches and scales a proxy fleet and writes its rules, which is far more work than a managed firewall.",
+    "concept": "self-managed-proxy-fleet",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The outbound connections leave the VPC, so the control sits in their route. Network Firewall supports [allow lists and deny lists with domain names](../facts/network-firewall.md#network-firewall-domain-allow-deny-lists), and for HTTPS it reads the [Server Name Indication (SNI) extension](../facts/network-firewall.md#network-firewall-domain-sni-host-header). Protection starts after [you modify your Amazon VPC route tables](../facts/network-firewall.md#network-firewall-route-tables-enable-protection) so that the private subnets' traffic goes through the firewall endpoints.",
+  "takeaway": "Outbound traffic to approved domains: Network Firewall with a domain list, in the route of the traffic.",
+  "twin": "If the stem said \"Attackers send requests that contain SQL injection code to the application\" instead: a web ACL with managed rule groups, because they block patterns [like SQL injection attacks](../facts/waf.md#waf-sql-database-group).",
+  "say": "Outbound domain filtering is a Network Firewall job, with the route tables sending the traffic through it.",
+  "facts": [
+   "network-firewall-domain-allow-deny-lists",
+   "network-firewall-domain-sni-host-header",
+   "network-firewall-route-tables-enable-protection",
+   "well-architected-sec05-finer-control-services",
+   "waf-sql-database-group"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-internet-facing"],
+  "twin_of": "edge-protection-q001"
+ }
+]

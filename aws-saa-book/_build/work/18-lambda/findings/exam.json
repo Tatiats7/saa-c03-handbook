@@ -1,0 +1,193 @@
+{
+ "lens": "exam",
+ "chapter": "18",
+ "findings": [
+  {
+   "id": "exam-01",
+   "file": "18-lambda/2-deep.md",
+   "section": "A failed batch returns to its queue but blocks its stream shard",
+   "quote": "> **Exam signal:** \"one bad record blocks the stream for days\" points to bisect: a bad record can block a shard for [up to one week](../facts/lambda.md#lambda-kinesis-bad-record-block-one-week).",
+   "type": "signal-misleading",
+   "severity": "blocking",
+   "evidence": "Fact lambda-stream-bisect-batch-on-error, docs/lambda/latest/dg/kinesis-on-failure-destination: 'Splitting batches doesn't consume the retry quota.' Fact lambda-kinesis-bad-record-block-one-week, same page: 'With the default settings, this means that a bad record can block processing on the affected shard for up to one week. To avoid this, configure your function's event source mapping with a reasonable number of retries and a maximum record age that fits your use case.' Fact lambda-kinesis-max-retry-attempts: the default '-1 means infinite: failed records are retried until the record expires'. With bisect alone, the batch is split down to the one bad record, which is then retried until it expires, so the shard stays blocked. AWS's fix is a retry limit or maximum record age, plus an on-failure destination to keep the record, with bisect to isolate it. The signal teaches a one-word answer that does not end the block.",
+   "status": "fixed",
+   "resolution": "fix-18: same fix as claims-18-002: retry limit or maximum record age with an on-failure destination; 'even with bisect'."
+  },
+  {
+   "id": "exam-02",
+   "file": "18-lambda/2-deep.md",
+   "section": "FAQ quick-fire, FAQ 3",
+   "quote": "**FAQ 3.** Is there a limit on parallel copies of a function?",
+   "type": "contradicts-trap",
+   "severity": "blocking",
+   "evidence": "The answer opens with 'No, but a default safety throttle applies.' and a quote that begins 'No. AWS Lambda is designed to run many instances of your functions in parallel.' 1-fast.md teaches the opposite as a trap: 'Wrong belief: Lambda scales without limit. Truth: All functions of an account share one concurrency quota per AWS Region, 1,000 by default' (lambda-trap-scales-without-limit). A reader who skims sees 'No.' and takes away the wrong belief, which is exactly the distractor of q004 ('Lambda scales every function on demand without a limit'). Lead with the limit ('Yes in practice: the Regional concurrency quota, 1,000 by default') or drop this FAQ.",
+   "status": "fixed",
+   "resolution": "fix-18: FAQ 3 now asks 'Does the account limit how many copies of a function run at once?' and answers 'Yes: a default safety throttle per account per Region, 1,000 by default.' The quote block is now the 'However, AWS Lambda has a default safety throttle...' sentence, not the one that starts with 'No.'"
+  },
+  {
+   "id": "exam-03",
+   "file": "18-lambda/1-fast.md",
+   "section": "In one breath, Show the picture step 5; 2-deep.md memory subsection",
+   "quote": "5. Each environment supports [a maximum of one invocation at a time](../facts/lambda.md#lambda-managed-instances-multi-concurrency-row), so two requests at once need two environments.",
+   "type": "scope-missing",
+   "severity": "should",
+   "evidence": "Fact lambda-managed-instances-multi-concurrency-row quotes the 'Lambda (default)' column of a table whose other column says 'Multi-concurrent invocations where one execution environment can handle multiple invocations simultaneously' (Lambda Managed Instances). Lambda Managed Instances became available on 2025-11-30 (_build/work/18-lambda/changes-feed-all.txt: '2025-11-30 whatsnew Announcing AWS Lambda Managed Instances'), well before the 2026-07-15 cut of RULINGS rule 7, so by the book's own rule it is examinable and needs a note. The same feed lists '2026-03-27 AWS Lambda supports up to 32 GB of memory and 16 vCPUs for Lambda Managed Instances', which qualifies the Stop and answer 'None. CPU grows up to 6 vCPU' and the A-list '10,240 MB Largest memory'. Scope these universal claims to standard (default) Lambda, and add one Changed recently line for Managed Instances.",
+   "status": "fixed",
+   "resolution": "fix-18: scoped to standard Lambda in the hero step 5 (diagrams/src/lambda-hero.json rebuilt, 1-fast.md), the memory Stop and answer ('None for a standard function') and the A-list ('Largest memory of a standard function'); 1-fast.md Changed recently adds a 2025-11-30 Lambda Managed Instances entry, status examinable."
+  },
+  {
+   "id": "exam-04",
+   "file": "18-lambda/1-fast.md",
+   "section": "Signals and traps",
+   "quote": "| \"reads a private database and calls an internet API\" | private subnets and a NAT gateway | they [access the internet through the NAT gateway](../facts/lambda.md#lambda-vpc-public-subnet-no-internet) | the function uses nothing in a virtual private cloud (VPC): attach it [only when necessary](../facts/lambda.md#lambda-wa-vpc-only-when-necessary) |",
+   "type": "guard-does-not-hold",
+   "severity": "should",
+   "evidence": "The 'But not if' cell describes a situation that the row's own stem phrase rules out: a function that 'reads a private database' does use the VPC. So the guard never applies to a stem with this phrase. A useful guard names the case where the NAT gateway is the wrong answer, for example: 'the outside calls go only to AWS services such as Amazon S3 or DynamoDB: a VPC endpoint' (q011 twin; vpc-faq-endpoint-types-gateway-interface).",
+   "status": "fixed",
+   "resolution": "fix-18: But not if now 'the calls go only to S3 or DynamoDB: a virtual private cloud (VPC) gateway endpoint'; the 2-deep VPC Stop and answer asks this case (vpc-faq-endpoint-types-gateway-interface)."
+  },
+  {
+   "id": "exam-05",
+   "file": "18-lambda/1-fast.md",
+   "section": "Signals and traps",
+   "quote": "| \"first requests after a quiet period are slow\" | provisioned concurrency | it is for [latency-sensitive applications](../facts/lambda.md#lambda-faq-pc-when) | best effort is enough: SnapStart, [as low as sub-second](../facts/lambda.md#lambda-snapstart-vs-pc-guide) |",
+   "type": "guard-incomplete",
+   "severity": "should",
+   "evidence": "SnapStart works only for some managed runtimes: the chapter's own Changed recently note says it was for Java and is 'now available for Python and .NET managed runtimes' (lambda-change-snapstart-python-dotnet-2024). It also cannot be combined with provisioned concurrency (FAQ 7: 'Lambda SnapStart and PC cannot be enabled at the same time, on the same function.'). A stem with a Node.js function or a container image makes SnapStart wrong. Add the runtime condition to the guard.",
+   "status": "fixed",
+   "resolution": "fix-18: the guard now names the runtimes: 'Java, Python or .NET, best effort: SnapStart'."
+  },
+  {
+   "id": "exam-06",
+   "file": "data/18-lambda/questions.json",
+   "section": "shipped bank (5-quiz.md)",
+   "quote": "lambda-q021 ready pass 3 multi 3.2 package-larger-than-zip-quota",
+   "type": "difficulty-mix",
+   "severity": "should",
+   "evidence": "SPEC.json difficulty_mix {1: 0.2, 2: 0.55, 3: 0.25}, difficulty_mix_tolerance 0.1. The 18 shipped questions (q list --chapter 18) are difficulty 1: 3 (q001, q003, q015; 17%), difficulty 2: 13 (72%, above the 65% maximum), difficulty 3: 2 (q021, q012; 11%, below the 15% minimum). q020 (difficulty 3, orchestrate-not-chain) has passed the blind panel (status verified) but is not shipped. Swapping it in for a difficulty 2 duplicate (see exam-09) fixes the mix and adds Step Functions coverage.",
+   "status": "fixed",
+   "resolution": "fix-18: lambda-q020 (difficulty 3, extended) and lambda-q022 (difficulty 1, core) set ready; lambda-q016 and lambda-q004 set back to verified. Shipped mix: difficulty 1 = 4 (22%), 2 = 11 (61%), 3 = 3 (17%). q lint 18 --ship clean: 18 ready, 9 core, 9 extended, 2 multi, 2 twin pairs."
+  },
+  {
+   "id": "exam-07",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 15 (lambda-q006) and Question 16 (lambda-q013)",
+   "quote": "The function must never run more than 50 copies at the same time. Clients must receive the result of each order in the API response, and the clients already retry any request that fails.",
+   "type": "twin-differs-too-much",
+   "severity": "should",
+   "evidence": "Twins should differ by one deciding phrase. q013 (twin_of lambda-q006) rewrites three sentences: it adds 'After quiet periods, the first requests take several seconds because new execution environments start', replaces the cap sentence with 'Traffic never needs more than 50 copies', and replaces the client sentences with 'the API must respond with low latency to every request'. Option d also changes ('runs no more than 50 tasks' versus 'whose tasks keep running between requests'). With this many changes, the pair no longer trains her to find the one phrase that decides. q002 and q009 show the intended shape.",
+   "status": "rejected",
+   "resolution": "fix-18: both q006 and q013 passed the blind panel. Rewriting q013 to differ by one phrase changes its stem and options, which needs a new blind verification (TOOLS-rules R5), and the pair still turns on one deciding constraint (cap versus latency). Logged for the W14 twin review (Q114 not implemented yet)."
+  },
+  {
+   "id": "exam-08",
+   "file": "18-lambda/2-deep.md",
+   "section": "AWS services push events to a function and Lambda polls queues and streams",
+   "quote": "An upload, a queue message and a schedule each start work. What tells the function?",
+   "type": "missing-examinable",
+   "severity": "should",
+   "evidence": "The intro names 'a schedule', and the story's trigger is scheduled jobs on a worker (STARTUP.md: 'Scheduled jobs on the worker register uploads, save results and send notifications'), but the trigger table lists no scheduler. An Amazon EventBridge rule or schedule that replaces a cron job on an instance is a common exam pattern. FREQUENCY.md row 6 also lists 'Lambda@Edge', and line 148 lists 'Step Functions vs SQS vs chained Lambdas' (orchestration). None of the three appears in the chapter, not even as a cross-reference (only speak follow-up s01 names Step Functions). Add an EventBridge row to the trigger table with an xref to 31, and xrefs to 32 (Step Functions) and to the CloudFront chapter (Lambda@Edge). Ship q020.",
+   "status": "fixed",
+   "resolution": "fix-18: the trigger table adds an Amazon EventBridge rules row (lambda-trigger-eventbridge-async-rules) and the line 'A cron schedule becomes an EventBridge rule' with an xref to 31; lambda-q020 (orchestrate with Step Functions, not a chain of functions) is now shipped. Lambda@Edge stays with chapter 15 (CloudFront): no room within the 4,500-word limit."
+  },
+  {
+   "id": "exam-09",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 3 (lambda-q001) and Question 8 (lambda-q002)",
+   "quote": "Configure an S3 event notification that invokes an AWS Lambda function, and create the thumbnail in the function for each new photo.",
+   "type": "redundant-items",
+   "severity": "should",
+   "evidence": "Both core questions test the same decision with the same deciding phrases (files arrive in S3 at sporadic or unpredictable times, a few seconds of work, LEAST operational overhead: S3 event notification plus Lambda), and q009 tests it a third time as q002's twin. Meanwhile, SQS partial batch response, Kinesis error handling (q018 was rejected) and orchestration have no shipped question. Replace q001 with a question on an untested section.",
+   "status": "rejected",
+   "resolution": "fix-18: q001 stays shipped: it is one of the difficulty-1 core items the mix needs (exam-06), and it tests seconds-long work on sporadic uploads while the q002/q009 twins test run duration. The bank's redundancy is reduced instead by shipping q020 and q022 in place of q004 and q016."
+  },
+  {
+   "id": "exam-10",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 13 (lambda-q021)",
+   "quote": "This is more than a .zip deployment package allows.",
+   "type": "stem-gives-away",
+   "severity": "should",
+   "evidence": "The deciding knowledge of the question is that 2 GB does not fit the [250 MB] unzipped quota (lambda-package-250-mb-unzipped). The stem states that conclusion, so the solver needs neither the number nor the reasoning, and the question becomes the recall of 'container image'. Remove the sentence and let the 2 GB figure do the work. The question is labelled difficulty 3.",
+   "status": "rejected",
+   "resolution": "fix-18: removing the sentence changes the stem of a verified question, which needs a new blind verification (TOOLS-rules R5); the chapter keeps it as verified. Logged for the W14 review."
+  },
+  {
+   "id": "exam-11",
+   "file": "data/18-lambda/cards.json",
+   "section": "deck core",
+   "quote": "\"deck\": \"core\"",
+   "type": "count",
+   "severity": "should",
+   "evidence": "SPEC.json deep counts cards core 14; stage show 18 warns 'cards: C201 deck core: 6 cards; needed 14'. Most must-know A-list numbers (3-second default timeout, 1,000 default concurrency, two async retries, 6 MB synchronous payload, 10 GB image) have no core card.",
+   "status": "fixed",
+   "resolution": "fix-18: the 8 A-list number cards were added; core deck 14, extended 18; cards lint 18 --ship clean (C201, C204)."
+  },
+  {
+   "id": "exam-12",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 15 (lambda-q006) and Question 16 (lambda-q013), option c",
+   "quote": "Place an Amazon SQS queue between API Gateway and the function, and set the maximum concurrency of the event source mapping to 50.",
+   "type": "untaught-concept",
+   "severity": "note",
+   "evidence": "The maximum concurrency of an SQS event source mapping is a real control, but 2-deep.md never mentions it, so the reader cannot judge the option from the chapter. One line in the batch subsection (a cap on how many functions the mapping invokes) would let the distractor teach.",
+   "status": "rejected",
+   "resolution": "fix-18: the canon has no verified fact that says what SQS maximum concurrency does (only its range, its charge and its relation to reserved concurrency), so a teaching line would be an ungrounded claim. The distractor and its why stay as verified."
+  },
+  {
+   "id": "exam-13",
+   "file": "18-lambda/2-deep.md",
+   "section": "Decision record",
+   "quote": "**Requirement.** Run each small job for each event, with no idle cost. Which solution has the LEAST operational overhead?",
+   "type": "qualifier-mismatch",
+   "severity": "note",
+   "evidence": "The requirement is a cost constraint ('no idle cost'), but the question asks for LEAST operational overhead, and the Decision paragraph argues mostly cost ('Containers that run all day cost money at night too'). The decision record models exam reading, so the qualifier should match the deciding constraint, or both should be named.",
+   "status": "fixed",
+   "resolution": "fix-18: the Requirement now asks 'Which solution is the MOST cost-effective?', matching the no-idle-cost constraint and the cost-based Decision."
+  },
+  {
+   "id": "exam-14",
+   "file": "18-lambda/2-deep.md",
+   "section": "Stop and answer of the VPC, RDS Proxy and function URL subsections",
+   "quote": "**Stop and answer.** A function in a VPC must stream a large report through its function URL. Does streaming work?",
+   "type": "trivia",
+   "severity": "note",
+   "evidence": "Three Stop and answer items test edge facts that are rarely examined and are not common beliefs: response streaming of a function URL in a VPC (response streaming is never explained), a VPC function that shows Pending after 14 idle days, and whether RDS Proxy can be public. Spend these slots on misconceptions the exam uses: SQS FIFO ordering with Lambda, or reaching a private database without the internet.",
+   "status": "fixed",
+   "resolution": "fix-18: the idle-VPC Stop and answer now asks how a VPC function reaches DynamoDB with no internet route (gateway endpoint); the function URL streaming question now asks about IAM authentication; the RDS Proxy question also teaches the VPC attachment."
+  },
+  {
+   "id": "exam-15",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 18 (lambda-q016)",
+   "quote": "The decision guide says that you typically [pay less with Lambda at lower traffic volumes](../facts/lambda.md#lambda-vs-fargate-cost-by-volume), while Fargate tends to cost less for [sustained, high-throughput workloads]",
+   "type": "hedged-key",
+   "severity": "note",
+   "evidence": "A MOST cost-effective key rests on 'typically' and 'tends to' (lambda-vs-fargate-cost-by-volume). It passed the panel because no option offers the closest competitor, a Compute Savings Plan on the Lambda usage. Keep the distractor set as it is, but have the explanation say that the volume pattern decides, so that she does not learn 'Fargate is always cheaper'.",
+   "status": "fixed",
+   "resolution": "fix-18: lambda-q016 is no longer shipped (set back to verified, exam-06), so the hedged key is not in the chapter bank."
+  },
+  {
+   "id": "exam-16",
+   "file": "18-lambda/2-deep.md",
+   "section": "A failed batch returns to its queue but blocks its stream shard, Go deeper",
+   "quote": "To keep them, add an on-failure destination to the event source mapping.",
+   "type": "unlinked-claim",
+   "severity": "note",
+   "evidence": "The canon has fact lambda-kinesis-failure-destination-sqs-sns (used in the q010 twin: 'an [Amazon SQS queue or Amazon SNS topic]'), but this sentence does not link it. Linking it here would also support the fix in exam-01.",
+   "status": "fixed",
+   "resolution": "fix-18: the Go deeper now says 'To keep them, add an Amazon SQS queue or Amazon SNS topic as an on-failure destination' (lambda-kinesis-failure-destination-sqs-sns)."
+  },
+  {
+   "id": "exam-17",
+   "file": "18-lambda/5-quiz.md",
+   "section": "Question 11 (lambda-q010), Deciding phrases",
+   "quote": "**Deciding phrases.** \"Amazon SQS standard queue\", \"keep the malformed messages for later analysis\", \"LEAST operational overhead\"",
+   "type": "deciding-phrase",
+   "severity": "note",
+   "evidence": "'standard' does not decide this item: a FIFO source queue would take the same redrive policy answer. What decides it is that the source is an SQS event source mapping and not an asynchronous invocation ('An event source mapping invokes the function'). Listing a non-deciding phrase trains the reader to mark the wrong words.",
+   "status": "fixed",
+   "resolution": "fix-18: lambda-q010 keywords now 'An event source mapping invokes the function', 'keep the malformed messages for later analysis', 'LEAST operational overhead' (keywords are not in the blind pack; stem, options and key unchanged)."
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "vpc-after",
+  "kind": "arch",
+  "size": "s",
+  "chapter": "10",
+  "title": "Callvale after: public and private subnets",
+  "claim": "The web instance is public; the worker and the database are private.",
+  "alt": "After: a custom VPC in two Availability Zones with public and private subnets.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "groups": [
+    {"id": "vpc", "type": "vpc", "label": "VPC 10.20.0.0/16", "cells": "A2:B5"},
+    {"id": "az1", "type": "az", "label": "AZ 1", "in": "vpc", "cells": "A3:B4"},
+    {"id": "pub1", "type": "subnet-public", "label": "Public subnet", "in": "az1", "cells": "A3:A4"},
+    {"id": "app1", "type": "subnet-private", "label": "Private subnet", "in": "az1", "cells": "B3"},
+    {"id": "data1", "type": "subnet-private", "label": "Private subnet", "in": "az1", "cells": "B4"},
+    {"id": "az2", "type": "az", "label": "AZ 2: empty subnets", "in": "vpc", "cells": "A5:B5"}
+  ],
+  "nodes": [
+    {"id": "users", "icon": "users", "label": "Users", "at": "A1"},
+    {"id": "s3", "icon": "s3", "label": "Amazon S3", "at": "B1"},
+    {"id": "igw", "icon": "internet-gateway", "label": "Internet gateway", "at": "A2"},
+    {"id": "gwep", "icon": "endpoint", "label": "Gateway endpoint", "at": "B2"},
+    {"id": "nat", "icon": "nat-gateway", "label": "NAT gateway", "at": "A3"},
+    {"id": "web", "icon": "instance", "label": "Web instance", "at": "A4"},
+    {"id": "worker", "icon": "instance", "label": "Worker instance", "at": "B3"},
+    {"id": "db", "icon": "instance", "label": "Database instance", "at": "B4"}
+  ],
+  "edges": [
+    {"from": "users", "to": "igw", "step": 1,
+     "say": "Users reach the web instance through the internet gateway."},
+    {"from": "igw", "to": "web", "step": 1, "fromSide": "right", "toSide": "right"},
+    {"from": "worker", "to": "db", "step": 2,
+     "say": "The worker and the database have no public IP addresses."},
+    {"from": "worker", "to": "nat", "step": 3, "label": "updates", "emph": true, "fromSide": "left", "toSide": "right",
+     "say": "The worker downloads updates through the NAT gateway in AZ 1."},
+    {"from": "nat", "to": "igw", "step": 3},
+    {"from": "worker", "to": "gwep", "step": 4, "label": "audio", "emph": true,
+     "say": "The worker sends audio to Amazon S3 through the gateway endpoint."},
+    {"from": "gwep", "to": "s3", "step": 4},
+    {"from": "web", "to": "db", "step": 5,
+     "say": "The database's security group allows the web and worker security groups."}
+  ],
+  "notes": "Brief 10 story pair, after (2-deep.md#decision-record, after Decision). Title, claim, alt, steps from brief.json. Same cells as vpc-before: users A1, Amazon S3 B1, internet gateway A2, web A4, worker B3, database B4 (STARTUP A7 rule 13 in two columns; three do not fit a phone). AZ 2 subnets are empty at month 7. No load balancer, no Amazon RDS. Story numbers only: 10.20.0.0/16, AZ 1, AZ 2. Step 2 sits on the worker-to-database arrow, the one arrow between two private subnets."
+}

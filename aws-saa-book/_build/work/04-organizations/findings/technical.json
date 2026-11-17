@@ -1,0 +1,174 @@
+{
+ "lens": "technical",
+ "chapter": "04",
+ "reviewer": "review-04-technical",
+ "reviewed": "2026-10-12",
+ "scope_note": "Ran 'saa.py sync 04' first (written=0, unchanged=8). 3-do.md and 4-say.md still print 'Nothing here yet.' (tasks and spoken items are status candidate), so tasks and spoken answers were reviewed in data/04-organizations/tasks.json (2) and speak.json (2). Read 1-fast.md, 2-deep.md, 5-quiz.md (10 shipped questions) and the verified-but-unshipped q003 in questions.json, plus the organizations-after diagram spec. About 30 statements were tested against saved AWS pages (search, show) and the verified facts; the findings below are the ones that did not hold or that drop a condition. Statements checked and found correct include: SCPs and the management account (q002 wording 'in that account'), SCP allow needed at every level (table cases 1 and 2, the Athena trap, q003), the Deny-reaches-children Stop-and-answer, SCP versus RCP direction (q007 aws:ResourceOrgID, q011 aws:PrincipalOrgID), outside principals not limited by SCPs, OrganizationAccountAccessRole for created versus invited accounts (q006), LeaveOrganization Deny on the root (q001), cost allocation tags only in the management account (q005), RI and Savings Plans owner-first sharing, RAM enable-sharing in the RAM console versus trusted access (q012), subnets and security groups shareable only inside the organization, default subnets not shareable (t01 step 2), the default subnet permission name and its three example actions (t01 steps 6 and 7), DescribeOrganization callable from any account (t02 step 2), the 10-SCP change of 2026-05-15, the direct account transfer change of 2025-11-19, the four-day removal wait, the 90-day reopen window, the 1000-account OU registration limit and the 5,000 principals per share. Task t01 is secure (no public resource, no external principal, no IAM user, tags on every resource) and its cleanup order is valid; t02 is read-only.",
+ "findings": [
+  {
+   "id": "technical-01",
+   "file": "04-organizations/2-deep.md",
+   "section": "a-control-tower-landing-zone-applies-preventive-and-detective-controls-to-registered-ous",
+   "quote": "**Exam trap:** New accounts created outside Account Factory [are not bound by the registered OU's controls](../facts/control-tower.md#control-tower-accounts-outside-not-bound) until you [separately register the OU or enroll the account]",
+   "type": "contradiction",
+   "severity": "blocking",
+   "evidence": "The trap teaches that an account created with CreateAccount in a registered OU escapes all of the OU's controls. The same section's Go deeper says the opposite for preventive controls, and the AWS control reference agrees with the Go deeper. Fact control-tower-preventive-apply-unenrolled-detective-enrolled-only: \"When you enable controls on an organizational unit (OU) that is registered with AWS Control Tower, preventive controls apply to all member accounts under the OU, enrolled and unenrolled.\" and \"detective controls apply to enrolled accounts only, not to all member accounts in the OU, if some accounts are not enrolled in AWS Control Tower.\" Preventive controls are SCPs and RCPs on the OU (fact control-tower-control-types-mechanisms), and SCPs on an OU reach every account below it (fact organizations-scp-deny-at-any-level-applies-below), however the account was created. A reader who believes the trap answers a 'does the Region deny control still apply to an account made with CreateAccount in a registered OU?' question wrong. Fix: say that such an account is not enrolled, so detective controls and Account Factory baselines skip it, while the OU's preventive controls still apply; keep 'not bound' only for accounts in OUs that are not registered.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): 2-deep trap rewritten: an OU that is not registered gets no controls until you register the OU or enroll the account (control-tower-accounts-outside-not-bound); in a registered OU, preventive controls reach accounts 'under the OU, enrolled and unenrolled', but 'detective controls apply to enrolled accounts only' (control-tower-preventive-apply-unenrolled-detective-enrolled-only). The duplicate sentence in the Go deeper was removed."
+  },
+  {
+   "id": "technical-02",
+   "file": "data/04-organizations/speak.json",
+   "section": "organizations-s01 must_not_say[2]",
+   "quote": "\"error\": \"Control Tower turns on the organization trail for you, so there is nothing to create\", \"correct\": \"You create an organization trail from the management account or a delegated administrator account.\"",
+   "type": "wrong",
+   "severity": "blocking",
+   "evidence": "The 'error' is true for a landing zone that opted in to Control Tower logging, and Callvale's decision record in this chapter is Control Tower. Source docs/controltower/latest/userguide (full:controltower-userguide, Pricing): \"If you choose to opt in during landing zone setup or update, AWS Control Tower sets up and activates an organization-level CloudTrail trail for you in the management account.\" The same paragraph: \"However, you may incur duplicate charges, if you also opt in to trails managed by AWS Control Tower. We do not recommend setting up external trails, unless you have a specific requirement.\" So the model answer ('Use an organization trail from the management account', kp2) pushed as a correction would have Chen create a second, duplicate trail next to the one Control Tower manages, and a reader graded against must_not_say is marked wrong for a correct statement. Fix: delete this must_not_say entry (or make the error 'Control Tower always creates the trail, whatever you choose at setup'), and add to the 60-second answer: in a Control Tower landing zone with logging opted in, the organization trail already exists; check it rather than create another.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): The must_not_say entry was removed and replaced by a real error (an administrator with AdministratorAccess cannot turn the SCP off; organizations-scp-admin-policy-cannot-override). The suggested 60-second line about an existing Control Tower trail was not added: fact control-tower-organization-level-trail was rejected (brief.v0 d063) and no verified fact replaces it."
+  },
+  {
+   "id": "technical-03",
+   "file": "04-organizations/1-fast.md",
+   "section": "check",
+   "quote": "**Predict 1:** Yes: SCPs do not restrict [users or roles in the management account](../facts/organizations.md#organizations-scp-no-effect-on-management-account).",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "Predict 1 asks whether a management-account administrator can 'still delete one' of the log buckets, with no word on where the bucket is. The answer is only true for a bucket in the management account itself. The chapter's own design puts the logs in a log archive member account (decision record, 'logs in their own account'; speak s01 'Keep the log files in a separate log archive account'), and AWS says to keep resources out of the management account (fact organizations-keep-resources-out-of-management-account). To touch a bucket in a member account, the administrator must act through a role in that member account, and fact iam-scp-applies-to-member-root-user: \"An SCP restricts permissions for IAM users and roles in member accounts, including the member account's root user.\" The flat 'Yes' plants the gist 'the management account bypasses SCPs everywhere'. Fix: 'Yes, for a bucket in the management account itself: SCPs do not restrict its users or roles. A bucket in a member account stays protected.' and say in the Predict that the bucket is in the management account.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): Predict 1 now says the bucket is stored in the management account; the reveal adds 'Member accounts stay protected.'"
+  },
+  {
+   "id": "technical-04",
+   "file": "04-organizations/5-quiz.md",
+   "section": "organizations-q008 twin",
+   "quote": "If the stem said \"teams create accounts with CreateAccount in a registered OU\" instead: enroll those accounts and use Account Factory, because accounts created outside it [are not bound by the registered OU's controls]",
+   "type": "oversimplified",
+   "severity": "should",
+   "evidence": "Same defect as technical-01, inside a question explanation. For an account created with CreateAccount in a registered OU, fact control-tower-preventive-apply-unenrolled-detective-enrolled-only: \"preventive controls apply to all member accounts under the OU, enrolled and unenrolled\"; only \"detective controls apply to enrolled accounts only\". The action (enroll, then use Account Factory) is right; the reason is wrong. Fix the reason: 'because detective controls apply to enrolled accounts only'.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): q008 twin now: the preventive controls already reach accounts in a registered OU, but 'detective controls apply to enrolled accounts only', so enroll them (fact added to the question). The explanation now speaks of an OU that is not registered. Explanation and twin only; stem, options and key unchanged, so no new verification is needed."
+  },
+  {
+   "id": "technical-05",
+   "file": "data/04-organizations/tasks.json",
+   "section": "organizations-t02 step 3; also 2-deep.md an-organization-is-a-tree-of-accounts-with-one-root-and-one-management-account step 4",
+   "quote": "Different means a member account, where SCPs can limit you if the feature set is ALL.",
+   "type": "condition-dropped",
+   "severity": "should",
+   "evidence": "All features is necessary but not sufficient: the SCP policy type must also be enabled on the root. Source full:organizations-userguide (Enable the service control policy type for the organization): \"Before you can attach a policy of any type to a root or to any OU within a root, you must enable the policy type for the organization. Policy types aren't enabled by default.\" The 2-deep step 'Turn on policies. Policies work only when all features are enabled.' followed by 'Start from FullAWSAccess. Organizations attaches the SCP FullAWSAccess to every root, OU and account' reads as if SCPs are live once all features are on (the fact organizations-fullawsaccess-attached-by-default itself is scoped 'SCP policy type enabled'). Fix: in 2-deep step 4 add 'and you enable each policy type, for example SCPs, on the root'; in t02 step 3 say 'where SCPs can limit you if the feature set is ALL and SCPs are enabled on the root'.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): t02 step 3 names the SCP policy type on the root (fact organizations-scp-disable-type-detaches-all); 2-deep step 4 names the two feature sets. The per-root policy-type step is not in 2-deep: the file is at its 2,400-word ceiling."
+  },
+  {
+   "id": "technical-06",
+   "file": "04-organizations/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "| \"run only in approved Regions\" | Region deny control, or an SCP with aws:RequestedRegion | it [disallows access to unlisted operations](../facts/control-tower.md#control-tower-region-deny-blocks-unlisted-regions) in other Regions |",
+   "type": "unsafe-oversimplification",
+   "severity": "should",
+   "evidence": "The row presents a home-made SCP with aws:RequestedRegion as equal to the Control Tower control. The 'unlisted operations' of the control are an exemption list for global services; a plain Deny on aws:RequestedRegion without that exemption breaks IAM, CloudFront, Route 53 and Support calls, which are sent to us-east-1. Source full:organizations-userguide (Condition element): \"The following example shows how to use a condition element with a deny statement in an SCP to restrict access to any operations outside the eu-central-1 and eu-west-1 Regions, except for actions in the specified services.\" The example policy uses \"NotAction\": [\"cloudfront:*\", \"iam:*\", \"route53:*\", \"support:*\"]. Fix: 'an SCP that denies with aws:RequestedRegion and exempts global services with NotAction'.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): Row now: Think 'Control Tower Region deny control'; But not if 'no Control Tower: an SCP on aws:RequestedRegion, except for actions in the specified services' (organizations-scp-notaction-region-limit-example)."
+  },
+  {
+   "id": "technical-07",
+   "file": "04-organizations/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "| \"accounts launch into subnets of one central VPC\" | AWS Resource Access Manager (AWS RAM) | it shares subnets with [only AWS accounts in its own organization](../facts/ram.md#ram-share-subnets-only-within-organization) | outside the organization: share a transit gateway |",
+   "type": "misleading",
+   "severity": "should",
+   "evidence": "The 'But not if' column offers a shared transit gateway as the way for outside accounts to do what the row's signal asks (launch into the subnets of one central VPC). A transit gateway does not do that: it connects the partner's own VPCs; the partner still launches into its own subnets. Fact ram-share-subnets-only-within-organization (shareable table, subnets): \"Can share with **only** AWS accounts in its own organization.\" and 2-deep Go deeper, fact ram-vpc-only-owner-attaches-transit-gateway. Rule: the signals table must give a correct gist on its own (READER.md 'Headings, tables and captions must give a correct gist on their own'). Fix: 'outside the organization: subnets cannot be shared; connect the other account's own VPC, for example with a shared transit gateway'.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): But-not-if cell now: 'outside the organization: a shared transit gateway to their own VPC'."
+  },
+  {
+   "id": "technical-08",
+   "file": "04-organizations/2-deep.md",
+   "section": "aws-ram-shares-one-resource-with-other-accounts-instead-of-copying-it",
+   "quote": "**Exam trap:** A plan to share a subnet with the IAM role of each developer fails. A subnet goes to [only AWS accounts in its own organization](../facts/ram.md#ram-share-subnets-only-within-organization), not to roles. <!-- trap: organizations-trap-ram-shares-outside-org-any-type -->",
+   "type": "wrong-evidence",
+   "severity": "should",
+   "evidence": "The claim (subnets cannot be shared with IAM roles) is true, but the linked display proves a different point (the organization limit), and the trap marker names a different misconception (sharing outside the organization for any type). The role limit is the 'Can share with IAM users and roles' column of the same table row in fact ram-share-subnets-only-within-organization: \"Default subnets are not shareable. You can share only subnets you create yourself. | No | No <br />Can share with **only** AWS accounts in its own organization.\" (columns: ... | Can share with IAM users and roles | Can share with accounts outside its organization | ...). Fix: either rewrite the trap to the outside-organization misconception its marker names ('A plan to share a subnet with a partner company's account fails'), or keep the roles point and link a display taken from the IAM-users-and-roles column with a matching trap id.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): RAM trap now names the belief of its trap id and adds a new case: 'Wrong: a partner company can use your default subnets.' with the displays 'only AWS accounts in its own organization' and 'Default subnets are not shareable' (ram-share-subnets-only-within-organization). The IAM roles point was dropped, so no display is missing."
+  },
+  {
+   "id": "technical-09",
+   "file": "data/04-organizations/tasks.json",
+   "section": "organizations-t01 verify",
+   "quote": "\"verify\": {\"command\": \"aws ec2 describe-vpcs --filters Name=tag:task,Values=organizations-t01 --query \\\"Vpcs[].VpcId\\\"\", \"expect\": \"An empty list.\"}",
+   "type": "verify-incomplete",
+   "severity": "should",
+   "evidence": "The verify step proves the VPC (and so the subnet) is gone, but not the resource share, the first thing the task asks the reader to delete. If delete-resource-share is skipped or fails, the verify still returns an empty list and the reader believes the cleanup is complete. The share check exists only as prose in still_costs. Rule: RULINGS hard rule 9 ('cost line, cleanup steps and a verify step on every Try and Lab'); a verify that cannot fail for a skipped cleanup step does not prove the cleanup. Fix: make the verify the share check (aws ram get-resource-shares --resource-owner SELF --name saa-organizations-t01 --resource-share-status ACTIVE --query \"resourceShares[].resourceShareArn\", expect an empty list) and keep the VPC check as a second line, or verify both in the expect text.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): t01 verify is now aws ram get-resource-shares --resource-owner SELF --resource-share-status ACTIVE --tag-filters tagKey=task,tagValues=organizations-t01, expect an empty list; the VPC check moved to still_costs. tasks check-cli 04: 13 commands ok."
+  },
+  {
+   "id": "technical-10",
+   "file": "04-organizations/2-deep.md",
+   "section": "numbers-that-decide-answers",
+   "quote": "| [10,240 characters](../facts/organizations.md#organizations-scp-max-document-size) | Size of one SCP |",
+   "type": "changed-not-flagged",
+   "severity": "should",
+   "evidence": "The SCP size doubled in the same 2026-05-15 change that the fast file flags for the SCP count, but the size has no Changed recently note, so the reader does not learn that older questions and older study material say 5,120. Fact organizations-scp-max-document-size: \"The maximum number of SCPs that can be attached to a single node (root, OU, or account) has increased from 5 to 10, and the maximum SCP size has increased from 5,120 to 10,240 characters.\" Rule: RULINGS hard rule 7 (a fact that changed since mid-2022 gets a Changed recently note with old value, new value, date and what older questions may assume). Fix: add the size to the existing 2026-05-15 Changed recently note (Old 5,120 characters, Now 10,240 characters).",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): 1-fast Changed recently entry is now 'More and larger SCPs': Old 5 SCPs of 5120 characters, Now 10 SCPs of 10,240 characters (display request fr-0031 filled)."
+  },
+  {
+   "id": "technical-11",
+   "file": "04-organizations/1-fast.md",
+   "section": "changed-recently",
+   "quote": "> **Changed recently:** (2026-05-15) More SCPs per root, OU or account.",
+   "type": "changed-not-flagged",
+   "severity": "should",
+   "evidence": "Resource control policies are new since mid-2022 and decide q011 and the 2-deep RCP exam signal, but neither this chapter nor chapter 03 (whose Changed recently notes cover only the IAM Identity Center rename and root MFA) has a Changed recently note for them. Older practice questions cannot offer an RCP and solve 'outsiders must not reach our buckets' with bucket policies or aws:PrincipalOrgID in each bucket policy. Source changes:organizations (saved change feed): \"2024-11-13  whatsnew  Introducing resource control policies (RCPs) to centrally restrict access to AWS resources\"; declarative policies (used in the 2-deep table) followed on 2024-12-01: \"Amazon Web Services announces declarative policies\". Rule: RULINGS hard rule 7. Fix: add a Changed recently note (2024-11-13; Old: no organization-wide policy on resources, only bucket and key policies; Now: RCPs; older questions: a bucket policy with aws:PrincipalOrgID).",
+   "status": "rejected",
+   "resolution": "fix-04 (2026-10-13): No verified fact records the RCP launch as a change: control-tower-change-rcp-controls-2024-11 has no changed field, and L107 needs changed.date of the fact linked in Now:. The fast Changed recently section is also at its budget. Orchestrator: register an Organizations change fact for the RCP launch (2024-11-13), then add the entry."
+  },
+  {
+   "id": "technical-12",
+   "file": "04-organizations/2-deep.md",
+   "section": "a-control-tower-landing-zone-applies-preventive-and-detective-controls-to-registered-ous",
+   "quote": "2. **Create the shared accounts.** Next to the management account, it creates [the log archive account, and the audit account](../facts/control-tower.md#control-tower-shared-accounts).",
+   "type": "outdated",
+   "severity": "should",
+   "evidence": "Landing zone version 4.0 (2025-11-17) made the Security OU and most service integrations optional, so the shared log archive and audit accounts are no longer created unconditionally. Source full:controltower-userguide (Structure of a landing zone): \"In AWS Control Tower landing zone version 4.0, AWS Control Tower no longer requires a Security OU, and you can define your own organizational structure.\" and (Creating the manifest file): \"With landing zone version 4.0, many components are now optional, allowing for a more flexible deployment.\" The same unconditional statement is in speak.json s02 ('It builds a landing zone with shared accounts for logs and for audit'). The chapter mentions version 4.0 only for mandatory controls, inside a Go deeper, and has no Changed recently note for it (RULINGS hard rule 7). Fix: 'it can create the log archive and audit accounts (optional from landing zone version 4.0)' and add one Changed recently note for landing zone 4.0 that covers the optional shared accounts and the mandatory controls no longer applied by default; the exam most likely assumes the classic layout.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): Softened: 2-deep step 2 says 'Setup can create the log archive account, and the audit account' and defines both; q004 explanation says 'The setup ... can create'; speak s02 now says 'It builds a landing zone, a well-architected environment of many accounts.' The Go deeper states the landing zone 4.0 change (mandatory controls no longer applied by default; older questions assume they are on). No verified fact yet says that the shared accounts are optional from 4.0, so the book does not state it; registering the quote 'With landing zone version 4.0, many components are now optional' would allow a Changed recently entry (orchestrator)."
+  },
+  {
+   "id": "technical-13",
+   "file": "04-organizations/1-fast.md",
+   "section": "signals-and-traps",
+   "quote": "| \"no one in member accounts, including administrators\" | Deny in an SCP on the root or OU |",
+   "type": "condition-dropped",
+   "severity": "note",
+   "evidence": "No hand file says that service-linked roles are outside every SCP; 2-deep ('SCPs limit member principals, including the member account's root user, and accounts designated as delegated administrators') and the signals row read as if the SCP binds every principal in a member account. Source full:organizations-userguide (AWS Organizations and service-linked roles): \"AWS Organizations SCPs never affect service-linked roles. These roles are exempt from any SCP restrictions.\" The verified fact iam-scp-applies-to-member-root-user already states this in its claim ('service-linked roles can't be restricted by SCPs'). Fix: one sentence in the Go deeper of the SCP-scope section.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): 2-deep step 3 adds 'SCPs do not affect any service-linked role' (organizations-scp-no-effect-on-management-account)."
+  },
+  {
+   "id": "technical-14",
+   "file": "04-organizations/2-deep.md",
+   "section": "decision-record",
+   "quote": "**Decision.** Control Tower with seven accounts in three OUs, and service control policies.",
+   "type": "imprecise",
+   "severity": "note",
+   "evidence": "Seven accounts cannot all be in the three OUs: the management account sits at the root, outside every OU, which is why OU SCPs do not reach it. The chapter's own after-figure alt text says 'the management account and three OUs ... holding six member accounts', and the diagram places the management account outside the OU boxes. Fact organizations-declarative-policy-at-root-includes-management: an SCP on the root \"applies to all organizational units (OUs) and member accounts in the organization. It does not apply to the management account in the organization.\" Fix: 'seven accounts: the management account and six member accounts in three OUs' (also the figure caption and the diagram title).",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): Decision now 'the management account and six member accounts in three OUs'; figure caption, diagram spec claim and title changed to match; organizations-after.svg rebuilt."
+  },
+  {
+   "id": "technical-15",
+   "file": "04-organizations/1-fast.md",
+   "section": "choose-it-or-not",
+   "quote": "| Who builds a new account? | Your team, for example with [AWS CloudFormation StackSets](../facts/organizations.md#organizations-stacksets-provision-to-accounts) |",
+   "type": "imprecise",
+   "severity": "note",
+   "evidence": "StackSets does not create accounts; it provisions resources and permissions into accounts that the team creates with the Organizations API or CLI. Fact organizations-stacksets-provision-to-accounts: \"You can simplify account creation by programmatically creating new accounts using the AWS Command Line Interface (AWS CLI), SDKs, or APIs, and centrally provision recommended resources and permissions to those accounts with AWS CloudFormation StackSets.\" Fix: 'Your team, with the Organizations API, and a baseline deployed with AWS CloudFormation StackSets'.",
+   "status": "fixed",
+   "resolution": "fix-04 (2026-10-13): Row now: 'Your team: programmatically creating new accounts, then a baseline with AWS CloudFormation StackSets' (both links to organizations-stacksets-provision-to-accounts)."
+  }
+ ]
+}

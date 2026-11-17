@@ -1,0 +1,2164 @@
+{
+  "chapter": "19",
+  "angle": "follow one release of one containerized service: the image goes into a Regional ECR repository (1), a task definition names its containers and two roles with different jobs (2), Fargate gives each task its own isolated compute (3), awsvpc gives each task its own network interface and decides how the image is pulled (4), an ECS service keeps the desired count across Availability Zones and rolls out new revisions (5), service auto scaling changes the task count while capacity providers bring the compute, Fargate Spot included (6); then the same containers under Kubernetes: EKS runs the control plane and you choose where pods run (7). On-premises options (ECS Anywhere, EKS Anywhere, EKS Distro) are recognise-only service cards in 2-services.md.",
+  "brief_by": "brief-19",
+  "written_at": "2026-10-14",
+  "template": "medium (no chapter override). Hand files: 1-fast.md (at most 1,000 words, file limit is an error), 2-deep.md (1,800 to 2,400 words, file limit is an error; How it works 1,300 to 1,800 in 7 subsections, each 150 to 400 words of body and callouts), 2-services.md (3 service cards of 150 to 220 words; the registry cards list is ecs-anywhere, eks-anywhere, eks-distro). Generated: 3-do.md, 4-say.md, 5-quiz.md, sources.md. Counts: 12 questions written (10 shipped: core 5, extended 5), 2 speak items, 12 written cards (core 4, extended 8), 1 Look, 1 to 2 Try, 0 Lab, 3 diagrams, 7 brief traps (cap).",
+  "base": "Pattern: _build/style/exemplar/ (README, iam-2-deep.md, vpc-2-deep-slice.md): house pattern U1 (problem, numbered trace with bold step names, compressing table when there are two or more cases, one Why reason, Exam signal, Exam trap or Go deeper or Try it, Say it, Stop and answer). Shape of this brief: _build/work/09-detection/brief.json (medium with service cards) and _build/work/18-lambda/brief.json (plans). Link texts in the plans are displays copied from _build/work/19-containers/fact-cards.md (chapter facts) and nb-cards.md (facts of chapters 14, 16 and 18, linked by id). A link text in [brackets] is followed by its fact id in (parentheses); copy the bracket text exactly, in lowercase where it stands mid-sentence, with the apostrophe the display has (straight or curly).",
+  "notes_for_writers": [
+    "Read the exemplar first. Each How-it-works subsection follows U1 and ends with Say it, then Stop and answer with its reveal. Spend the words on the trace, not on lists; a feature list goes into a Go deeper block or a service card.",
+    "Budgets are tight, and the file limits are errors: 1-fast.md at most 1,000 words; 2-deep.md at most 2,400. lint.word_count counts reveals, Go deeper blocks, prompts, alt texts and captions. Use the per-section aims in budgets.",
+    "Fargate is a compute engine, not an orchestrator: say 'Amazon ECS on AWS Fargate' or 'EKS pods on Fargate'. ECS Managed Instances (generally available September 30, 2025) and EKS Auto Mode (December 1, 2024) are taught as options, never as the one right answer: no question keys on them (volatile window), and the prose never calls either 'the best'. Use the AWS wording 'recommended' only with its fact link.",
+    "Callvale's trade-off in STARTUP.md says 'a higher price for each unit of compute'. No saved AWS page compares the Fargate price with the EC2 price (brief.v0 d19-139). Keep the decision, change the stated reason (RULINGS: the story never teaches a fact): Callvale pays for the task size it provisions, busy or idle, and has no access to the host; AWS points large price-optimized workloads to EC2 capacity. Never write that Fargate costs more.",
+    "No sentence on: one-sentence 'ECS and EKS share the Fargate vCPU quota' (d19-024: no single sentence; the same quota row appears on both quota pages, so write that each quota page lists it, or leave it out); how ECS injects secrets as environment variables (d19-028 rejected; the execution role use case 'references sensitive data using Secrets Manager secrets' is verified and enough); the ECR layer size (rejected); the exact Fargate Savings Plans percentage beyond the Fargate pricing page fact (two pages disagree: 50 and 52; use only fargate-pricing-savings-plans-up-to-50-percent, or no number); the instance lifetime of ECS Managed Instances (14 or 21 days conflict); Spot Instance draining on EC2 (rejected).",
+    "Fargate task sizes: do not state a maximum task size. The 32 vCPU size is from 2026-06-05 (examinable but volatile); the 16 vCPU fact is no longer the maximum. If a size is needed, say 'from [256 (.25 vCPU)] (fargate-task-size-smallest)' only.",
+    "Neighbour chapters (registry numbers): IAM 03; KMS 06; Secrets Manager 07; VPC and endpoints 10; PrivateLink 11; ELB 14; EC2 16; Auto Scaling 17; Lambda 18; AWS Batch 20; EFS 23; Savings Plans and cost 41. Link a verified neighbour fact by id where the plan names one; a cross-reference to a section of another chapter is a link only if that section exists, otherwise an xref marker.",
+    "Story numbers allowed in this chapter (data/startup.json chapters.19.uses_numbers): 14 engineers, a 40-minute release, 6 Fargate services, at least 3 tasks for each service. Stage 3, month 20; Chen exists. Fixed service names: dashboard, upload, search, accounts, billing, admin. Question stems say 'A company' and never name Callvale.",
+    "Kubernetes words: pod, node, namespace, DaemonSet and kubectl appear in subsection 7 and in the EKS questions. Define pod, node, control plane, managed node group and Fargate profile in bold at first use in 2-deep.md (term requests); write 'Kubernetes' as the third-party name it is.",
+    "Displays with a contraction (doesn't, isn't, aren't, can't, doesn’t, aren’t, isn’t): if L803 fires on the contraction inside a link text, file a display request (facts request --fact ID --display TEXT) instead of rewording the AWS quote.",
+    "Every subsection carries exactly one Exam signal and one Say it. Go deeper: exactly 2 (subsections 1 and 7). Spot the bug: exactly 1 (subsection 4). Exam trap callouts: exactly 4 (subsections 1, 3, 4, 6), each ending with its trap comment. Try it: subsection 1 (containers-t02) and, only if the tasks writer ships it, subsection 4 (containers-t03). Counted callouts in 2-deep.md: 4 Exam trap + up to 2 Try it = 6 of 8."
+  ],
+  "frozen": {
+    "2-deep.md": "Nothing frozen. Write the 7 subsections from the plans below, in this order.",
+    "items": "No exemplar items exist for containers; write every item from the slots, cards, speak and tasks below."
+  },
+  "budgets": {
+    "rule": "lint.word_count counts every word of the file: reveals, Go deeper blocks, prompts, image alt text and captions included (code blocks and comments excluded). File limits are errors (SPEC lint.file_word_limit_severity); section limits are warnings.",
+    "1-fast.md_total_max": 1000,
+    "1-fast.md_aims": "Predict 60, Look first 35 (the task region is generated and not counted), In one breath 210 (section max 200 is a warning: keep alt 30, caption 21, 4 steps at about 13 words each, Say it 25, problem field 15, prompt 15, startup example 50), Words 85, Choose it or not 185, Signals and traps 210, Changed recently 55, Check 85, Recap 55 = about 980.",
+    "1-fast.md_callouts": "callouts_max 4: Say it (one-breath; not counted) and Startup example (counted); Changed recently entries do not count.",
+    "2-deep.md_total_min": 1800,
+    "2-deep.md_total_max": 2400,
+    "2-deep.md_aims": "How it works about 1,600 (H2 intro line 20; 7 subsections with body and callouts of 155 to 175 words each, Stop and answer with its reveal at most 35 words each; Go deeper 2 blocks of at most 65 words; Spot the bug with reveal about 50) + Numbers 160 + Decision record 240 (fields 140, two diagrams with alt at most 30 words and caption at most 23 words each) + FAQ 235 + In the real world 85 = about 2,320. If the file runs over 2,400, cut Go deeper words first, then table cells; never drop a required device.",
+    "subsection_rule": "Body plus callouts (not Go deeper, prompts or reveals) at least 150 words per subsection (SPEC subsection_words) and at most 400; aim 155 to 175.",
+    "callouts_max_2_deep": 8,
+    "callouts_planned_2_deep": "6: Exam trap x4 (subsections 1, 3, 4, 6), Try it x2 (subsection 1 containers-t02; subsection 4 containers-t03 only if shipped). No Startup example in 2-deep.md: the fast Startup example uses about 50 of the 80 story words of the chapter.",
+    "2-services.md": "3 cards of 150 to 220 words each (D15), about 570 words."
+  },
+  "sections": [
+    {
+      "file": "1-fast.md",
+      "section": "predict",
+      "heading": "Predict",
+      "role": "predict",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": "Two prompts, each ending with '?'. Predict 1 is the gist trap (<!-- gist-trap -->): 'A containerized application on AWS Fargate must read objects from an S3 bucket. The team adds S3 read permissions to the task execution role of the task definition. Can the application now read the bucket?' (common sense says yes; the answer is no: the application uses the task role). Predict 2: 'A service runs all its tasks on Fargate Spot. During a busy hour AWS needs the Spot capacity back. Does Amazon ECS start the replacement tasks on regular Fargate instead?' (no). Answers appear only in Check (U4). No term defined in a prompt; no AWS number. At most 60 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "look-first",
+      "heading": "Look first",
+      "role": "task",
+      "minutes": 3,
+      "bullets": [
+        "3.2.K1"
+      ],
+      "facts": [
+        "fargate-ondemand-vcpu-quota",
+        "fargate-spot-vcpu-quota",
+        "fargate-faq-quotas-based-on-vcpu-per-region-account",
+        "fargate-faq-new-accounts-lower-quotas-raisable"
+      ],
+      "task": "containers-t01",
+      "plan": "One or two sentences (at most 35 words) and the task region for containers-t01 (read-only, 3 minutes): read the Fargate quotas of your account. Example lead: 'Fargate has no instances, but it has quotas. Fargate quotas count the [number of vCPU cores used] (fargate-faq-quotas-based-on-vcpu-per-region-account) in a Region.' Then <!-- task:start id=containers-t01 --> <!-- task:end -->."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "in-one-breath",
+      "heading": "In one breath",
+      "role": "breath",
+      "minutes": 2,
+      "bullets": [
+        "2.1.K14",
+        "3.2.K1"
+      ],
+      "facts": [
+        "ecs-fully-managed-orchestration",
+        "eks-fully-managed-kubernetes-service",
+        "fargate-faq-serverless-engine-for-ecs-and-eks",
+        "fargate-whitepaper-own-kernel-for-ecs-and-eks",
+        "fargate-no-placement-strategies-best-effort-az-spread",
+        "ecs-task-execution-role-for-agents",
+        "fargate-requires-awsvpc-network-mode",
+        "ecs-iam-role-table-task-role"
+      ],
+      "plan": "Say it (one-breath definition, at most 25 words, linked): 'Amazon ECS is a [fully managed container orchestration service] (ecs-fully-managed-orchestration), Amazon EKS runs Kubernetes for you, and AWS Fargate is a [serverless compute engine for containers] (fargate-faq-serverless-engine-for-ecs-and-eks).' Then the bold field '**The problem it solves.**' in one sentence of about 15 words: teams that package code as containers need something that places, restarts and scales them. Then 'Predict the picture.' prompt: 'A request reaches the load balancer. Does the load balancer send it to an instance, or to the task itself?' with the hero containers-hero in a reveal, its caption and its 4 numbered steps (text fixed in diagrams). Then the Startup example callout with the problem of data/startup.json chapters.19.problem word for word (47 words; at most 60 with the label). The story never teaches a fact."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "words-that-go-together",
+      "heading": "Words that go together",
+      "role": "words",
+      "minutes": 1,
+      "bullets": [
+        "2.1.K14"
+      ],
+      "facts": [],
+      "plan": "A words table of 4 rows (see words_table). Cell 1 spelled as the term field of data/terms.json after the terms agent adds it; cell 2 one collocation of the bank with exactly one bold span. At most 85 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "choose-it-or-not",
+      "heading": "Choose it or not",
+      "role": "choose",
+      "minutes": 2,
+      "bullets": [
+        "2.1.S4",
+        "3.2.K1",
+        "2.1.K14",
+        "4.2.S3"
+      ],
+      "facts": [
+        "ec2-compute-guide-fargate-no-servers-for-containers",
+        "ecs-cluster-ec2-full-control-you-manage-instances",
+        "lambda-fargate-no-execution-time-limit",
+        "fargate-guide-containers-run-indefinitely-no-hard-limit",
+        "fargate-faq-gpu-not-supported",
+        "ecs-faq-ec2-root-access-to-os",
+        "ecs-faq-fargate-billing-granularity",
+        "ecs-pricing-ec2-no-additional-charge",
+        "fargate-vs-lambda-lambda-best-for-event-driven",
+        "ecs-faq-no-additional-charge",
+        "eks-pricing-per-cluster-per-hour-fee",
+        "ecs-task-definition-json-blueprint",
+        "eks-certified-kubernetes-conformant",
+        "fargate-whitepaper-own-kernel-for-ecs-and-eks",
+        "eks-fargate-no-spot",
+        "eks-decision-guide-kubernetes-skills-sre-teams"
+      ],
+      "plan": "Two compare tables (see compare_tables), at most 4 columns each, each under its H3 and followed by its bold **Deciding question:** line. At most 185 words in all. If the section runs long, cut the table 1 billing row to one link per cell, never a deciding question."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "signals-and-traps",
+      "heading": "Signals and traps",
+      "role": "signals",
+      "minutes": 2,
+      "bullets": [
+        "3.2.K1",
+        "2.1.S4",
+        "4.2.S3",
+        "2.1.K14",
+        "2.1.K8"
+      ],
+      "facts": [
+        "ec2-compute-guide-fargate-no-servers-for-containers",
+        "fargate-faq-gpu-not-supported",
+        "eks-certified-kubernetes-conformant",
+        "fargate-spot-interruption-tolerant-discount",
+        "ecs-iam-role-table-task-role",
+        "eks-faq-anywhere-for-isolated-or-air-gapped",
+        "eks-hybrid-nodes-need-reliable-connection",
+        "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+        "ecr-pull-through-cache-keeps-cache-current",
+        "ecs-task-execution-role-for-agents",
+        "ecs-task-role-gives-app-code-aws-permissions",
+        "fargate-no-privileged-containers",
+        "fargate-no-daemon-scheduling-strategy",
+        "fargate-spot-no-on-demand-replacement",
+        "ecs-capacity-provider-manages-infrastructure-scaling"
+      ],
+      "plan": "A signals table of exactly 6 rows (see signals; columns: The stem says | Think | Because | But not if) and the fixed H3 'Traps' with the 3 fast traps (containers-trap-execution-role-for-app, containers-trap-fargate-runs-anything, containers-trap-fargate-spot-falls-back), each a list item that ends with <!-- trap: <id> -->. At most 210 words."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "changed-recently",
+      "heading": "Changed recently",
+      "role": "changed",
+      "minutes": 1,
+      "bullets": [
+        "2.1.K14"
+      ],
+      "facts": [
+        "ecs-change-native-blue-green-deployments-2025-07",
+        "ecs-blue-green-native-similar-to-codedeploy"
+      ],
+      "plan": "One examinable entry (see changed_recently.fast), in the form of CONVENTIONS D6, at most 60 words. The date (2025-07-15) must equal changed.date of the fact linked in Now (L107): fact request fr-0102 asks the registrar to set it. Until fr-0102 is filled, write the entry and expect the L107 warning; do not drop it."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "check",
+      "heading": "Check",
+      "role": "check",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [
+        "ecs-task-execution-role-for-agents",
+        "ecs-task-execution-role-use-cases",
+        "ecr-ecs-agent-pull-permissions",
+        "fargate-spot-no-on-demand-replacement",
+        "ecs-capacity-provider-manages-infrastructure-scaling"
+      ],
+      "plan": "Two Check prompts parallel to Predict, each a new case, each answered in its reveal, with a separate '**Predict <n>:**' paragraph (U4). Check 1: 'A new task stops before its container starts. The error says that the task cannot pull its image from a private Amazon ECR repository. The task role allows every ECR action. Which role needs the permissions?' (The task execution role: it [grants the Amazon ECS container and Fargate agents] permission to call AWS (ecs-task-execution-role-for-agents), for example to pull from [an Amazon ECR private repository] (ecs-task-execution-role-use-cases). Predict 1: no; the application uses the task role, and the execution role's permissions [aren't directly accessible by the containers] (ecs-task-execution-role-for-agents).) Check 2: 'A batch service runs on Fargate Spot, and two of its tasks must keep running when Spot capacity is short. What do you add to the capacity provider strategy?' (A base of 2 on the FARGATE capacity provider, with Spot taking the weight: a strategy sets [the `base` and `weight` to assign to them] (ecs-capacity-provider-manages-infrastructure-scaling). Predict 2: no; [Fargate doesn't replace Spot capacity with on-demand capacity] (fargate-spot-no-on-demand-replacement).) Keep each reveal at about 35 words; the '2' in Check 2 is story data of the prompt."
+    },
+    {
+      "file": "1-fast.md",
+      "section": "recap-from-memory",
+      "heading": "Recap from memory",
+      "role": "recap",
+      "minutes": 1,
+      "bullets": [],
+      "facts": [],
+      "plan": "Three Recap prompts, each asking only for a sentence, row or cell that 1-fast.md states above (U4): the deciding question under the table 'ECS or EKS'; the 'But not if' cell of the signals row that points to EKS Anywhere; which role in a task definition gives the application its AWS permissions and which role pulls the image (traps list). Reveals copy the fast-file text."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "how-it-works",
+      "heading": "How it works",
+      "role": "how",
+      "minutes": 28,
+      "bullets": [],
+      "facts": [],
+      "plan": {
+        "intro_line": "About 20 words: this part follows one release of one service, from the image to the running task, the service and its scaling, and then the same containers on Kubernetes. Not a list of subsections.",
+        "subsections_in_order": [
+          "images-live-in-a-regional-ecr-repository-that-tasks-pull-from",
+          "a-task-definition-gives-the-agent-one-role-and-the-application-another",
+          "fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage",
+          "in-awsvpc-mode-each-task-gets-its-own-network-interface",
+          "a-service-keeps-the-desired-task-count-and-replaces-tasks-during-a-release",
+          "service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+          "eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run"
+        ],
+        "pass_route_subsections": [
+          "a-task-definition-gives-the-agent-one-role-and-the-application-another",
+          "fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage",
+          "service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+          "eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run"
+        ],
+        "causal_chain": "image pushed to a Regional repository -> task definition (containers, execution role for the agent, task role for the code) -> compute for each task (Fargate, EC2 instances, ECS Managed Instances) -> network interface of each task and the image pull path -> service: desired count, AZ spread, health checks, rolling or blue/green release -> scaling: task count by service auto scaling, compute by capacity providers (Fargate Spot, managed scaling of an Auto Scaling group) -> Kubernetes on EKS: AWS control plane, pods on node groups, Fargate or Auto Mode, Pod Identity, HPA and node autoscalers",
+        "minutes": "4 + 4 + 4 + 4 + 4 + 4 + 4 = 28"
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "images-live-in-a-regional-ecr-repository-that-tasks-pull-from",
+      "heading": "Images live in a Regional ECR repository that tasks pull from",
+      "parent": "how-it-works",
+      "order": 1,
+      "minutes": 4,
+      "bullets": [
+        "2.1.K8",
+        "4.2.K8"
+      ],
+      "facts": [
+        "ecr-managed-container-image-registry",
+        "ecr-default-private-registry-per-account",
+        "ecr-repository-logical-collection-of-images",
+        "ecr-docker-cli-needs-token-get-login-password",
+        "ecr-authorization-token-valid-12-hours",
+        "ecr-get-authorization-token-requires-iam-policy",
+        "ecr-faq-images-stored-in-s3",
+        "ecr-encryption-default-sse-s3-aes256",
+        "ecr-encryption-settings-cannot-change-after-creation",
+        "ecr-tag-immutability-prevent-overwrite",
+        "ecr-scan-on-push-each-new-image",
+        "ecr-scanning-basic-vs-enhanced",
+        "ecr-enhanced-scanning-inspector-cost",
+        "ecr-faq-regional-service",
+        "ecr-pricing-same-region-transfer-free",
+        "ecr-faq-cross-region-pull-latency-and-transfer-cost",
+        "ecs-keep-images-in-same-region-as-workload",
+        "ecr-faq-replicates-across-regions-and-accounts",
+        "ecr-replication-only-new-pushes",
+        "ecr-replication-destination-account-policy-only",
+        "ecr-pull-through-cache-keeps-cache-current",
+        "ecr-migrate-one-time-copy-no-auto-update",
+        "ecr-lifecycle-count-more-than-and-since-pushed",
+        "ecr-faq-pricing-storage-and-internet-transfer",
+        "ecr-repository-policy-default-account-only"
+      ],
+      "plan": {
+        "problem": "A team builds an image on a laptop. Tasks in two Regions must start from that image, and a released tag must never change.",
+        "trace": [
+          "**Log in.** The Docker CLI [doesn't support native IAM authentication methods] (ecr-docker-cli-needs-token-get-login-password), so the client gets an authorization token that is valid for [12 hours] (ecr-authorization-token-valid-12-hours).",
+          "**Push.** The image goes into a repository, [a logical collection where you can store] images (ecr-repository-logical-collection-of-images); each account has [a default private Amazon ECR registry] (ecr-default-private-registry-per-account) in each Region.",
+          "**Store.** ECR encrypts the image with [server-side encryption with Amazon S3-managed encryption keys] (ecr-encryption-default-sse-s3-aes256); with tag immutability you [prevent image tags from being overwritten] (ecr-tag-immutability-prevent-overwrite).",
+          "**Pull.** A task in the same Region pulls the image, and that transfer [is free of charge] (ecr-pricing-same-region-transfer-free)."
+        ],
+        "table": null,
+        "table_note": "No table: the trace has one case. The two-Region case goes into the Why and the Exam trap.",
+        "why": "Why one repository per Region? ECR is a [Regional service] (ecr-faq-regional-service): a pull from another Region adds [additional latency and data transfer costs] (ecr-faq-cross-region-pull-latency-and-transfer-cost), so AWS says to [Host your images in a repository] in the Region of the workload (ecs-keep-images-in-same-region-as-workload).",
+        "exam_signal": "\"scan each new image for vulnerabilities when it is pushed\" points to scan on push, which scans [each new image pushed to the repository] (ecr-scan-on-push-each-new-image); \"continuous scanning, including programming language packages\" points to enhanced scanning with Amazon Inspector: [automated, continuous scanning of your repositories] (ecr-scanning-basic-vs-enhanced).",
+        "exam_trap": "containers-trap-ecr-global",
+        "exam_trap_text": "Wrong belief: one repository in the first Region serves tasks in every Region. Truth: ECR can [automatically replicate them to other Regions and accounts] (ecr-faq-replicates-across-regions-and-accounts), so each Region pulls locally. End with <!-- trap: containers-trap-ecr-global -->. At most 40 words.",
+        "try_it": "Try it callout for containers-t02 after the Exam trap, ending with its task comment.",
+        "go_deeper": "Go deeper: sharing, caching and cleaning up images (at most 65 words). By default [only the AWS account that created the repository] has access (ecr-repository-policy-default-account-only); for cross-account replication [The source account does not require] a policy (ecr-replication-destination-account-policy-only). A pull through cache rule lets ECR [cache repositories in an upstream registry] (ecr-pull-through-cache-keeps-cache-current); after a one-time copy, newer versions [are not pulled automatically] (ecr-migrate-one-time-copy-no-auto-update). A lifecycle policy expires images [older than the specified number of days] (ecr-lifecycle-count-more-than-and-since-pushed), and you pay for [the amount of data you store] (ecr-faq-pricing-storage-and-internet-transfer).",
+        "say_it": "The short answer is: push each image to ECR in the Region where it runs. The thing to watch is a second Region.",
+        "stop_and_answer": "A team turns on replication to a second Region for a repository that already holds 40 images. An hour later, the second Region pulls the release tag that was pushed last week. Does the pull work? Answer: no; only content pushed [after replication is configured is replicated] (ecr-replication-only-new-pushes); push the tag again or copy it. Keep this fact out of the trace and the Go deeper."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "a-task-definition-gives-the-agent-one-role-and-the-application-another",
+      "heading": "A task definition gives the agent one role and the application another",
+      "parent": "how-it-works",
+      "order": 2,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "2.1.K14",
+        "2.1.K4"
+      ],
+      "facts": [
+        "ecs-task-definition-json-blueprint",
+        "ecs-faq-task-smallest-unit",
+        "ecs-task-is-instantiation-of-task-definition",
+        "ecs-containers-per-task-definition-limit",
+        "fargate-task-containers-share-resources",
+        "ecs-one-task-definition-family-per-business-purpose",
+        "ecs-task-definition-revision-maps-to-app-version",
+        "ecs-task-execution-role-for-agents",
+        "ecs-task-execution-role-use-cases",
+        "ecr-ecs-agent-pull-permissions",
+        "ecs-task-role-gives-app-code-aws-permissions",
+        "ecs-iam-role-table-task-role",
+        "ecs-task-role-credentials-exclusive-no-instance-inheritance",
+        "ecs-task-role-fargate-no-instance-profile",
+        "ecs-task-role-least-privilege-per-task-definition",
+        "ecs-iam-role-table-container-instance-role",
+        "ecs-container-instance-role-registers-agent",
+        "ecs-private-registry-credentials-secrets-manager"
+      ],
+      "plan": {
+        "problem": "A new task must pull a private image, send its logs, and let the application write to an S3 bucket. Two different programs make these calls.",
+        "trace": [
+          "**Describe.** A task definition is [a text file in JSON format] (ecs-task-definition-json-blueprint) with up to [10 container definitions] (ecs-containers-per-task-definition-limit) and the roles of the task.",
+          "**Start.** A task is [the instantiation of a task definition] (ecs-task-is-instantiation-of-task-definition); the containers of one Fargate task [always run on the same host] (fargate-task-containers-share-resources).",
+          "**Pull and log.** The task execution role [grants the Amazon ECS container and Fargate agents] permission to call AWS (ecs-task-execution-role-for-agents), for example to pull from [an Amazon ECR private repository] or to use [the `awslogs` log driver] (ecs-task-execution-role-use-cases).",
+          "**Run the code.** The task role [allows your application code (running in the container)] to call services such as Amazon S3 (ecs-task-role-gives-app-code-aws-permissions); the SDK uses the credentials [provided by the task role exclusively] (ecs-task-role-credentials-exclusive-no-instance-inheritance)."
+        ],
+        "table": "Which role answers which call (columns: Call | Made by | Role): pull the image from Amazon ECR | the Fargate or container agent | task execution role; send logs with the awslogs driver | the agent | task execution role; read a secret that the task definition names | the agent | task execution role: it [references sensitive data using Secrets Manager secrets] (ecs-task-execution-role-use-cases); write to Amazon S3 | the application | task role: [Your application accesses other AWS services] (ecs-iam-role-table-task-role). Four rows; cells at most 15 words.",
+        "why": "Why two roles? The agent calls AWS before your code starts, and the code calls AWS while it runs. The execution role's permissions [aren't directly accessible by the containers] (ecs-task-execution-role-for-agents), so the code cannot use them.",
+        "exam_signal": "\"the application in the container needs access to an S3 bucket\" points to the task role ([use other AWS services], ecs-iam-role-table-task-role); \"tasks fail because they cannot pull the image from a private repository\" points to the task execution role (ecs-task-execution-role-use-cases).",
+        "exam_trap": null,
+        "exam_trap_note": "No Exam trap callout here: containers-trap-execution-role-for-app lives in the fast Traps list. Do not repeat it as a callout.",
+        "body_extras": "One sentence only if words remain: on Fargate, [EC2 instance profiles are not available] for containers (ecs-task-role-fargate-no-instance-profile); on EC2, the container instance role lets instances [register with the cluster] (ecs-iam-role-table-container-instance-role).",
+        "say_it": "The short answer is: the agent uses the execution role, and your code uses the task role. The thing to watch is which program makes the call.",
+        "stop_and_answer": "The search and billing services share one task definition. Its task role can read the billing table and the audio bucket, but search needs only the bucket. What do you change? Answer: give each service its own family, each [for only one business purpose] (ecs-one-task-definition-family-per-business-purpose), and [a role for each specific task definition] with the minimum permissions (ecs-task-role-least-privilege-per-task-definition). Keep these facts out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage",
+      "heading": "Fargate gives each task its own isolated compute and no instance to manage",
+      "parent": "how-it-works",
+      "order": 3,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "3.2.K1",
+        "2.1.S4",
+        "2.1.K4",
+        "4.2.S3"
+      ],
+      "facts": [
+        "fargate-serverless-pay-as-you-go",
+        "fargate-no-provision-vm-clusters",
+        "fargate-faq-single-tenant-instance-per-workload",
+        "fargate-task-isolation-boundary",
+        "fargate-containers-cannot-access-host-resources",
+        "fargate-no-host-access-ecs-exec",
+        "fargate-task-retirement-aws-maintains-infrastructure",
+        "fargate-new-tasks-latest-revision-patched",
+        "fargate-retirement-service-tasks-replaced-automatically",
+        "fargate-retirement-no-opt-out",
+        "fargate-no-privileged-containers",
+        "fargate-faq-gpu-not-supported",
+        "fargate-no-daemon-scheduling-strategy",
+        "ecs-faq-fargate-billing-granularity",
+        "fargate-pricing-windows-5-minute-minimum",
+        "fargate-faq-ephemeral-storage-20-gib-erased",
+        "fargate-ephemeral-storage-max-200-gib",
+        "fargate-faq-efs-for-persistent-storage",
+        "ecs-efs-volumes-shared-persistent-across-instances",
+        "ecs-ebs-volume-service-task-deleted-on-termination",
+        "ecs-cluster-ec2-full-control-you-manage-instances",
+        "ecs-faq-ec2-root-access-to-os",
+        "ecs-faq-ec2-for-greater-control",
+        "ecs-ec2-capacity-large-workloads-price-optimized",
+        "ecs-containers-not-security-boundary-use-fargate-for-isolation",
+        "ecs-managed-instances-full-range-ec2-aws-manages",
+        "ecs-capacity-managed-instances",
+        "ecs-managed-instances-multi-task-placement-default",
+        "ecs-faq-mi-additional-benefits-over-fargate",
+        "ecs-faq-mi-compute-in-your-account-billing",
+        "eks-stateless-application-no-session-data-deployment"
+      ],
+      "plan": {
+        "problem": "A team wants containers without instances to patch. Before it moves, it asks what it gives up.",
+        "trace": [
+          "**Ask for a size.** The task asks for vCPU and memory, and you no longer [provision, configure, or scale clusters] of instances (fargate-no-provision-vm-clusters).",
+          "**Isolate.** Each task runs on [its own single use, single tenant compute instance] (fargate-faq-single-tenant-instance-per-workload) and [does not share the underlying kernel] with another task (fargate-task-isolation-boundary).",
+          "**Patch.** AWS [is responsible for maintaining the underlying infrastructure]; when a platform revision is replaced, [all tasks running on that revision are stopped] (fargate-task-retirement-aws-maintains-infrastructure), and [the Amazon ECS scheduler automatically replaces the tasks] of a service (fargate-retirement-service-tasks-replaced-automatically).",
+          "**Bill.** You pay for the requested vCPU and memory from the image pull, [rounded up to the nearest second] (ecs-faq-fargate-billing-granularity)."
+        ],
+        "table": "Three places for ECS tasks (columns: Question | Fargate | EC2 instances | ECS Managed Instances): Who manages the instances | AWS | you: [including instance selection, configuration, and maintenance] (ecs-cluster-ec2-full-control-you-manage-instances) | AWS: [AWS handles provisioning, scaling, patching, and maintenance] (ecs-managed-instances-full-range-ec2-aws-manages); Tasks on one host | one task (no link needed) | many: [there is no task isolation] (ecs-containers-not-security-boundary-use-fargate-for-isolation) | [multiple tasks on a single instance by default] (ecs-managed-instances-multi-task-placement-default); GPUs | [not supported on AWS Fargate today] (fargate-faq-gpu-not-supported) | yes: [root access to the operating system] is yours (ecs-faq-ec2-root-access-to-os) | yes: [GPU acceleration] (ecs-capacity-managed-instances); You pay for | each task | the instances | the instances plus a [management fee per instance, not per task] (ecs-faq-mi-compute-in-your-account-billing). Cells at most 15 words.",
+        "why": "Why can AWS patch Fargate for you? AWS owns the host, and Fargate [prevents containers from accessing the underlying host] (fargate-containers-cannot-access-host-resources). The same design removes privileged containers and host access.",
+        "exam_signal": "\"strict isolation between tasks\" points to Fargate: [For workloads with strict isolation requirements, use Fargate] (ecs-containers-not-security-boundary-use-fargate-for-isolation); \"control of the instances, their operating system or their GPUs\" points to EC2 capacity for customers who need [greater control of their EC2 instances] (ecs-faq-ec2-for-greater-control).",
+        "exam_trap": "containers-trap-task-storage-persists",
+        "exam_trap_text": "Wrong belief: files that a task writes to its own storage are still there for the replacement task. Truth: a Fargate task gets [20 GiB] of ephemeral storage, and the data is erased when the workload stops (fargate-faq-ephemeral-storage-20-gib-erased); shared, lasting files go to [Amazon Elastic File System (EFS)] (fargate-faq-efs-for-persistent-storage). End with <!-- trap: containers-trap-task-storage-persists -->. At most 45 words.",
+        "say_it": "The short answer is: Fargate gives each task its own compute, and AWS patches it. The thing to watch is that you lose host access.",
+        "stop_and_answer": "A nightly report runs as a standalone Fargate task, not in a service. AWS retires its platform revision on the night of the run. What happens to the report? Answer: AWS stops the task, and [Amazon ECS doesn’t launch a replacement task] for a standalone task (fargate-retirement-service-tasks-replaced-automatically); the team reruns it. The trace names only service tasks; keep the standalone half out of it."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "in-awsvpc-mode-each-task-gets-its-own-network-interface",
+      "heading": "In awsvpc mode each task gets its own network interface",
+      "parent": "how-it-works",
+      "order": 4,
+      "minutes": 4,
+      "bullets": [
+        "2.1.K14"
+      ],
+      "facts": [
+        "fargate-requires-awsvpc-network-mode",
+        "fargate-awsvpc-needs-subnets-and-security-groups",
+        "ecs-network-mode-awsvpc-own-eni",
+        "ecs-awsvpc-task-own-eni-security-groups",
+        "fargate-faq-security-groups-nacls-flow-logs-on-eni",
+        "fargate-network-security-groups-nacls-ip-from-subnet",
+        "fargate-target-group-ip-target-type",
+        "ecs-awsvpc-load-balancer-target-type-ip",
+        "elb-nlb-faq-ip-targets-container-security-groups-same-port",
+        "fargate-task-has-route-to-internet-to-pull",
+        "fargate-public-subnet-image-pull-needs-public-ip",
+        "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+        "ecr-privatelink-no-internet-gateway-needed",
+        "ecr-vpc-endpoint-security-group-port-443",
+        "fargate-ecr-endpoint-uses-private-ip",
+        "fargate-classic-load-balancer-not-supported",
+        "ecs-alb-recommended-for-services",
+        "ecs-awsvpc-eni-limits-tasks-per-instance",
+        "ecs-awsvpc-trunking-increases-eni-density",
+        "ecs-network-mode-bridge-default-linux"
+      ],
+      "plan": {
+        "problem": "A task in a private subnet must take requests from a load balancer and pull its image. The subnet has no route to the internet.",
+        "trace": [
+          "**Attach.** Fargate tasks [require the `awsvpc` network mode], which [provides each task with an elastic network interface] (fargate-requires-awsvpc-network-mode).",
+          "**Place.** The service names subnets and [one or more security groups] (fargate-awsvpc-needs-subnets-and-security-groups), and the tasks [receive an IP address from the configured subnet] (fargate-network-security-groups-nacls-ip-from-subnet).",
+          "**Receive.** The load balancer sends requests to the task's address, so [you must choose `ip` as the target type] (fargate-target-group-ip-target-type).",
+          "**Pull.** To pull its image, the task [must have a route to the internet] (fargate-task-has-route-to-internet-to-pull), or the VPC has endpoints that keep the traffic [to the Amazon network] (ecr-privatelink-no-internet-gateway-needed)."
+        ],
+        "trace_note": "Step 2: link [one or more security groups] (fargate-awsvpc-needs-subnets-and-security-groups) and [receive an IP address from the configured subnet] (fargate-network-security-groups-nacls-ip-from-subnet); write the step so that both displays read as part of the sentence.",
+        "table": "How a task gets its image (columns: Subnet | What the task needs): public subnet | [a public IP address needs to be assigned] (fargate-public-subnet-image-pull-needs-public-ip); private subnet with internet access | a route through a NAT gateway: [the subnet can have a NAT gateway attached] (fargate-task-has-route-to-internet-to-pull); private subnet with no internet access | VPC endpoints: tasks [require both Amazon ECR VPC endpoints] and [the Amazon S3 gateway endpoint] (ecr-vpc-endpoints-fargate-need-ecr-and-s3).",
+        "why": "Why ip targets? The task, not an instance, owns the network interface. Registering by IP address also means each container [can now have its own security group] (elb-nlb-faq-ip-targets-container-security-groups-same-port).",
+        "exam_signal": "\"each task must have its own security group\" points to awsvpc mode, which lets you use security groups [at a more granular level within your tasks] (ecs-awsvpc-task-own-eni-security-groups); \"tasks in private subnets with no internet access pull images from Amazon ECR\" points to VPC endpoints (ecr-vpc-endpoints-fargate-need-ecr-and-s3).",
+        "exam_trap": "containers-trap-instance-target-type",
+        "exam_trap_text": "Wrong belief: a target group of type instance works for Fargate tasks, as it does for EC2 instances. Truth: the tasks are [associated with an elastic network interface] and not an EC2 instance, so [you must choose `ip` as the target type] (fargate-target-group-ip-target-type). Link one display only if the second repeats the trace; at most 40 words. End with <!-- trap: containers-trap-instance-target-type -->.",
+        "try_it": "Try it callout for containers-t03 only if the tasks writer ships it (after the Exam trap), ending with its task comment. If containers-t03 is parked, leave the callout out.",
+        "spot_the_bug": "Spot the bug (the one of the file), after the Exam trap and before the Say it, about 50 words with its reveal: 'A service runs Fargate tasks in private subnets with no NAT gateway. The team creates interface VPC endpoints for the ECR API and the Docker registry, and their security group allows port 443 from the private subnets. The tasks still fail to pull the image. What is wrong?' Reveal: the Amazon S3 gateway endpoint is missing: tasks [require both Amazon ECR VPC endpoints] and [the Amazon S3 gateway endpoint] (ecr-vpc-endpoints-fargate-need-ecr-and-s3). The port 443 rule is right ([must allow incoming connections on port 443], ecr-vpc-endpoint-security-group-port-443) and is the decoy.",
+        "say_it": "The short answer is: each task gets its own network interface, like a small instance. The thing to watch is how the task reaches its image.",
+        "stop_and_answer": "A service on EC2 instances uses the awsvpc network mode. Each instance runs fewer tasks than its CPU and memory allow. What limits the count? Answer: each task in this mode [network mode requires an ENI], and an instance has a [default quota for the number of network interfaces] (ecs-awsvpc-eni-limits-tasks-per-instance); trunking raises it after you [opt in to the `awsvpcTrunking` account setting] (ecs-awsvpc-trunking-increases-eni-density). Keep these facts out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "a-service-keeps-the-desired-task-count-and-replaces-tasks-during-a-release",
+      "heading": "A service keeps the desired task count and replaces tasks during a release",
+      "parent": "how-it-works",
+      "order": 5,
+      "minutes": 4,
+      "bullets": [
+        "2.1.K14",
+        "2.1.K4"
+      ],
+      "facts": [
+        "ecs-service-maintains-desired-count",
+        "ecs-service-scheduler-for-long-running-stateless",
+        "ecs-replica-strategy-default-spreads-azs",
+        "fargate-no-placement-strategies-best-effort-az-spread",
+        "ecs-production-multi-az-lose-an-az",
+        "ecs-overprovision-for-az-failure-two-or-three-azs",
+        "ecs-service-scheduler-replaces-unhealthy-tasks",
+        "ecs-faq-service-scheduler-registers-containers-with-load-balancer",
+        "ecs-daemon-strategy-one-task-per-instance",
+        "ecs-rolling-update-replaces-tasks",
+        "ecs-rolling-minimum-healthy-percent-default-100",
+        "ecs-rolling-maximum-percent-default-200",
+        "ecs-minimum-healthy-percent-meaning",
+        "ecs-maximum-percent-meaning",
+        "ecs-min-healthy-percent-example-50-of-four",
+        "ecs-circuit-breaker-rolls-back-to-completed",
+        "ecs-failed-deployment-detection-circuit-breaker-vs-alarms",
+        "ecs-blue-green-definition-and-zero-downtime",
+        "ecs-blue-green-doubles-resource-usage",
+        "ecs-blue-green-native-similar-to-codedeploy",
+        "ecs-change-native-blue-green-deployments-2025-07",
+        "ecs-service-connect-recommended-for-service-to-service",
+        "ecs-one-task-definition-family-per-business-purpose"
+      ],
+      "plan": {
+        "problem": "A web service must keep three tasks across Availability Zones, replace a task that fails, and ship a new version without dropping requests.",
+        "trace": [
+          "**Keep the count.** A service runs and [maintain a specified number of instances] of a task definition (ecs-service-maintains-desired-count); by default the scheduler [spreads tasks across Availability Zones] (ecs-replica-strategy-default-spreads-azs).",
+          "**Replace.** The scheduler replaces a task after a [container health check] or a [load balancer target group health check] fails (ecs-service-scheduler-replaces-unhealthy-tasks), and it [automatically register and deregister your containers] with the load balancer (ecs-faq-service-scheduler-registers-containers-with-load-balancer).",
+          "**Roll out.** A rolling update [replaces the currently running tasks with new tasks] (ecs-rolling-update-replaces-tasks); by default the minimum healthy percent is [100%] (ecs-rolling-minimum-healthy-percent-default-100) and the maximum percent is [200%] (ecs-rolling-maximum-percent-default-200).",
+          "**Stop a bad release.** The deployment circuit breaker [determines if the tasks reach a steady state] and can [automatically roll back a failed deployment] (ecs-circuit-breaker-rolls-back-to-completed)."
+        ],
+        "trace_note": "Step 1 'run and [maintain ...]': write the sentence so that the display reads naturally, for example 'A service exists to [maintain a specified number of instances] of a task definition'.",
+        "table": "Two ways to release (columns: Release | During the release | Undo): rolling update | old and new tasks run between the lower and the upper limit | the circuit breaker can [automatically roll back a failed deployment] (ecs-circuit-breaker-rolls-back-to-completed); blue/green | [two identical production environments called blue and green] (ecs-blue-green-definition-and-zero-downtime), which [may double your resource usage during deployments] (ecs-blue-green-doubles-resource-usage) | traffic moves back to blue. Link each fact once in the subsection: if the circuit-breaker display is in the trace, the table cell says 'circuit breaker rollback' without a link.",
+        "why": "Why start new tasks first? The minimum healthy percent is the [lower limit on the number of tasks] (ecs-minimum-healthy-percent-meaning) that must stay healthy; at the default, capacity never drops during a release, and the maximum percent gives the room for the new tasks.",
+        "exam_signal": "\"test the new version before production traffic moves, and roll back fast\" points to a blue/green deployment, now [part of the Amazon ECS service itself] (ecs-blue-green-native-similar-to-codedeploy); \"stop the deployment when new tasks cannot start\" points to the circuit breaker, which can [stop a deployment when the tasks can't start] (ecs-failed-deployment-detection-circuit-breaker-vs-alarms).",
+        "exam_trap": null,
+        "exam_trap_note": "No Exam trap here (the brief trap cap is used). The 'Changed recently' entry in 1-fast.md covers blue/green without CodeDeploy.",
+        "body_extras": "One sentence only if words remain: for calls between services without a load balancer, AWS says [We recommend Service Connect] (ecs-service-connect-recommended-for-service-to-service).",
+        "say_it": "The short answer is: a service keeps the count and replaces tasks that fail. The thing to watch is where it finds room for new tasks.",
+        "stop_and_answer": "A service has four tasks. To save money during releases, the team sets the minimum healthy percent to 50 and the maximum percent to 100. What can the scheduler do first in a release? Answer: it can [stop two existing tasks] before it starts two new tasks (ecs-min-healthy-percent-example-50-of-four), so capacity drops by half during the release. Keep this fact out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+      "heading": "Service auto scaling changes the task count and capacity providers supply the compute",
+      "parent": "how-it-works",
+      "order": 6,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "3.2.K6",
+        "4.2.K8",
+        "4.2.S3"
+      ],
+      "facts": [
+        "ecs-service-auto-scaling-application-auto-scaling",
+        "ecs-service-auto-scaling-types-target-step-scheduled-predictive",
+        "ecs-faq-service-metrics-cpu-memory-for-app-auto-scaling",
+        "ecs-target-tracking-easiest-step-scaling-reacts-faster",
+        "ecs-target-tracking-scale-out-fast-scale-in-slow",
+        "ecs-scaling-target-headroom-60-80-percent",
+        "ecs-sqs-scale-on-backlog-per-task",
+        "ecs-sqs-scale-in-protection-task-processing",
+        "ecs-predictive-scaling-historical-patterns",
+        "ecs-predictive-scaling-service-level-not-compute",
+        "ecs-capacity-provider-manages-infrastructure-scaling",
+        "ecs-capacity-providers-three-compute-types",
+        "ecs-fargate-capacity-providers-auto-created",
+        "ecs-faq-split-across-capacity-providers",
+        "ecs-strategy-only-one-base",
+        "ecs-strategy-fargate-or-asg-not-both",
+        "ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider",
+        "ecs-cluster-auto-scaling-reservation-above-or-below-target",
+        "ecs-cluster-auto-scaling-policy-managed-by-ecs",
+        "ecs-target-capacity-below-100-keeps-spare-instances",
+        "ecs-managed-termination-protection-only-empty-instances",
+        "ecs-placement-binpack-least-unused-cpu-memory",
+        "ecs-faq-compute-autoscaling-fargate-and-ec2",
+        "fargate-spot-interruption-tolerant-discount",
+        "fargate-spot-two-minute-interruption-warning",
+        "fargate-spot-warning-delivery-sigterm-eventbridge",
+        "fargate-spot-container-must-handle-sigterm",
+        "fargate-spot-no-on-demand-replacement",
+        "fargate-spot-single-task-service-interrupted",
+        "fargate-faq-spot-up-to-70-percent-discount",
+        "fargate-spot-linux-only-pricing-page",
+        "ecs-capacity-providers-recommended-over-launch-types"
+      ],
+      "plan": {
+        "problem": "Traffic doubles every weekday morning. The service needs more tasks, and on EC2 capacity the tasks also need more instances to run on.",
+        "trace": [
+          "**Count tasks.** Service auto scaling uses Application Auto Scaling to [increase or decrease the desired number] of tasks (ecs-service-auto-scaling-application-auto-scaling), for example toward [a target value for a specific metric] such as average CPU (ecs-service-auto-scaling-types-target-step-scheduled-predictive).",
+          "**Choose capacity.** A capacity provider strategy lists providers with [the `base` and `weight` to assign to them] (ecs-capacity-provider-manages-infrastructure-scaling); FARGATE and FARGATE_SPOT are [managed by Amazon ECS on every cluster] (ecs-fargate-capacity-providers-auto-created).",
+          "**Add instances.** On EC2, managed scaling of an Auto Scaling group capacity provider lets ECS [manage the scaling of Amazon EC2 instances] (ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider), so the group can [launch EC2 instances, and then register them] (ecs-cluster-auto-scaling-reservation-above-or-below-target).",
+          "**Lose Spot.** A Fargate Spot task gets a [two-minute warning] (fargate-spot-two-minute-interruption-warning), delivered as a [SIGTERM signal to the running task] (fargate-spot-warning-delivery-sigterm-eventbridge); [Fargate doesn't replace Spot capacity with on-demand capacity] (fargate-spot-no-on-demand-replacement)."
+        ],
+        "trace_note": "Step 4 links three facts, each with its own display; if the body passes 175 words, move the SIGTERM clause into the Say it or drop it (fargate-spot-container-must-handle-sigterm stays for the speak item).",
+        "table": "What scales what (columns: Layer | Scaled by | Applies to): tasks | service auto scaling | services on Fargate and on EC2; EC2 instances | cluster auto scaling (managed scaling) | Auto Scaling group capacity providers; Fargate compute | AWS: [AWS manages and automatically scales the underlying capacity] (ecs-predictive-scaling-service-level-not-compute) | Fargate and Fargate Spot.",
+        "why": "Why two layers? Tasks and instances are different resources: a task needs room, and an instance gives room. On Fargate the second layer is AWS's job, so you scale only the tasks.",
+        "exam_signal": "\"scale the workers on the messages waiting in an SQS queue\" points to backlog per task, because queue depth is [not a reliable metric to scale on directly] (ecs-sqs-scale-on-backlog-per-task); \"traffic rises at the same time every weekday\" points to predictive scaling, which can [analyze daily or weekly patterns] (ecs-predictive-scaling-historical-patterns).",
+        "exam_trap": "containers-trap-service-scaling-adds-instances",
+        "exam_trap_text": "Wrong belief: service auto scaling also adds and removes the EC2 instances of the cluster. Truth: it changes only the task count; instances follow when an Auto Scaling group capacity provider lets ECS [manage the scaling of Amazon EC2 instances] (ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider). If that display is already in the trace, link the managed termination protection fact instead: ECS terminates only instances that [don't have any running Amazon ECS tasks] (ecs-managed-termination-protection-only-empty-instances). End with <!-- trap: containers-trap-service-scaling-adds-instances -->. At most 45 words.",
+        "say_it": "The short answer is: service auto scaling counts tasks, and capacity providers bring the compute. The thing to watch is Spot capacity that comes back late.",
+        "stop_and_answer": "A small service runs one task, on Fargate Spot only. AWS reclaims the Spot capacity. What happens to the service? Answer: [A service with only one task is interrupted] until capacity is available (fargate-spot-single-task-service-interrupted); give it a FARGATE base or more tasks. Keep this fact out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+      "heading": "EKS runs the Kubernetes control plane and you choose where pods run",
+      "parent": "how-it-works",
+      "order": 7,
+      "minutes": 4,
+      "route": "pass",
+      "bullets": [
+        "3.2.K6",
+        "2.1.K14",
+        "2.1.S4",
+        "2.1.K8"
+      ],
+      "facts": [
+        "eks-fully-managed-kubernetes-service",
+        "eks-faq-managed-kubernetes-no-control-plane-to-run",
+        "eks-control-plane-three-azs-api-etcd",
+        "eks-control-plane-dedicated-per-cluster",
+        "eks-faq-control-plane-multi-az-and-self-healing",
+        "eks-pricing-per-cluster-per-hour-fee",
+        "eks-certified-kubernetes-conformant",
+        "eks-faq-runs-open-source-kubernetes-compatible",
+        "eks-whitepaper-natural-migration-path-for-kubernetes",
+        "eks-pod-smallest-deployable-unit",
+        "eks-kubernetes-node-machine-runs-containers",
+        "eks-compute-options-pod-scheduling",
+        "eks-managed-node-group-asg-in-your-account",
+        "eks-managed-node-group-automates-ec2-lifecycle",
+        "eks-managed-node-group-on-demand-or-spot",
+        "eks-compute-compare-who-manages-ec2-instances",
+        "eks-compute-compare-who-patches-node-os",
+        "eks-fargate-profile-selects-pods",
+        "eks-fargate-pod-own-compute-boundary",
+        "eks-fargate-pods-not-matching-profile-pending",
+        "eks-fargate-no-daemonsets",
+        "eks-fargate-no-spot",
+        "eks-fargate-pod-execution-role-required",
+        "eks-auto-mode-aws-manages-infrastructure",
+        "eks-auto-mode-karpenter-scaling",
+        "eks-faq-auto-mode-vs-fargate-conformant-istio",
+        "eks-faq-auto-mode-vs-fargate-gpu-spot-purchase-options",
+        "eks-pod-identity-role-to-service-account",
+        "eks-pod-identity-recommended-over-irsa",
+        "eks-pod-identity-credential-isolation-imds",
+        "eks-irsa-role-to-service-account",
+        "eks-hpa-scales-pod-count-on-cpu",
+        "eks-metrics-server-not-default-not-for-monitoring",
+        "eks-cluster-autoscaler-uses-auto-scaling-groups",
+        "eks-karpenter-right-sized-compute",
+        "eks-karpenter-customer-managed-no-sla",
+        "eks-vpc-cni-pods-get-vpc-ip-addresses",
+        "eks-load-balancer-controller-creates-alb-for-ingress-nlb-for-service"
+      ],
+      "plan": {
+        "problem": "A team already runs Kubernetes and wants AWS to run the control plane. The team must still decide where the pods run and how they get AWS permissions.",
+        "trace": [
+          "**Control plane.** EKS runs the API servers and etcd [across three Availability Zones within an AWS Region] (eks-control-plane-three-azs-api-etcd); each cluster has [its own unique Kubernetes control plane] (eks-control-plane-dedicated-per-cluster) and a [per cluster per hour fee] (eks-pricing-per-cluster-per-hour-fee).",
+          "**Pods and nodes.** A **pod** is [the smallest deployable unit] (eks-pod-smallest-deployable-unit), and a **node** is [a machine that runs containerized applications] (eks-kubernetes-node-machine-runs-containers); pods run on managed node groups, on [AWS Fargate] or on Auto Mode nodes (eks-compute-options-pod-scheduling).",
+          "**Select for Fargate.** A **Fargate profile** picks pods [matched using a namespace and the labels] (eks-fargate-profile-selects-pods), and each such pod [has its own compute boundary] (eks-fargate-pod-own-compute-boundary).",
+          "**Give permissions.** EKS Pod Identity associates [an IAM role with a Kubernetes service account] (eks-pod-identity-role-to-service-account); AWS [recommends using EKS Pod Identities] (eks-pod-identity-recommended-over-irsa).",
+          "**Scale.** The Horizontal Pod Autoscaler [automatically scales the number of Pods] (eks-hpa-scales-pod-count-on-cpu); new nodes come from a node autoscaler (Go deeper)."
+        ],
+        "trace_note": "Five steps fit only if each stays at about 20 words; merge 'Select for Fargate' into 'Pods and nodes' if the body passes 175 words. Bold pod, node, managed node group and Fargate profile at first use (term requests).",
+        "table": "Where pods run (columns: Question | Managed node groups | Fargate | EKS Auto Mode): Who manages the EC2 instances | you: [Must deploy and manage Amazon EC2 instances] (eks-compute-compare-who-manages-ec2-instances) | AWS | AWS: it [extends AWS management of Kubernetes clusters] (eks-auto-mode-aws-manages-infrastructure); DaemonSets | yes | [Daemonsets aren’t supported on Fargate] (eks-fargate-no-daemonsets) | yes: it supports [platform tools like Istio] (eks-faq-auto-mode-vs-fargate-conformant-istio) — or write 'yes' without a link if the cell reads badly; Spot | yes, [only On-Demand or only Amazon EC2 Spot Instances] per group (eks-managed-node-group-on-demand-or-spot) | no: [Amazon EKS doesn’t support Fargate Spot] (eks-fargate-no-spot) | yes, [including GPU and Spot instances] (eks-faq-auto-mode-vs-fargate-gpu-spot-purchase-options). Cells at most 15 words.",
+        "why": "Why can AWS run only part of Kubernetes? The control plane and the nodes are separate: AWS runs the control plane and [automatically detects and replaces unhealthy control plane nodes] (eks-faq-control-plane-multi-az-and-self-healing), while the nodes run your code.",
+        "exam_signal": "\"existing Kubernetes manifests and tools, with minimal code changes\" points to Amazon EKS, which can [deploy Kubernetes-compatible applications without refactoring] (eks-certified-kubernetes-conformant); \"each pod gets only the AWS permissions it needs\" points to EKS Pod Identity, which can [scope IAM permissions to a service account] (eks-pod-identity-credential-isolation-imds).",
+        "exam_trap": null,
+        "go_deeper": "Go deeper: scaling nodes (at most 65 words). The Horizontal Pod Autoscaler needs a metrics source, and the Metrics Server [isn’t deployed by default in Amazon EKS clusters] (eks-metrics-server-not-default-not-for-monitoring). [The Cluster Autoscaler uses Auto Scaling groups] (eks-cluster-autoscaler-uses-auto-scaling-groups); Karpenter [launches right-sized compute resources] (eks-karpenter-right-sized-compute), but you run it, and there is [no AWS Service Level Agreement (SLA) for Karpenter] (eks-karpenter-customer-managed-no-sla). In Auto Mode, AWS runs this for you: [EKS Auto Mode builds upon Karpenter] (eks-auto-mode-karpenter-scaling).",
+        "say_it": "The short answer is: AWS runs the Kubernetes control plane, and you choose where pods run. The thing to watch is the fee for each cluster.",
+        "stop_and_answer": "A cluster has no node groups and one Fargate profile, which selects the namespace web. A team deploys pods in the namespace jobs. Where do those pods run? Answer: nowhere yet; pods [must match a Fargate profile], and the others [might be stuck as `Pending`] (eks-fargate-pods-not-matching-profile-pending). Keep this fact out of the trace."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "numbers-that-decide-answers",
+      "heading": "Numbers that decide answers",
+      "role": "numbers",
+      "minutes": 2,
+      "bullets": [
+        "4.2.S3",
+        "3.2.K1"
+      ],
+      "facts": [
+        "lambda-fargate-no-execution-time-limit",
+        "fargate-spot-two-minute-interruption-warning",
+        "fargate-faq-spot-up-to-70-percent-discount",
+        "fargate-pricing-per-second-one-minute-minimum",
+        "fargate-ephemeral-storage-default-20-gib",
+        "ecs-containers-per-task-definition-limit",
+        "fargate-ondemand-vcpu-quota",
+        "fargate-ephemeral-storage-max-200-gib",
+        "ecr-authorization-token-valid-12-hours",
+        "ecs-faq-sla-monthly-uptime",
+        "eks-standard-support-14-months",
+        "eks-version-total-support-26-months"
+      ],
+      "plan": {
+        "a_list": [
+          {
+            "fact": "lambda-fargate-no-execution-time-limit",
+            "display": "15 minutes per invocation",
+            "what": "Longest run of one Lambda invocation (Fargate has no hard limit)",
+            "why_it_decides": "A job that runs longer goes to a container task"
+          },
+          {
+            "fact": "fargate-spot-two-minute-interruption-warning",
+            "display": "two-minute warning",
+            "what": "Notice before AWS stops a Fargate Spot task",
+            "why_it_decides": "The container must finish or save work after SIGTERM"
+          },
+          {
+            "fact": "fargate-faq-spot-up-to-70-percent-discount",
+            "display": "up to a 70 percent discount",
+            "what": "Fargate Spot price compared with the Fargate price",
+            "why_it_decides": "Interruption-tolerant tasks are the cheapest Fargate option"
+          },
+          {
+            "fact": "fargate-pricing-per-second-one-minute-minimum",
+            "display": "per second with a 1-minute minimum",
+            "what": "How Fargate bills a Linux task (Windows: a 5-minute minimum)",
+            "why_it_decides": "Many very short tasks each pay at least one minute"
+          },
+          {
+            "fact": "fargate-ephemeral-storage-default-20-gib",
+            "display": "20 GiB",
+            "what": "Default ephemeral storage of a Fargate task",
+            "why_it_decides": "It is erased when the task stops; lasting files go to EFS"
+          }
+        ],
+        "b_list": [
+          {
+            "fact": "ecs-containers-per-task-definition-limit",
+            "display": "10 container definitions",
+            "what": "Containers in one task definition"
+          },
+          {
+            "fact": "fargate-ondemand-vcpu-quota",
+            "display": "6 vCPUs",
+            "what": "Default Fargate On-Demand quota per Region (adjustable)"
+          },
+          {
+            "fact": "fargate-ephemeral-storage-max-200-gib",
+            "display": "200 GiB",
+            "what": "Largest ephemeral storage of an ECS task on Fargate"
+          },
+          {
+            "fact": "ecr-authorization-token-valid-12-hours",
+            "display": "12 hours",
+            "what": "Life of an ECR authorization token"
+          },
+          {
+            "fact": "ecs-faq-sla-monthly-uptime",
+            "display": "99.99%",
+            "what": "Monthly uptime in the ECS Compute SLA"
+          },
+          {
+            "fact": "eks-standard-support-14-months",
+            "display": "14 months",
+            "what": "Standard support of a Kubernetes version on EKS"
+          },
+          {
+            "fact": "eks-version-total-support-26-months",
+            "display": "26 months",
+            "what": "Standard plus extended support (extended support costs extra)"
+          }
+        ],
+        "not_examinable_entry_under_b_list": null,
+        "note": "Every A-list row has one number card (containers-c001 to c005). The 'what' and 'why' cells are strict text: the Windows 5-minute minimum needs its own link [5-minute minimum] (fargate-pricing-windows-5-minute-minimum) or must be left out. No not-examinable entry is planned (word budget); the fast section therefore uses no second exempt sentence. At most 160 words."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "decision-record",
+      "heading": "Decision record",
+      "role": "example",
+      "minutes": 2,
+      "bullets": [
+        "2.1.S4",
+        "2.1.K4",
+        "4.2.S3"
+      ],
+      "facts": [
+        "fargate-no-provision-vm-clusters",
+        "ecs-one-task-definition-family-per-business-purpose",
+        "eks-decision-guide-kubernetes-skills-sre-teams",
+        "fargate-no-host-access-ecs-exec",
+        "fargate-guide-pricing-per-second-pay-for-what-you-provision",
+        "ecs-ec2-capacity-large-workloads-price-optimized"
+      ],
+      "plan": {
+        "context": "From data/startup.json chapters.19 (trigger and problem), at most 80 words: stage 3, month 20. Callvale's application runs on one Auto Scaling group of instances that the team must patch. 14 engineers release it together; one release takes 40 minutes, and one bad change in billing breaks sign-in. One engineer knows Kubernetes. Embed containers-before after this field.",
+        "requirement": "Exam English: The company must deploy and scale six services separately, with no instances to patch, with the LEAST operational overhead.",
+        "options": [
+          "Six Auto Scaling groups of instances, one for each service.",
+          "Amazon EKS with managed node groups.",
+          "Amazon ECS with AWS Fargate, one service for each part of the application."
+        ],
+        "decision": "Six Amazon ECS services on AWS Fargate: dashboard, upload, search, accounts, billing and admin, each with at least 3 tasks and its own task definition family [for only one business purpose] (ecs-one-task-definition-family-per-business-purpose). EKS is weighed and not chosen: the [skills of your organization are a major factor] (eks-decision-guide-kubernetes-skills-sre-teams), and Callvale has one Kubernetes engineer. Embed containers-after after this field.",
+        "trade_off": "Callvale has no access to the host: [Neither customers nor AWS operators can connect] to it (fargate-no-host-access-ecs-exec). Callvale pays for the task size it provisions, busy or idle: [You pay for what you provision] (fargate-guide-pricing-per-second-pay-for-what-you-provision). The STARTUP wording 'a higher price for each unit of compute' is not grounded; do not write it (notes_for_writers 4).",
+        "diagrams": [
+          "containers-before",
+          "containers-after"
+        ],
+        "budget": "Fields at most 140 words; each diagram alt at most 30 words and caption at most 23 words."
+      }
+    },
+    {
+      "file": "2-deep.md",
+      "section": "faq-quick-fire",
+      "heading": "FAQ quick-fire",
+      "role": "faq",
+      "minutes": 3,
+      "bullets": [
+        "3.2.K1",
+        "2.1.K4",
+        "2.1.K14",
+        "2.1.S4"
+      ],
+      "facts": [
+        "fargate-faq-gpu-not-supported",
+        "fargate-faq-efs-for-persistent-storage",
+        "ecr-faq-regional-service",
+        "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+        "eks-faq-runs-open-source-kubernetes-compatible"
+      ],
+      "plan": "Five items (see faq), each a can-or-cannot question, the short answer with a fact link, and an AWS quote block with whole sentences of the evidence quote and the source link. At most 235 words in all; keep each answer line at about 12 words."
+    },
+    {
+      "file": "2-deep.md",
+      "section": "in-the-real-world",
+      "heading": "In the real world",
+      "role": "realworld",
+      "minutes": 1,
+      "bullets": [
+        "2.1.K4"
+      ],
+      "facts": [
+        "ecs-case-study-smartsheet-fargate-independent-deployments"
+      ],
+      "plan": "See realworld. At most 85 words. Required in this brief (L905 checks every brief section from the edit stage on): if 2-deep.md would pass 2,400 words, cut Go deeper words and table cells first."
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-ecs-anywhere",
+      "heading": "Amazon ECS Anywhere",
+      "role": "card",
+      "service": "ecs-anywhere",
+      "minutes": 1,
+      "bullets": [
+        "2.1.S4"
+      ],
+      "facts": [
+        "ecs-anywhere-faq-what-it-is",
+        "ecs-anywhere-external-instances-outbound-workloads",
+        "ecs-anywhere-faq-same-cluster-on-premises-ec2-fargate",
+        "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+        "ecs-anywhere-no-load-balancing",
+        "ecs-anywhere-network-modes-no-awsvpc",
+        "ecs-anywhere-faq-disconnected-tasks-keep-running",
+        "ecs-anywhere-pricing-per-instance-hour"
+      ],
+      "plan": {
+        "what_it_is": "A feature of Amazon ECS that lets you [run and manage container-based applications on-premises] (ecs-anywhere-faq-what-it-is), on your own virtual machines and servers. You register each server as an external instance in an ECS cluster.",
+        "stem_signals": [
+          "\"run containers on the company's own servers with the same ECS tools and APIs\"",
+          "\"manage on-premises and cloud containers from one ECS cluster\"",
+          "\"move on-premises container workloads to Fargate later\""
+        ],
+        "do_not_confuse_with": "Amazon EKS Anywhere: Kubernetes clusters that you run yourself, also disconnected. ECS Anywhere keeps the control plane in the Region and needs a [stable internet connection] (ecs-anywhere-faq-needs-stable-internet-not-air-gapped).",
+        "one_fact": "[Service load balancing isn't supported] on external instances (ecs-anywhere-no-load-balancing).",
+        "say_it": "ECS Anywhere runs ECS tasks on your own servers. The control plane stays in the AWS Region, so the site needs the internet.",
+        "source": "Amazon ECS Anywhere FAQs, https://aws.amazon.com/ecs/anywhere/faqs/ (use the page title of the snapshot)."
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-eks-anywhere",
+      "heading": "Amazon EKS Anywhere",
+      "role": "card",
+      "service": "eks-anywhere",
+      "minutes": 1,
+      "bullets": [
+        "2.1.S4"
+      ],
+      "facts": [
+        "eks-anywhere-faq-customer-managed-product",
+        "eks-anywhere-faq-uses-eks-distro",
+        "eks-anywhere-faq-connected-or-air-gapped",
+        "eks-anywhere-faq-built-on-cluster-api-infrastructure",
+        "eks-anywhere-faq-not-supported-on-aws-cloud",
+        "eks-anywhere-support-needs-enterprise-subscription",
+        "eks-faq-hybrid-nodes-vs-anywhere-connected-vs-air-gapped",
+        "eks-hybrid-nodes-need-reliable-connection"
+      ],
+      "plan": {
+        "what_it_is": "A [customer-managed product] (eks-anywhere-faq-customer-managed-product) for Kubernetes clusters on your own infrastructure. It uses [the same Kubernetes distribution deployed by Amazon EKS] (eks-anywhere-faq-uses-eks-distro).",
+        "stem_signals": [
+          "\"Kubernetes in a data center with no connection to the internet\" (air-gapped)",
+          "\"Kubernetes on VMware vSphere or bare metal servers on premises\" ([VMware vSphere, bare metal, Nutanix], eks-anywhere-faq-built-on-cluster-api-infrastructure)"
+        ],
+        "do_not_confuse_with": "Amazon EKS Hybrid Nodes: the control plane stays in AWS, and the site [must have a reliable connection] (eks-hybrid-nodes-need-reliable-connection). Amazon EKS Distro: the Kubernetes build only, without cluster tooling or paid support.",
+        "one_fact": "EKS Anywhere is [not supported on AWS Cloud] (eks-anywhere-faq-not-supported-on-aws-cloud); on AWS, use Amazon EKS.",
+        "say_it": "EKS Anywhere is Kubernetes from AWS that you run in your own data center. It also works with no connection to AWS.",
+        "source": "Amazon EKS Anywhere FAQs, https://aws.amazon.com/eks/eks-anywhere/faqs/"
+      }
+    },
+    {
+      "file": "2-services.md",
+      "section": "amazon-eks-distro",
+      "heading": "Amazon EKS Distro",
+      "role": "card",
+      "service": "eks-distro",
+      "minutes": 1,
+      "bullets": [
+        "2.1.S4"
+      ],
+      "facts": [
+        "eks-distro-faq-same-kubernetes-as-eks-run-it-yourself",
+        "eks-distro-faq-same-versions-as-eks",
+        "eks-distro-faq-clusters-on-ec2-on-premises-other-clouds",
+        "eks-distro-faq-you-set-up-servers-and-networking",
+        "eks-distro-faq-support-best-effort",
+        "eks-distro-faq-does-not-include-iam-authenticator-or-plugins",
+        "eks-distro-faq-release-channels-github-s3-ecr"
+      ],
+      "plan": {
+        "what_it_is": "The open-source Kubernetes and dependencies that Amazon EKS deploys, packaged so that you can [manually run Kubernetes clusters anywhere] (eks-distro-faq-same-kubernetes-as-eks-run-it-yourself).",
+        "stem_signals": [
+          "\"the same Kubernetes versions and builds as Amazon EKS, with the company's own tooling\"",
+          "\"Kubernetes clusters on premises or in other clouds, run by the company\" ([on premises on your own hardware], eks-distro-faq-clusters-on-ec2-on-premises-other-clouds)"
+        ],
+        "do_not_confuse_with": "Amazon EKS Anywhere: adds cluster lifecycle tooling and an optional paid subscription. For EKS Distro, fixes are on a [best effort basis] (eks-distro-faq-support-best-effort).",
+        "one_fact": "It does not include [the official Kubernetes network, storage plugins] or the AWS IAM authenticator (eks-distro-faq-does-not-include-iam-authenticator-or-plugins).",
+        "say_it": "EKS Distro is the Kubernetes build that EKS uses. You install it, run it and support it yourself.",
+        "source": "Amazon EKS Distro FAQs, https://aws.amazon.com/eks/eks-distro/faqs/"
+      }
+    }
+  ],
+  "traps": [
+    {
+      "id": "containers-trap-execution-role-for-app",
+      "belief": "The task execution role gives the application in the container its permissions, for example to read an S3 bucket.",
+      "truth": "The task execution role is for the ECS container and Fargate agents, and its permissions are not directly accessible by the containers; the application uses the task role.",
+      "facts": [
+        "ecs-task-execution-role-for-agents",
+        "ecs-task-role-gives-app-code-aws-permissions"
+      ],
+      "placed_in": "1-fast.md#signals-and-traps"
+    },
+    {
+      "id": "containers-trap-fargate-runs-anything",
+      "belief": "Fargate runs any container that EC2 capacity runs, including privileged containers, GPU work and one daemon task on every host.",
+      "truth": "Privileged containers are unavailable on Fargate, GPU workloads are not supported there, and Fargate does not support the DAEMON scheduling strategy.",
+      "facts": [
+        "fargate-no-privileged-containers",
+        "fargate-faq-gpu-not-supported",
+        "fargate-no-daemon-scheduling-strategy",
+        "eks-fargate-no-daemonsets"
+      ],
+      "placed_in": "1-fast.md#signals-and-traps"
+    },
+    {
+      "id": "containers-trap-fargate-spot-falls-back",
+      "belief": "When Fargate Spot capacity is not available, ECS starts the tasks on regular Fargate instead.",
+      "truth": "Fargate does not replace Spot capacity with on-demand capacity; a capacity provider strategy with a base on FARGATE keeps a minimum running.",
+      "facts": [
+        "fargate-spot-no-on-demand-replacement",
+        "ecs-capacity-provider-manages-infrastructure-scaling"
+      ],
+      "placed_in": "1-fast.md#signals-and-traps"
+    },
+    {
+      "id": "containers-trap-ecr-global",
+      "belief": "One ECR repository in one Region serves tasks in every Region at no extra cost.",
+      "truth": "ECR is a Regional service; pulls from another Region add latency and data transfer costs, and replication copies images to other Regions.",
+      "facts": [
+        "ecr-faq-regional-service",
+        "ecr-faq-cross-region-pull-latency-and-transfer-cost",
+        "ecr-faq-replicates-across-regions-and-accounts"
+      ],
+      "placed_in": "2-deep.md#images-live-in-a-regional-ecr-repository-that-tasks-pull-from (Exam trap callout)"
+    },
+    {
+      "id": "containers-trap-task-storage-persists",
+      "belief": "Files that a task writes to its own storage are still there for the task that replaces it.",
+      "truth": "Fargate ephemeral storage is erased when the workload stops, and an EBS volume of a service task is deleted at task termination; shared, lasting files go to Amazon EFS.",
+      "facts": [
+        "fargate-faq-ephemeral-storage-20-gib-erased",
+        "ecs-ebs-volume-service-task-deleted-on-termination",
+        "fargate-faq-efs-for-persistent-storage",
+        "ecs-efs-volumes-shared-persistent-across-instances"
+      ],
+      "placed_in": "2-deep.md#fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage (Exam trap callout)"
+    },
+    {
+      "id": "containers-trap-instance-target-type",
+      "belief": "A target group of type instance works for Fargate tasks, as it does for EC2 instances.",
+      "truth": "Tasks in awsvpc mode are associated with a network interface, not an instance, so the target type must be ip.",
+      "facts": [
+        "fargate-target-group-ip-target-type",
+        "ecs-awsvpc-load-balancer-target-type-ip"
+      ],
+      "placed_in": "2-deep.md#in-awsvpc-mode-each-task-gets-its-own-network-interface (Exam trap callout)"
+    },
+    {
+      "id": "containers-trap-service-scaling-adds-instances",
+      "belief": "ECS service auto scaling also adds and removes the EC2 instances of the cluster.",
+      "truth": "Service auto scaling changes the desired number of tasks; EC2 instances follow only through cluster auto scaling, the managed scaling of an Auto Scaling group capacity provider.",
+      "facts": [
+        "ecs-service-auto-scaling-application-auto-scaling",
+        "ecs-predictive-scaling-service-level-not-compute",
+        "ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider"
+      ],
+      "placed_in": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute (Exam trap callout)"
+    }
+  ],
+  "traps_note": "7 traps = brief_traps_max of the medium template (U5): 3 in the fast Traps list, 4 as Exam trap callouts in 2-deep.md (subsections 1, 3, 4, 6). Misconceptions without a trap id (questions use a misconception sentence): 'ECS Anywhere or EKS Hybrid Nodes run in an air-gapped data center' (ecs-anywhere-faq-needs-stable-internet-not-air-gapped, eks-hybrid-nodes-need-reliable-connection); 'EKS Anywhere runs on EC2 in the AWS Cloud' (eks-anywhere-faq-not-supported-on-aws-cloud); 'an EC2 Instance Savings Plan covers Fargate' (ec2-savings-plans-two-ec2-types-flexibility); 'a one-time copy of images into ECR stays current' (ecr-migrate-one-time-copy-no-auto-update); 'the Horizontal Pod Autoscaler adds nodes' (eks-hpa-scales-pod-count-on-cpu).",
+  "traps_from_other_chapters": {
+    "rule": "Question writers can tag a distractor with a trap id of another chapter when the distractor states exactly that trap's belief (lint.traps() knows them). Q205 needs a trap id on at least half of the wrong options; reuse is allowed.",
+    "ids": [
+      "lambda-trap-timeout-raisable",
+      "ec2-trap-lambda-runs-any-job",
+      "ec2-trap-spot-for-uninterruptible",
+      "auto-scaling-trap-ec2-auto-scaling-for-any-resource",
+      "iam-trap-keys-on-instance",
+      "aws-map-trap-ec2-guest-os-patched-by-aws",
+      "elb-trap-targets-need-public-ip",
+      "vpc-trap-public-ip-is-enough",
+      "how-the-exam-asks-trap-cheapest-wins",
+      "how-the-exam-asks-trap-newest-feature-wins",
+      "how-the-exam-asks-trap-works-means-correct"
+    ]
+  },
+  "compare_tables": [
+    {
+      "where": "1-fast.md#choose-it-or-not",
+      "h3": "Fargate or EC2 capacity or Lambda",
+      "columns": [
+        "Question",
+        "AWS Fargate",
+        "EC2 capacity",
+        "AWS Lambda"
+      ],
+      "rows": [
+        "Who manages the instances | nobody: you [run containers without having to manage servers] (ec2-compute-guide-fargate-no-servers-for-containers) | you: [You manage the underlying Amazon EC2 instances directly] (ecs-cluster-ec2-full-control-you-manage-instances) | nobody (no link needed: no absolute word)",
+        "How long one run lasts | [there is no hard limit on execution time] (fargate-guide-containers-run-indefinitely-no-hard-limit) | as long as the instance runs | at most [15 minutes per invocation] (lambda-fargate-no-execution-time-limit)",
+        "GPUs or root access | [not supported on AWS Fargate today] (fargate-faq-gpu-not-supported) | yes: [root access to the operating system] (ecs-faq-ec2-root-access-to-os) | no host to reach (no link: write without an absolute word)",
+        "Fits best | [specific resource needs or persistent processes] (fargate-vs-lambda-lambda-best-for-event-driven) | control of the instance or large, steady fleets | [event-driven tasks, unpredictable workloads, or wait-heavy orchestration workflows] (fargate-vs-lambda-lambda-best-for-event-driven) — the second link of one fact: link it once and write the other cell in plain words if the lint asks"
+      ],
+      "deciding_question": "Does one run end within minutes on an event, and does the work need the host?"
+    },
+    {
+      "where": "1-fast.md#choose-it-or-not",
+      "h3": "ECS or EKS",
+      "columns": [
+        "Question",
+        "Amazon ECS",
+        "Amazon EKS"
+      ],
+      "rows": [
+        "Charge for the orchestrator | [no additional charge for Amazon ECS] (ecs-faq-no-additional-charge) | a [per cluster per hour fee] (eks-pricing-per-cluster-per-hour-fee)",
+        "What you describe the application in | task definitions, [a text file in JSON format] (ecs-task-definition-json-blueprint) | Kubernetes manifests: [deploy Kubernetes-compatible applications without refactoring] (eks-certified-kubernetes-conformant)",
+        "Runs on Fargate | yes, Fargate Spot included | yes, but [Amazon EKS doesn’t support Fargate Spot] (eks-fargate-no-spot)",
+        "Skills the team needs | ECS only | Kubernetes: the [skills of your organization are a major factor] (eks-decision-guide-kubernetes-skills-sre-teams)"
+      ],
+      "deciding_question": "Does the team already run Kubernetes, or does it want the AWS orchestrator with nothing extra to operate?"
+    }
+  ],
+  "signals": [
+    {
+      "stem": "\"run containers without managing servers or clusters\"",
+      "think": "AWS Fargate",
+      "because": "you [run containers without having to manage servers] (ec2-compute-guide-fargate-no-servers-for-containers)",
+      "but_not_if": "the containers need GPUs or privileged mode: EC2 capacity"
+    },
+    {
+      "stem": "\"already runs Kubernetes and must move with minimal code changes\"",
+      "think": "Amazon EKS",
+      "because": "you [deploy Kubernetes-compatible applications without refactoring] (eks-certified-kubernetes-conformant)",
+      "but_not_if": "the team has no Kubernetes skills and wants the least to operate: Amazon ECS on Fargate"
+    },
+    {
+      "stem": "\"tasks can tolerate interruption, at the lowest cost\"",
+      "think": "the FARGATE_SPOT capacity provider",
+      "because": "Fargate Spot can [run interruption tolerant Amazon ECS tasks] at a discount (fargate-spot-interruption-tolerant-discount)",
+      "but_not_if": "some tasks must always run: add a base on FARGATE"
+    },
+    {
+      "stem": "\"the application in the container must read an S3 bucket\"",
+      "think": "task role",
+      "because": "the task role is needed when [Your application accesses other AWS services] (ecs-iam-role-table-task-role)",
+      "but_not_if": "the task cannot pull its image or send its logs: task execution role"
+    },
+    {
+      "stem": "\"Kubernetes in a data center with no connection to AWS\"",
+      "think": "Amazon EKS Anywhere",
+      "because": "it is the EKS option for [isolated or air-gapped environments] (eks-faq-anywhere-for-isolated-or-air-gapped)",
+      "but_not_if": "the site has a reliable connection and wants the control plane in AWS: EKS Hybrid Nodes"
+    },
+    {
+      "stem": "\"tasks in private subnets with no internet access pull images from Amazon ECR\"",
+      "think": "ECR interface endpoints plus the S3 gateway endpoint",
+      "because": "Fargate tasks [require both Amazon ECR VPC endpoints] and the S3 gateway endpoint (ecr-vpc-endpoints-fargate-need-ecr-and-s3)",
+      "but_not_if": "the images live in Docker Hub: a pull through cache rule in ECR"
+    }
+  ],
+  "fast_traps_text": [
+    "containers-trap-execution-role-for-app: **Wrong belief:** The task execution role gives the application its permissions. **Truth:** the execution role [grants the Amazon ECS container and Fargate agents] permission (ecs-task-execution-role-for-agents); the task role [allows your application code (running in the container)] to call AWS (ecs-task-role-gives-app-code-aws-permissions).",
+    "containers-trap-fargate-runs-anything: **Wrong belief:** Fargate runs any container that an instance runs. **Truth:** [privileged containers or access are currently unavailable] (fargate-no-privileged-containers), GPU work is [not supported on AWS Fargate today] (fargate-faq-gpu-not-supported), and Fargate tasks [do not support the `DAEMON` scheduling strategy] (fargate-no-daemon-scheduling-strategy).",
+    "containers-trap-fargate-spot-falls-back: **Wrong belief:** When Spot capacity runs out, ECS uses regular Fargate. **Truth:** [Fargate doesn't replace Spot capacity with on-demand capacity] (fargate-spot-no-on-demand-replacement); give the strategy a base on FARGATE."
+  ],
+  "words_table": [
+    {
+      "term": "container image",
+      "collocation": "**push** an image to a repository",
+      "plain": "The packaged application that every task starts from",
+      "not": "a container (the running copy)"
+    },
+    {
+      "term": "task definition",
+      "collocation": "**register** a task definition",
+      "plain": "The JSON blueprint of one or more containers and their roles",
+      "not": "a task (a running copy of it)"
+    },
+    {
+      "term": "task role",
+      "collocation": "**attach** a policy to the task role",
+      "plain": "The role whose credentials the application code uses",
+      "not": "task execution role"
+    },
+    {
+      "term": "capacity provider",
+      "collocation": "**associate** a capacity provider with a cluster",
+      "plain": "A source of compute for tasks: Fargate, Fargate Spot or an Auto Scaling group",
+      "not": "launch type"
+    }
+  ],
+  "words_table_note": "Each row's term and collocation are term requests (term_requests); the terms agent adds them to data/terms.json with exactly these collocations before the writers start. Cell 3 and 4 are free text.",
+  "changed_recently": {
+    "fast": [
+      {
+        "date": "2025-07-15",
+        "what": "Blue/green deployments for ECS services without AWS CodeDeploy.",
+        "now_fact": "ecs-change-native-blue-green-deployments-2025-07",
+        "old": "not available.",
+        "now": "[native blue/green deployments] (ecs-change-native-blue-green-deployments-2025-07), with the configuration [part of the Amazon ECS service itself] (ecs-blue-green-native-similar-to-codedeploy)",
+        "exam_expects": "older questions build ECS blue/green with AWS CodeDeploy; both [provide similar functionality] (ecs-blue-green-native-similar-to-codedeploy). Prefer an option that is right under both.",
+        "status": "examinable",
+        "fact_request": "fr-0102 (changed.date 2025-07-15 on ecs-change-native-blue-green-deployments-2025-07)"
+      }
+    ],
+    "dropped": "EKS default envelope encryption (2025-03-05, eks-change-envelope-encryption-default-2025-03, has changed.date) and EKS Auto Mode (2024-12-01) were weighed; the 1,000-word cap of the fast file allows one entry. Auto Mode is taught in subsection 7 instead.",
+    "not_examinable_yet": "None placed (word budget of 2-deep.md). Facts after the cut-off 2026-07-15 (ECR 25 replication rules, ECR 200 GB layers, ECS Action Logs, Service Connect zone-aware routing, ECS fractional GPU, Early Success Criteria, Express Mode on Graviton, ECS with VPC Lattice blue/green, EKS multiple OIDC providers, EKS CA rotation, Kubernetes 1.37) appear nowhere in the chapter."
+  },
+  "faq": [
+    {
+      "n": 1,
+      "question": "Can a task on AWS Fargate use a GPU?",
+      "answer": "No. GPU work is [not supported on AWS Fargate today] (fargate-faq-gpu-not-supported); use Amazon EC2.",
+      "fact": "fargate-faq-gpu-not-supported",
+      "quote": "Use Amazon EC2 for GPU workloads, which are not supported on AWS Fargate today.",
+      "source": "https://aws.amazon.com/fargate/faqs/ (AWS Fargate FAQs)"
+    },
+    {
+      "n": 2,
+      "question": "Can a workload on Fargate keep data after it stops?",
+      "answer": "Yes, on a file system: [Amazon Elastic File System (EFS)] (fargate-faq-efs-for-persistent-storage) gives persistent storage.",
+      "fact": "fargate-faq-efs-for-persistent-storage",
+      "quote": "Amazon Elastic File System (EFS) an be used to provide persistent storage to workloads running on AWS Fargate.",
+      "quote_note": "Copy the AWS sentence exactly, typo 'an' included.",
+      "source": "https://aws.amazon.com/fargate/faqs/ (AWS Fargate FAQs)"
+    },
+    {
+      "n": 3,
+      "question": "Is Amazon ECR a global service?",
+      "answer": "No. ECR is a [Regional service] (ecr-faq-regional-service); replicate images to the other Regions.",
+      "fact": "ecr-faq-regional-service",
+      "quote": "Amazon ECR is a Regional service and is designed to give you flexibility in how images are deployed.",
+      "source": "https://aws.amazon.com/ecr/faqs/ (Amazon ECR FAQs)"
+    },
+    {
+      "n": 4,
+      "question": "Can ECS Anywhere run in an air-gapped data center?",
+      "answer": "No. The servers need a [stable internet connection] (ecs-anywhere-faq-needs-stable-internet-not-air-gapped) to the ECS control plane.",
+      "fact": "ecs-anywhere-faq-needs-stable-internet-not-air-gapped",
+      "quote": "Hence, it requires your on-premises compute to have a stable internet connection to communicate with the in-region ECS control plane.",
+      "source": "https://aws.amazon.com/ecs/anywhere/faqs/ (Amazon ECS Anywhere FAQs)"
+    },
+    {
+      "n": 5,
+      "question": "Can a team keep its Kubernetes tools when it moves to Amazon EKS?",
+      "answer": "Yes. Applications are compatible with [any standard Kubernetes environment] (eks-faq-runs-open-source-kubernetes-compatible).",
+      "fact": "eks-faq-runs-open-source-kubernetes-compatible",
+      "quote": "Amazon EKS runs the open-source Kubernetes software, so you can use all the existing plug-ins and tooling from the Kubernetes community.",
+      "source": "https://aws.amazon.com/eks/faqs/ (Amazon EKS FAQs)"
+    }
+  ],
+  "faq_alternatives": [
+    "fargate-faq-no-privileged-mode-or-docker-socket (Docker in Docker on Fargate: no)",
+    "ecs-anywhere-faq-same-cluster-on-premises-ec2-fargate (on-premises, EC2 and Fargate in one cluster: yes)",
+    "eks-anywhere-faq-not-supported-on-aws-cloud (EKS Anywhere on the AWS Cloud: no)",
+    "ecs-faq-ec2-root-access-to-os (root access on ECS container instances: yes)",
+    "fargate-faq-hipaa-eligible-with-baa (HIPAA on Fargate: yes, with a BAA)"
+  ],
+  "story": {
+    "trigger": "data/startup.json chapters.19.trigger (stage 3, month 20).",
+    "startup_example_fast": "1-fast.md#in-one-breath: the problem of data/startup.json chapters.19.problem, word for word (47 words).",
+    "ben_question": "Ben asks: 'ECS or EKS? My one Kubernetes engineer says that EKS is the standard.' It is speak item containers-s01, not prose.",
+    "continuity": "Components that exist before month 20: the web Auto Scaling group behind an Application Load Balancer (chapters 14, 17), conversion workers on EC2 (17), Lambda functions (18), the PrivateLink endpoint service with its Network Load Balancer (chapter 11, month 18). After this chapter the NLB of the endpoint service forwards to the upload service, and Amazon Inspector scans the images in Amazon ECR (data/startup.json chapters.19.note): show both in containers-after only if the layout allows; never teach them in prose here."
+  },
+  "decision_record": "See sections[decision-record].plan.",
+  "realworld": {
+    "company_line": "**Smartsheet, 2024.** (year from the AWS customer-references entry of the case page, date 2024-06-07; corpus cases/index.jsonl)",
+    "intro": "At most two sentences with a link to the case fact: Smartsheet moved to [transition from coupled deployments to independent deployments] with Amazon ECS and AWS Fargate (ecs-case-study-smartsheet-fargate-independent-deployments). Rephrase around the display so that it reads well.",
+    "quote": "Using a serverless platform on AWS, Smartsheet can deploy more frequently, increase throughput, and reduce the engineering time to deploy from hours to minutes.",
+    "quote_source": "https://aws.amazon.com/solutions/case-studies/smartsheet-ecs-fargate-case-study/",
+    "it_shows": "**It shows:** services that deploy on their own shorten each release.",
+    "say_it": "Two sentences: Smartsheet split its deployments with ECS on Fargate. Releases went from hours to minutes.",
+    "note": "The quote has 24 words (limit 25). Real company names appear only here."
+  },
+  "devices": {
+    "go_deeper": [
+      "subsection 1: sharing, caching and cleaning up images",
+      "subsection 7: scaling nodes"
+    ],
+    "spot_the_bug": "subsection 4 (missing Amazon S3 gateway endpoint)",
+    "exam_trap_callouts": {
+      "subsection 1": "containers-trap-ecr-global",
+      "subsection 3": "containers-trap-task-storage-persists",
+      "subsection 4": "containers-trap-instance-target-type",
+      "subsection 6": "containers-trap-service-scaling-adds-instances"
+    },
+    "try_it": {
+      "subsection 1": "containers-t02",
+      "subsection 4": "containers-t03 (only if shipped)"
+    },
+    "look_first": "containers-t01 in 1-fast.md#look-first",
+    "predict_the_picture": "containers-hero in 1-fast.md#in-one-breath",
+    "pass_route": "subsections 2, 3, 6 and 7 carry <!-- section: route=pass --> (the core questions review them)"
+  },
+  "question_slots": [
+    {
+      "slot": 1,
+      "id": "containers-q001",
+      "bullet": "2.1.K14",
+      "concept": "task-role-vs-execution-role",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-monolithic",
+        "ee-least-privilege",
+        "ee-must"
+      ],
+      "section": "2-deep.md#a-task-definition-gives-the-agent-one-role-and-the-application-another",
+      "trap": "containers-trap-execution-role-for-app",
+      "twin": "strict twin A of containers-q005",
+      "plan": "Context: a company moved a monolithic application into containers on Amazon ECS with AWS Fargate. Changed phrase (the only difference from q005): 'The application code in the container must read objects from an S3 bucket.' Ask with a least-privilege qualifier ('Which solution meets this requirement and follows the principle of least privilege?'). Options identical in q001 and q005, written in neutral words: (a) add the needed permissions to the task role of the task definition [key here]; (b) add the needed permissions to the task execution role of the task definition [trap containers-trap-execution-role-for-app; key in q005]; (c) attach an instance profile with the needed permissions to the Fargate tasks [impossible-feature: ecs-task-role-fargate-no-instance-profile]; (d) store an access key with the needed permissions as an environment variable in the task definition [iam-trap-keys-on-instance, violates-qualifier]. Facts: ecs-task-role-gives-app-code-aws-permissions, ecs-task-execution-role-for-agents, ecs-task-role-fargate-no-instance-profile, ecs-iam-role-table-task-role."
+    },
+    {
+      "slot": 2,
+      "id": "containers-q002",
+      "bullet": "3.2.K1",
+      "concept": "fargate-vs-lambda-long-running",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-long-running",
+        "ee-sporadic",
+        "ee-least-operational-overhead"
+      ],
+      "section": "1-fast.md#choose-it-or-not",
+      "trap": "lambda-trap-timeout-raisable",
+      "plan": "A containerized job processes recorded calls. It starts at sporadic times when a customer asks for a bulk export, and each run takes 2 to 3 hours. The company wants no servers to manage. LEAST operational overhead. Key: run the job as an Amazon ECS task on AWS Fargate (fargate-guide-containers-run-indefinitely-no-hard-limit, fargate-no-provision-vm-clusters). Distractors: a Lambda function from a container image with the timeout raised through Service Quotas [lambda-trap-timeout-raisable; impossible-feature with lambda-timeout-max or lambda-fargate-no-execution-time-limit]; an EC2 instance that runs all day with a cron job [violates-qualifier]; an EKS cluster with a managed node group that runs the job as a pod [violates-qualifier; ec2-trap-lambda-runs-any-job not needed]. Do not key on how the task is started; the stem can say 'an application already calls RunTask' or leave the trigger out."
+    },
+    {
+      "slot": 3,
+      "id": "containers-q003",
+      "bullet": "4.2.S3",
+      "concept": "fargate-spot-capacity-provider-base",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-most-cost-effective",
+        "ee-can-tolerate-interruption",
+        "ee-at-a-minimum"
+      ],
+      "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+      "trap": "containers-trap-fargate-spot-falls-back",
+      "plan": "An ECS service on Fargate must keep at a minimum two tasks running at all times; the other tasks can tolerate interruption. MOST cost-effective. Key: a capacity provider strategy with a base of 2 on FARGATE and the larger weight on FARGATE_SPOT (ecs-capacity-provider-manages-infrastructure-scaling, fargate-spot-no-on-demand-replacement, fargate-faq-spot-up-to-70-percent-discount). Distractors: FARGATE_SPOT only, with a minimum task count of 2 in service auto scaling [containers-trap-fargate-spot-falls-back]; FARGATE only with a Compute Savings Plan [violates-qualifier]; EC2 Spot Instances in an Auto Scaling group capacity provider with a base of 2 [wrong-configuration: Spot Instances can be interrupted too; ec2-trap-spot-for-uninterruptible]. Do not key on the weight arithmetic."
+    },
+    {
+      "slot": 4,
+      "id": "containers-q004",
+      "bullet": "4.2.S3",
+      "concept": "fargate-spot-vs-compute-savings-plan",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-intermittent",
+        "ee-most-cost-effective"
+      ],
+      "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+      "trap": "ec2-trap-spot-for-uninterruptible",
+      "twin": "strict twin A of containers-q010",
+      "plan": "Context shared with q010: a company runs 20 tasks of a data processing service on Amazon ECS with AWS Fargate and does not want to manage instances. Changed phrase: 'The tasks process intermittent batch work and can be stopped and restarted at any time without harm.' MOST cost-effective. Options identical in q004 and q010: (a) run the tasks with the FARGATE_SPOT capacity provider [key here]; (b) buy a Compute Savings Plan for the Fargate usage [key in q010; here violates-qualifier: a commitment for an intermittent load; ec2-spot-vs-savings-plans-guideline]; (c) buy an EC2 Instance Savings Plan for the instance family that Fargate uses [misconception: it applies to a specific instance family; ec2-savings-plans-two-ec2-types-flexibility, fargate-compute-savings-plans-cover-fargate-lambda]; (d) move the tasks to EC2 Spot Instances in an Auto Scaling group capacity provider [violates the 'no instances to manage' constraint]. Facts: fargate-faq-spot-up-to-70-percent-discount, fargate-spot-interruption-tolerant-discount, ec2-spot-vs-savings-plans-guideline."
+    },
+    {
+      "slot": 5,
+      "id": "containers-q005",
+      "bullet": "2.1.K14",
+      "concept": "task-role-vs-execution-role",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-monolithic",
+        "ee-least-privilege",
+        "ee-must"
+      ],
+      "section": "2-deep.md#a-task-definition-gives-the-agent-one-role-and-the-application-another",
+      "trap": "containers-trap-execution-role-for-app",
+      "twin_of": "containers-q001",
+      "twin": "strict twin B of containers-q001",
+      "plan": "Same context and same four options as q001. Changed phrase: 'New tasks stop before the container starts, because they cannot pull the image from a private Amazon ECR repository.' Key moves to (b) the task execution role (ecs-task-execution-role-use-cases, ecr-ecs-agent-pull-permissions). Option (a), the task role, now carries the misconception 'the task role is used to pull the image' with fact ecs-task-execution-role-for-agents. The twin line of each question quotes the changed phrase of the other."
+    },
+    {
+      "slot": 6,
+      "id": "containers-q006",
+      "bullet": "2.1.K8",
+      "concept": "ecr-pull-through-cache-migration",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-migrate",
+        "ee-one-time"
+      ],
+      "section": "2-deep.md#images-live-in-a-regional-ecr-repository-that-tasks-pull-from",
+      "trap": null,
+      "plan": "A company migrates its containerized applications to Amazon ECS. The applications use public base images from Docker Hub. The tasks must pull the images from Amazon ECR, and the images in ECR must stay current with the upstream registry; a one-time copy does not meet this. Key: an ECR pull through cache rule for Docker Hub, with the credentials in a Secrets Manager secret (ecr-pull-through-cache-keeps-cache-current, ecr-pull-through-cache-upstream-registries-auth). Distractors: copy each image once into a private repository [misconception: newer versions are not pulled automatically; ecr-migrate-one-time-copy-no-auto-update]; an ECR replication rule with Docker Hub as the source [sibling-confusion: replication copies between ECR registries; ecr-replication-cross-region-cross-account]; pull directly from Docker Hub through a NAT gateway [different-problem: the requirement is ECR]. Difficulty 1: qualifier none is allowed."
+    },
+    {
+      "slot": 7,
+      "id": "containers-q007",
+      "bullet": "2.1.K14",
+      "concept": "private-subnet-image-pull-and-ip-targets",
+      "difficulty": 3,
+      "type": "multi",
+      "layer": "extended",
+      "exam_english": [
+        "ee-stringent",
+        "ee-privately",
+        "ee-select-two",
+        "ee-which-combination"
+      ],
+      "section": "2-deep.md#in-awsvpc-mode-each-task-gets-its-own-network-interface",
+      "trap": "containers-trap-instance-target-type",
+      "plan": "(Select TWO.) An ECS service runs Fargate tasks in private subnets. Stringent security rules forbid any route to the internet. An internal Application Load Balancer sends requests to the tasks, and the tasks pull their image from Amazon ECR. Which combination of steps meets these requirements? Keys: (1) interface VPC endpoints for the ECR API and the Docker registry plus a gateway endpoint for Amazon S3 (ecr-vpc-endpoints-fargate-need-ecr-and-s3); (2) a target group with the ip target type (fargate-target-group-ip-target-type). Distractors: a target group with the instance target type [containers-trap-instance-target-type]; public IP addresses on the tasks and a route to an internet gateway [violates the no-internet rule; vpc-trap-public-ip-is-enough]; a NAT gateway for the private subnets [violates the no-internet rule]. Five options."
+    },
+    {
+      "slot": 8,
+      "id": "containers-q008",
+      "bullet": "3.2.K6",
+      "concept": "eks-fargate-daemon-as-sidecar",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-serverless",
+        "ee-least-operational-overhead"
+      ],
+      "section": "2-deep.md#eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+      "trap": "containers-trap-fargate-runs-anything",
+      "plan": "A company runs all its Kubernetes pods on Amazon EKS with AWS Fargate. A new rule needs a log agent next to every application container. The company wants to keep all pods on Fargate. LEAST operational overhead. Key: run the agent as a sidecar container in each pod (eks-fargate-no-daemonsets). Distractors: deploy the agent as a DaemonSet [containers-trap-fargate-runs-anything; impossible-feature with eks-fargate-no-daemonsets]; add a managed node group and run the DaemonSet there [violates the 'keep all pods on Fargate' constraint]; add the agent to the Fargate profile [keyword-bait: a profile only selects pods, eks-fargate-profile-selects-pods]."
+    },
+    {
+      "slot": 9,
+      "id": "containers-q009",
+      "bullet": "2.1.S4",
+      "concept": "existing-kubernetes-to-eks",
+      "difficulty": 3,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-minimal-code-changes",
+        "ee-refactor",
+        "ee-least-operational-overhead"
+      ],
+      "section": "2-deep.md#eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+      "trap": null,
+      "worked": "worked think-aloud, no wrong path (medium: worked 1, worked_wrong_path 0)",
+      "plan": "A company runs its applications on a self-managed Kubernetes cluster in its data center, with Kubernetes manifests and kubectl. It moves to AWS with minimal code changes, does not want to refactor, and does not want to operate the Kubernetes control plane. LEAST operational overhead. Key: an Amazon EKS cluster with managed node groups, deploying the existing manifests (eks-whitepaper-natural-migration-path-for-kubernetes, eks-faq-migrate-standard-kubernetes-without-code-changes, eks-faq-managed-kubernetes-no-control-plane-to-run). Distractors: rewrite the manifests as ECS task definitions on Fargate [violates 'minimal code changes'; how-the-exam-asks-trap-works-means-correct]; install Kubernetes on EC2 instances in an Auto Scaling group [violates-qualifier: you run the control plane]; install EKS Anywhere on EC2 instances in a VPC [impossible-feature: eks-anywhere-faq-not-supported-on-aws-cloud]. Never key on EKS Auto Mode (volatile)."
+    },
+    {
+      "slot": 10,
+      "id": "containers-q010",
+      "bullet": "4.2.S3",
+      "concept": "fargate-spot-vs-compute-savings-plan",
+      "difficulty": 2,
+      "type": "single",
+      "layer": "extended",
+      "exam_english": [
+        "ee-steady-state",
+        "ee-most-cost-effective"
+      ],
+      "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+      "trap": "ec2-trap-spot-for-uninterruptible",
+      "twin_of": "containers-q004",
+      "twin": "strict twin B of containers-q004",
+      "plan": "Same context and same four options as q004. Changed phrase: 'The tasks serve a steady-state load all day, every day, and must not be interrupted.' Key moves to (b) the Compute Savings Plan (fargate-compute-savings-plans-cover-fargate-lambda, ec2-spot-vs-savings-plans-guideline). Option (a), FARGATE_SPOT, now carries ec2-trap-spot-for-uninterruptible (fargate-spot-two-minute-interruption-warning). The twin line of each question quotes the changed phrase of the other."
+    },
+    {
+      "slot": 11,
+      "id": "containers-q011",
+      "bullet": "2.1.K4",
+      "concept": "stateful-shared-files-efs",
+      "difficulty": 1,
+      "type": "single",
+      "layer": "core",
+      "exam_english": [
+        "ee-across-availability-zones",
+        "ee-durable"
+      ],
+      "section": "2-deep.md#fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage",
+      "trap": "containers-trap-task-storage-persists",
+      "plan": "A service on Amazon ECS with AWS Fargate runs tasks across Availability Zones. All tasks must read and write the same files, and the files must stay durable when tasks are replaced. Key: an Amazon EFS file system mounted as a volume by every task (ecs-efs-volumes-shared-persistent-across-instances, fargate-faq-efs-for-persistent-storage). Distractors: raise the ephemeral storage of each task to the maximum [containers-trap-task-storage-persists; fargate-faq-ephemeral-storage-20-gib-erased]; attach an Amazon EBS volume to each task [misconception: one new volume per task, deleted with a service task; ecs-ebs-volume-one-per-task-new-volume, ecs-ebs-volume-service-task-deleted-on-termination]; a bind mount shared by the containers of the task [different-problem: shared only inside one task; fargate-task-containers-share-resources]. Difficulty 1; qualifier none is allowed."
+    },
+    {
+      "slot": 12,
+      "id": "containers-q012",
+      "bullet": "4.2.K8",
+      "concept": "ecs-cluster-auto-scaling-binpack",
+      "difficulty": 3,
+      "type": "multi",
+      "layer": "extended",
+      "exam_english": [
+        "ee-sufficient",
+        "ee-select-two",
+        "ee-most-cost-effective"
+      ],
+      "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+      "trap": "containers-trap-service-scaling-adds-instances",
+      "plan": "(Select TWO.) An ECS service runs on EC2 instances of an Auto Scaling group. Service auto scaling lowers the task count at night, but the number of instances stays the same, and most instances run few tasks. The group has sufficient instances for the day peak. Which combination of steps reduces cost the MOST? Keys: (1) an Auto Scaling group capacity provider with managed scaling turned on (ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider, ecs-cluster-auto-scaling-reservation-above-or-below-target); (2) the binpack placement strategy on memory or CPU (ecs-placement-binpack-least-unused-cpu-memory). Distractors: lower the minimum task count of the service auto scaling policy [containers-trap-service-scaling-adds-instances]; the spread placement strategy on instance ID [wrong-configuration: ecs-placement-strategy-types-binpack-random-spread]; a target tracking policy on average CPU attached directly to the Auto Scaling group [misconception: ECS creates and manages that policy for cluster auto scaling; ecs-cluster-auto-scaling-policy-managed-by-ecs; auto-scaling-trap-ec2-auto-scaling-for-any-resource only if the text states that belief]. Five options."
+    }
+  ],
+  "question_plan": {
+    "write": 12,
+    "ship": "10 (core 5, extended 5)",
+    "layer": {
+      "core": [
+        1,
+        3,
+        5,
+        6,
+        8,
+        11
+      ],
+      "extended": [
+        2,
+        4,
+        7,
+        9,
+        10,
+        12
+      ]
+    },
+    "difficulty": {
+      "1": [
+        6,
+        11
+      ],
+      "2": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        8,
+        10
+      ],
+      "3": [
+        7,
+        9,
+        12
+      ]
+    },
+    "multi": [
+      7,
+      12
+    ],
+    "twin_pairs": [
+      "q001 / q005 (strict: 'The application code in the container must read objects from an S3 bucket' / 'New tasks stop before the container starts, because they cannot pull the image from a private Amazon ECR repository'; same four options; key task role / task execution role)",
+      "q004 / q010 (strict: 'The tasks process intermittent batch work and can be stopped and restarted at any time without harm' / 'The tasks serve a steady-state load all day, every day, and must not be interrupted'; same four options; key FARGATE_SPOT / Compute Savings Plan)"
+    ],
+    "twin_note": "The template needs 1 twin pair; 2 are planned so that one rejection does not block shipping (orchestrator note). Both pairs are strict (J2). Twins share their layer; at least 3 questions stand between them (q001 and q005: 3; q004 and q010: 5).",
+    "worked": [
+      "q009 (no wrong path)"
+    ],
+    "slots_on_a_brief_trap": "7 of 12 (q001, q003, q005, q007, q008, q011, q012); with traps of other chapters on q002, q004 and q010: 10 of 12. Every brief trap except containers-trap-ecr-global is the slot trap of at least one slot; a distractor in q006 may cite containers-trap-ecr-global only if its text states that belief.",
+    "bullets_covered": "all 8 bullets of the registry entry: 2.1.K4 q011; 2.1.K8 q006; 2.1.K14 q001 q005 q007; 2.1.S4 q009; 3.2.K1 q002; 3.2.K6 q008; 4.2.K8 q012; 4.2.S3 q003 q004 q010.",
+    "q205_rule": "Every wrong option names a trap id where one fits (this brief's 7, or traps_from_other_chapters); at least half of the wrong options carry one. A distractor gets a trap id only when its text states exactly that trap's belief; otherwise it carries a misconception sentence and a distractor_type.",
+    "rule": "Question ids are containers-q001 to containers-q012 in slot order. Protect both strict twin pairs, both multiple-response questions and the worked question when the weakest two are cut. At most 2 questions per concept; a unique (concept, trap) pair per question (twins exempt). At most one impossible-feature distractor per question, with its fact. Never key an answer on ECS Managed Instances, EKS Auto Mode, ECS Express Mode, native ECS blue/green or any Fargate task size (recent changes, volatile window), nor on a Savings Plans percentage. Stems never name Callvale; they can reuse its situation (six services, 3 tasks each)."
+  },
+  "terms": [
+    "serverless",
+    "stateless",
+    "ephemeral"
+  ],
+  "terms_note": "These bank terms are taught in this chapter too (bold at first use in each hand file, U6). Every term below in term_requests is defined in bold in this chapter; the terms agent adds them to data/terms.json right after this brief, and the orchestrator then moves their ids into terms, so no writer needs a needs-term marker.",
+  "term_requests": [
+    {
+      "term": "container",
+      "where": "2-deep.md (first subsection) and 1-fast.md (words table, column 4)",
+      "meaning": "A running, isolated copy of a packaged application and everything it needs.",
+      "collocations": [
+        "run a container",
+        "package an application in a container"
+      ],
+      "do_not_confuse": [
+        "instance",
+        "container image"
+      ]
+    },
+    {
+      "term": "container image",
+      "where": "1-fast.md words table",
+      "meaning": "The packaged application, with its code and dependencies, that every container starts from.",
+      "collocations": [
+        "push an image to a repository",
+        "pull an image from a repository",
+        "build an image"
+      ],
+      "do_not_confuse": [
+        "container",
+        "Amazon Machine Image (AMI)"
+      ]
+    },
+    {
+      "term": "repository (Amazon ECR)",
+      "where": "2-deep.md subsection 1",
+      "meaning": "A named place in Amazon ECR that stores the versions of one image.",
+      "collocations": [
+        "create a repository",
+        "replicate a repository to another Region"
+      ],
+      "do_not_confuse": [
+        "registry"
+      ],
+      "note": "The bank term can be 'repository' with this meaning; S3 and code repositories are not taught here."
+    },
+    {
+      "term": "registry (Amazon ECR)",
+      "where": "2-deep.md subsection 1",
+      "meaning": "The set of repositories of one account in one Region.",
+      "collocations": [
+        "the private registry of the account"
+      ],
+      "do_not_confuse": [
+        "repository"
+      ]
+    },
+    {
+      "term": "tag immutability",
+      "where": "2-deep.md subsection 1",
+      "meaning": "A repository setting that stops an image tag from being overwritten.",
+      "collocations": [
+        "turn on tag immutability"
+      ],
+      "do_not_confuse": [
+        "Object Lock"
+      ]
+    },
+    {
+      "term": "pull through cache",
+      "where": "2-deep.md subsection 1 (Go deeper)",
+      "meaning": "An ECR rule that keeps a private copy of images from an upstream registry up to date.",
+      "collocations": [
+        "create a pull through cache rule"
+      ],
+      "do_not_confuse": [
+        "replication"
+      ]
+    },
+    {
+      "term": "container orchestration",
+      "where": "1-fast.md in one breath (Say it uses the AWS phrase)",
+      "meaning": "Software that places, starts, restarts and scales containers for you.",
+      "collocations": [
+        "a container orchestration service"
+      ],
+      "do_not_confuse": [
+        "container compute (Fargate)"
+      ]
+    },
+    {
+      "term": "microservice",
+      "where": "2-deep.md subsection 2 or Decision record",
+      "meaning": "A small part of an application that is deployed and scaled on its own.",
+      "collocations": [
+        "split a monolithic application into microservices",
+        "deploy each microservice separately"
+      ],
+      "do_not_confuse": [
+        "monolithic application"
+      ]
+    },
+    {
+      "term": "task definition",
+      "where": "1-fast.md words table",
+      "meaning": "A JSON blueprint of one or more containers, their settings and their roles.",
+      "collocations": [
+        "register a task definition",
+        "a new revision of the task definition"
+      ],
+      "do_not_confuse": [
+        "task"
+      ]
+    },
+    {
+      "term": "task (Amazon ECS)",
+      "where": "2-deep.md subsection 2",
+      "meaning": "A running copy of a task definition.",
+      "collocations": [
+        "run a task",
+        "stop a task"
+      ],
+      "do_not_confuse": [
+        "task definition",
+        "pod"
+      ]
+    },
+    {
+      "term": "ECS service",
+      "where": "2-deep.md subsection 5",
+      "meaning": "An ECS resource that keeps a number of tasks of one task definition running.",
+      "collocations": [
+        "create a service",
+        "run tasks as a service"
+      ],
+      "do_not_confuse": [
+        "AWS service",
+        "Kubernetes Service"
+      ]
+    },
+    {
+      "term": "ECS cluster",
+      "where": "2-deep.md subsection 2 or 6",
+      "meaning": "A logical group of tasks and services and the capacity that they run on.",
+      "collocations": [
+        "register an instance with the cluster"
+      ],
+      "do_not_confuse": [
+        "EKS cluster"
+      ]
+    },
+    {
+      "term": "task role",
+      "where": "1-fast.md words table",
+      "meaning": "The IAM role whose credentials the application code in a task uses.",
+      "collocations": [
+        "attach a policy to the task role"
+      ],
+      "do_not_confuse": [
+        "task execution role"
+      ]
+    },
+    {
+      "term": "task execution role",
+      "where": "2-deep.md subsection 2 (and the fast traps list)",
+      "meaning": "The IAM role that the ECS or Fargate agent uses to pull images, send logs and read secrets for a task.",
+      "collocations": [
+        "the agent uses the task execution role"
+      ],
+      "do_not_confuse": [
+        "task role",
+        "execution role (Lambda)"
+      ]
+    },
+    {
+      "term": "capacity provider",
+      "where": "1-fast.md words table",
+      "meaning": "A source of compute for tasks: Fargate, Fargate Spot or an Auto Scaling group.",
+      "collocations": [
+        "associate a capacity provider with a cluster"
+      ],
+      "do_not_confuse": [
+        "launch type"
+      ]
+    },
+    {
+      "term": "capacity provider strategy",
+      "where": "2-deep.md subsection 6",
+      "meaning": "The list of capacity providers of a service, each with a base and a weight.",
+      "collocations": [
+        "set a base and a weight"
+      ],
+      "do_not_confuse": [
+        "placement strategy"
+      ]
+    },
+    {
+      "term": "launch type",
+      "where": "2-deep.md subsection 6",
+      "meaning": "The older way to choose where tasks run: Fargate, EC2 or EXTERNAL.",
+      "collocations": [
+        "the Fargate launch type"
+      ],
+      "do_not_confuse": [
+        "capacity provider"
+      ]
+    },
+    {
+      "term": "awsvpc network mode",
+      "where": "2-deep.md subsection 4",
+      "meaning": "The network mode in which each task gets its own network interface.",
+      "collocations": [
+        "use the awsvpc network mode"
+      ],
+      "do_not_confuse": [
+        "bridge network mode",
+        "host network mode"
+      ]
+    },
+    {
+      "term": "service auto scaling",
+      "where": "2-deep.md subsection 6",
+      "meaning": "Automatic change of the desired number of tasks of an ECS service.",
+      "collocations": [
+        "scale the task count"
+      ],
+      "do_not_confuse": [
+        "cluster auto scaling"
+      ]
+    },
+    {
+      "term": "cluster auto scaling",
+      "where": "2-deep.md subsection 6",
+      "meaning": "ECS scaling of the EC2 instances of an Auto Scaling group capacity provider.",
+      "collocations": [
+        "turn on managed scaling"
+      ],
+      "do_not_confuse": [
+        "service auto scaling"
+      ]
+    },
+    {
+      "term": "rolling update",
+      "where": "2-deep.md subsection 5",
+      "meaning": "A release that replaces running tasks with new tasks a few at a time.",
+      "collocations": [
+        "roll out a new revision"
+      ],
+      "do_not_confuse": [
+        "blue/green deployment"
+      ]
+    },
+    {
+      "term": "blue/green deployment",
+      "where": "2-deep.md subsection 5",
+      "meaning": "A release that runs the old and the new version side by side and then moves traffic.",
+      "collocations": [
+        "shift traffic to the green environment",
+        "roll back to blue"
+      ],
+      "do_not_confuse": [
+        "rolling update"
+      ]
+    },
+    {
+      "term": "deployment circuit breaker",
+      "where": "2-deep.md subsection 5",
+      "meaning": "An ECS setting that stops a rolling update whose tasks do not become healthy and can roll it back.",
+      "collocations": [
+        "the circuit breaker rolls back a deployment"
+      ],
+      "do_not_confuse": [
+        "CloudWatch alarm"
+      ]
+    },
+    {
+      "term": "control plane",
+      "where": "2-deep.md subsection 7",
+      "meaning": "The part of an orchestrator that stores the desired state and decides where work runs.",
+      "collocations": [
+        "AWS runs the control plane"
+      ],
+      "do_not_confuse": [
+        "data plane",
+        "node"
+      ]
+    },
+    {
+      "term": "pod",
+      "where": "2-deep.md subsection 7",
+      "meaning": "The smallest unit that Kubernetes deploys: one or more containers that share an IP address.",
+      "collocations": [
+        "schedule a pod on a node"
+      ],
+      "do_not_confuse": [
+        "task (Amazon ECS)",
+        "node"
+      ]
+    },
+    {
+      "term": "node (Kubernetes)",
+      "where": "2-deep.md subsection 7",
+      "meaning": "A machine that runs the containers of pods.",
+      "collocations": [
+        "add a node to the cluster"
+      ],
+      "do_not_confuse": [
+        "pod",
+        "control plane"
+      ]
+    },
+    {
+      "term": "managed node group",
+      "where": "2-deep.md subsection 7",
+      "meaning": "EKS nodes in an Auto Scaling group that EKS creates and updates for you.",
+      "collocations": [
+        "create a managed node group"
+      ],
+      "do_not_confuse": [
+        "Fargate profile",
+        "EKS Auto Mode"
+      ]
+    },
+    {
+      "term": "Fargate profile",
+      "where": "2-deep.md subsection 7",
+      "meaning": "An EKS setting that selects, by namespace and labels, which pods run on Fargate.",
+      "collocations": [
+        "a Fargate profile selects pods"
+      ],
+      "do_not_confuse": [
+        "managed node group"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "containers-t01",
+      "type": "look",
+      "title": "Read the Fargate quotas of your account",
+      "section": "1-fast.md#look-first",
+      "kills": "\"Fargate is serverless, so no account quota limits how many tasks run.\"",
+      "trap": null,
+      "pass_route": false,
+      "minutes": 3,
+      "plan": "In AWS CloudShell, read-only, $0. Step 1: list the Fargate quotas of the current Region (aws service-quotas list-service-quotas --service-code fargate, with a --query that prints name, value and adjustable). Expect the On-Demand and Spot vCPU quotas: the default is [6 vCPUs] (fargate-ondemand-vcpu-quota, fargate-spot-vcpu-quota), quotas count the [number of vCPU cores used] (fargate-faq-quotas-based-on-vcpu-per-region-account), and a new account can show lower values that you can [raise these soft limits] for (fargate-faq-new-accounts-lower-quotas-raisable). Step 2: the same command with --region us-west-2 (expect a separate value for that Region). Creates nothing. Confirm the command and service code with tasks check-cli --reference; if fargate is not a valid service code, park the task and report it.",
+      "facts": [
+        "fargate-ondemand-vcpu-quota",
+        "fargate-spot-vcpu-quota",
+        "fargate-faq-quotas-based-on-vcpu-per-region-account",
+        "fargate-faq-new-accounts-lower-quotas-raisable"
+      ]
+    },
+    {
+      "id": "containers-t02",
+      "type": "try",
+      "title": "Create an ECR repository with immutable tags and look for it in another Region",
+      "section": "2-deep.md#images-live-in-a-regional-ecr-repository-that-tasks-pull-from",
+      "kills": "\"One ECR repository serves tasks in every Region.\"",
+      "trap": "containers-trap-ecr-global",
+      "pass_route": true,
+      "minutes": 10,
+      "plan": "In AWS CloudShell, about 10 minutes, $0 (an empty repository stores no data; you pay for [the amount of data you store], ecr-faq-pricing-storage-and-internet-transfer). Step 1: aws ecr create-repository --repository-name saa-containers-t02 --image-tag-mutability IMMUTABLE --image-scanning-configuration scanOnPush=true --tags Key=book,Value=saa Key=task,Value=containers-t02 (us-east-1). Step 2: aws ecr describe-repositories --repository-names saa-containers-t02 (expect imageTagMutability IMMUTABLE, scanOnPush true, and encryptionType AES256: the default is [server-side encryption with Amazon S3-managed encryption keys], ecr-encryption-default-sse-s3-aes256). Step 3, break it: predict whether the repository exists in us-west-2; run the same describe command with --region us-west-2; expect RepositoryNotFoundException; explain: ECR is a [Regional service] (ecr-faq-regional-service). Cleanup: aws ecr delete-repository --repository-name saa-containers-t02. Verify by name (TOOLS-rules R6, T108): aws ecr describe-repositories --repository-names saa-containers-t02, expect RepositoryNotFoundException. Commands from the ECR CLI reference pages in the corpus (tasks check-cli --reference).",
+      "facts": [
+        "ecr-faq-regional-service",
+        "ecr-encryption-default-sse-s3-aes256",
+        "ecr-tag-immutability-prevent-overwrite",
+        "ecr-scan-on-push-each-new-image",
+        "ecr-faq-pricing-storage-and-internet-transfer"
+      ]
+    },
+    {
+      "id": "containers-t03",
+      "type": "try",
+      "title": "Register a Fargate task definition and break its network mode",
+      "section": "2-deep.md#in-awsvpc-mode-each-task-gets-its-own-network-interface",
+      "kills": "\"A Fargate task can use any network mode, as a task on an EC2 instance can.\"",
+      "trap": null,
+      "pass_route": false,
+      "minutes": 10,
+      "status": "optional: write it only if the commands can be grounded in a CLI reference page of the corpus; the template needs at least 1 Try, which containers-t02 covers",
+      "plan": "In AWS CloudShell, about 10 minutes, $0 (a registered task definition runs nothing). Step 1, break it: predict, then aws ecs register-task-definition --family saa-containers-t03 --requires-compatibilities FARGATE --network-mode bridge --cpu 256 --memory 512 with one small public container definition and --tags key=book,value=saa key=task,value=containers-t03 (the ECS tag syntax is lowercase key/value: check it); expect a ClientException that names the network mode; explain: Fargate tasks [require the `awsvpc` network mode] (fargate-requires-awsvpc-network-mode). Step 2, the fix: the same command with --network-mode awsvpc; expect a task definition with revision 1. Step 3: aws ecs describe-task-definition --task-definition saa-containers-t03 (expect networkMode awsvpc and requiresCompatibilities FARGATE). Cleanup: aws ecs deregister-task-definition --task-definition saa-containers-t03:1, then aws ecs delete-task-definitions --task-definitions saa-containers-t03:1. Verify by name: aws ecs describe-task-definition --task-definition saa-containers-t03:1, expect status DELETE_IN_PROGRESS or a ClientException; if no fact or reference page supports the expected result after deletion, park the task.",
+      "facts": [
+        "fargate-requires-awsvpc-network-mode",
+        "fargate-launch-type-requires-task-definition-config",
+        "fargate-task-size-smallest"
+      ]
+    }
+  ],
+  "speak": [
+    {
+      "id": "containers-s01",
+      "kind": "compare",
+      "persona": "Ben, CTO of Callvale",
+      "prompt": "ECS or EKS? My one Kubernetes engineer says that EKS is the standard.",
+      "section": "2-deep.md#eks-runs-the-kubernetes-control-plane-and-you-choose-where-pods-run",
+      "layer": "core",
+      "pass_route": true,
+      "plan": {
+        "ten_second": "Both run your containers, and both work with Fargate. EKS fits teams that already run Kubernetes; ECS is less to operate for you.",
+        "key_points_must": [
+          "Both orchestrate containers and both run on Fargate (fargate-whitepaper-own-kernel-for-ecs-and-eks).",
+          "EKS runs upstream Kubernetes, so existing manifests and tools work (eks-faq-runs-open-source-kubernetes-compatible).",
+          "EKS has a per cluster per hour fee; ECS has no additional charge (eks-pricing-per-cluster-per-hour-fee, ecs-faq-no-additional-charge).",
+          "Skills decide: Kubernetes needs a team that handles frequent cluster upgrades (eks-decision-guide-kubernetes-skills-sre-teams)."
+        ],
+        "key_points_nice": [
+          "A Kubernetes version gets 14 months of standard support, then extended support at extra cost (eks-standard-support-14-months, eks-pricing-extended-support-additional-cost-per-cluster-hour)."
+        ],
+        "must_not_say": [
+          "error: 'ECS is not for production; EKS is the standard on AWS.' correct: ECS is a fully managed container orchestration service (ecs-fully-managed-orchestration).",
+          "error: 'With EKS we would run the Kubernetes control plane ourselves.' correct: EKS manages the control plane for you (eks-managed-control-plane-across-azs)."
+        ],
+        "follow_ups": [
+          "Can we move from ECS to EKS later? Yes: the same images in Amazon ECR work with both (ecr-faq-integrated-with-ecs-eks-lambda); only the task definitions become Kubernetes manifests.",
+          "Does Fargate Spot work with EKS? No: Amazon EKS does not support Fargate Spot (eks-fargate-no-spot); EKS uses Spot Instances in node groups."
+        ],
+        "in_your_case": "One Kubernetes engineer and six services: ECS on Fargate. Check-back question: 'Who would handle the cluster upgrades if your Kubernetes engineer is away?'"
+      }
+    },
+    {
+      "id": "containers-s02",
+      "kind": "decide",
+      "persona": "a startup founder in office hours",
+      "prompt": "Should we run our containers on Fargate or on EC2 instances? We want low cost and little operations work.",
+      "section": "2-deep.md#fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage",
+      "layer": "extended",
+      "pass_route": false,
+      "plan": {
+        "ten_second": "Start on Fargate: no instances to patch, and you pay per second for what each task asks for. Move to EC2 for GPUs or large steady fleets.",
+        "key_points_must": [
+          "Fargate removes instance provisioning and scaling (fargate-no-provision-vm-clusters).",
+          "Fargate bills the requested vCPU and memory per second (ecs-faq-fargate-billing-granularity).",
+          "EC2 capacity fits control, GPUs and large price-optimized workloads (ecs-ec2-capacity-large-workloads-price-optimized, fargate-faq-gpu-not-supported).",
+          "Fargate Spot and Compute Savings Plans lower the Fargate bill (fargate-faq-spot-up-to-70-percent-discount, fargate-compute-savings-plans-cover-fargate-lambda)."
+        ],
+        "must_not_say": [
+          "error: 'Fargate always costs more than EC2.' correct: no AWS page says so; on Fargate you pay for what you provision (fargate-guide-pricing-per-second-pay-for-what-you-provision).",
+          "error: 'Fargate can run GPU work too.' correct: GPU workloads are not supported on Fargate today (fargate-faq-gpu-not-supported)."
+        ],
+        "follow_ups": [
+          "What happens when a Fargate Spot task is stopped? It gets a two-minute warning as SIGTERM, and the container must save its work (fargate-spot-warning-delivery-sigterm-eventbridge, fargate-spot-container-must-handle-sigterm).",
+          "Does a Savings Plan cover Fargate? Compute Savings Plans do (fargate-compute-savings-plans-cover-fargate-lambda); EC2 Instance Savings Plans apply to an instance family (ec2-savings-plans-two-ec2-types-flexibility)."
+        ],
+        "in_your_case": "Check-back question: 'Do any of your containers need a GPU or access to the host?'"
+      }
+    }
+  ],
+  "cards": [
+    {
+      "id": "containers-c001",
+      "type": "number",
+      "deck": "core",
+      "front": "In AWS Lambda, the longest run of one invocation is {{c1::15 minutes per invocation}}; Fargate has no such limit.",
+      "back": "15 minutes per invocation",
+      "facts": [
+        "lambda-fargate-no-execution-time-limit"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "containers-c002",
+      "type": "number",
+      "deck": "core",
+      "front": "On Fargate Spot, before AWS stops a task, the task gets a {{c1::two-minute warning}}.",
+      "back": "two-minute warning",
+      "facts": [
+        "fargate-spot-two-minute-interruption-warning"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "containers-c003",
+      "type": "number",
+      "deck": "extended",
+      "front": "Fargate Spot runs interruption-tolerant ECS tasks at {{c1::up to a 70 percent discount}} off the Fargate price.",
+      "back": "up to a 70 percent discount",
+      "facts": [
+        "fargate-faq-spot-up-to-70-percent-discount"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "containers-c004",
+      "type": "number",
+      "deck": "extended",
+      "front": "In AWS Fargate, a Linux task is billed {{c1::per second with a 1-minute minimum}}.",
+      "back": "per second with a 1-minute minimum",
+      "facts": [
+        "fargate-pricing-per-second-one-minute-minimum"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "containers-c005",
+      "type": "number",
+      "deck": "extended",
+      "front": "In AWS Fargate, an ECS task gets {{c1::20 GiB}} of ephemeral storage by default, erased when it stops.",
+      "back": "20 GiB",
+      "facts": [
+        "fargate-ephemeral-storage-default-20-gib",
+        "fargate-faq-ephemeral-storage-20-gib-erased"
+      ],
+      "section": "2-deep.md#numbers-that-decide-answers"
+    },
+    {
+      "id": "containers-c006",
+      "type": "differ",
+      "deck": "core",
+      "front": "In Amazon ECS, task role or task execution role: which one does the application code use to call Amazon S3?",
+      "back": "The task role",
+      "extra": "The task execution role is for the ECS container and Fargate agents: pulling images, sending logs, reading secrets.",
+      "facts": [
+        "ecs-iam-role-table-task-role",
+        "ecs-task-execution-role-for-agents"
+      ],
+      "trap": "containers-trap-execution-role-for-app",
+      "section": "2-deep.md#a-task-definition-gives-the-agent-one-role-and-the-application-another"
+    },
+    {
+      "id": "containers-c007",
+      "type": "cannot",
+      "deck": "core",
+      "front": "In AWS Fargate, can a task run a privileged container?",
+      "back": "No",
+      "extra": "Privileged containers or access are currently unavailable on Fargate; use EC2 capacity or ECS Managed Instances.",
+      "facts": [
+        "fargate-no-privileged-containers"
+      ],
+      "trap": "containers-trap-fargate-runs-anything",
+      "section": "2-deep.md#fargate-gives-each-task-its-own-isolated-compute-and-no-instance-to-manage"
+    },
+    {
+      "id": "containers-c008",
+      "type": "decide",
+      "deck": "extended",
+      "front": "Kubernetes clusters in a data center with no connection to AWS, supported by AWS: which service?",
+      "back": "Amazon EKS Anywhere",
+      "extra": "EKS Hybrid Nodes and ECS Anywhere need a connection to the AWS Region.",
+      "facts": [
+        "eks-faq-anywhere-for-isolated-or-air-gapped",
+        "eks-hybrid-nodes-need-reliable-connection"
+      ],
+      "section": "2-services.md#amazon-eks-anywhere"
+    },
+    {
+      "id": "containers-c009",
+      "type": "cannot",
+      "deck": "extended",
+      "front": "In an ECS service on Fargate, can the load balancer target group use the target type instance?",
+      "back": "No: use the ip target type",
+      "extra": "Tasks in awsvpc mode are associated with a network interface, not an EC2 instance.",
+      "facts": [
+        "fargate-target-group-ip-target-type"
+      ],
+      "trap": "containers-trap-instance-target-type",
+      "section": "2-deep.md#in-awsvpc-mode-each-task-gets-its-own-network-interface"
+    },
+    {
+      "id": "containers-c010",
+      "type": "decide",
+      "deck": "extended",
+      "front": "An ECS service on Fargate Spot must always keep two tasks running: what do you set?",
+      "back": "A base of 2 on the FARGATE capacity provider",
+      "extra": "Fargate does not replace Spot capacity with on-demand capacity.",
+      "facts": [
+        "ecs-capacity-provider-manages-infrastructure-scaling",
+        "fargate-spot-no-on-demand-replacement"
+      ],
+      "trap": "containers-trap-fargate-spot-falls-back",
+      "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute"
+    },
+    {
+      "id": "containers-c011",
+      "type": "differ",
+      "deck": "extended",
+      "front": "In Amazon ECS, service auto scaling or cluster auto scaling: which one adds EC2 instances?",
+      "back": "Cluster auto scaling (managed scaling of a capacity provider)",
+      "extra": "Service auto scaling changes only the desired number of tasks.",
+      "facts": [
+        "ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider",
+        "ecs-service-auto-scaling-application-auto-scaling"
+      ],
+      "trap": "containers-trap-service-scaling-adds-instances",
+      "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute"
+    },
+    {
+      "id": "containers-c012",
+      "type": "cannot",
+      "deck": "extended",
+      "front": "In Amazon ECR, can one repository serve tasks in every Region without extra cost?",
+      "back": "No: ECR is Regional; replicate the images",
+      "extra": "A pull from another Region adds latency and data transfer costs.",
+      "facts": [
+        "ecr-faq-regional-service",
+        "ecr-faq-cross-region-pull-latency-and-transfer-cost"
+      ],
+      "trap": "containers-trap-ecr-global",
+      "section": "2-deep.md#images-live-in-a-regional-ecr-repository-that-tasks-pull-from"
+    }
+  ],
+  "card_plan": {
+    "core": 4,
+    "extended": 8,
+    "core_ids": [
+      "containers-c001",
+      "containers-c002",
+      "containers-c006",
+      "containers-c007"
+    ],
+    "number_cards_equal_a_list_rows": 5,
+    "rule": "Fronts and backs above are drafts for the card writer: one fact per card (c005, c006, c008, c010, c011 and c012 name two facts of one rule; keep both or split), a back of at most 12 words, a display of a fact for any number with a unit (the cloze texts are the A-list displays), and the context named at the start of the front. The cloze syntax and the front of a number card follow the exemplar cards.json; change the front so that it does not hold the answer outside the cloze."
+  },
+  "diagrams": [
+    {
+      "id": "containers-hero",
+      "kind": "arch",
+      "placement": "1-fast.md#in-one-breath (behind 'Predict the picture.': 'A request reaches the load balancer. Does the load balancer send it to an instance, or to the task itself?')",
+      "title": "One request through an ECS service on Fargate",
+      "claim": "An ECS service runs tasks from an ECR image on Fargate, and the load balancer sends each request to one task.",
+      "alt": "A VPC with private subnets in two Availability Zones. An Application Load Balancer sends requests to the Fargate tasks of one ECS service. The tasks pull their image from Amazon ECR and write to Amazon S3.",
+      "say": [
+        "The ECS service starts tasks on Fargate, and Fargate will try its best to spread tasks across Availability Zones.",
+        "The task execution role grants the Amazon ECS container and Fargate agents permission to pull the image from Amazon ECR.",
+        "The awsvpc mode provides each task with an elastic network interface, and the load balancer sends each request to one task.",
+        "The task role lets the application use other AWS services, such as Amazon S3."
+      ],
+      "facts_for_steps": [
+        "fargate-no-placement-strategies-best-effort-az-spread",
+        "ecs-task-execution-role-for-agents",
+        "fargate-requires-awsvpc-network-mode",
+        "ecs-iam-role-table-task-role"
+      ],
+      "note": "Size s. Nodes: users (left), Application Load Balancer (elb icon), two Fargate tasks in two private subnets in AZ 1 and AZ 2 inside one VPC group, Amazon ECR (ecr icon) above compute, Amazon S3 (s3 icon) on the right; numbered steps 1 to 4 on the edges in the order of 'say'. In the Markdown steps link step 1 [try its best to spread tasks] (fargate-no-placement-strategies-best-effort-az-spread), step 2 [grants the Amazon ECS container and Fargate agents] (ecs-task-execution-role-for-agents), step 3 [provides each task with an elastic network interface] (fargate-requires-awsvpc-network-mode), step 4 [use other AWS services] (ecs-iam-role-table-task-role); rephrase a step only so that the verbatim display fits, and keep spec say and Markdown steps equal (L703). The caption states no hard fact. No AWS number in labels or steps."
+    },
+    {
+      "id": "containers-before",
+      "kind": "arch",
+      "placement": "2-deep.md#decision-record (after Context)",
+      "title": "Callvale before: one application on one Auto Scaling group",
+      "claim": "One application on one Auto Scaling group means one release for all 14 engineers and instances that the team patches.",
+      "alt": "Before: users reach an Application Load Balancer that sends every request to one application on the web Auto Scaling group in three Availability Zones. Conversion workers run in a second group.",
+      "say": [],
+      "note": "Story picture, no steps (word budget of the Decision record). Keep each component in the same grid cell as in containers-after (STARTUP A7 rule 13): users left, load balancer, compute in the middle, data on the right, integration under compute. The claim is story text: no AWS fact, and the 14 engineers come from data/startup.json."
+    },
+    {
+      "id": "containers-after",
+      "kind": "arch",
+      "placement": "2-deep.md#decision-record (after Decision)",
+      "title": "Callvale after: six ECS services on Fargate",
+      "claim": "The load balancer routes by path to six Fargate services that each deploy and scale on their own, with images from Amazon ECR.",
+      "alt": "After: the Application Load Balancer sends requests by path to six ECS services on Fargate in three Availability Zones: dashboard, upload, search, accounts, billing and admin. Each service pulls its image from Amazon ECR. Conversion workers stay on EC2.",
+      "say": [],
+      "note": "Story picture, no steps. Same grid cells as containers-before. Optional if the layout allows: the Network Load Balancer of the PrivateLink endpoint service forwards to the upload service, and Amazon Inspector scans the images in Amazon ECR (data/startup.json chapters.19.note). The alt text stays at most 40 words even then; cut the service names before the workers."
+    }
+  ],
+  "fact_requests": [
+    {
+      "id": "fr-0102",
+      "service": "ecs",
+      "where": "1-fast.md#changed-recently",
+      "question": "Set changed.date 2025-07-15 (new feature; changed.was: not available) with evidence on ecs-change-native-blue-green-deployments-2025-07, so that a Changed recently entry can link it in Now.",
+      "effect": "Without it the Changed recently entry fails the date rule (L107). Filed 2026-10-14 by brief-19; it blocks the counts gate (B09) until it is filled or closed."
+    }
+  ],
+  "fact_requests_note": "No other planned sentence lacks a verified fact. Gaps that the plan avoids instead of filling (brief.v0): ECS secrets injected as environment variables (d19-028, rejected); one sentence that ECS and EKS share the Fargate vCPU quota (d19-024); a Fargate-versus-EC2 unit price comparison (d19-139); Kubernetes Service definition (d19-056); subnet IP planning for the VPC CNI (d19-067); security groups for pods (rejected); the ECR basic scanning GA date (d19-092); the standard EKS SLA percentage (d19-124); Auto Mode with Savings Plans in one sentence (d19-132, the general eks-savings-plans-for-cluster-compute is verified); Spot Instance draining on EC2 (d19-116, rejected).",
+  "notes_for_orchestrator": [
+    "1. Terms: 28 term requests (term_requests, with meanings, collocations and do-not-confuse lists). The words table uses container image, task definition, task role and capacity provider with exactly the collocations listed. After the terms agent adds them, move their ids into brief.json terms (B11 checks only existing ids; terms now holds serverless, stateless, ephemeral).",
+    "2. Fact request fr-0102 (changed.date on ecs-change-native-blue-green-deployments-2025-07) is open and blocks the counts gate (B09) until filled. If it is unfillable, the writer replaces the Changed recently entry with the first sentence of grounding.exempt_sentences.",
+    "3. STARTUP.md and data/startup.json chapters.19.decision.tradeoff say Callvale 'pays more for each unit of compute'. No saved AWS page supports a Fargate-versus-EC2 price comparison (brief.v0 d19-139). This brief keeps the decision and changes the stated reason to: no host access, and paying for the provisioned task size busy or idle (RULINGS 2026-10-04: keep the decision, change the reason, report it). Consider editing the story bible's trade-off text.",
+    "4. Traps: 7, equal to brief_traps_max (medium). Every brief trap has a home in a hand file (3 in the fast Traps list, 4 Exam trap callouts in 2-deep.md), so L905 is satisfiable.",
+    "5. Twin pairs: 2 strict pairs (q001/q005, q004/q010), one more than the template needs (orchestrator note).",
+    "6. In the real world is planned as required (Smartsheet, 2024; the year comes from the AWS customer-references API row in _build/corpus/cases/index.jsonl, date 2024-06-07). The 2-deep.md budget leaves about 80 words of margin under the 2,400-word file limit; if a writer cannot fit it, the orchestrator removes the section from the brief before the edit stage (L905).",
+    "7. Volatile topics kept out of question keys: ECS Managed Instances (2025-09-30), EKS Auto Mode (2024-12-01), ECS Express Mode (2025-11-21), native ECS blue/green (2025-07-15), Fargate 32 vCPU (2026-06-05), ECS predictive scaling (2024-11-21).",
+    "8. containers-t03 is optional (CLI grounding of the break-it error); containers-t02 is the required Try (pass_route true)."
+  ]
+}

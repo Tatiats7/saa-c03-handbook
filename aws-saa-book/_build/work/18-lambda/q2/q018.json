@@ -1,0 +1,78 @@
+[
+ {
+  "id": "lambda-q018",
+  "section": "2-deep.md#a-failed-batch-returns-to-its-queue-but-blocks-its-stream-shard",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K5"],
+  "topics": ["integration", "resilience"],
+  "services": ["lambda", "kinesis-data-streams", "sqs", "s3"],
+  "concept": "stream-poison-record",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company processes clickstream records from an Amazon Kinesis data stream with an AWS Lambda function. The event source mapping uses the default settings. However, one malformed record makes the function fail, and processing of that record's shard stops for days while the other shards continue. The company wants to keep failed records for later analysis and keep each shard moving. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": ["The event source mapping uses the default settings", "keep failed records for later analysis", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Configure a dead-letter queue on the function, so that Lambda moves the malformed record to an Amazon SQS queue after its retries end.",
+    "correct": false,
+    "why": "A function's [dead letter queue](../facts/lambda.md#lambda-faq-dlq-after-retries) receives asynchronous events after their retries; a stream mapping keeps failed records in its own on-failure destination.",
+    "concept": "function-dead-letter-queue",
+    "trap": "lambda-trap-function-dlq-for-streams",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "On the event source mapping, turn on bisect batch on function error, set a retry limit, and add an Amazon SQS queue as the on-failure destination.",
+    "correct": true,
+    "why": "[BisectBatchOnFunctionError](../facts/lambda.md#lambda-stream-bisect-batch-on-error) isolates the bad record, the retry limit ends the loop, and the mapping sends discarded records to an [Amazon SQS queue or Amazon SNS topic](../facts/lambda.md#lambda-kinesis-failure-destination-sqs-sns).",
+    "concept": "stream-error-handling-settings",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Raise the parallelization factor of the event source mapping, so that other concurrent batches from the same shard move past the malformed record.",
+    "correct": false,
+    "why": "More batches for each shard keep no copy of the failed record, and Lambda [stops processing additional records in a shard](../facts/lambda.md#lambda-kinesis-in-order-stops-on-error) after an error.",
+    "concept": "parallelization-factor",
+    "trap": null,
+    "misconception": "believes that more concurrent batches for each shard skip a record that keeps failing",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Add code to the function that catches parse errors, writes each malformed record to an Amazon S3 bucket, and returns success for the batch.",
+    "correct": false,
+    "why": "It works, but parsing and copying code in the function is more to build and maintain than three settings on the event source mapping.",
+    "concept": "custom-error-copy",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "With the default settings, [failed records are retried until the record expires](../facts/lambda.md#lambda-kinesis-max-retry-attempts), so a bad record can block its shard for [up to one week](../facts/lambda.md#lambda-kinesis-bad-record-block-one-week). Bisect batch isolates the record, a retry limit stops the loop, and an on-failure destination keeps the record while the shard moves on.",
+  "takeaway": "A poison record in a stream needs bisect batch, a retry limit and an on-failure destination on the mapping.",
+  "twin": "If the stem said \"an Amazon SQS standard queue\" instead: a redrive policy on the source queue, because the [visibility timeout and redrive policy](../facts/lambda.md#lambda-queue-esm-retry-set-on-queue) decide where failed messages go.",
+  "say": "Split the failed batch, cap the retries and send the bad record to an on-failure destination, so the shard keeps moving.",
+  "facts": [
+   "lambda-stream-bisect-batch-on-error",
+   "lambda-kinesis-failure-destination-sqs-sns",
+   "lambda-faq-dlq-after-retries",
+   "lambda-kinesis-in-order-stops-on-error",
+   "lambda-kinesis-max-retry-attempts",
+   "lambda-kinesis-bad-record-block-one-week",
+   "lambda-queue-esm-retry-set-on-queue"
+  ],
+  "sources": [],
+  "exam_english": ["ee-however", "ee-least-operational-overhead"],
+  "twin_of": null
+ }
+]

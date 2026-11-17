@@ -1,0 +1,78 @@
+{
+  "id": "dynamodb-q010",
+  "section": "2-deep.md#secondary-indexes-give-the-same-items-a-second-key-to-query",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 3,
+  "task": "3.3",
+  "bullets": ["3.3.K3"],
+  "topics": ["databases", "performance"],
+  "services": ["dynamodb"],
+  "concept": "gsi-for-new-access-pattern-existing-table",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "An online store uses Amazon DynamoDB for its orders table. The partition key of the table is CustomerId, and the sort key is OrderDate. A new screen in the application must list the orders of one customer sorted by OrderTotal. The table is being created now, and the new screen must use strongly consistent reads. The table will grow to millions of orders, and the screen must stay fast as the table grows. Which solution meets these requirements with the LEAST operational overhead?",
+  "keywords": ["is being created now", "must use strongly consistent reads", "must stay fast as the table grows", "LEAST operational overhead"],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a global secondary index with CustomerId as the partition key and OrderTotal as the sort key, and query the index for the screen.",
+    "correct": false,
+    "why": "The screen needs strongly consistent reads, but queries on a global secondary index [support eventual consistency only](../facts/dynamodb.md#dynamodb-index-read-consistency-gsi-vs-lsi).",
+    "concept": "gsi-strong-read",
+    "trap": "dynamodb-trap-gsi-strong-read",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "b",
+    "text": "Define a local secondary index on the table with OrderTotal as the sort key, and query the index for the screen.",
+    "correct": true,
+    "why": "The table is new, so the index is [created when the table is created](../facts/dynamodb.md#dynamodb-lsi-created-with-table), and a query can use [either eventually consistent or strongly consistent reads](../facts/dynamodb.md#dynamodb-lsi-strongly-consistent-allowed).",
+    "concept": "lsi-at-creation",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Scan the table with a filter expression on CustomerId for each request, and sort the returned orders by OrderTotal in the application.",
+    "correct": false,
+    "why": "It needs no index, but a Scan [always scans the entire table or secondary index](../facts/dynamodb.md#dynamodb-scan-less-efficient-than-query), and it slows [as a table or index grows](../facts/dynamodb.md#dynamodb-scan-slows-as-table-grows), so the screen does not stay fast.",
+    "concept": "scan-with-filter",
+    "trap": "dynamodb-trap-filter-saves-capacity",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "d",
+    "text": "Copy each order into a second table keyed by CustomerId and OrderTotal through a Lambda function that reads the stream of the table.",
+    "correct": false,
+    "why": "The copy is written from the stream after each change, and [reads from GSIs and streams are eventually consistent](../facts/dynamodb.md#dynamodb-gsi-and-streams-reads-eventual), so the copy can miss the latest write.",
+    "concept": "stream-copy-table",
+    "trap": null,
+    "misconception": "treats a copy that is written after each change as current",
+    "distractor_type": "wrong-configuration"
+   }
+  ],
+  "explanation": "The screen needs strong reads on another sort key of the same customer. A local secondary index has the [same partition key as the base table](../facts/dynamodb.md#dynamodb-lsi-same-partition-key) and its own sort key. Strongly consistent reads are [only supported on tables and local secondary indexes](../facts/dynamodb.md#dynamodb-strong-reads-only-tables-and-lsi), and the table is new, so the index can be defined now.",
+  "takeaway": "Strong reads on another sort key of a new table: define a local secondary index at creation.",
+  "twin": "If the stem said \"The table currently holds two years of orders, and eventually consistent reads are acceptable.\" instead: a global secondary index, because you can [add a new global secondary index](../facts/dynamodb.md#dynamodb-index-online-operations-gsi-vs-lsi) later.",
+  "say": null,
+  "facts": [
+   "dynamodb-index-read-consistency-gsi-vs-lsi",
+   "dynamodb-lsi-created-with-table",
+   "dynamodb-lsi-strongly-consistent-allowed",
+   "dynamodb-scan-less-efficient-than-query",
+   "dynamodb-scan-slows-as-table-grows",
+   "dynamodb-gsi-and-streams-reads-eventual",
+   "dynamodb-lsi-same-partition-key",
+   "dynamodb-strong-reads-only-tables-and-lsi",
+   "dynamodb-index-online-operations-gsi-vs-lsi"
+  ],
+  "sources": [],
+  "exam_english": ["ee-least-operational-overhead", "ee-must"],
+  "twin_of": "dynamodb-q004"
+}

@@ -1,0 +1,28 @@
+{
+ "by": "tasks-23",
+ "date": "2026-10-14",
+ "file": "data/23-efs-fsx/tasks.json",
+ "draft": "_build/work/23-efs-fsx/tasks-draft.json",
+ "tasks": ["efs-fsx-t01 look", "efs-fsx-t02 try (pass_route)", "efs-fsx-t03 try"],
+ "blocking_contract_gap": {
+  "finding": "T106 fails on efs-fsx-t03 steps[2] (create-replication-configuration). The operation has no tag option: the CLI reference page (saved 2026-10-14) lists none, and `tasks check-cli 23` reports T118 ('has no tag option in the CLI model and is not in untaggable_operations'). A replication configuration is not a taggable resource; the replica that it creates is tagged in step 5 with efs tag-resource (Key=book,Value=saa Key=task,Value=efs-fsx-t03).",
+  "fix_for_the_orchestrator": "Add \"create-replication-configuration\" to SPEC.json tasks.untaggable_operations (the list is a seed; untaggable_rule). Not done by this agent: SPEC.json is the orchestrator's contract. The same gap as chapter 13 (create-hosted-zone, create-health-check).",
+  "expected_after_the_fix": "The command has no name option, so the untaggable branch of T106 has nothing to check, and step 5 tags the replica anyway. Every other rule already passes: tasks lint 23 shows this one error only; T107 pairs create-file-system with delete-file-system $SRC_ID and create-replication-configuration with delete-replication-configuration, in reverse order. Counts then: 1 look, 2 try, 2 break-it steps, 1 try with pass_route.",
+  "after_the_fix": "python3 aws-saa-book/tools/saa.py stage end 23 tasks --counts tasks=3",
+  "why_not_replaced": "2-deep.md already carries the Try it callout <!-- task: efs-fsx-t03 --> in the replication subsection, so t03 must stay the replication task."
+ },
+ "how_t03_was_stored": "tasks add rejects an item with a T106 error, so efs-fsx-t03 was appended to data/23-efs-fsx/tasks.json by hand, with the fields that tasks add sets (chapter, status candidate, rev 1, label, checked). t01 and t02 went in through tasks add.",
+ "changes_from_brief": [
+  "efs-fsx-t01: a fourth step lists the mount targets of one file system (placeholder <FS_ID>, skip when no file system exists): at most one row per zone (efs-quota-mount-targets-per-az). The FSx query adds StorageType, so the expect can separate SSD file systems (size specified) from INTELLIGENT_TIERING ones (no size to specify; facts fsx-openzfs-two-storage-classes-intelligent-tiering-and-ssd, fsx-lustre-intelligent-tiering-elastic-pay-for-data-stored).",
+  "efs-fsx-t02: create-file-system also passes --no-backup and a Name tag; no describe-lifecycle-configuration step, because put-lifecycle-configuration already returns the three policies. The lifecycle policies use the JSON form of the EFS guide's CLI example. No SPEC cleanup pair is needed for put-lifecycle-configuration: T107 exempts lifecycle nouns. The step 3 expect states the trap truth (efs-lifecycle-default-no-move-back-to-standard).",
+  "efs-fsx-t03: the source is created in us-east-1 and the replica in us-west-2, with --region on every command, so the two Regions differ whatever the CloudShell Region is. delete-replication-configuration takes --source-file-system-id (not --file-system-id). DEST_ID is captured from describe-replication-configurations, not from the create command: a capture on the create step makes T107 require $DEST_ID in the delete-replication-configuration command. The fix step reads FileSystemProtection.ReplicationOverwriteProtection (REPLICATING = read-only; API_FileSystemProtectionDescription). Cleanup order: delete-replication-configuration, a describe that waits for it to disappear, then the source, then the former replica; T107 pairs the only create-file-system with the delete of $SRC_ID, so that delete must come before the delete of $DEST_ID.",
+  "Cost lines say 'About $0.00 (rounded)' with the metered sizes (6 KiB; approximately 12 MiB on the replica) and the replication billing fact; no EFS price fact exists, so no dollar amount above zero."
+ ],
+ "verify_choice": "Both Try verifies use resourcegroupstaggingapi get-resources --tag-filters Key=task,Values=<task id>; SPEC tasks.verify_rule asks for a verified fact that the API lists EFS file systems: fr-0100 is still open. Evidence for whoever fills it: docs/resourcegroupstagging/latest/APIReference/Welcome says 'The `GetResources`, `GetTagKeys`, and `GetTagValues` operations support all resource types.' and lists 'Amazon Elastic File System (Amazon EFS)'; docs/efs/latest/ug/manage-fs-tags says 'You can tag Amazon EFS file system and access point resources.' (model: kms-tagging-api-getresources-tagged-keys). No T108 by-name verify exists for EFS: describe-file-systems takes --creation-token, which is not a name option. The t02 verify expect adds a by-token check (FileSystemNotFound after deletion, API_DeleteFileSystem).",
+ "open_points_for_review": [
+  "t02 step 4: no saved page gives the error text of update-file-system to bursting with an Archive policy; the expect says 'An error' only.",
+  "t03 step 5: no saved page says in words that tag-resource works on a destination while it replicates (it is read-only for data); if it fails, the replica keeps no book tags until failover, and the verify in us-west-2 would miss it.",
+  "t03 permissions: iam:CreateServiceLinkedRole is needed only when the EFS service-linked role does not exist yet (efs-replication page, Required IAM permissions)."
+ ],
+ "checks": "tasks lint 23: 1 error (T106 above), 0 warnings; tasks check-cli 23 --reference: 22 commands ok (awscli 1.46.1), 1 T118 warning (the same gap)."
+}

@@ -1,0 +1,192 @@
+[
+ {
+  "id": "containers-q007",
+  "section": "2-deep.md#in-awsvpc-mode-each-task-gets-its-own-network-interface",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.1",
+  "bullets": ["2.1.K14"],
+  "topics": ["networking", "security"],
+  "services": ["ecs", "fargate", "ecr", "vpc", "elb", "privatelink"],
+  "concept": "private-subnet-image-pull-and-ip-targets",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs an Amazon ECS service on AWS Fargate in private subnets. Stringent security rules forbid any route from these subnets to the internet, and the security team reviews every resource that the company adds to the VPC. An internal Application Load Balancer must send requests to the tasks, and the tasks must pull their container image privately from Amazon ECR. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+  "keywords": [
+   "forbid any route from these subnets to the internet",
+   "pull their container image privately from Amazon ECR",
+   "reviews every resource that the company adds to the VPC",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create interface VPC endpoints for the Amazon ECR API and the Docker registry, and create a gateway endpoint for Amazon S3.",
+    "correct": true,
+    "why": "Fargate tasks [require both Amazon ECR VPC endpoints](../facts/ecr.md#ecr-vpc-endpoints-fargate-need-ecr-and-s3) and [the Amazon S3 gateway endpoint](../facts/ecr.md#ecr-vpc-endpoints-fargate-need-ecr-and-s3) to pull privately.",
+    "concept": "ecr-vpc-endpoints",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Create the target group of the load balancer with the instance target type, and attach the target group to the ECS service.",
+    "correct": false,
+    "why": "Fargate tasks are [associated with an elastic network interface](../facts/fargate.md#fargate-target-group-ip-target-type), not with an EC2 instance, so the instance target type does not fit them.",
+    "concept": "instance-target-type",
+    "trap": "containers-trap-instance-target-type",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Turn on public IP address assignment for the tasks, so that the tasks reach Amazon ECR without a route to an internet gateway.",
+    "correct": false,
+    "why": "A task with a public IP address still needs a [route to the internet or a NAT gateway](../facts/fargate.md#fargate-public-subnet-image-pull-needs-public-ip) to pull, and the rules forbid that route.",
+    "concept": "public-ip-on-tasks",
+    "trap": "vpc-trap-public-ip-is-enough",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Create the target group of the load balancer with the ip target type, and attach the target group to the ECS service.",
+    "correct": true,
+    "why": "Fargate tasks are [associated with an elastic network interface](../facts/fargate.md#fargate-target-group-ip-target-type), so the target group registers the IP address of each task.",
+    "concept": "ip-target-type",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Create interface VPC endpoints for every AWS service that offers them in the Region, and create a gateway endpoint for Amazon S3.",
+    "correct": false,
+    "why": "It works, because the set includes the ECR and S3 endpoints, but every extra endpoint is one more resource for the security team to review and manage.",
+    "concept": "endpoints-for-every-service",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "For the image, Fargate tasks [require both Amazon ECR VPC endpoints](../facts/ecr.md#ecr-vpc-endpoints-fargate-need-ecr-and-s3) and [the Amazon S3 gateway endpoint](../facts/ecr.md#ecr-vpc-endpoints-fargate-need-ecr-and-s3), and the pull then runs [over the task's private IPv4 address](../facts/fargate.md#fargate-ecr-endpoint-uses-private-ip). For the load balancer, each task has its own network interface, so the target group uses ip targets.",
+  "takeaway": "Private Fargate tasks behind a load balancer: ECR and S3 endpoints for the pull, ip targets for the traffic.",
+  "twin": "If the stem said \"the tasks run in public subnets that route to an internet gateway\" instead: public IP addresses on the tasks work for the pull, because in a public subnet [a public IP address needs to be assigned](../facts/fargate.md#fargate-public-subnet-image-pull-needs-public-ip).",
+  "say": "No internet route: ECR endpoints plus the S3 gateway endpoint for the pull, and ip targets for the load balancer.",
+  "facts": [
+   "ecr-vpc-endpoints-fargate-need-ecr-and-s3",
+   "fargate-ecr-endpoint-uses-private-ip",
+   "fargate-target-group-ip-target-type",
+   "ecs-awsvpc-load-balancer-target-type-ip",
+   "fargate-public-subnet-image-pull-needs-public-ip"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-stringent",
+   "ee-privately",
+   "ee-select-two",
+   "ee-which-combination",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "containers-q012",
+  "section": "2-deep.md#service-auto-scaling-changes-the-task-count-and-capacity-providers-supply-the-compute",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.2",
+  "bullets": ["4.2.K8"],
+  "topics": ["cost", "compute"],
+  "services": ["ecs", "ec2-auto-scaling", "ec2"],
+  "concept": "ecs-cluster-auto-scaling-binpack",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs an Amazon ECS service on Amazon EC2 instances in an Auto Scaling group. The group has sufficient instances for the day peak. At night, service auto scaling lowers the task count, but the number of instances stays the same, and most instances run few tasks. The company wants to stop paying for idle instances at night. Which combination of steps is the MOST cost-effective way to meet these requirements? (Select TWO.)",
+  "keywords": [
+   "the number of instances stays the same",
+   "most instances run few tasks",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Lower the minimum task count of the service auto scaling policy, so that service auto scaling also removes the idle instances.",
+    "correct": false,
+    "why": "Service auto scaling can [increase or decrease the desired number](../facts/ecs.md#ecs-service-auto-scaling-application-auto-scaling) of tasks, not of instances, and the task count already drops at night.",
+    "concept": "service-auto-scaling",
+    "trap": "containers-trap-service-scaling-adds-instances",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Change the task placement strategy of the service to binpack on memory, so that the tasks fill as few instances as possible.",
+    "correct": true,
+    "why": "Binpack leaves [the least amount of unused CPU or memory](../facts/ecs.md#ecs-placement-binpack-least-unused-cpu-memory), which [minimizes the number of container instances in use](../facts/ecs.md#ecs-placement-binpack-least-unused-cpu-memory) and frees instances to remove.",
+    "concept": "binpack-placement",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Change the task placement strategy of the service to spread on instance ID, so that each instance runs a share of the tasks.",
+    "correct": false,
+    "why": "Spread [spreads placement across available candidates evenly](../facts/ecs.md#ecs-placement-strategy-types-binpack-random-spread), so tasks stay on every instance and no instance becomes free to remove.",
+    "concept": "spread-placement",
+    "trap": null,
+    "misconception": "spreading the tasks thin lets the cluster remove instances",
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Add an Auto Scaling group capacity provider with managed scaling to the capacity provider strategy of the service, with a target capacity of 50 percent to keep spare instances.",
+    "correct": false,
+    "why": "It scales in, but a target below full use keeps [the amount of free capacity](../facts/ecs.md#ecs-target-capacity-below-100-keeps-spare-instances) as idle instances, which costs more at night.",
+    "concept": "low-target-capacity",
+    "trap": "how-the-exam-asks-trap-works-means-correct",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Add an Auto Scaling group capacity provider with managed scaling to the capacity provider strategy of the service, with a target capacity of 100 percent.",
+    "correct": true,
+    "why": "Managed scaling lets Amazon ECS [manage the scaling of Amazon EC2 instances](../facts/ecs.md#ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider), so the group can [terminate EC2 container instances, and then deregister them](../facts/ecs.md#ecs-cluster-auto-scaling-reservation-above-or-below-target).",
+    "concept": "managed-scaling",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Two gaps exist. The instances do not follow the task count, so cluster auto scaling is missing: managed scaling lets Amazon ECS [manage the scaling of Amazon EC2 instances](../facts/ecs.md#ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider). The tasks are spread thin, so no instance is empty: binpack [minimizes the number of container instances in use](../facts/ecs.md#ecs-placement-binpack-least-unused-cpu-memory).",
+  "takeaway": "Tasks drop but instances stay: add cluster auto scaling through managed scaling, and binpack the tasks.",
+  "twin": "If the stem said \"the service runs on AWS Fargate\" instead: no instance step is needed, because for Fargate [AWS manages and automatically scales the underlying capacity](../facts/ecs.md#ecs-predictive-scaling-service-level-not-compute).",
+  "say": "Service auto scaling moves tasks, not instances: turn on managed scaling and binpack the tasks.",
+  "facts": [
+   "ecs-service-auto-scaling-application-auto-scaling",
+   "ecs-placement-binpack-least-unused-cpu-memory",
+   "ecs-placement-strategy-types-binpack-random-spread",
+   "ecs-target-capacity-below-100-keeps-spare-instances",
+   "ecs-cluster-auto-scaling-managed-scaling-asg-capacity-provider",
+   "ecs-cluster-auto-scaling-reservation-above-or-below-target",
+   "ecs-predictive-scaling-service-level-not-compute"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-sufficient",
+   "ee-select-two",
+   "ee-which-combination",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ }
+]

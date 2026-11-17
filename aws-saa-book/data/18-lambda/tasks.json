@@ -1,0 +1,432 @@
+{
+ "v": 1,
+ "chapter": "lambda",
+ "items": [
+  {
+   "id": "lambda-t01",
+   "type": "look",
+   "title": "Read your Lambda concurrency quota in two Regions",
+   "kills": "\"Lambda scales without limit, in every Region the same.\"",
+   "trap": "lambda-trap-scales-without-limit",
+   "section": "1-fast.md#look-first",
+   "pass_route": false,
+   "minutes": 3,
+   "cost": "$0",
+   "cost_if_forgotten": "$0",
+   "cost_facts": [],
+   "permissions": [
+    "lambda:GetAccountSettings",
+    "servicequotas:ListAWSDefaultServiceQuotas"
+   ],
+   "read_only_alternative": "This task is read-only. It needs no alternative.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read the concurrency quota of your account in the current Region, and the part of it that no function reserves.",
+     "command": "aws lambda get-account-settings --query \"AccountLimit.{Quota:ConcurrentExecutions,Unreserved:UnreservedConcurrentExecutions}\"",
+     "expect": "Two numbers, Quota and Unreserved. They are equal when no function in this Region reserves concurrency. A new account can show a lower Quota than the chapter: new accounts start with reduced quotas that AWS raises with usage.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Run the same command for a second Region, <OTHER_REGION>. Choose a Region you do not work in, for example eu-west-1.",
+     "command": "aws lambda get-account-settings --region <OTHER_REGION> --query \"AccountLimit.{Quota:ConcurrentExecutions,Unreserved:UnreservedConcurrentExecutions}\"",
+     "expect": "The two numbers of that Region. Compare them with step 1: each Region shows its own pair.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "List the default Lambda quotas of the current Region and read the Adjustable column.",
+     "command": "aws service-quotas list-aws-default-service-quotas --service-code lambda --query \"Quotas[].[QuotaName,Value,Adjustable]\" --output table",
+     "expect": "A table of quota names, default values and True or False. True marks a quota you can ask to increase. False marks a quota you cannot change.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [],
+   "verify": null,
+   "still_costs": [],
+   "facts": [
+    "lambda-concurrent-executions-default",
+    "lambda-new-account-reduced-quotas",
+    "lambda-quota-scope-region-vs-vpc",
+    "lambda-quotas-hard-vs-soft",
+    "lambda-unreserved-concurrency-100-always",
+    "lambda-faq-limit-increase-service-quotas"
+   ],
+   "sources": [
+    {
+     "title": "get-account-settings, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/lambda/get-account-settings.html"
+    },
+    {
+     "title": "list-aws-default-service-quotas, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/service-quotas/list-aws-default-service-quotas.html"
+    },
+    {
+     "title": "Lambda quotas",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html"
+    }
+   ],
+   "chapter": "lambda",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "lambda-t02",
+   "type": "try",
+   "title": "Stop a function with reserved concurrency zero and start it again",
+   "kills": "\"A function always scales to meet its requests.\"",
+   "trap": "lambda-trap-scales-without-limit",
+   "section": "2-deep.md#reserved-concurrency-guarantees-and-caps-the-concurrency-of-one-function-at-no-charge",
+   "pass_route": true,
+   "minutes": 12,
+   "cost": "$0 for Lambda inside the free tier of one million requests and 400,000 GB-seconds per month: this task makes three short requests. Reserved concurrency incurs no additional charges, and IAM has no additional charge. CloudWatch Logs charges for the ingestion and storage of a few log lines.",
+   "cost_if_forgotten": "$0 a day for the function and its role: you do not pay for idle capacity, and IAM has no additional charge. The log group keeps a few log lines, and CloudWatch Logs charges for their storage until you delete it.",
+   "cost_facts": [
+    "lambda-free-tier",
+    "lambda-reserved-concurrency-no-charge",
+    "lambda-no-pay-for-idle-capacity",
+    "iam-offered-at-no-additional-charge",
+    "lambda-faq-advanced-logging-no-charge"
+   ],
+   "permissions": [
+    "cloudformation:CreateStack",
+    "cloudformation:DescribeStacks",
+    "cloudformation:DeleteStack",
+    "iam:CreateRole",
+    "iam:TagRole",
+    "iam:AttachRolePolicy",
+    "iam:DetachRolePolicy",
+    "iam:GetRole",
+    "iam:PassRole",
+    "iam:DeleteRole",
+    "lambda:CreateFunction",
+    "lambda:TagResource",
+    "lambda:GetFunction",
+    "lambda:InvokeFunction",
+    "lambda:PutFunctionConcurrency",
+    "lambda:DeleteFunctionConcurrency",
+    "lambda:DeleteFunction",
+    "logs:DeleteLogGroup"
+   ],
+   "read_only_alternative": "In an account where you cannot create resources, read what is already there. aws lambda get-account-settings --query AccountLimit shows how much of the pool functions reserve: ConcurrentExecutions minus UnreservedConcurrentExecutions. aws lambda get-function-concurrency --function-name <FUNCTION_NAME> shows the reserved concurrency of one existing function. Neither command changes anything.",
+   "steps": [
+    {
+     "text": "Create a stack from a template that builds the routine part: an execution role that Lambda can assume, with the AWSLambdaBasicExecutionRole policy, and a Python function named saa-lambda-t02 that returns a short answer.",
+     "command": "aws cloudformation create-stack --stack-name saa-lambda-t02 --capabilities CAPABILITY_IAM --tags Key=book,Value=saa Key=task,Value=lambda-t02 --template-body '{\"Resources\":{\"FnRole\":{\"Type\":\"AWS::IAM::Role\",\"Properties\":{\"AssumeRolePolicyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]},\"ManagedPolicyArns\":[\"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"]}},\"Fn\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"FunctionName\":\"saa-lambda-t02\",\"Runtime\":\"python3.13\",\"Handler\":\"index.handler\",\"Role\":{\"Fn::GetAtt\":[\"FnRole\",\"Arn\"]},\"Code\":{\"ZipFile\":\"def handler(event, context): return dict(ok=True)\"}}}}}'",
+     "expect": "A StackId.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Wait until AWS CloudFormation reports that the stack is complete.",
+     "command": "aws cloudformation wait stack-create-complete --stack-name saa-lambda-t02",
+     "expect": "No output when the stack is ready.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Invoke the function synchronously. The CLI writes the answer of the function to the file response.json in your CloudShell home directory.",
+     "command": "aws lambda invoke --function-name saa-lambda-t02 response.json",
+     "expect": "StatusCode 200 and no FunctionError field.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Set the reserved concurrency of the function to 0.",
+     "command": "aws lambda put-function-concurrency --function-name saa-lambda-t02 --reserved-concurrent-executions 0",
+     "expect": "ReservedConcurrentExecutions with the value 0.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Invoke the function again, with the same command as in step 3.",
+     "command": "aws lambda invoke --function-name saa-lambda-t02 response.json",
+     "expect": "After a short wait, an error that names TooManyRequestsException. No StatusCode 200.",
+     "break_it": true,
+     "predict": "The function worked a minute ago, and its code has not changed. What happens to this call?",
+     "explain": "A function stops processing events when you [set its reserved concurrency to 0](../facts/lambda.md#lambda-reserved-concurrency-zero-throttles), until you remove that limit. Each call then fails with a [throttling error (429 status code)](../facts/lambda.md#lambda-throttle-429). The AWS CLI and SDKs [automatically retry on client timeouts](../facts/lambda.md#lambda-sdk-cli-auto-retry), throttling and service errors, so the error came after a short wait."
+    },
+    {
+     "text": "Fix it: remove the reserved concurrency setting of the function.",
+     "command": "aws lambda delete-function-concurrency --function-name saa-lambda-t02",
+     "expect": "No output.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Invoke the function a third time.",
+     "command": "aws lambda invoke --function-name saa-lambda-t02 response.json",
+     "expect": "StatusCode 200, as in step 3.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Remove the reserved concurrency of the function, in case you stopped before step 6.",
+     "command": "aws lambda delete-function-concurrency --function-name saa-lambda-t02"
+    },
+    {
+     "text": "Delete the log group that Lambda created at the first invocation. Lambda made it outside the stack, so it has no book tag, and the stack does not delete it.",
+     "command": "aws logs delete-log-group --log-group-name /aws/lambda/saa-lambda-t02"
+    },
+    {
+     "text": "Delete the stack. AWS CloudFormation deletes the function and its role.",
+     "command": "aws cloudformation delete-stack --stack-name saa-lambda-t02"
+    },
+    {
+     "text": "Wait until the stack is deleted.",
+     "command": "aws cloudformation wait stack-delete-complete --stack-name saa-lambda-t02"
+    }
+   ],
+   "verify": {
+    "command": "aws lambda get-function --function-name saa-lambda-t02",
+    "expect": "An error that names ResourceNotFoundException: the function no longer exists. Then check the log group with aws logs describe-log-groups --log-group-name-prefix /aws/lambda/saa-lambda-t02 and expect an empty list."
+   },
+   "still_costs": [
+    "The log group /aws/lambda/saa-lambda-t02, if you skip its cleanup step: CloudWatch Logs charges for the storage of its log lines until you delete it.",
+    "Nothing else: an idle function and a reserved concurrency setting have no charge, and IAM has no additional charge."
+   ],
+   "facts": [
+    "lambda-execution-role-trust-lambda-principal",
+    "lambda-execution-role-required-logs",
+    "lambda-reserved-concurrency-zero-throttles",
+    "lambda-throttle-429",
+    "lambda-faq-throttle-sync-429",
+    "lambda-sdk-cli-auto-retry",
+    "lambda-reserved-concurrency-no-charge",
+    "lambda-free-tier",
+    "lambda-no-pay-for-idle-capacity",
+    "iam-offered-at-no-additional-charge",
+    "lambda-faq-advanced-logging-no-charge"
+   ],
+   "sources": [
+    {
+     "title": "Creating your first serverless function (AWS CLI tutorial)",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/example_lambda_GettingStarted_019_section.html"
+    },
+    {
+     "title": "Use PutFunctionConcurrency with a CLI",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/example_lambda_PutFunctionConcurrency_section.html"
+    },
+    {
+     "title": "Use DeleteFunctionConcurrency with a CLI",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/example_lambda_DeleteFunctionConcurrency_section.html"
+    },
+    {
+     "title": "AWS::Lambda::Function Code (inline ZipFile code)",
+     "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-lambda-function-code.html"
+    },
+    {
+     "title": "create-stack, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudformation/create-stack.html"
+    },
+    {
+     "title": "Sending Lambda function logs to CloudWatch Logs",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html"
+    }
+   ],
+   "chapter": "lambda",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "lambda-t03",
+   "type": "try",
+   "title": "Invoke a failing function both ways and find each error",
+   "kills": "\"Lambda retries every failed invocation and keeps the failed event.\"",
+   "trap": "lambda-trap-lambda-retries-sync",
+   "section": "2-deep.md#a-synchronous-caller-handles-errors-itself-but-lambda-retries-asynchronous-events",
+   "pass_route": false,
+   "minutes": 15,
+   "cost": "$0 for Lambda inside the free tier of one million requests and 400,000 GB-seconds per month: this task makes two short requests. IAM has no additional charge. The queue gets fewer than ten requests; its rates are on the Amazon SQS pricing page. CloudWatch Logs charges for the ingestion and storage of a few log lines.",
+   "cost_if_forgotten": "$0 a day for the function and its role: you do not pay for idle capacity, and IAM has no additional charge. The queue keeps one message, and the Amazon SQS pricing page lists what a queue costs. CloudWatch Logs charges for the storage of a few log lines until you delete the log group.",
+   "cost_facts": [
+    "lambda-free-tier",
+    "lambda-no-pay-for-idle-capacity",
+    "iam-offered-at-no-additional-charge",
+    "lambda-faq-advanced-logging-no-charge"
+   ],
+   "permissions": [
+    "sqs:CreateQueue",
+    "sqs:TagQueue",
+    "sqs:GetQueueAttributes",
+    "sqs:GetQueueUrl",
+    "sqs:ReceiveMessage",
+    "sqs:DeleteQueue",
+    "cloudformation:CreateStack",
+    "cloudformation:DescribeStacks",
+    "cloudformation:DeleteStack",
+    "iam:CreateRole",
+    "iam:TagRole",
+    "iam:AttachRolePolicy",
+    "iam:PutRolePolicy",
+    "iam:DetachRolePolicy",
+    "iam:DeleteRolePolicy",
+    "iam:GetRole",
+    "iam:PassRole",
+    "iam:DeleteRole",
+    "lambda:CreateFunction",
+    "lambda:TagResource",
+    "lambda:GetFunction",
+    "lambda:InvokeFunction",
+    "lambda:PutFunctionEventInvokeConfig",
+    "lambda:DeleteFunctionEventInvokeConfig",
+    "lambda:DeleteFunction",
+    "logs:DeleteLogGroup"
+   ],
+   "read_only_alternative": "In an account where you cannot create resources, read the asynchronous settings of an existing function: aws lambda list-function-event-invoke-configs --function-name <FUNCTION_NAME> shows MaximumRetryAttempts and DestinationConfig. An empty list means that nobody changed the retry settings and that the function has no destination. The command changes nothing.",
+   "steps": [
+    {
+     "text": "Create a standard queue that will receive the records of failed asynchronous calls.",
+     "command": "aws sqs create-queue --queue-name saa-lambda-t03-failed --tags book=saa,task=lambda-t03",
+     "capture": {
+      "name": "QUEUE_URL",
+      "query": "QueueUrl"
+     },
+     "expect": "No output: the shell keeps the queue URL in QUEUE_URL.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the ARN of the queue. The role policy and the destination setting name the queue by this ARN.",
+     "command": "aws sqs get-queue-attributes --queue-url $QUEUE_URL --attribute-names QueueArn",
+     "capture": {
+      "name": "QUEUE_ARN",
+      "query": "Attributes.QueueArn"
+     },
+     "expect": "No output: the shell keeps the queue ARN in QUEUE_ARN.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create a stack from a template for the routine part: an execution role that can send messages to this one queue, and a Python function named saa-lambda-t03 that raises an error on every call.",
+     "command": "aws cloudformation create-stack --stack-name saa-lambda-t03 --capabilities CAPABILITY_IAM --parameters ParameterKey=QueueArn,ParameterValue=$QUEUE_ARN --tags Key=book,Value=saa Key=task,Value=lambda-t03 --template-body '{\"Parameters\":{\"QueueArn\":{\"Type\":\"String\"}},\"Resources\":{\"FnRole\":{\"Type\":\"AWS::IAM::Role\",\"Properties\":{\"AssumeRolePolicyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]},\"ManagedPolicyArns\":[\"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"],\"Policies\":[{\"PolicyName\":\"saa-send-to-failed-queue\",\"PolicyDocument\":{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sqs:SendMessage\",\"Resource\":{\"Ref\":\"QueueArn\"}}]}}]}},\"Fn\":{\"Type\":\"AWS::Lambda::Function\",\"Properties\":{\"FunctionName\":\"saa-lambda-t03\",\"Runtime\":\"python3.13\",\"Handler\":\"index.handler\",\"Role\":{\"Fn::GetAtt\":[\"FnRole\",\"Arn\"]},\"Code\":{\"ZipFile\":\"def handler(event, context): raise RuntimeError(context.function_name)\"}}}}}'",
+     "expect": "A StackId.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Wait until AWS CloudFormation reports that the stack is complete.",
+     "command": "aws cloudformation wait stack-create-complete --stack-name saa-lambda-t03",
+     "expect": "No output when the stack is ready.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Configure the asynchronous calls of the function: no retries, so that the test is quick, and an on-failure destination that sends a record to your queue.",
+     "command": "aws lambda put-function-event-invoke-config --function-name saa-lambda-t03 --maximum-retry-attempts 0 --destination-config OnFailure={Destination=$QUEUE_ARN}",
+     "expect": "MaximumRetryAttempts 0 and your queue ARN under OnFailure. If you see an error about permissions, wait one minute and run the command again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Invoke the function synchronously.",
+     "command": "aws lambda invoke --function-name saa-lambda-t03 response.json",
+     "expect": "StatusCode 200 and a FunctionError field, at once. The error details are in the file response.json.",
+     "break_it": true,
+     "predict": "The function fails, and it has an on-failure destination. Does Lambda retry this call, and does a record of it reach the queue?",
+     "explain": "For a synchronous call, the [status code is 200, even if the function returned an error](../facts/lambda.md#lambda-sync-status-200-with-function-error). Lambda does not retry the call: the caller must [retry the invocation manually](../facts/lambda.md#lambda-sync-error-caller-retries). The on-failure destination receives records of asynchronous invocations, here in [a standard SQS queue](../facts/lambda.md#lambda-async-destination-targets)."
+    },
+    {
+     "text": "Fix the test: invoke the same function asynchronously, with the invocation type Event.",
+     "command": "aws lambda invoke --function-name saa-lambda-t03 --invocation-type Event response.json",
+     "expect": "StatusCode 202 and no FunctionError field, although the function fails again.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the bodies of the messages in the queue. The command waits for a message for 20 seconds.",
+     "command": "aws sqs receive-message --queue-url $QUEUE_URL --wait-time-seconds 20 --query \"Messages[].Body\"",
+     "expect": "One message, not two: the record of the asynchronous call. In requestContext, condition is RetriesExhausted and approximateInvokeCount is 1. If the list is empty, wait one minute and run the command again.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Remove the asynchronous invocation settings of the function.",
+     "command": "aws lambda delete-function-event-invoke-config --function-name saa-lambda-t03"
+    },
+    {
+     "text": "Delete the log group that Lambda created at the first invocation. Lambda made it outside the stack, so it has no book tag, and the stack does not delete it.",
+     "command": "aws logs delete-log-group --log-group-name /aws/lambda/saa-lambda-t03"
+    },
+    {
+     "text": "Delete the stack. AWS CloudFormation deletes the function and its role.",
+     "command": "aws cloudformation delete-stack --stack-name saa-lambda-t03"
+    },
+    {
+     "text": "Wait until the stack is deleted.",
+     "command": "aws cloudformation wait stack-delete-complete --stack-name saa-lambda-t03"
+    },
+    {
+     "text": "Delete the queue and the message in it. If your CloudShell session ended, QUEUE_URL is empty: set it again to the URL that aws sqs get-queue-url --queue-name saa-lambda-t03-failed prints.",
+     "command": "aws sqs delete-queue --queue-url $QUEUE_URL"
+    }
+   ],
+   "verify": {
+    "command": "aws sqs get-queue-url --queue-name saa-lambda-t03-failed",
+    "expect": "An error that says the queue does not exist. If it still prints the URL, wait one minute and run it again. Then check the log group with aws logs describe-log-groups --log-group-name-prefix /aws/lambda/saa-lambda-t03 and expect an empty list."
+   },
+   "still_costs": [
+    "The queue saa-lambda-t03-failed and its message, if you skip its cleanup step. The Amazon SQS pricing page lists what a queue costs.",
+    "The log group /aws/lambda/saa-lambda-t03, if you skip its cleanup step: CloudWatch Logs charges for the storage of its log lines until you delete it.",
+    "Nothing else: an idle function has no charge, and IAM has no additional charge."
+   ],
+   "facts": [
+    "lambda-async-retry-attempts-0-to-2",
+    "lambda-sync-status-200-with-function-error",
+    "lambda-sync-error-caller-retries",
+    "lambda-async-queue-then-separate-process",
+    "lambda-async-discard-then-destination",
+    "lambda-async-destination-targets",
+    "lambda-execution-role-trust-lambda-principal",
+    "lambda-free-tier",
+    "lambda-no-pay-for-idle-capacity",
+    "iam-offered-at-no-additional-charge",
+    "lambda-faq-advanced-logging-no-charge"
+   ],
+   "sources": [
+    {
+     "title": "Configuring error handling settings for Lambda asynchronous invocations",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-configuring.html"
+    },
+    {
+     "title": "Capturing records of Lambda asynchronous invocations",
+     "url": "https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html"
+    },
+    {
+     "title": "Invoke, AWS Lambda API Reference",
+     "url": "https://docs.aws.amazon.com/lambda/latest/api/API_Invoke.html"
+    },
+    {
+     "title": "put-function-event-invoke-config, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/lambda/put-function-event-invoke-config.html"
+    },
+    {
+     "title": "create-queue, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/create-queue.html"
+    },
+    {
+     "title": "receive-message, AWS CLI Command Reference",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/sqs/receive-message.html"
+    },
+    {
+     "title": "AWS::Lambda::Function Code (inline ZipFile code)",
+     "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-lambda-function-code.html"
+    }
+   ],
+   "chapter": "lambda",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

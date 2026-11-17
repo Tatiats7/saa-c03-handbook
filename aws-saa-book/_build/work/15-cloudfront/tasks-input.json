@@ -1,0 +1,641 @@
+[
+ {
+  "id": "cloudfront-t01",
+  "type": "look",
+  "title": "Read the managed cache policies and the CloudFront prefix list",
+  "kills": "\"CloudFront puts every header, cookie and query string in the cache key by default.\"",
+  "trap": "cloudfront-trap-forward-all-values",
+  "section": "1-fast.md#look-first",
+  "pass_route": false,
+  "minutes": 4,
+  "cost": "$0",
+  "cost_if_forgotten": "$0",
+  "cost_facts": [],
+  "permissions": [
+   "cloudfront:ListCachePolicies",
+   "cloudfront:GetCachePolicy",
+   "ec2:DescribeManagedPrefixLists"
+  ],
+  "read_only_alternative": "This task is read-only. It needs no alternative.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. List the cache policies that AWS manages for CloudFront, with the ID and the name of each one.",
+    "command": "aws cloudfront list-cache-policies --type managed --query \"CachePolicyList.Items[].CachePolicy.[Id,CachePolicyConfig.Name]\"",
+    "expect": "Pairs of an ID and a name. Find the two names that contain CachingOptimized and CachingDisabled. Their IDs are the ones in steps 2 and 3.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Predict first: which headers, cookies and query strings does CachingOptimized put in the cache key? Then read its cache key settings.",
+    "command": "aws cloudfront get-cache-policy --id 658327ea-f89d-4fab-a63d-7e88639e58f6 --query \"CachePolicy.CachePolicyConfig.ParametersInCacheKeyAndForwardedToOrigin.[HeadersConfig.HeaderBehavior,CookiesConfig.CookieBehavior,QueryStringsConfig.QueryStringBehavior,EnableAcceptEncodingGzip]\"",
+    "expect": "none, none, none and true. No header, cookie or query string goes into the cache key, only the normalized Accept-Encoding header. Two viewers with different cookies share one cached copy.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read the three time to live (TTL) settings of CachingDisabled in seconds: the minimum, the default and the maximum.",
+    "command": "aws cloudfront get-cache-policy --id 4135ea2d-6df8-44a3-9df3-4b5a84be39ad --query \"CachePolicy.CachePolicyConfig.[MinTTL,DefaultTTL,MaxTTL]\"",
+    "expect": "0, 0 and 0. A copy that lives 0 seconds is no copy: this is how the policy disables caching. It is meant for dynamic content, such as API calls.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Find the prefix list that AWS manages for CloudFront: the list whose name contains cloudfront. A security group of an origin can name this list to accept traffic from CloudFront and from nothing else.",
+    "command": "aws ec2 describe-managed-prefix-lists --query \"PrefixLists[?contains(PrefixListName, 'cloudfront')].[PrefixListName,PrefixListId,OwnerId]\"",
+    "expect": "One row: the name of the list, an ID that starts with pl- and an owner that is not your account ID. CloudFront keeps the addresses in this list up to date for you. If the result is empty, add --region us-east-1 and run the command again.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [],
+  "verify": null,
+  "still_costs": [],
+  "facts": [
+   "cloudfront-managed-policy-caching-optimized",
+   "cloudfront-managed-policy-caching-disabled",
+   "cloudfront-prefix-list-origin-facing-servers",
+   "elb-alb-cloudfront-prefix-list-sg"
+  ],
+  "sources": [
+   {
+    "title": "Use managed cache policies (names, IDs and settings of CachingOptimized and CachingDisabled)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html"
+   },
+   {
+    "title": "list-cache-policies (AWS CLI Command Reference, option --type managed)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/list-cache-policies.html"
+   },
+   {
+    "title": "get-cache-policy (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/get-cache-policy.html"
+   },
+   {
+    "title": "Locations and IP address ranges of CloudFront edge servers (the CloudFront managed prefix list)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers.html"
+   },
+   {
+    "title": "describe-managed-prefix-lists (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-managed-prefix-lists.html"
+   }
+  ]
+ },
+ {
+  "id": "cloudfront-t02",
+  "type": "try",
+  "title": "Test a CloudFront function without a distribution and try a network call",
+  "kills": "\"A CloudFront function can call another service, like a Lambda@Edge function.\"",
+  "trap": "cloudfront-trap-edge-functions-interchangeable",
+  "section": "2-deep.md#cloudfront-functions-do-light-rewrites-and-edge-lambda-functions-can-call-other-services",
+  "pass_route": true,
+  "minutes": 12,
+  "cost": "About $0. The function is never attached to a distribution, so no viewer request runs it. CloudFront Functions is charged for invocations, at $0.10 per 1 million invocations, and the monthly free tier includes 2,000,000 CloudFront Functions invocations.",
+  "cost_if_forgotten": "$0 a day. The function stays in the DEVELOPMENT stage and is attached to no distribution, so nothing invokes it.",
+  "cost_facts": [
+   "cloudfront-price-functions-invocation-rate",
+   "cloudfront-price-functions-per-invocation",
+   "cloudfront-faq-free-tier-monthly-usage"
+  ],
+  "permissions": [
+   "cloudfront:CreateFunction",
+   "cloudfront:TagResource",
+   "cloudfront:TestFunction",
+   "cloudfront:UpdateFunction",
+   "cloudfront:DescribeFunction",
+   "cloudfront:DeleteFunction"
+  ],
+  "read_only_alternative": "This alternative creates nothing. List the CloudFront functions of the account with their runtime and stage: aws cloudfront list-functions --query \"FunctionList.Items[].[Name,FunctionConfig.Runtime,FunctionMetadata.Stage]\" Then answer the predict question of step 4 on paper: can a CloudFront function that calls fetch return the request?",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Create a function for the viewer request event. The command sends this code in base64: function handler(event) { var request = event.request; request.headers[\"x-saa-task\"] = {value: \"cloudfront-t02\"}; return request; }",
+    "command": "aws cloudfront create-function --name saa-cloudfront-t02 --function-config '{\"Comment\":\"saa-cloudfront-t02\",\"Runtime\":\"cloudfront-js-2.0\"}' --function-code ZnVuY3Rpb24gaGFuZGxlcihldmVudCkgeyB2YXIgcmVxdWVzdCA9IGV2ZW50LnJlcXVlc3Q7IHJlcXVlc3QuaGVhZGVyc1sieC1zYWEtdGFzayJdID0ge3ZhbHVlOiAiY2xvdWRmcm9udC10MDIifTsgcmV0dXJuIHJlcXVlc3Q7IH0= --tags 'Items=[{Key=book,Value=saa},{Key=task,Value=cloudfront-t02}]'",
+    "capture": {
+     "name": "ETAG",
+     "query": "ETag"
+    },
+    "expect": "No output. ETAG now holds the version identifier of the function. If you get a TaggingConflict error, wait a few minutes and run the command again.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Test the function with an event object, in base64, that holds a viewer request for /index.html. The test runs the code inside CloudFront: no distribution and no viewer take part.",
+    "command": "aws cloudfront test-function --name saa-cloudfront-t02 --if-match $ETAG --stage DEVELOPMENT --event-object eyJ2ZXJzaW9uIjoiMS4wIiwiY29udGV4dCI6eyJldmVudFR5cGUiOiJ2aWV3ZXItcmVxdWVzdCJ9LCJ2aWV3ZXIiOnsiaXAiOiIxOTguNTEuMTAwLjExIn0sInJlcXVlc3QiOnsibWV0aG9kIjoiR0VUIiwidXJpIjoiL2luZGV4Lmh0bWwiLCJxdWVyeXN0cmluZyI6e30sImhlYWRlcnMiOnt9LCJjb29raWVzIjp7fX19 --query \"TestResult.[FunctionErrorMessage,FunctionOutput]\"",
+    "expect": "No error message (an empty string or null), then the returned event as JSON text. The request now holds the header x-saa-task with the value cloudfront-t02.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "A teammate wants the function to check each user with an external service. Replace the code with this version, sent in base64: function handler(event) { fetch(\"https://aws.amazon.com/\"); return event.request; }",
+    "command": "aws cloudfront update-function --name saa-cloudfront-t02 --if-match $ETAG --function-config '{\"Comment\":\"saa-cloudfront-t02\",\"Runtime\":\"cloudfront-js-2.0\"}' --function-code ZnVuY3Rpb24gaGFuZGxlcihldmVudCkgeyBmZXRjaCgiaHR0cHM6Ly9hd3MuYW1hem9uLmNvbS8iKTsgcmV0dXJuIGV2ZW50LnJlcXVlc3Q7IH0=",
+    "capture": {
+     "name": "ETAG_NET",
+     "query": "ETag"
+    },
+    "expect": "No output. ETAG_NET now holds the new version identifier. CloudFront stores the new code; nothing runs it yet.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Run the same test against the new version of the code.",
+    "command": "aws cloudfront test-function --name saa-cloudfront-t02 --if-match $ETAG_NET --stage DEVELOPMENT --event-object eyJ2ZXJzaW9uIjoiMS4wIiwiY29udGV4dCI6eyJldmVudFR5cGUiOiJ2aWV3ZXItcmVxdWVzdCJ9LCJ2aWV3ZXIiOnsiaXAiOiIxOTguNTEuMTAwLjExIn0sInJlcXVlc3QiOnsibWV0aG9kIjoiR0VUIiwidXJpIjoiL2luZGV4Lmh0bWwiLCJxdWVyeXN0cmluZyI6e30sImhlYWRlcnMiOnt9LCJjb29raWVzIjp7fX19 --query \"TestResult.[FunctionErrorMessage,FunctionOutput]\"",
+    "expect": "An error message where step 2 showed none, and no returned request. If the command itself ends with an error, that is the same result.",
+    "break_it": true,
+    "predict": "The code now calls fetch to reach a website before it returns the request. Does the test return the request?",
+    "explain": "CloudFront Functions have no [network access](../facts/cloudfront.md#cloudfront-functions-no-network-no-body-fs-access), so the call to fetch fails inside the function. A check that needs another service belongs in Lambda@Edge, which can [make network calls to external resources](../facts/cloudfront.md#cloudfront-lambda-edge-network-calls-allowed)."
+   },
+   {
+    "text": "Fix it: put back the code of step 1, in the same base64 form. Keep the newest version identifier.",
+    "command": "aws cloudfront update-function --name saa-cloudfront-t02 --if-match $ETAG_NET --function-config '{\"Comment\":\"saa-cloudfront-t02\",\"Runtime\":\"cloudfront-js-2.0\"}' --function-code ZnVuY3Rpb24gaGFuZGxlcihldmVudCkgeyB2YXIgcmVxdWVzdCA9IGV2ZW50LnJlcXVlc3Q7IHJlcXVlc3QuaGVhZGVyc1sieC1zYWEtdGFzayJdID0ge3ZhbHVlOiAiY2xvdWRmcm9udC10MDIifTsgcmV0dXJuIHJlcXVlc3Q7IH0=",
+    "capture": {
+     "name": "ETAG_FIXED",
+     "query": "ETag"
+    },
+    "expect": "No output. ETAG_FIXED now holds the newest version identifier.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Run the test a third time.",
+    "command": "aws cloudfront test-function --name saa-cloudfront-t02 --if-match $ETAG_FIXED --stage DEVELOPMENT --event-object eyJ2ZXJzaW9uIjoiMS4wIiwiY29udGV4dCI6eyJldmVudFR5cGUiOiJ2aWV3ZXItcmVxdWVzdCJ9LCJ2aWV3ZXIiOnsiaXAiOiIxOTguNTEuMTAwLjExIn0sInJlcXVlc3QiOnsibWV0aG9kIjoiR0VUIiwidXJpIjoiL2luZGV4Lmh0bWwiLCJxdWVyeXN0cmluZyI6e30sImhlYWRlcnMiOnt9LCJjb29raWVzIjp7fX19 --query \"TestResult.[FunctionErrorMessage,FunctionOutput]\"",
+    "expect": "No error message again, and the request with the header x-saa-task.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the function. The command names the newest version identifier.",
+    "command": "aws cloudfront delete-function --name saa-cloudfront-t02 --if-match $ETAG_FIXED"
+   }
+  ],
+  "verify": {
+   "command": "aws cloudfront describe-function --name saa-cloudfront-t02",
+   "expect": "An error that names NoSuchFunctionExists: the function no longer exists."
+  },
+  "still_costs": [
+   "Nothing: a function that no distribution uses is never invoked. Delete it anyway, because one account can have 100 CloudFront Functions.",
+   "If CloudShell restarted, ETAG_FIXED is empty. Read the current value with aws cloudfront describe-function --name saa-cloudfront-t02 --query ETag --output text and use it after --if-match."
+  ],
+  "facts": [
+   "cloudfront-functions-lightweight-javascript-native",
+   "cloudfront-functions-no-network-no-body-fs-access",
+   "cloudfront-lambda-edge-network-calls-allowed",
+   "cloudfront-edge-compare-languages",
+   "cloudfront-quota-functions-per-account",
+   "cloudfront-price-functions-invocation-rate",
+   "cloudfront-price-functions-per-invocation",
+   "cloudfront-faq-free-tier-monthly-usage"
+  ],
+  "sources": [
+   {
+    "title": "Create functions (CLI: create-function, DEVELOPMENT stage, TaggingConflict error)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/create-function.html"
+   },
+   {
+    "title": "Test functions (CLI: test-function with an event object and an ETag)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/test-function.html"
+   },
+   {
+    "title": "Update functions",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/update-function.html"
+   },
+   {
+    "title": "CloudFront Functions event structure (viewer request event object)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-event-structure.html"
+   },
+   {
+    "title": "Tutorial: Create a simple function with CloudFront Functions",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/functions-tutorial.html"
+   },
+   {
+    "title": "create-function (AWS CLI Command Reference: --tags, and blobs in base64 by default)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/create-function.html"
+   },
+   {
+    "title": "test-function (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/test-function.html"
+   },
+   {
+    "title": "update-function (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/update-function.html"
+   },
+   {
+    "title": "delete-function (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/delete-function.html"
+   },
+   {
+    "title": "describe-function (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/describe-function.html"
+   },
+   {
+    "title": "list-functions (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/list-functions.html"
+   }
+  ]
+ },
+ {
+  "id": "cloudfront-t03",
+  "type": "try",
+  "title": "Create an accelerator and see that its two addresses survive a disable",
+  "kills": "\"Disabling an accelerator gives its static IP addresses back to AWS.\"",
+  "trap": null,
+  "section": "2-deep.md#global-accelerator-carries-tcp-and-udp-from-two-static-addresses-over-the-aws-network",
+  "pass_route": false,
+  "minutes": 12,
+  "cost": "$0.025 for each full or partial hour that the accelerator exists, enabled or disabled, plus the standard public IPv4 address charge of $0.005 per IP per hour for each of its two addresses. The task takes less than one hour.",
+  "cost_if_forgotten": "$0.025 for every hour, 24 hours a day, plus $0.005 per IP per hour for each of the two addresses, until you delete the accelerator. Disabling it does not stop the charges.",
+  "cost_facts": [
+   "global-accelerator-price-fixed-fee-per-hour",
+   "global-accelerator-price-fixed-fee-enabled-or-disabled",
+   "global-accelerator-price-public-ipv4-charges",
+   "vpc-public-ipv4-charge-2024"
+  ],
+  "permissions": [
+   "globalaccelerator:ListAccelerators",
+   "globalaccelerator:CreateAccelerator",
+   "globalaccelerator:TagResource",
+   "globalaccelerator:DescribeAccelerator",
+   "globalaccelerator:UpdateAccelerator",
+   "globalaccelerator:DeleteAccelerator",
+   "iam:CreateServiceLinkedRole",
+   "tag:GetResources"
+  ],
+  "read_only_alternative": "This alternative creates nothing. List the accelerators of the account with their state and addresses: aws globalaccelerator list-accelerators --region us-west-2 --query \"Accelerators[].[Name,Enabled,IpSets[0].IpAddresses]\" A row with false still shows two addresses, because a disabled accelerator keeps them. If the list is empty, answer the predict question of step 5 on paper.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. List the accelerators of the account. The command names no Region, so the AWS CLI uses the Region of your CloudShell session.",
+    "command": "aws globalaccelerator list-accelerators",
+    "expect": "An error instead of a list, for example that the AWS CLI could not connect to the endpoint URL. If your session runs in US West (Oregon), you see a list instead.",
+    "break_it": true,
+    "predict": "Global Accelerator is a global service. Does this command work from the Region of your session?",
+    "explain": "Global Accelerator is a global service, but [you must specify the US West (Oregon) Region](../facts/global-accelerator.md#global-accelerator-cli-region-us-west-2) in its Regional AWS CLI commands. Add [--region us-west-2](../facts/global-accelerator.md#global-accelerator-cli-region-us-west-2) to each command of this task."
+   },
+   {
+    "text": "Fix it: run the same list in US West (Oregon).",
+    "command": "aws globalaccelerator list-accelerators --region us-west-2 --query \"Accelerators[].Name\"",
+    "expect": "A list of names. In a learning account it is often an empty list.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Create an accelerator with IPv4 addresses and no listener, with the book and task tags. From now on, the hourly fee runs.",
+    "command": "aws globalaccelerator create-accelerator --name saa-cloudfront-t03 --ip-address-type IPV4 --region us-west-2 --tags Key=book,Value=saa Key=task,Value=cloudfront-t03",
+    "capture": {
+     "name": "ACC_ARN",
+     "query": "Accelerator.AcceleratorArn"
+    },
+    "expect": "No output. ACC_ARN now holds the ARN of the new accelerator.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read whether the accelerator is enabled, its status and its IP addresses. Write the two addresses down.",
+    "command": "aws globalaccelerator describe-accelerator --accelerator-arn $ACC_ARN --region us-west-2 --query \"Accelerator.[Enabled,Status,IpSets[0].IpAddresses]\"",
+    "expect": "true, a status such as IN_PROGRESS or DEPLOYED, and two IPv4 addresses.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Predict first: when you disable the accelerator, does it keep its two addresses? Then disable it.",
+    "command": "aws globalaccelerator update-accelerator --accelerator-arn $ACC_ARN --no-enabled --region us-west-2 --query \"Accelerator.[Enabled,IpSets[0].IpAddresses]\"",
+    "expect": "false and the same two addresses as in step 4. The accelerator is off, but the addresses stay assigned to it.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Read the state again until the status shows DEPLOYED, so that the change has finished before the cleanup.",
+    "command": "aws globalaccelerator describe-accelerator --accelerator-arn $ACC_ARN --region us-west-2 --query \"Accelerator.[Enabled,Status]\"",
+    "expect": "false and DEPLOYED. If the status shows IN_PROGRESS, wait one minute and run the command again.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the accelerator. Now the account loses the two addresses. If the command returns an error about the state of the accelerator, wait one minute and run it again.",
+    "command": "aws globalaccelerator delete-accelerator --accelerator-arn $ACC_ARN --region us-west-2"
+   }
+  ],
+  "verify": {
+   "command": "aws resourcegroupstaggingapi get-resources --region us-west-2 --tag-filters Key=task,Values=cloudfront-t03 --query \"ResourceTagMappingList[].ResourceARN\"",
+   "expect": "An empty list. Check also that aws globalaccelerator list-accelerators --region us-west-2 --query \"Accelerators[].Name\" no longer shows saa-cloudfront-t03."
+  },
+  "still_costs": [
+   "The accelerator, until delete-accelerator has run: the fixed hourly fee applies whether it is enabled or disabled, and its two public IPv4 addresses are billed too.",
+   "If CloudShell restarted, ACC_ARN is empty. Find the ARN with aws globalaccelerator list-accelerators --region us-west-2 --query \"Accelerators[?Name=='saa-cloudfront-t03'].AcceleratorArn\" --output text and use it in the cleanup."
+  ],
+  "facts": [
+   "global-accelerator-cli-region-us-west-2",
+   "global-accelerator-faq-two-static-ipv4-independent-network-zones",
+   "global-accelerator-static-ips-kept-until-delete",
+   "global-accelerator-price-fixed-fee-per-hour",
+   "global-accelerator-price-fixed-fee-enabled-or-disabled",
+   "global-accelerator-price-public-ipv4-charges",
+   "vpc-public-ipv4-charge-2024"
+  ],
+  "sources": [
+   {
+    "title": "CreateAccelerator (AWS Global Accelerator API Reference: CLI example with tags and --region us-west-2)",
+    "url": "https://docs.aws.amazon.com/global-accelerator/latest/api/API_CreateAccelerator.html"
+   },
+   {
+    "title": "create-accelerator (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/globalaccelerator/create-accelerator.html"
+   },
+   {
+    "title": "describe-accelerator (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/globalaccelerator/describe-accelerator.html"
+   },
+   {
+    "title": "update-accelerator (AWS CLI Command Reference: disable an accelerator; the addresses stay assigned)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/globalaccelerator/update-accelerator.html"
+   },
+   {
+    "title": "delete-accelerator (AWS CLI Command Reference: disable before delete)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/globalaccelerator/delete-accelerator.html"
+   },
+   {
+    "title": "list-accelerators (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/globalaccelerator/list-accelerators.html"
+   },
+   {
+    "title": "AWS Region availability for AWS Global Accelerator (--region us-west-2 in CLI commands)",
+    "url": "https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.regions.html"
+   },
+   {
+    "title": "Tagging in AWS Global Accelerator",
+    "url": "https://docs.aws.amazon.com/global-accelerator/latest/dg/tagging-in-global-accelerator.html"
+   },
+   {
+    "title": "get-resources (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/resourcegroupstaggingapi/get-resources.html"
+   },
+   {
+    "title": "AWS Global Accelerator pricing",
+    "url": "https://aws.amazon.com/global-accelerator/pricing/"
+   }
+  ]
+ },
+ {
+  "id": "cloudfront-t04",
+  "type": "lab",
+  "title": "Serve a private bucket through CloudFront with origin access control",
+  "kills": "\"The bucket must be public, or CloudFront cannot serve its files.\"",
+  "trap": "cloudfront-trap-public-bucket",
+  "section": "2-deep.md#origin-access-control-keeps-the-bucket-private-and-lets-your-distribution-read-it",
+  "pass_route": false,
+  "template": "data/15-cloudfront/templates/cloudfront-t04.yaml",
+  "minutes": 35,
+  "cost": "About $0. With pay-as-you-go pricing, CloudFront charges for data transfer out and for HTTP or HTTPS requests. This lab sends fewer than 10 requests for one small file, and the monthly free tier includes 10,000,000 HTTP/HTTPS requests and 1 TB of data transfer out. Origin fetches from S3 are free, and S3 has no minimum charge.",
+  "cost_if_forgotten": "About $0 a day while nobody requests the file: CloudFront charges for data transfer out and for requests, and S3 charges for storage by size and time, here a few kilobytes. Anyone who finds the domain name can still download the file, so run the cleanup.",
+  "cost_facts": [
+   "cloudfront-price-dimensions-transfer-out-and-requests",
+   "cloudfront-faq-free-tier-monthly-usage",
+   "cloudfront-price-payg-origin-fetch-free-incl-vpc-origins",
+   "s3-faq-no-minimum-charge",
+   "s3-pricing-storage-rate-size-duration-class"
+  ],
+  "permissions": [
+   "sts:GetCallerIdentity",
+   "cloudformation:CreateStack",
+   "cloudformation:DescribeStacks",
+   "cloudformation:DescribeStackResource",
+   "cloudformation:DescribeStackEvents",
+   "cloudformation:DeleteStack",
+   "s3:CreateBucket",
+   "s3:PutBucketTagging",
+   "s3:PutBucketPublicAccessBlock",
+   "s3:PutBucketOwnershipControls",
+   "s3:PutObject",
+   "s3:PutBucketPolicy",
+   "s3:DeleteBucketPolicy",
+   "s3:ListBucket",
+   "s3:DeleteObject",
+   "s3:DeleteBucket",
+   "cloudfront:CreateOriginAccessControl",
+   "cloudfront:GetOriginAccessControl",
+   "cloudfront:DeleteOriginAccessControl",
+   "cloudfront:CreateDistribution",
+   "cloudfront:TagResource",
+   "cloudfront:GetDistribution",
+   "cloudfront:UpdateDistribution",
+   "cloudfront:DeleteDistribution"
+  ],
+  "read_only_alternative": "This alternative creates nothing. List the origin access controls of the account: aws cloudfront list-origin-access-controls --query \"OriginAccessControlList.Items[].[Name,SigningBehavior,OriginAccessControlOriginType]\" If a bucket of your account is the origin of a distribution, read its policy with aws s3api get-bucket-policy --bucket <BUCKET>. Find the service principal cloudfront.amazonaws.com and the Condition that names one distribution ARN.",
+  "steps": [
+   {
+    "text": "Open AWS CloudShell. Store your account ID. The lab template puts it in the bucket name, because bucket names are global.",
+    "command": "aws sts get-caller-identity",
+    "capture": {
+     "name": "ACCOUNT_ID",
+     "query": "Account"
+    },
+    "expect": "No output. ACCOUNT_ID now holds your 12-digit account ID.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Create the stack of the lab template: a private bucket, an origin access control that signs every request, and a distribution with the bucket as its origin. The template adds no bucket policy.",
+    "command": "aws cloudformation create-stack --stack-name saa-cloudfront-t04 --tags Key=book,Value=saa Key=task,Value=cloudfront-t04 --template-body '{\"AWSTemplateFormatVersion\":\"2010-09-09\",\"Description\":\"saa-cloudfront-t04: private bucket, origin access control, distribution\",\"Resources\":{\"Bucket\":{\"Type\":\"AWS::S3::Bucket\",\"Properties\":{\"BucketName\":{\"Fn::Sub\":\"saa-cloudfront-t04-${AWS::AccountId}\"},\"PublicAccessBlockConfiguration\":{\"BlockPublicAcls\":true,\"BlockPublicPolicy\":true,\"IgnorePublicAcls\":true,\"RestrictPublicBuckets\":true},\"OwnershipControls\":{\"Rules\":[{\"ObjectOwnership\":\"BucketOwnerEnforced\"}]},\"Tags\":[{\"Key\":\"book\",\"Value\":\"saa\"},{\"Key\":\"task\",\"Value\":\"cloudfront-t04\"}]}},\"Oac\":{\"Type\":\"AWS::CloudFront::OriginAccessControl\",\"Properties\":{\"OriginAccessControlConfig\":{\"Name\":\"saa-cloudfront-t04\",\"OriginAccessControlOriginType\":\"s3\",\"SigningBehavior\":\"always\",\"SigningProtocol\":\"sigv4\"}}},\"Distribution\":{\"Type\":\"AWS::CloudFront::Distribution\",\"Properties\":{\"DistributionConfig\":{\"Enabled\":true,\"Comment\":\"saa-cloudfront-t04\",\"Origins\":[{\"Id\":\"bucket\",\"DomainName\":{\"Fn::GetAtt\":[\"Bucket\",\"RegionalDomainName\"]},\"OriginAccessControlId\":{\"Fn::GetAtt\":[\"Oac\",\"Id\"]},\"S3OriginConfig\":{\"OriginAccessIdentity\":\"\"}}],\"DefaultCacheBehavior\":{\"TargetOriginId\":\"bucket\",\"ViewerProtocolPolicy\":\"redirect-to-https\",\"CachePolicyId\":\"658327ea-f89d-4fab-a63d-7e88639e58f6\"}},\"Tags\":[{\"Key\":\"book\",\"Value\":\"saa\"},{\"Key\":\"task\",\"Value\":\"cloudfront-t04\"}]}}}}'",
+    "expect": "JSON with the StackId of the new stack.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Wait until the stack is complete. The distribution takes the longest. While you wait, read the template file named above.",
+    "command": "aws cloudformation wait stack-create-complete --stack-name saa-cloudfront-t04",
+    "expect": "No output, after several minutes. If it ends with an error, read the newest events with aws cloudformation describe-stack-events --stack-name saa-cloudfront-t04 --max-items 5, then run the cleanup.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Store the ID of the distribution that the stack created.",
+    "command": "aws cloudformation describe-stack-resource --stack-name saa-cloudfront-t04 --logical-resource-id Distribution",
+    "capture": {
+     "name": "DIST_ID",
+     "query": "StackResourceDetail.PhysicalResourceId"
+    },
+    "expect": "No output. DIST_ID now holds the distribution ID, a string of capital letters and digits.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Store the domain name of the distribution.",
+    "command": "aws cloudfront get-distribution --id $DIST_ID",
+    "capture": {
+     "name": "DOMAIN",
+     "query": "Distribution.DomainName"
+    },
+    "expect": "No output. DOMAIN now holds a name that ends with cloudfront.net.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Upload the small text file /etc/os-release to the bucket as note.txt.",
+    "command": "aws s3 cp /etc/os-release s3://saa-cloudfront-t04-$ACCOUNT_ID/note.txt --content-type text/plain",
+    "expect": "One line that starts with upload: and ends with note.txt.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Ask S3 for note.txt without a signature, as a stranger on the internet would.",
+    "command": "aws s3api head-object --bucket saa-cloudfront-t04-$ACCOUNT_ID --key note.txt --no-sign-request",
+    "expect": "An error that shows 403 (Forbidden). The bucket is private.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Ask CloudFront for note.txt. The option -i prints the status line and the headers before the body.",
+    "command": "curl -sS -i https://$DOMAIN/note.txt",
+    "expect": "A status line with 403 and an XML error with the code AccessDenied. CloudFront signed its request to the bucket, but no bucket policy allows CloudFront yet.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "A teammate gives you a bucket policy from another project. It allows the CloudFront service principal, but its Condition names the distribution EDFDVBD6EXAMPLE, not yours. Apply it.",
+    "command": "aws s3api put-bucket-policy --bucket saa-cloudfront-t04-$ACCOUNT_ID --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowCloudFrontServicePrincipal\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cloudfront.amazonaws.com\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::saa-cloudfront-t04-'$ACCOUNT_ID'/*\",\"Condition\":{\"StringEquals\":{\"AWS:SourceArn\":\"arn:aws:cloudfront::'$ACCOUNT_ID':distribution/EDFDVBD6EXAMPLE\"}}}]}'",
+    "expect": "No output.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Wait 30 seconds. Then ask CloudFront for note.txt again.",
+    "command": "curl -sS -i https://$DOMAIN/note.txt",
+    "expect": "Again a status line with 403 and the code AccessDenied.",
+    "break_it": true,
+    "predict": "The bucket policy now allows the CloudFront service principal to read objects. Does your distribution get note.txt?",
+    "explain": "The policy allows the [CloudFront service principal (cloudfront.amazonaws.com)](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal), but its Condition allows it [only when the request is on behalf](../facts/cloudfront.md#cloudfront-oac-bucket-policy-cloudfront-service-principal) of the distribution that the Condition names. Your distribution is a different one, so S3 refuses its signed request."
+   },
+   {
+    "text": "Fix it: apply the same policy with your own distribution ID in the Condition.",
+    "command": "aws s3api put-bucket-policy --bucket saa-cloudfront-t04-$ACCOUNT_ID --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowCloudFrontServicePrincipal\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cloudfront.amazonaws.com\"},\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::saa-cloudfront-t04-'$ACCOUNT_ID'/*\",\"Condition\":{\"StringEquals\":{\"AWS:SourceArn\":\"arn:aws:cloudfront::'$ACCOUNT_ID':distribution/'$DIST_ID'\"}}}]}'",
+    "expect": "No output.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Wait 30 seconds, because CloudFront keeps an error response for a short time. Then ask CloudFront for note.txt again.",
+    "command": "curl -sS -i https://$DOMAIN/note.txt",
+    "expect": "A status line with 200 and the text of the file, with lines such as NAME and VERSION. If you still see 403, wait one minute and run curl again.",
+    "break_it": false,
+    "predict": null
+   },
+   {
+    "text": "Ask S3 for note.txt again without a signature.",
+    "command": "aws s3api head-object --bucket saa-cloudfront-t04-$ACCOUNT_ID --key note.txt --no-sign-request",
+    "expect": "403 (Forbidden) again. The policy lets your distribution read the file; it does not open the S3 URL. The bucket was private in every step.",
+    "break_it": false,
+    "predict": null
+   }
+  ],
+  "cleanup": [
+   {
+    "text": "Delete the bucket policy.",
+    "command": "aws s3api delete-bucket-policy --bucket saa-cloudfront-t04-$ACCOUNT_ID"
+   },
+   {
+    "text": "Delete note.txt, so that the stack can delete the empty bucket.",
+    "command": "aws s3 rm s3://saa-cloudfront-t04-$ACCOUNT_ID --recursive"
+   },
+   {
+    "text": "Delete the stack. CloudFormation deletes the distribution, the origin access control and the bucket. The distribution takes the longest.",
+    "command": "aws cloudformation delete-stack --stack-name saa-cloudfront-t04"
+   },
+   {
+    "text": "Wait until the stack is deleted.",
+    "command": "aws cloudformation wait stack-delete-complete --stack-name saa-cloudfront-t04"
+   }
+  ],
+  "verify": {
+   "command": "aws cloudformation describe-stacks --stack-name saa-cloudfront-t04",
+   "expect": "An error that says the stack does not exist. If the wait of the cleanup reported DELETE_FAILED, the bucket still held a file: run cleanup steps 2 to 4 again."
+  },
+  "still_costs": [
+   "The distribution and the bucket with its file, until the stack is deleted. A forgotten distribution serves note.txt to anyone who has its domain name.",
+   "If CloudShell restarted, ACCOUNT_ID is empty. Run step 1 again before the cleanup."
+  ],
+  "facts": [
+   "cloudfront-oac-bucket-policy-cloudfront-service-principal",
+   "cloudfront-oac-signing-always-recommended",
+   "cloudfront-private-s3-oac-plus-signed-urls",
+   "cloudfront-oac-object-ownership-bucket-owner-enforced",
+   "cloudfront-error-caching-default-ttl",
+   "s3-private-by-default",
+   "s3-bucket-name-global-namespace-default",
+   "cloudfront-price-dimensions-transfer-out-and-requests",
+   "cloudfront-faq-free-tier-monthly-usage",
+   "cloudfront-price-payg-origin-fetch-free-incl-vpc-origins",
+   "s3-faq-no-minimum-charge",
+   "s3-pricing-storage-rate-size-duration-class"
+  ],
+  "sources": [
+   {
+    "title": "Get started with a standard distribution (AWS CLI): an S3 origin with origin access control and the bucket policy",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/get-started-cli-tutorial.html"
+   },
+   {
+    "title": "Restrict access to an Amazon S3 origin (origin access control and the bucket policy)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html"
+   },
+   {
+    "title": "Use managed cache policies (ID of CachingOptimized)",
+    "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html"
+   },
+   {
+    "title": "AWS::CloudFront::OriginAccessControl OriginAccessControlConfig (CloudFormation Template Reference)",
+    "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-cloudfront-originaccesscontrol-originaccesscontrolconfig.html"
+   },
+   {
+    "title": "AWS::CloudFront::Distribution (CloudFormation Template Reference)",
+    "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-cloudfront-distribution.html"
+   },
+   {
+    "title": "AWS::CloudFront::Distribution S3OriginConfig (an empty OriginAccessIdentity with OAC)",
+    "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-cloudfront-distribution-s3originconfig.html"
+   },
+   {
+    "title": "AWS::S3::Bucket (CloudFormation Template Reference, RegionalDomainName)",
+    "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-s3-bucket.html"
+   },
+   {
+    "title": "create-stack (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudformation/create-stack.html"
+   },
+   {
+    "title": "describe-stack-resource (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudformation/describe-stack-resource.html"
+   },
+   {
+    "title": "get-distribution (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudfront/get-distribution.html"
+   },
+   {
+    "title": "put-bucket-policy (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-policy.html"
+   },
+   {
+    "title": "head-object (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/s3api/head-object.html"
+   },
+   {
+    "title": "cp (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/s3/cp.html"
+   },
+   {
+    "title": "rm (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/s3/rm.html"
+   },
+   {
+    "title": "delete-bucket-policy (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/s3api/delete-bucket-policy.html"
+   },
+   {
+    "title": "delete-stack (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudformation/delete-stack.html"
+   },
+   {
+    "title": "describe-stacks (AWS CLI Command Reference)",
+    "url": "https://docs.aws.amazon.com/cli/latest/reference/cloudformation/describe-stacks.html"
+   }
+  ]
+ }
+]

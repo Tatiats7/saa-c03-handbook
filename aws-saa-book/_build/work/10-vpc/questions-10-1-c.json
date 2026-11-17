@@ -1,0 +1,388 @@
+[
+ {
+  "id": "vpc-q003",
+  "section": "2-deep.md#a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.S1"
+  ],
+  "topics": [
+   "networking",
+   "resilience",
+   "cost"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "natgw-per-az-ha",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs an application on Amazon EC2 instances in private subnets in two Availability Zones. The instances download small daily updates from partner websites on the internet. The route tables of both private subnets send 0.0.0.0/0 to one NAT gateway in a public subnet in the first Availability Zone. Outbound internet access must stay highly available during an Availability Zone failure. Which solution is the MOST cost-effective way to meet these requirements?",
+  "keywords": [
+   "must stay highly available during an Availability Zone failure",
+   "one NAT gateway",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a NAT gateway in each zone, add a standby NAT gateway next to each one, and route each private subnet to its own zone.",
+    "correct": false,
+    "why": "It works, but [each NAT gateway is created in a specific Availability Zone and implemented with redundancy in that zone](../facts/vpc.md#vpc-natgw-one-az-redundant-in-zone), so the standby gateways add hourly charges and no availability.",
+    "concept": "standby-natgw",
+    "trap": null,
+    "misconception": "adds a standby NAT gateway, not knowing that each NAT gateway is already redundant inside its zone",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "b",
+    "text": "Keep the one NAT gateway in the first Availability Zone, and keep the routes of both private subnets pointed at that NAT gateway.",
+    "correct": false,
+    "why": "If the first zone fails, [resources in the other Availability Zones lose internet access](../facts/vpc.md#vpc-natgw-shared-across-azs-loses-internet), because the shared NAT gateway is zonal.",
+    "concept": "single-shared-natgw",
+    "trap": "vpc-trap-one-natgw-ha",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "c",
+    "text": "Replace the NAT gateway with an egress-only internet gateway, and route 0.0.0.0/0 from both private subnets to the egress-only internet gateway.",
+    "correct": false,
+    "why": "An egress-only internet gateway is [for use with IPv6 traffic only](../facts/vpc.md#vpc-eigw-ipv6-outbound-only), so the IPv4 traffic of the instances gets no path to the internet.",
+    "concept": "egress-only-for-ipv4",
+    "trap": "vpc-trap-eigw-ipv4",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "d",
+    "text": "Create a NAT gateway in a public subnet in the second Availability Zone, and route each private subnet to the NAT gateway in its own zone.",
+    "correct": true,
+    "why": "This follows the advice to [create a NAT gateway in each Availability Zone, and configure your routing to ensure that resources use the NAT gateway in the same Availability Zone](../facts/vpc.md#vpc-natgw-shared-across-azs-loses-internet).",
+    "concept": "natgw-per-az",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "Because [each NAT gateway is created in a specific Availability Zone and implemented with redundancy in that zone](../facts/vpc.md#vpc-natgw-one-az-redundant-in-zone), a failure of the first zone stops the shared gateway. One more gateway in the second zone, with a route per zone, removes that dependency at the lowest added cost.",
+  "takeaway": "For outbound access that survives a zone failure, create a NAT gateway in each Availability Zone and route each zone to its own.",
+  "twin": "If the stem said \"This is a test environment, and an outage of one Availability Zone is acceptable.\" instead: keep the one NAT gateway, because each gateway is [charged for each hour that your NAT gateway is available](../facts/vpc.md#vpc-natgw-pricing-dimensions).",
+  "say": "One NAT gateway lives in one zone, so for a zone failure I put one in each zone and route each subnet to its own.",
+  "facts": [
+   "vpc-natgw-one-az-redundant-in-zone",
+   "vpc-natgw-shared-across-azs-loses-internet",
+   "vpc-eigw-ipv6-outbound-only",
+   "vpc-natgw-pricing-dimensions"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-highly-available",
+   "ee-across-availability-zones",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q013",
+  "section": "2-deep.md#data-transfer-is-free-inside-one-availability-zone-but-charged-across-zones",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.S3"
+  ],
+  "topics": [
+   "networking",
+   "cost"
+  ],
+  "services": [
+   "vpc",
+   "vpc-endpoints",
+   "s3",
+   "ec2"
+  ],
+  "concept": "nat-cost-reduction-combination",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs batch workers on Amazon EC2 instances in private subnets in three Availability Zones. The route tables of all private subnets send 0.0.0.0/0 to one NAT gateway in the first Availability Zone. Most of the traffic of the workers goes to Amazon S3 buckets in the same AWS Region, and the workers also download a significant volume of data from software repositories on the internet. The workers must stay in private subnets in all three zones. The bill shows high NAT gateway data processing charges and charges for data transfer between Availability Zones. Which combination of steps is the MOST cost-effective way to reduce these charges? (Select TWO.)",
+  "keywords": [
+   "Amazon S3 buckets in the same AWS Region",
+   "charges for data transfer between Availability Zones",
+   "must stay in private subnets",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Move the workers to public subnets, give each worker a public IPv4 address, and delete the NAT gateway in the first Availability Zone.",
+    "correct": false,
+    "why": "The workers must stay in private subnets, and [you pay an hourly rate for each public IPv4 address used by your AWS account](../facts/vpc.md#vpc-public-ipv4-hourly-in-use-or-idle).",
+    "concept": "public-ip-per-worker",
+    "trap": "vpc-trap-public-ipv4-free",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Associate a second Elastic IP address with the existing NAT gateway so that it can process the traffic of all three zones.",
+    "correct": false,
+    "why": "Each address adds room for [55,000 simultaneous connections](../facts/vpc.md#vpc-nat-55000-connections-per-ip), but the per-gigabyte and cross-zone charges stay the same.",
+    "concept": "second-eip-natgw",
+    "trap": null,
+    "misconception": "believes more Elastic IP addresses lower NAT gateway charges or spread the gateway across zones",
+    "distractor_type": "keyword-bait"
+   },
+   {
+    "id": "c",
+    "text": "Create a gateway endpoint for Amazon S3, and associate it with the route tables of all the private subnets.",
+    "correct": true,
+    "why": "[There are no data processing or hourly charges for using Gateway Type VPC endpoints](../facts/vpc.md#vpc-gateway-endpoint-no-hourly-or-processing-charge), so the S3 traffic leaves the NAT gateway.",
+    "concept": "gateway-endpoint-s3",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "d",
+    "text": "Create an interface endpoint for Amazon S3 in each Availability Zone, and send the S3 traffic of the workers to the endpoint network interfaces.",
+    "correct": false,
+    "why": "It works, but for an interface endpoint [you are also billed per GB of data processed](../facts/vpc.md#vpc-interface-endpoint-billed-hour-per-az-and-gb), unlike a gateway endpoint.",
+    "concept": "interface-endpoint-s3",
+    "trap": null,
+    "misconception": "assumes that every VPC endpoint type is free",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Create a NAT gateway in each Availability Zone that has workers, and route each private subnet to the NAT gateway in its own zone.",
+    "correct": true,
+    "why": "For a significant volume across zones, the advice is to [create a NAT gateway in each Availability Zone with resources](../facts/vpc.md#vpc-natgw-same-az-reduces-charges), which ends the cross-zone transfer.",
+    "concept": "natgw-per-az-cost",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "S3 in the same Region looks free, but NAT gateway data processing applies [regardless of the traffic's source or destination](../facts/vpc.md#vpc-natgw-data-processing-any-destination). A gateway endpoint takes the S3 bytes off the NAT gateway. A NAT gateway in each zone ends the cross-zone transfer for the internet downloads.",
+  "takeaway": "Cut NAT gateway bills with a gateway endpoint for S3 traffic and a NAT gateway in each zone for internet traffic.",
+  "twin": "If the stem said \"Amazon DynamoDB tables\" instead: create a gateway endpoint for DynamoDB, because [Gateway VPC endpoints provide reliable connectivity to Amazon S3 and DynamoDB without requiring an internet gateway or a NAT device for your VPC](../facts/vpc.md#vpc-gateway-endpoint-s3-dynamodb-no-privatelink).",
+  "say": null,
+  "facts": [
+   "vpc-gateway-endpoint-no-hourly-or-processing-charge",
+   "vpc-natgw-same-az-reduces-charges",
+   "vpc-interface-endpoint-billed-hour-per-az-and-gb",
+   "vpc-public-ipv4-hourly-in-use-or-idle",
+   "vpc-nat-55000-connections-per-ip",
+   "vpc-natgw-data-processing-any-destination",
+   "vpc-gateway-endpoint-s3-dynamodb-no-privatelink",
+   "vpc-data-transfer-ec2-to-s3-same-region-free"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-which-combination",
+   "ee-select-two",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q015",
+  "section": "2-deep.md#a-zonal-nat-gateway-fails-with-its-zone-but-a-regional-one-follows-workloads",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 4,
+  "task": "4.4",
+  "bullets": [
+   "4.4.S1"
+  ],
+  "topics": [
+   "networking",
+   "resilience"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "regional-nat-gateway",
+  "difficulty": 3,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company runs workloads on Amazon EC2 instances in private subnets of one VPC. Auto Scaling groups add and remove instances in three Availability Zones, and some zones have no instances for weeks. The instances need outbound IPv4 internet access that is highly available. The network team does not want to create and track a NAT gateway, a public subnet and a separate route for each Availability Zone. Which solution will meet these requirements with the LEAST operational overhead?",
+  "keywords": [
+   "some zones have no instances for weeks",
+   "outbound IPv4 internet access that is highly available",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create one zonal NAT gateway in a public subnet in the first Availability Zone, and point the 0.0.0.0/0 route of every private subnet to it.",
+    "correct": false,
+    "why": "The gateway is zonal, so if the first zone fails, [resources in the other Availability Zones lose internet access](../facts/vpc.md#vpc-natgw-shared-across-azs-loses-internet).",
+    "concept": "single-zonal-natgw",
+    "trap": "vpc-trap-one-natgw-ha",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "b",
+    "text": "Create one regional NAT gateway in manual mode, and add or remove its Availability Zones whenever the Auto Scaling groups change zones.",
+    "correct": false,
+    "why": "It works, but in manual mode [you are responsible for expanding and contracting your NAT gateway across Availability Zones](../facts/vpc.md#vpc-regional-nat-modes).",
+    "concept": "regional-natgw-manual",
+    "trap": null,
+    "misconception": "chooses manual zone control where the automatic mode does the same work",
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "c",
+    "text": "Create a private NAT gateway in each Availability Zone, and point the 0.0.0.0/0 route of each private subnet to the gateway in its zone.",
+    "correct": false,
+    "why": "A private NAT gateway sends traffic [to other VPCs or on-premises networks using Transit Gateway or a virtual private gateway](../facts/vpc.md#vpc-natgw-private-connectivity-type), not to the internet.",
+    "concept": "private-natgw",
+    "trap": null,
+    "misconception": "confuses the private connectivity type with a NAT gateway for private subnets",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "d",
+    "text": "Create one regional NAT gateway in automatic mode, and point the 0.0.0.0/0 route of every private subnet to the regional NAT gateway.",
+    "correct": true,
+    "why": "In automatic mode [AWS automatically manages IP addresses and Availability Zone expansion](../facts/vpc.md#vpc-regional-nat-modes), so the gateway reaches new zones without work from the team.",
+    "concept": "regional-natgw-automatic",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   }
+  ],
+  "explanation": "The workloads move between zones, and the team wants no gateway or route for each zone. A regional NAT gateway has two modes. In automatic mode [AWS automatically manages IP addresses and Availability Zone expansion](../facts/vpc.md#vpc-regional-nat-modes), but in manual mode [you are responsible for expanding and contracting your NAT gateway across Availability Zones](../facts/vpc.md#vpc-regional-nat-modes). Automatic mode leaves the team one gateway to manage.",
+  "takeaway": "When workloads move between zones, a regional NAT gateway in automatic mode gives highly available outbound access with one route target.",
+  "twin": "If the stem said \"the instances must reach other VPCs through a transit gateway, not the internet\" instead: use a zonal private NAT gateway, because regional NAT gateways [do not support private NAT](../facts/vpc.md#vpc-regional-nat-no-private-nat).",
+  "say": "A regional NAT gateway follows the workload across zones, so there's one gateway and one route to manage.",
+  "facts": [
+   "vpc-regional-nat-modes",
+   "vpc-natgw-shared-across-azs-loses-internet",
+   "vpc-natgw-private-connectivity-type",
+   "vpc-regional-nat-no-private-nat"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-highly-available",
+   "ee-least-operational-overhead"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "vpc-q021",
+  "section": "2-deep.md#a-vpc-spans-every-availability-zone-but-each-subnet-lives-in-one-zone",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 2,
+  "task": "2.2",
+  "bullets": [
+   "2.2.S4"
+  ],
+  "topics": [
+   "networking",
+   "resilience"
+  ],
+  "services": [
+   "vpc",
+   "ec2"
+  ],
+  "concept": "remove-single-points-of-failure",
+  "difficulty": 2,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST cost-effective",
+  "stem": "A company runs worker instances in one private subnet. The workers process jobs from a queue and download data from the internet through a NAT gateway in a public subnet. All the subnets and the NAT gateway are in the same Availability Zone. The company wants the workers to be fault tolerant and to keep processing jobs if that Availability Zone fails. Which combination of steps is the MOST cost-effective way to meet these requirements? (Select TWO.)",
+  "keywords": [
+   "All the subnets and the NAT gateway are in the same Availability Zone",
+   "fault tolerant",
+   "MOST cost-effective"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Create a private subnet in a second Availability Zone, and run worker instances in both private subnets.",
+    "correct": true,
+    "why": "Resources in separate zones [protect your applications from the failure of a single Availability Zone](../facts/vpc.md#vpc-subnet-one-az-protects-from-zone-failure), so the workers no longer depend on one zone.",
+    "concept": "subnet-per-az",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Change the existing private subnet so that it spans a second Availability Zone, and launch more workers in it.",
+    "correct": false,
+    "why": "A subnet [cannot span zones](../facts/vpc.md#vpc-subnet-single-az), so the subnet stays in the zone that can fail.",
+    "concept": "stretch-subnet",
+    "trap": "vpc-trap-subnet-spans-azs",
+    "misconception": null,
+    "distractor_type": "impossible-feature"
+   },
+   {
+    "id": "c",
+    "text": "Associate a second Elastic IP address with the existing NAT gateway so that the NAT gateway keeps working if its zone fails.",
+    "correct": false,
+    "why": "Extra addresses add connections, but [each NAT gateway is created in a specific Availability Zone and implemented with redundancy in that zone](../facts/vpc.md#vpc-natgw-one-az-redundant-in-zone).",
+    "concept": "second-eip-natgw",
+    "trap": "vpc-trap-one-natgw-ha",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Create a NAT gateway in a public subnet in the second zone, and route each private subnet to the NAT gateway in its zone.",
+    "correct": true,
+    "why": "The advice is to [create a NAT gateway in each Availability Zone, and configure your routing to ensure that resources use the NAT gateway in the same Availability Zone](../facts/vpc.md#vpc-natgw-shared-across-azs-loses-internet).",
+    "concept": "natgw-per-az",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "e",
+    "text": "Create a NAT gateway in every Availability Zone of the Region, including the zones that have no worker instances.",
+    "correct": false,
+    "why": "It works, but every NAT gateway is [charged for each hour that your NAT gateway is available](../facts/vpc.md#vpc-natgw-pricing-dimensions), and zones without workers need no gateway.",
+    "concept": "natgw-every-az",
+    "trap": null,
+    "misconception": "adds NAT gateways in zones where no workload runs",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "The design has two single points of failure in one zone, the subnet with the workers and the NAT gateway. A design principle is to [avoid single points of failure, including the underlying physical infrastructure](../facts/vpc.md#vpc-wa-rel10-bp01-avoid-single-points-of-failure). Workers in a second zone and a NAT gateway in that zone remove both, at the cost of one more gateway.",
+  "takeaway": "Remove each single point of failure: subnets with instances in two zones, and a NAT gateway in each zone that has instances.",
+  "twin": "If the stem said \"the workers download nothing from the internet\" instead: the second subnet with workers is enough, and the second zone needs no NAT gateway.",
+  "say": null,
+  "facts": [
+   "vpc-subnet-one-az-protects-from-zone-failure",
+   "vpc-natgw-shared-across-azs-loses-internet",
+   "vpc-subnet-single-az",
+   "vpc-natgw-pricing-dimensions",
+   "vpc-natgw-one-az-redundant-in-zone",
+   "vpc-wa-rel10-bp01-avoid-single-points-of-failure"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-select-two",
+   "ee-fault-tolerant",
+   "ee-which-combination",
+   "ee-most-cost-effective"
+  ],
+  "twin_of": null
+ }
+]

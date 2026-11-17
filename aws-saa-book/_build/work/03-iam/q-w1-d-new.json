@@ -1,0 +1,297 @@
+[
+  {
+   "id": "iam-q011",
+   "section": "2-deep.md#passing-a-role-to-a-service-needs-the-passrole-permission",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.S3"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "ec2"],
+   "concept": "passrole",
+   "difficulty": 3,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a project in one AWS account. Developers launch Amazon EC2 instances for the project and attach one of two project IAM roles to each instance. The account also has an IAM role with the AdministratorAccess policy for an operations tool. The developers' IAM policy allows ec2:RunInstances and allows iam:PassRole on all roles. The security team must apply least privilege: developers keep launching instances with the project roles, but they cannot attach the administrator role to an instance. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["allows iam:PassRole on all roles", "cannot attach the administrator role", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Set a permissions boundary on the two project roles that limits them to the project's actions, and keep the developers' current IAM policy unchanged.",
+     "correct": false,
+     "why": "A boundary limits what the project roles can do, but the developers still hold iam:PassRole on the administrator role, so they can still attach it.",
+     "concept": "boundary-on-passed-roles",
+     "trap": null,
+     "misconception": "believes a boundary on the project roles controls which role a developer can pass",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Move the administrator role and the operations tool to a separate AWS account, and keep the developers' current IAM policy unchanged.",
+     "correct": false,
+     "why": "It works, because [PassRole only works with a service in the same AWS account](../facts/iam.md#iam-passrole-required-to-give-role-to-service), but moving the tool is far more work than one policy edit.",
+     "concept": "move-admin-role",
+     "trap": null,
+     "misconception": "moves a workload to another account to solve a permissions problem",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Change the developers' IAM policy so that iam:PassRole allows only the ARNs of the two project roles, and keep the permission to launch instances.",
+     "correct": true,
+     "why": "The Resource element of iam:PassRole limits which roles a developer can pass, so a developer cannot pass [a role that has more permissions than you want the user to have](../facts/iam.md#iam-passrole-prevents-privilege-escalation).",
+     "concept": "passrole-scoped",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Detach the IAM roles from the instances, and give each developer an access key with the project permissions to store on the instances they launch.",
+     "correct": false,
+     "why": "Stored keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), so this trades a role problem for a long-term credential on every instance.",
+     "concept": "access-key-on-server",
+     "trap": "iam-trap-keys-on-instance",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    }
+   ],
+   "explanation": "To give an instance a role, the developer [must have the iam:PassRole permission for that role](../facts/iam.md#iam-passrole-required-to-give-role-to-service). These developers have it for every role in the account. Limiting iam:PassRole to the two project role ARNs stops them from passing [a role that has more permissions than you want the user to have](../facts/iam.md#iam-passrole-prevents-privilege-escalation), and launches with the project roles keep working.",
+   "takeaway": "Stop privilege escalation through roles by scoping iam:PassRole to the approved role ARNs.",
+   "twin": "If the stem said \"developers create new roles for their instances, and the roles must stay under a set maximum\" instead: a permissions boundary, because it sets the [maximum permissions that an identity-based policy can grant](../facts/iam.md#iam-permissions-boundary-sets-maximum-does-not-grant).",
+   "say": "I'd scope iam:PassRole to the project roles, so nobody can hand the admin role to an instance.",
+   "facts": [
+    "iam-passrole-prevents-privilege-escalation",
+    "iam-passrole-required-to-give-role-to-service",
+    "iam-long-term-keys-valid-until-revoked-temporary-expire",
+    "iam-permissions-boundary-sets-maximum-does-not-grant"
+   ],
+   "sources": [],
+   "exam_english": ["ee-least-privilege", "ee-least-operational-overhead", "ee-must"],
+   "twin_of": null
+  },
+  {
+   "id": "iam-q012",
+   "section": "2-deep.md#condition-keys-narrow-an-allow-to-the-right-organization-or-network",
+   "pool": "chapter",
+   "layer": "core",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": ["1.3.K1"],
+   "topics": ["identity", "security", "storage"],
+   "services": ["iam", "s3", "organizations"],
+   "concept": "principalorgid-condition",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company uses AWS Organizations with all features enabled and adds new member accounts every week. Applications in every member account write log files to one Amazon S3 bucket in a central logging account. The IAM roles of the applications already allow s3:PutObject on the bucket. The security team must restrict writes to the bucket to principals in the organization's accounts, including accounts that are created later. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["adds new member accounts every week", "including accounts that are created later", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a bucket policy statement that allows s3:PutObject with the wildcard character as the principal and with no condition on the statement.",
+     "correct": false,
+     "why": "Without a condition, a wildcard principal with Allow grants access to all users, [including anonymous users (public access)](../facts/iam.md#iam-principal-wildcard-is-public).",
+     "concept": "wildcard-principal",
+     "trap": "iam-trap-wildcard-principal-means-account",
+     "misconception": null,
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "b",
+     "text": "Add a bucket policy statement that allows s3:PutObject for every principal, with a condition that aws:PrincipalOrgID equals the organization ID.",
+     "correct": true,
+     "why": "The [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) condition compares the caller's organization with the ID in the policy, and the policy will [automatically include the correct accounts](../facts/iam.md#iam-condition-key-principalorgid) as accounts join.",
+     "concept": "principalorgid-bucket-policy",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "c",
+     "text": "Attach an SCP to the root of the organization that allows s3:PutObject on the bucket for the principals of every member account.",
+     "correct": false,
+     "why": "[An SCP never grants permissions](../facts/iam.md#iam-scp-never-grants-permissions), and SCPs [do not affect resource-based policies directly](../facts/iam.md#iam-scp-not-outside-principals-or-resource-policies), so the bucket policy still decides who writes.",
+     "concept": "scp-as-grant",
+     "trap": "iam-trap-scp-grants",
+     "misconception": null,
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "d",
+     "text": "Add a bucket policy statement that allows s3:PutObject for a list of every member account ID, and update the list when an account is created.",
+     "correct": false,
+     "why": "It works, but every new account means one more policy edit, and [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) removes that work.",
+     "concept": "account-id-list",
+     "trap": null,
+     "misconception": "lists every account by hand when one condition key covers the organization",
+     "distractor_type": "violates-qualifier"
+    }
+   ],
+   "explanation": "The writers are in other accounts, so the [resource-based policy in the trusting account must allow the requester](../facts/iam.md#iam-eval-cross-account-needs-both-policies). A list of account IDs needs an edit for each new account. The [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) key compares the organization of the caller, and policies that use it [automatically include the correct accounts](../facts/iam.md#iam-condition-key-principalorgid) when accounts are added or removed.",
+   "takeaway": "Restrict a resource to every account of an organization, now and later, with aws:PrincipalOrgID.",
+   "twin": "If the stem said \"two partner accounts outside the organization\" instead: name the two account IDs as principals, because the [aws:PrincipalOrgID](../facts/iam.md#iam-condition-key-principalorgid) condition matches callers from the organization alone.",
+   "say": "I'd allow the whole organization with aws:PrincipalOrgID, so new accounts are covered without edits.",
+   "facts": [
+    "iam-condition-key-principalorgid",
+    "iam-principal-wildcard-is-public",
+    "iam-scp-never-grants-permissions",
+    "iam-scp-not-outside-principals-or-resource-policies",
+    "iam-eval-cross-account-needs-both-policies"
+   ],
+   "sources": [],
+   "exam_english": ["ee-restrict", "ee-least-operational-overhead", "ee-must"],
+   "twin_of": null
+  },
+  {
+   "id": "iam-q013",
+   "section": "2-deep.md#a-kms-key-policy-decides-whether-iam-policies-count-for-the-key",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.3",
+   "bullets": ["1.3.S4"],
+   "topics": ["security", "identity"],
+   "services": ["iam", "kms", "s3"],
+   "concept": "kms-key-policy",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company manages its own keys in AWS KMS. An application on Amazon EC2 instances uses an IAM role to read objects from an Amazon S3 bucket in the same account. The objects are encrypted with SSE-KMS and a customer managed key. The role's IAM policy allows s3:GetObject on the bucket and kms:Decrypt on the key. The key policy has one statement, which allows the key administrators' IAM role to use and manage the key. Every read fails with an access denied error. Which solution will fix the reads with the LEAST operational overhead?",
+   "keywords": ["manages its own keys", "The key policy has one statement", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Add a statement to the bucket policy that allows s3:GetObject and kms:Decrypt for the application's IAM role on the bucket and the key.",
+     "correct": false,
+     "why": "When Amazon S3 decrypts the object, [each service checks the permissions of the same IAM principal](../facts/iam.md#iam-forward-access-sessions-check-caller-permissions), so AWS KMS still needs the key policy to allow the role.",
+     "concept": "bucket-policy-for-key",
+     "trap": null,
+     "misconception": "believes a bucket policy can give a role the use of a KMS key",
+     "distractor_type": "sibling-confusion"
+    },
+    {
+     "id": "b",
+     "text": "Attach the AdministratorAccess managed policy to the application's IAM role, so that its identity-based policy allows every AWS KMS action on the key.",
+     "correct": false,
+     "why": "Unless the key policy allows it, [IAM policies cannot allow access to a KMS key](../facts/iam.md#iam-kms-iam-policy-needs-key-policy-permission), so a broader IAM policy changes nothing.",
+     "concept": "broader-iam-policy",
+     "trap": null,
+     "misconception": "In one account, an IAM allow for kms:Decrypt is enough for any KMS key.",
+     "distractor_type": "wrong-configuration"
+    },
+    {
+     "id": "c",
+     "text": "Create a new customer managed key with the default key policy, re-encrypt every object with the new key, and schedule the old key for deletion.",
+     "correct": false,
+     "why": "It works, because [the default key policy enables IAM policies](../facts/iam.md#iam-kms-iam-policy-needs-key-policy-permission), but re-encrypting every object is far more work than one key policy statement.",
+     "concept": "new-key-default-policy",
+     "trap": null,
+     "misconception": "replaces a key to avoid editing its key policy",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "d",
+     "text": "Add a statement to the key policy that allows the application's IAM role to use kms:Decrypt on the key, and keep the IAM policy unchanged.",
+     "correct": true,
+     "why": "The key policy is [the primary way to control access](../facts/iam.md#iam-kms-key-policy-required-primary-control) to a KMS key, and a statement that allows the role gives it kms:Decrypt on the key.",
+     "concept": "key-policy-statement",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    }
+   ],
+   "explanation": "A KMS key works differently from most resources. Unless the key policy explicitly allows it, [IAM policies cannot allow access to a KMS key](../facts/iam.md#iam-kms-iam-policy-needs-key-policy-permission). This key policy names the administrators' role and nothing else, so the kms:Decrypt allow in the application role's policy does not count. One key policy statement for the application role fixes every read.",
+   "takeaway": "For a KMS key, an IAM allow counts when the key policy enables IAM policies or names the role.",
+   "twin": "If the stem said \"the role is in another AWS account\" instead: change the key policy and the role's IAM policy, because for cross-account use [neither policy alone is sufficient](../facts/iam.md#iam-kms-cross-account-key-policy-and-iam-policy).",
+   "say": null,
+   "facts": [
+    "iam-kms-key-policy-required-primary-control",
+    "iam-kms-iam-policy-needs-key-policy-permission",
+    "iam-forward-access-sessions-check-caller-permissions",
+    "iam-kms-cross-account-key-policy-and-iam-policy"
+   ],
+   "sources": [],
+   "exam_english": ["ee-manages-its-own-keys", "ee-least-operational-overhead"],
+   "twin_of": null
+  },
+  {
+   "id": "iam-q014",
+   "section": "2-deep.md#access-analyzer-and-last-accessed-data-find-permissions-to-remove",
+   "pool": "chapter",
+   "layer": "extended",
+   "domain": 1,
+   "task": "1.1",
+   "bullets": ["1.1.K4"],
+   "topics": ["identity", "security"],
+   "services": ["iam", "cloudtrail", "lambda"],
+   "concept": "policy-generation",
+   "difficulty": 2,
+   "type": "single",
+   "select": 1,
+   "qualifier": "LEAST operational overhead",
+   "stem": "A company runs a batch application on AWS Lambda. During testing, a developer attached the AdministratorAccess policy to the function's execution role. The application has now run in production for two months, and an AWS CloudTrail trail records the account's activity. The security team must replace the policy with a policy that follows the principle of least privilege and that matches the actions the function really uses. Which solution will meet these requirements with the LEAST operational overhead?",
+   "keywords": ["the actions the function really uses", "an AWS CloudTrail trail records the account's activity", "LEAST operational overhead"],
+   "options": [
+    {
+     "id": "a",
+     "text": "Download the IAM credential report, find the services that the role used, and write a customer managed policy that allows those services.",
+     "correct": false,
+     "why": "The credential report [lists all users in the account and the status of their credentials](../facts/iam.md#iam-credential-report-contents), not the actions that a role used.",
+     "concept": "credential-report",
+     "trap": null,
+     "misconception": "believes the credential report shows which services a role used",
+     "distractor_type": "different-problem"
+    },
+    {
+     "id": "b",
+     "text": "Read two months of CloudTrail log files by hand, list every action that the role called, and write a customer managed policy from the list.",
+     "correct": false,
+     "why": "It works, but reading two months of logs by hand is far more work than letting Access Analyzer generate the same policy.",
+     "concept": "manual-cloudtrail-review",
+     "trap": null,
+     "misconception": "builds by hand what Access Analyzer generates from the same logs",
+     "distractor_type": "violates-qualifier"
+    },
+    {
+     "id": "c",
+     "text": "Use IAM Access Analyzer to generate a policy from the role's CloudTrail activity, review the generated policy, and attach it in place of AdministratorAccess.",
+     "correct": true,
+     "why": "Access Analyzer can [analyze your CloudTrail logs](../facts/iam.md#iam-access-analyzer-policy-generation-from-cloudtrail) for the role and [generate an IAM policy based on that activity](../facts/iam.md#iam-access-analyzer-policy-generation-from-cloudtrail), which the team reviews before use.",
+     "concept": "access-analyzer-policy-generation",
+     "trap": null,
+     "misconception": null,
+     "distractor_type": null
+    },
+    {
+     "id": "d",
+     "text": "Run the IAM policy simulator for each AWS action against the role, and keep in a new policy the actions that the simulator allows.",
+     "correct": false,
+     "why": "The simulator [does not make an actual AWS service request](../facts/iam.md#iam-policy-simulator-no-real-request), and with AdministratorAccess it reports every action as allowed, not as used.",
+     "concept": "policy-simulator",
+     "trap": null,
+     "misconception": "believes the policy simulator shows which permissions a role used",
+     "distractor_type": "sibling-confusion"
+    }
+   ],
+   "explanation": "The team needs the actions that the function really called, and CloudTrail already holds them. IAM Access Analyzer [generates a fine-grained policy based on the access activity captured in your logs](../facts/iam.md#iam-faq-access-analyzer-policy-generation), and policy generation can analyze [90 days](../facts/iam.md#iam-access-analyzer-policy-generation-time-range) of CloudTrail data, which covers the two months. The team reviews the generated policy and replaces AdministratorAccess with it.",
+   "takeaway": "To cut a broad role down to least privilege, generate a policy from its CloudTrail activity with IAM Access Analyzer.",
+   "twin": "If the stem said \"find the roles in the account that are no longer used\" instead: an unused access analyzer, because it reports [unused roles, unused access keys and unused passwords](../facts/iam.md#iam-access-analyzer-unused-access-findings).",
+   "say": "I'd let IAM Access Analyzer generate the policy from CloudTrail, then review it.",
+   "facts": [
+    "iam-access-analyzer-policy-generation-from-cloudtrail",
+    "iam-credential-report-contents",
+    "iam-policy-simulator-no-real-request",
+    "iam-faq-access-analyzer-policy-generation",
+    "iam-access-analyzer-policy-generation-time-range",
+    "iam-access-analyzer-unused-access-findings"
+   ],
+   "sources": [],
+   "exam_english": ["ee-least-privilege", "ee-least-operational-overhead", "ee-must"],
+   "twin_of": null
+  }
+]

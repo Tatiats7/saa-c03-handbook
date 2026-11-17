@@ -1,0 +1,103 @@
+{
+ "id": "cloudfront-q012",
+ "section": "2-deep.md#vpc-origins-let-cloudfront-reach-load-balancers-and-instances-in-private-subnets",
+ "pool": "chapter",
+ "layer": "extended",
+ "domain": 3,
+ "task": "3.4",
+ "bullets": [
+  "3.4.K1"
+ ],
+ "topics": [
+  "security"
+ ],
+ "services": [
+  "cloudfront",
+  "elb",
+  "vpc",
+  "lambda"
+ ],
+ "concept": "lock-internet-facing-alb-to-cloudfront",
+ "difficulty": 3,
+ "type": "multi",
+ "select": 2,
+ "qualifier": "LEAST operational overhead",
+ "stem": "A company runs a web application on Amazon EC2 instances behind an internet-facing Application Load Balancer. The load balancer is the origin of an Amazon CloudFront distribution. Attackers now send requests to the DNS name of the load balancer directly, which bypasses the protections at CloudFront. The load balancer must stay internet-facing until a network redesign next quarter. The load balancer must not accept connections from IP addresses outside CloudFront, and only requests that come through the company's own distribution may reach the application. Which combination of steps will meet these requirements with the LEAST operational overhead? (Select TWO.)",
+ "keywords": [
+  "must stay internet-facing",
+  "must not accept connections from IP addresses outside CloudFront",
+  "only requests that come through the company's own distribution",
+  "LEAST operational overhead"
+ ],
+ "options": [
+  {
+   "id": "a",
+   "text": "Configure origin access control on the load balancer origin, so that CloudFront signs each request and the load balancer rejects every request without a signature.",
+   "correct": false,
+   "why": "Origin access control covers Amazon Simple Storage Service ([S3) Origins, AWS Elemental Origins, and Lambda Function URLs](../facts/cloudfront.md#cloudfront-faq-secure-origin-oac-supported-origins), and a load balancer is not one of them.",
+   "concept": "oac-on-load-balancer",
+   "trap": null,
+   "misconception": "origin access control works for any origin type",
+   "distractor_type": "impossible-feature"
+  },
+  {
+   "id": "b",
+   "text": "In the security group of the load balancer, allow inbound HTTPS from the AWS-managed prefix list for CloudFront, and remove the other inbound rules.",
+   "correct": true,
+   "why": "The group then admits only the [AWS-managed prefix list for CloudFront](../facts/elb.md#elb-alb-cloudfront-prefix-list-sg), which [prevents non-CloudFront traffic from reaching your origin](../facts/cloudfront.md#cloudfront-prefix-list-origin-facing-servers).",
+   "concept": "cloudfront-prefix-list",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "c",
+   "text": "Add a deny rule to the network ACL of the load balancer subnets for each IP address that sends requests directly to the load balancer.",
+   "correct": false,
+   "why": "A deny list blocks known addresses, and [you can't reference prefix lists in network ACL rules](../facts/vpc.md#vpc-nacl-no-prefix-lists), so a network ACL cannot admit CloudFront alone.",
+   "concept": "nacl-deny-list",
+   "trap": "edge-protection-trap-nacl-for-many-attack-ips",
+   "misconception": null,
+   "distractor_type": "different-problem"
+  },
+  {
+   "id": "d",
+   "text": "Configure CloudFront to add a secret custom header to origin requests, and add a listener rule that forwards only the requests that carry that header.",
+   "correct": true,
+   "why": "CloudFront can [add a custom HTTP header to requests](../facts/cloudfront.md#cloudfront-alb-restrict-custom-header-and-https), and the listener can [only forward requests that contain the custom HTTP](../facts/cloudfront.md#cloudfront-alb-restrict-custom-header-and-https) header that marks this distribution.",
+   "concept": "secret-origin-header",
+   "trap": null,
+   "misconception": null,
+   "distractor_type": null
+  },
+  {
+   "id": "e",
+   "text": "Run an AWS Lambda function each day that reads the published CloudFront IP ranges and rewrites the inbound rules of the security group of the load balancer.",
+   "correct": false,
+   "why": "It works, but it is code to run and fix, while [the CloudFront managed prefix list contains the IP](../facts/cloudfront.md#cloudfront-prefix-list-origin-facing-servers) ranges already and stays current.",
+   "concept": "ip-range-updater",
+   "trap": "how-the-exam-asks-trap-works-means-correct",
+   "misconception": null,
+   "distractor_type": "violates-qualifier"
+  }
+ ],
+ "explanation": "Two locks work together on an internet-facing origin. The security group allows the [AWS-managed prefix list for CloudFront](../facts/elb.md#elb-alb-cloudfront-prefix-list-sg), and AWS says to [remove any other inbound rules](../facts/elb.md#elb-alb-cloudfront-prefix-list-sg). A secret header that CloudFront adds marks the requests of this distribution.",
+ "takeaway": "Public load balancer behind CloudFront: prefix list in the security group plus a secret header. Private load balancer: VPC origin.",
+ "twin": "If the stem said \"the load balancer can move to private subnets now\" instead: use a VPC origin, because CloudFront works with [internal Application Load Balancers inside private subnets](../facts/cloudfront.md#cloudfront-alb-internal-needs-vpc-origins).",
+ "say": "While the load balancer stays public, I allow only the CloudFront prefix list and check a secret header from CloudFront.",
+ "facts": [
+  "cloudfront-faq-secure-origin-oac-supported-origins",
+  "elb-alb-cloudfront-prefix-list-sg",
+  "cloudfront-prefix-list-origin-facing-servers",
+  "vpc-nacl-no-prefix-lists",
+  "cloudfront-alb-restrict-custom-header-and-https",
+  "cloudfront-alb-internal-needs-vpc-origins"
+ ],
+ "sources": [],
+ "exam_english": [
+  "ee-which-combination",
+  "ee-select-two",
+  "ee-internet-facing"
+ ],
+ "twin_of": null
+}

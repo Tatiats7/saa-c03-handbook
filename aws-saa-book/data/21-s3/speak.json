@@ -1,0 +1,661 @@
+{
+ "v": 1,
+ "chapter": "s3",
+ "items": [
+  {
+   "id": "s3-s01",
+   "kind": "explain",
+   "prompt": "How can a customer upload directly to our bucket if the bucket is private?",
+   "persona": "Ana, CEO of Callvale",
+   "ten_second": "Our application gives the browser a presigned URL, a short-lived link for one recording. The browser uploads straight to the bucket, which stays private.",
+   "sixty_second": [
+    "The short answer is: our application gives the browser a special link, called a presigned URL.",
+    "The browser sends the recording straight to the bucket with it.",
+    "It works like this. Our application signs the link with its own permissions.",
+    "The link is for one recording, and it has an expiry time.",
+    "The customer needs no AWS account and no password of their own.",
+    "S3 checks the expiry when the request arrives, then stores the recording.",
+    "The bucket stays private the whole time.",
+    "The thing to watch is that anyone who holds the link can use it.",
+    "They can use it many times until it expires, so we keep the expiry short.",
+    "In your case, we sign a fresh link for each upload.",
+    "How long does a customer need to upload a long call on a slow connection?"
+   ],
+   "skeleton": [
+    "presigned URL, straight to bucket",
+    "signed with our permissions",
+    "anyone holding it, until expiry",
+    "a fresh link per upload"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "A presigned URL gives time-limited access to an object without changing the bucket policy, and it uses the credentials of the principal who generated it.",
+     "accept": [
+      "the link carries our application's permission",
+      "the bucket policy does not change"
+     ],
+     "facts": [
+      "s3-presigned-url-time-limited-creator-credentials"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "A presigned URL lets someone upload a specific object to the bucket without AWS credentials or permissions of their own.",
+     "accept": [
+      "the customer needs no AWS account",
+      "no AWS credentials for the uploader"
+     ],
+     "facts": [
+      "s3-presigned-url-upload-no-credentials-needed"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "The URL works only if its creator has permission for the operation, because a presigned URL is limited by the permissions of the user who created it.",
+     "accept": [
+      "the signer must be allowed to upload",
+      "the link cannot do more than the signer"
+     ],
+     "facts": [
+      "s3-presigned-url-creator-needs-permission"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Anyone who holds the URL can use it, many times, until it expires, so the expiry should be short.",
+     "accept": [
+      "whoever has the link can use it",
+      "it works until it expires"
+     ],
+     "facts": [
+      "s3-presigned-url-reusable-until-expiry",
+      "s3-presigned-url-creator-needs-permission"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Buckets and the objects in them are private by default and can be accessed only if you explicitly grant access.",
+     "accept": [
+      "the bucket is private by default"
+     ],
+     "facts": [
+      "s3-private-by-default"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "A presigned URL made with temporary credentials expires when those credentials expire, even if the URL was given a later expiration time.",
+     "accept": [
+      "the link dies with the role session"
+     ],
+     "facts": [
+      "s3-presigned-url-expires-with-temporary-credentials"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "the link works only once",
+     "correct": "A presigned URL can be used many times until its expiration date and time.",
+     "fact": "s3-presigned-url-reusable-until-expiry"
+    },
+    {
+     "error": "the customer needs an AWS account to upload",
+     "correct": "A presigned URL lets someone upload a specific object without AWS credentials or permissions of their own.",
+     "fact": "s3-presigned-url-upload-no-credentials-needed"
+    },
+    {
+     "error": "the bucket has to be public for a moment",
+     "correct": "The bucket stays private. A presigned URL gives time-limited access to an object without changing the bucket policy.",
+     "fact": "s3-presigned-url-time-limited-creator-credentials"
+    }
+   ],
+   "terms": [
+    {
+     "say": "presigned URL",
+     "avoid": [
+      "signed link",
+      "temporary link"
+     ]
+    },
+    {
+     "say": "bucket",
+     "avoid": [
+      "S3 drive"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What is the longest expiry we can set on that link?",
+     "answer": "A presigned URL created with the AWS CLI or an SDK can be valid for up to 7 days. If it is signed with temporary role credentials, it stops working when those credentials expire, whichever comes first.",
+     "facts": [
+      "s3-presign-cli-sdk-expiration",
+      "s3-presigned-url-expires-with-temporary-credentials"
+     ]
+    },
+    {
+     "question": "Our web page runs on another domain. Will the browser allow the upload?",
+     "answer": "Only with a CORS configuration on the bucket. A browser normally blocks JavaScript requests to resources in a different domain. A CORS configuration on the bucket explicitly enables those cross-origin requests from your site.",
+     "facts": [
+      "s3-cors-purpose"
+     ]
+    }
+   ],
+   "facts": [
+    "s3-presigned-url-time-limited-creator-credentials",
+    "s3-presigned-url-upload-no-credentials-needed",
+    "s3-presigned-url-creator-needs-permission",
+    "s3-presigned-url-reusable-until-expiry",
+    "s3-presigned-url-expires-with-temporary-credentials",
+    "s3-private-by-default",
+    "s3-cors-purpose",
+    "s3-presign-cli-sdk-expiration"
+   ],
+   "section": "2-deep.md#a-presigned-url-lends-the-permission-of-its-signer-until-the-url-expires",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "s3-s02",
+   "kind": "compare",
+   "prompt": "Should I put my old files in S3 Standard-IA or in Intelligent-Tiering?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Both cut the cost of rarely read data. Data read about once a month fits Standard-IA. If you do not know the pattern, choose Intelligent-Tiering.",
+   "sixty_second": [
+    "Both lower the storage cost of data that you rarely read.",
+    "The difference is who decides: you, or S3.",
+    "It works like this. Standard-IA is cheaper to store, but every read has a retrieval fee.",
+    "It also bills at least thirty days for each object.",
+    "Intelligent-Tiering watches each object and moves it to cheaper tiers when nobody reads it.",
+    "It has no retrieval fee, only a small monitoring charge per object.",
+    "The thing to watch is small objects.",
+    "Objects smaller than one hundred twenty-eight kilobytes stay in the Frequent Access tier.",
+    "And Standard-IA bills them as if they were one hundred twenty-eight kilobytes.",
+    "In your case, check two things: object size, and how often users open old data.",
+    "Do you know which old objects your users open again, and how big they are?"
+   ],
+   "skeleton": [
+    "both cut cost of rare reads",
+    "Standard-IA: retrieval fee, minimum days",
+    "Intelligent-Tiering: moves objects, monitoring fee",
+    "small objects: check the size"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "S3 Intelligent-Tiering is the class for data with unknown, changing or unpredictable access patterns.",
+     "accept": [
+      "Intelligent-Tiering when you do not know the access pattern",
+      "unknown access means Intelligent-Tiering"
+     ],
+     "facts": [
+      "s3-intelligent-tiering-ideal-for-unknown-access"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "Intelligent-Tiering has no retrieval charges, and it charges a small monthly monitoring and automation fee per object.",
+     "accept": [
+      "no retrieval fee in Intelligent-Tiering",
+      "a small fee per object for monitoring"
+     ],
+     "facts": [
+      "s3-faq-it-no-retrieval-fees",
+      "s3-faq-it-monitoring-fee"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "S3 Standard-IA has a per-GB retrieval charge and a minimum storage duration of 30 days.",
+     "accept": [
+      "Standard-IA charges for each read",
+      "Standard-IA bills at least thirty days"
+     ],
+     "facts": [
+      "s3-faq-standard-ia-retrieval-charge",
+      "s3-ia-min-duration-charge"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Objects smaller than 128 KB are not auto-tiered in Intelligent-Tiering, and Standard-IA bills each of them as 128 KB.",
+     "accept": [
+      "small objects do not move tiers",
+      "small objects cost more in Standard-IA"
+     ],
+     "facts": [
+      "s3-int-tiering-small-objects",
+      "s3-ia-min-billable-size"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "S3 Standard-IA suits data kept for at least a month and accessed every month or two.",
+     "accept": [
+      "Standard-IA for data read about monthly"
+     ],
+     "facts": [
+      "s3-faq-standard-vs-ia-access-frequency"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "Intelligent-Tiering moves an object to the Infrequent Access tier after 30 consecutive days without access.",
+     "accept": [
+      "after a month without reads it moves down"
+     ],
+     "facts": [
+      "s3-int-tiering-automatic-tiers"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "Intelligent-Tiering has retrieval fees",
+     "correct": "There are no retrieval charges in S3 Intelligent-Tiering. You pay a small monitoring and automation fee per object instead.",
+     "fact": "s3-faq-it-no-retrieval-fees"
+    },
+    {
+     "error": "Standard-IA is always cheaper for old data",
+     "correct": "Standard-IA adds a per-GB retrieval charge and bills at least 30 days and 128 KB per object, so small or short-lived objects can cost more there.",
+     "fact": "s3-faq-standard-ia-retrieval-charge"
+    }
+   ],
+   "terms": [
+    {
+     "say": "storage class",
+     "avoid": [
+      "storage tier",
+      "S3 tier"
+     ]
+    },
+    {
+     "say": "retrieval fee",
+     "avoid": [
+      "read tax"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "If an object in Intelligent-Tiering is read again, does it stay in the cheaper tier?",
+     "answer": "No. When an object in the Infrequent Access or Archive Instant Access tier is accessed again, S3 moves it back to the Frequent Access tier automatically.",
+     "facts": [
+      "s3-int-tiering-move-back"
+     ]
+    },
+    {
+     "question": "Is there a minimum storage time in Intelligent-Tiering?",
+     "answer": "No. S3 Intelligent-Tiering has no minimum storage duration. S3 Standard-IA and S3 One Zone-IA charge for at least 30 days.",
+     "facts": [
+      "s3-faq-it-no-min-duration",
+      "s3-ia-min-duration-charge"
+     ]
+    }
+   ],
+   "facts": [
+    "s3-intelligent-tiering-ideal-for-unknown-access",
+    "s3-faq-it-no-retrieval-fees",
+    "s3-faq-it-monitoring-fee",
+    "s3-int-tiering-small-objects",
+    "s3-faq-standard-ia-retrieval-charge",
+    "s3-ia-min-duration-charge",
+    "s3-ia-min-billable-size",
+    "s3-faq-standard-vs-ia-access-frequency",
+    "s3-int-tiering-automatic-tiers",
+    "s3-int-tiering-move-back",
+    "s3-faq-it-no-min-duration"
+   ],
+   "section": "2-deep.md#intelligent-tiering-moves-an-unread-object-to-cheaper-tiers-with-no-retrieval-fee",
+   "layer": "core",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 2
+  },
+  {
+   "id": "s3-s03",
+   "kind": "compare",
+   "prompt": "Object Lock governance mode or compliance mode: which one should we turn on for our records?",
+   "persona": "a fintech CTO you advise",
+   "ten_second": "Both stop normal users from deleting a locked version. Compliance mode also stops administrators and the root user, and nobody can shorten it.",
+   "sixty_second": [
+    "Both modes lock a version of an object, so normal users can't delete it.",
+    "The difference is who can still remove the lock.",
+    "It works like this. In governance mode, a user with a special permission can bypass it.",
+    "That user also sends a bypass header with the request.",
+    "In compliance mode, no user can delete the version, not even the root user.",
+    "And nobody can shorten the retention period.",
+    "The thing to watch is that you can't turn Object Lock off later.",
+    "Versioning stays on for that bucket too.",
+    "So test your retention settings in governance mode before you use compliance mode.",
+    "In your case, the regulator decides.",
+    "Does your regulator require that nobody, not even an administrator, can delete a record early?"
+   ],
+   "skeleton": [
+    "both lock a version",
+    "governance: bypass with permission",
+    "compliance: nobody, not even root",
+    "cannot turn it off later"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "In governance mode, users cannot delete a locked version unless they have special permission: s3:BypassGovernanceRetention plus the bypass header.",
+     "accept": [
+      "governance mode can be bypassed with a permission",
+      "privileged users can remove a governance lock"
+     ],
+     "facts": [
+      "s3-object-lock-governance-mode"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "In compliance mode, no user can overwrite or delete a protected version, including the root user, and its retention period cannot be shortened.",
+     "accept": [
+      "compliance mode stops even the root user",
+      "the date cannot be moved earlier"
+     ],
+     "facts": [
+      "s3-object-lock-compliance-mode"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "After Object Lock is enabled on a bucket, you cannot disable Object Lock or Versioning for that bucket.",
+     "accept": [
+      "Object Lock cannot be turned off",
+      "versioning stays on"
+     ],
+     "facts": [
+      "s3-faq-object-lock-cannot-disable"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "AWS says to use compliance mode when no user, including the root user, should ever be able to delete objects during the retention period.",
+     "accept": [
+      "compliance mode when nobody at all can delete",
+      "governance mode when some admins need a way out"
+     ],
+     "facts": [
+      "s3-object-lock-mode-choice"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "Object Lock supports records kept in a non-erasable, non-rewritable format under SEC Rule 17a-4(f), FINRA Rule 4511 or CFTC Regulation 1.31.",
+     "accept": [
+      "it helps with SEC and FINRA record rules"
+     ],
+     "facts": [
+      "s3-faq-object-lock-regulations"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "A legal hold gives the same protection with no expiration date and stays until someone removes it.",
+     "accept": [
+      "a legal hold has no end date"
+     ],
+     "facts": [
+      "s3-object-lock-retention-vs-legal-hold"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "governance mode stops everyone",
+     "correct": "In governance mode, a user with s3:BypassGovernanceRetention who sends the bypass header can delete a locked version or change its lock settings.",
+     "fact": "s3-object-lock-governance-mode"
+    },
+    {
+     "error": "the root user can shorten a compliance retention period",
+     "correct": "In compliance mode, no user can delete the version, including the root user, and its retention period cannot be shortened.",
+     "fact": "s3-object-lock-compliance-mode"
+    }
+   ],
+   "terms": [
+    {
+     "say": "compliance mode",
+     "avoid": [
+      "strict mode"
+     ]
+    },
+    {
+     "say": "retention period",
+     "avoid": [
+      "lock time"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Is there any way to delete a compliance-mode record before its date?",
+     "answer": "Only one: delete the AWS account that owns it. No user, including the root user, can delete or overwrite the version, and its retention period cannot be shortened. You can extend the retention period.",
+     "facts": [
+      "s3-object-lock-compliance-mode",
+      "s3-object-lock-retention-extend-only"
+     ]
+    },
+    {
+     "question": "What if a lawsuit needs a record kept after its retention date?",
+     "answer": "Add a legal hold. It gives the same protection with no expiration date and stays until an authorized user removes it. It is independent of the retention period, so it keeps protecting the version after that period ends.",
+     "facts": [
+      "s3-object-lock-retention-vs-legal-hold",
+      "s3-object-lock-legal-hold-independent"
+     ]
+    }
+   ],
+   "facts": [
+    "s3-object-lock-governance-mode",
+    "s3-object-lock-compliance-mode",
+    "s3-object-lock-mode-choice",
+    "s3-object-lock-retention-vs-legal-hold",
+    "s3-faq-object-lock-cannot-disable",
+    "s3-object-lock-requires-versioning",
+    "s3-faq-object-lock-regulations",
+    "s3-object-lock-retention-extend-only",
+    "s3-object-lock-legal-hold-independent"
+   ],
+   "section": "2-deep.md#object-lock-compliance-mode-stops-every-user-from-deleting-a-version-until-its-date",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "s3-s04",
+   "kind": "decide",
+   "prompt": "S3 already has eleven nines of durability. Why should we pay for versioning or backups?",
+   "persona": "Ben, CTO of Callvale",
+   "ten_second": "Durability means S3 won't lose your data. It doesn't protect you from your own deletes. Versioning keeps old versions, so you can restore them.",
+   "sixty_second": [
+    "The short answer is: durability doesn't protect you from your own delete commands.",
+    "It works like this. Eleven nines means S3 is designed not to lose your data.",
+    "But when someone deletes an object, S3 deletes it right away.",
+    "AWS can't get it back for you.",
+    "With versioning on, a delete only adds a delete marker.",
+    "The old version stays, and you can restore it.",
+    "The thing to watch is cost: every old version is billed like a normal object.",
+    "So add a lifecycle rule that removes old versions after some days.",
+    "In your case, versioning is also what AWS Backup needs before it backs up a bucket.",
+    "If someone deleted a customer's recordings this morning, how would you get them back?"
+   ],
+   "skeleton": [
+    "durability is not delete protection",
+    "a delete is immediate",
+    "versioning adds a delete marker",
+    "old versions cost: lifecycle rule"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "S3 is designed for 11 nines of durability, but durability does not protect against accidental or malicious deletes.",
+     "accept": [
+      "durability is not protection from deletes",
+      "eleven nines does not stop a delete"
+     ],
+     "facts": [
+      "s3-faq-durability-11-nines",
+      "s3-faq-durability-not-delete-protection"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "When you tell S3 to delete data, it is deleted immediately and cannot be recovered by AWS.",
+     "accept": [
+      "AWS cannot bring a deleted object back",
+      "the delete happens at once"
+     ],
+     "facts": [
+      "s3-faq-delete-is-immediate"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "In a versioned bucket, a delete without a version ID adds a delete marker, and the earlier version is not permanently deleted.",
+     "accept": [
+      "a delete only adds a marker",
+      "the old version stays"
+     ],
+     "facts": [
+      "s3-delete-marker-soft-delete"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Normal S3 rates apply to every version of an object that is stored, so old versions keep costing money until they are deleted.",
+     "accept": [
+      "every version is billed",
+      "old versions cost storage"
+     ],
+     "facts": [
+      "s3-versioning-every-version-billed"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "A lifecycle rule with NoncurrentVersionExpiration permanently deletes noncurrent versions a number of days after they become noncurrent.",
+     "accept": [
+      "a lifecycle rule removes old versions"
+     ],
+     "facts": [
+      "s3-lifecycle-noncurrent-version-expiration"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "S3 Versioning must be turned on before AWS Backup can back up a bucket.",
+     "accept": [
+      "AWS Backup needs versioning"
+     ],
+     "facts": [
+      "s3-aws-backup-requires-versioning"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "AWS can restore a deleted object for us",
+     "correct": "When you tell S3 to delete data, it is deleted immediately and cannot be recovered by AWS. Versioning or a backup is how you get it back.",
+     "fact": "s3-faq-delete-is-immediate"
+    },
+    {
+     "error": "versioning stops all deletes",
+     "correct": "A DELETE that names a version ID permanently deletes that version, and S3 adds no delete marker.",
+     "fact": "s3-versioning-delete-with-version-id-permanent"
+    }
+   ],
+   "terms": [
+    {
+     "say": "versioning",
+     "avoid": [
+      "version control"
+     ]
+    },
+    {
+     "say": "durability",
+     "avoid": [
+      "data safety"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can we stop someone from deleting old versions on purpose?",
+     "answer": "Yes. For records that no user can delete before a date, use S3 Object Lock in compliance mode. MFA delete also asks for a second factor, but only the root user can turn it on, and you cannot use it with lifecycle rules, so it does not fit next to the rule I just suggested.",
+     "facts": [
+      "s3-object-lock-compliance-mode",
+      "s3-mfa-delete-root-only-cli-api",
+      "s3-mfa-delete-not-with-lifecycle"
+     ]
+    },
+    {
+     "question": "Will versioning double our storage bill?",
+     "answer": "It grows only when you overwrite or delete objects, because the old versions stay. Normal S3 rates apply to every stored version. A lifecycle rule can permanently delete noncurrent versions a set number of days after they become noncurrent.",
+     "facts": [
+      "s3-versioning-new-version-only-on-put",
+      "s3-versioning-every-version-billed",
+      "s3-lifecycle-noncurrent-version-expiration"
+     ]
+    }
+   ],
+   "facts": [
+    "s3-faq-durability-11-nines",
+    "s3-faq-durability-not-delete-protection",
+    "s3-faq-delete-is-immediate",
+    "s3-delete-marker-soft-delete",
+    "s3-versioning-every-version-billed",
+    "s3-lifecycle-noncurrent-version-expiration",
+    "s3-aws-backup-requires-versioning",
+    "s3-versioning-delete-with-version-id-permanent",
+    "s3-object-lock-compliance-mode",
+    "s3-versioning-new-version-only-on-put",
+    "s3-mfa-delete-root-only-cli-api",
+    "s3-mfa-delete-not-with-lifecycle"
+   ],
+   "section": "2-deep.md#versioning-turns-a-delete-into-a-delete-marker-and-keeps-every-version",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "chapter": "s3",
+   "status": "ready",
+   "rev": 2
+  }
+ ]
+}

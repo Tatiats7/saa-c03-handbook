@@ -1,0 +1,43 @@
+{
+  "id": "pilot-web-three-tier",
+  "kind": "arch",
+  "size": "s",
+  "title": "A three-tier web application behind Amazon CloudFront",
+  "claim": "Each request enters the VPC through the load balancer, and the instances and the database stay in private subnets.",
+  "alt": "Users send requests to Amazon CloudFront. Amazon CloudFront forwards each request to an Application Load Balancer in the public subnets of a VPC. The load balancer forwards the request to one of two EC2 instances in an Auto Scaling group in private subnets. The instances use a primary DB instance in other private subnets. The primary DB instance replicates to a standby DB instance in a Multi-AZ deployment.",
+  "notes": "Pilot diagram. QA on 2026-10-04: 2 rounds, lint clean. No ports or limits are drawn, because the fact canon is still empty. Known limits: tiers are rows and no Availability Zone box is drawn, because groups cannot cross; the arrows from the load balancer enter the instances from the side, because a top entry runs through the group labels; the highlight ring on the load balancer was removed in round 2, because arrowheads overlap the ring.",
+  "cols": 2,
+  "rows": 5,
+  "flow": "down",
+  "groups": [
+    {"id": "vpc", "type": "vpc", "label": "VPC", "cells": "A3:B5"},
+    {"id": "web", "type": "subnet-public", "label": "Public subnets", "in": "vpc", "cells": "A3:B3"},
+    {"id": "app", "type": "subnet-private", "label": "Private subnets: app tier", "in": "vpc", "cells": "A4:B4"},
+    {"id": "asg", "type": "auto-scaling-group", "label": "Auto Scaling group", "in": "app", "cells": "A4:B4"},
+    {"id": "data", "type": "subnet-private", "label": "Private subnets: data tier", "in": "vpc", "cells": "A5:B5"},
+    {"id": "maz", "type": "generic", "label": "Multi-AZ deployment", "in": "data", "cells": "A5:B5"}
+  ],
+  "nodes": [
+    {"id": "users", "icon": "users", "label": "Users", "at": "A1:B1"},
+    {"id": "cf", "icon": "cloudfront", "label": "Amazon CloudFront", "at": "A2:B2"},
+    {"id": "alb", "icon": "alb", "label": "Application Load Balancer", "at": "A3:B3", "emph": true},
+    {"id": "app1", "icon": "instance", "label": "EC2 instance", "at": "A4"},
+    {"id": "app2", "icon": "instance", "label": "EC2 instance", "at": "B4"},
+    {"id": "db1", "icon": "db-instance", "label": "Primary DB\ninstance", "at": "A5"},
+    {"id": "db2", "icon": "db-instance-standby", "label": "Standby DB\ninstance", "at": "B5"}
+  ],
+  "edges": [
+    {"from": "users", "to": "cf", "label": "HTTPS", "step": 1,
+     "say": "A user sends an HTTPS request to Amazon CloudFront."},
+    {"from": "cf", "to": "alb", "step": 2, "emph": true,
+     "say": "Amazon CloudFront forwards the request to its origin, the Application Load Balancer."},
+    {"from": "alb", "to": "app1", "step": 3,
+     "say": "The load balancer forwards the request to a healthy instance in the Auto Scaling group."},
+    {"from": "alb", "to": "app2", "step": 3},
+    {"from": "app1", "to": "db1", "label": "SQL", "step": 4,
+     "say": "The instance reads and writes data on the primary DB instance."},
+    {"from": "app2", "to": "db1", "step": 4},
+    {"from": "db1", "to": "db2", "label": "replication", "step": 5, "dashed": true,
+     "say": "Amazon RDS copies the data to the standby DB instance of the Multi-AZ deployment."}
+  ]
+}

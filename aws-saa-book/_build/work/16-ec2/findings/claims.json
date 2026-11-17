@@ -1,0 +1,249 @@
+{
+ "lens": "claims",
+ "chapter": "16",
+ "findings": [
+  {
+   "id": "claims-01",
+   "file": "16-ec2/2-deep.md",
+   "section": "a-placement-group-decides-whether-instances-sit-close-together-or-apart (Stop and answer)",
+   "quote": "A team needs 12 critical instances in one Availability Zone, each on different hardware. A launch into one spread placement group fails. What fixes it? ... AWS recommends that you [use multiple spread placement groups]",
+   "type": "technical: condition dropped from a fact; answer does not meet the stated requirement",
+   "severity": "blocking",
+   "evidence": "Fact ec2-placement-spread-more-than-7-use-multiple-groups, quote from placement-strategies: \"Using multiple spread placement groups does not guarantee that instances are spread across groups, but it does ensure they are spread within each group\". The stem requires each of the 12 instances on different hardware; multiple groups do not guarantee that, so the answer as written teaches a false guarantee. Fix: say that multiple groups spread the instances within each group only, and that no placement group guarantees 12 instances on 12 distinct racks in one zone (or change the stem to 'no more than seven share a failure').",
+   "status": "fixed",
+   "resolution": "2-deep.md Stop and answer: the stem now asks to limit how many of 12 instances fail together, and the answer adds that multiple spread groups spread instances within each group, but two groups can share hardware (fact ec2-placement-spread-more-than-7-use-multiple-groups)."
+  },
+  {
+   "id": "claims-02",
+   "file": "16-ec2/2-deep.md",
+   "section": "a-role-gives-the-instance-credentials-and-session-manager-needs-no-open-port (step 3)",
+   "quote": "Without VPC endpoints, it must allow [HTTPS (port 443) outbound traffic](../facts/ec2.md#ec2-ssm-agent-outbound-https-443-no-inbound) to the Systems Manager endpoints.",
+   "type": "claims: condition dropped from the linked fact (network path)",
+   "severity": "should",
+   "evidence": "Fact ec2-ssm-agent-outbound-https-443-no-inbound, quote: \"The alternative to using a VPC endpoint is to allow outbound internet access on your managed instances. In this case, the managed instances must also allow HTTPS (port 443) outbound traffic\". The sentence keeps the port and drops the precondition 'outbound internet access' (a NAT gateway or a public address). A private instance with no NAT and no endpoints fails Session Manager even with the role and port 443 open; the reader is told to close SSH in the same section. Fact request fr-0061 is still open for exactly this. Fix: 'The instance needs a path to Systems Manager: VPC endpoints, or outbound internet access with HTTPS (port 443) outbound.'",
+   "status": "fixed",
+   "resolution": "Step 3 now says the instance needs a path out: VPC endpoints, or outbound internet access with HTTPS (port 443) outbound traffic (fact ec2-ssm-agent-outbound-https-443-no-inbound, whose claim carries the outbound internet access condition)."
+  },
+  {
+   "id": "claims-03",
+   "file": "16-ec2/2-deep.md",
+   "section": "a-role-gives-the-instance-credentials-and-session-manager-needs-no-open-port (Stop and answer)",
+   "quote": "Session Manager reaches instance A but not instance B. Neither security group has an inbound rule, and B has no instance profile. Why does B fail? ... Session Manager needs a role with AmazonSSMManagedInstanceCore.",
+   "type": "technical: oversimplified absolute (Default Host Management Configuration)",
+   "severity": "should",
+   "evidence": "source full:amazoncloudwatch-monitoring line 105024: \"Default Host Management Configuration (DHMC) is a Systems Manager feature that automatically grants Amazon EC2 instances permissions to connect to Systems Manager without requiring you to manually attach an IAM instance profile to each instance.\" Also full:inspector-user line 539 (\"without the use of IAM instance profiles, by using SSM Default Host Management Configuration\"). An instance with no instance profile can still be managed when DHMC is on, so 'no profile' is not proof of failure. Fix: add 'and the account has not turned on Default Host Management Configuration' to the stem, or soften the answer. The same absolute is in data/16-ec2/speak.json ec2-s03 ('Without it, Session Manager can't connect to the instance').",
+   "status": "fixed",
+   "resolution": "The stem now adds that the account gives instances no other Systems Manager permissions, so the answer holds also where Default Host Management Configuration exists (no verified fact for DHMC in the canon, so the book does not name it)."
+  },
+  {
+   "id": "claims-04",
+   "file": "data/16-ec2/speak.json (ec2-s03; renders into 16-ec2/4-say.md)",
+   "section": "ec2-s03 sixty_second",
+   "quote": "So you can delete the SSH rule from the security group. The thing to watch is the role. Without it, Session Manager can't connect to the instance.",
+   "type": "technical: unsafe advice without its precondition; absolute not supported",
+   "severity": "should",
+   "evidence": "Fact ec2-ssm-agent-outbound-https-443-no-inbound (\"The alternative to using a VPC endpoint is to allow outbound internet access on your managed instances\"): the answer tells a CTO to delete the SSH rule but never says that the instance needs a network path to Systems Manager (VPC endpoints or outbound internet access); a production instance in a private subnet without NAT would be locked out. The say stage note itself records 's03 does not describe the agent's network path (fr-0061 open)'. 'can't connect' without the role ignores DHMC (source full:amazoncloudwatch-monitoring line 105024, see claims-03). Fix: add one line on the network path and replace 'can't connect' with 'usually can't connect'.",
+   "status": "fixed",
+   "resolution": "ec2-s03 (speak add --replace): new line on the outbound path (VPC endpoints or outbound internet access over HTTPS), new must point kp6 with fact ec2-ssm-agent-outbound-https-443-no-inbound, and 'usually can't connect' replaces 'can't connect'. Speak lint clean."
+  },
+  {
+   "id": "claims-05",
+   "file": "16-ec2/2-deep.md",
+   "section": "a-role-gives-the-instance-credentials-and-session-manager-needs-no-open-port (Go deeper: IMDSv2 and the hop limit)",
+   "quote": "By default, an instance accepts [either IMDSv1 or IMDSv2, or both]... The IMDSv2 token has a [hop limit of 1] by default",
+   "type": "claims: scope of the fact dropped; contradicts the chapter's own task",
+   "severity": "should",
+   "evidence": "Fact ec2-imds-default-v1-or-v2 has scope 'when no launch, account or AMI setting requires IMDSv2'. Source docs/AWSEC2/latest/UserGuide/configuring-instance-metadata-options lines 32: \"You can set the imds-support parameter to v2.0 when you register or modify an AMI. When an instance is launched with this AMI, the instance metadata version is automatically set to IMDSv2 and the hop limit is set to 2.\" and full:awsec2-userguide line 42016: \"If you opt not to manually specify the value, it will be determined by a combination of default settings.\" Task ec2-t01 step 4 teaches account-level defaults, so the prose and the task disagree. Fix: 'Unless the account or the AMI sets IMDSv2, an instance accepts either...' and 'a hop limit of 1 unless the AMI sets 2'.",
+   "status": "fixed",
+   "resolution": "Go deeper now opens with the scope: 'When no account or AMI setting asks for IMDSv2, an instance accepts either IMDSv1 or IMDSv2, or both'; the hop limit of 1 is stated for that case. The account and AMI defaults were cut again for the file word limit (L201)."
+  },
+  {
+   "id": "claims-06",
+   "file": "16-ec2/2-deep.md",
+   "section": "on-demand-bills-each-second-and-a-commitment-lowers-the-price-of-steady-use (step 1); also 1-fast.md choose-it-or-not table, 2-deep.md numbers-that-decide-answers A-list, hero diagram step 6",
+   "quote": "**On-Demand Instances** bill each second with a [60-second minimum]",
+   "type": "technical: scope missing (operating system)",
+   "severity": "should",
+   "evidence": "source full:awsec2-userguide line 20149: \"Per-second billing is available for instances using an open-source Linux distribution, such as Amazon Linux and Ubuntu. Per-hour billing is used for commercial Linux distributions, such as Red Hat Enterprise Linux and SUSE Linux Enterprise Server.\" The chapter states per-second billing for every On-Demand Instance in four places (fast table 'billed per second with a 60-second minimum', deep step 1, A-list 'Per-second billing fits short jobs', ec2-hero step 'Billing runs for the seconds'). Fix: add 'for most operating systems, such as Amazon Linux, Ubuntu and Windows' once in deep step 1 and soften the others, or file a fact for the per-hour exception.",
+   "status": "fixed",
+   "resolution": "2-deep.md step 1 now scopes per-second billing to common operating systems such as Amazon Linux, Ubuntu and Windows (the scope of verified fact ec2-per-second-billing-all-purchase-options). The fast table, A-list and hero step keep the general rule; the per-hour exception has no verified fact (the pricing-page scope of the fact disagrees with the User Guide line), so no exception is taught."
+  },
+  {
+   "id": "claims-07",
+   "file": "16-ec2/2-deep.md",
+   "section": "spot-instances-use-spare-capacity-that-ec2-can-take-back-with-two-minutes-notice (Exam trap)",
+   "quote": "Many think that a higher maximum price protects a Spot Instance. Instances with a maximum price are [interrupted more frequently]",
+   "type": "technical: the truth does not answer the belief; main interruption cause missing",
+   "severity": "should",
+   "evidence": "source docs/AWSEC2/latest/UserGuide/spot-interruptions lines 11-16: \"Capacity: Amazon EC2 can interrupt your Spot Instance when it needs it back. EC2 reclaims your instance mainly to repurpose capacity\" and \"Price: The Spot price is higher than your maximum price.\" The trap compares 'a maximum price' with 'no maximum price'; it does not say why a higher price does not help. A reader can conclude that raising the price causes more interruptions. Fix: 'EC2 reclaims Spot capacity mainly when it needs it back, whatever you pay; a maximum price can only add interruptions, so leave it empty.' The same reasoning is in data/16-ec2/questions.json ec2-q018 why-not for the maximum-price option.",
+   "status": "fixed",
+   "resolution": "Exam trap now says that Amazon EC2 can interrupt your Spot Instance when it needs it back (fact ec2-spot-interruption-reasons), and that a maximum price adds interruptions; the 'Why so cheap?' line uses the same fact. ec2-q018 option b why already says a higher price does not protect them."
+  },
+  {
+   "id": "claims-08",
+   "file": "16-ec2/2-deep.md",
+   "section": "stop-reboot-and-terminate-keep-different-parts-of-an-instance (step 2); faq-quick-fire FAQ 9",
+   "quote": "A [stopped] instance has no usage charge, but [charges are incurred for the storage] of its EBS volumes. / FAQ 9: Not for usage, but charges are incurred for the storage of its EBS volumes.",
+   "type": "technical: incomplete cost answer that contradicts the chapter's own Changed recently note",
+   "severity": "should",
+   "evidence": "Fact ec2-eip-charged-in-use-and-idle: \"There is a charge for all Elastic IP addresses whether they are in use (allocated to a resource, like an EC2 instance) or idle\"; fact ec2-state-stopped-not-billed has scope 'EBS volumes and Elastic IP addresses are still charged'; fact ec2-hibernate-no-instance-fee-ebs-rates claim names Elastic IP charges. The answer to 'Do you pay for a stopped instance?' lists only EBS storage, while 1-fast.md says 'AWS charges for all public IPv4 addresses, in use or idle'. Fix: add 'and any Elastic IP address it keeps' to both places.",
+   "status": "fixed",
+   "resolution": "2-deep.md step 2 now adds 'There is also a charge for all Elastic IP addresses that it keeps' (fact ec2-eip-charged-in-use-and-idle). FAQ 9 keeps its answer to the AWS FAQ quote, which names EBS storage only."
+  },
+  {
+   "id": "claims-09",
+   "file": "16-ec2/2-deep.md",
+   "section": "recovery-and-a-moved-network-interface-keep-an-instances-addresses-after-a-failure (step 2)",
+   "quote": "**Recover in place.** [Simplified automatic recovery is enabled during instance launch]. It keeps the instance [including the instance ID]",
+   "type": "claims: scope of the fact dropped (supported instance types)",
+   "severity": "should",
+   "evidence": "Fact ec2-recovery-simplified-enabled-by-default has scope 'supported instances only'. source full:awsec2-userguide line 33800: \"This setting is enabled by default at launch for supported instance types.\" Also it must be 'configured in advance on an instance before a system status check fails' (same fact). As written, every instance recovers on its own. Fix: 'on supported instance types, simplified automatic recovery is enabled at launch'.",
+   "status": "fixed",
+   "resolution": "Step 2 now reads 'On supported instance types, simplified automatic recovery is enabled during instance launch'."
+  },
+  {
+   "id": "claims-10",
+   "file": "data/16-ec2/questions.json (ec2-q020; renders into 16-ec2/5-quiz.md Question 14)",
+   "section": "ec2-q020 why",
+   "quote": "The recover action is [suited for System Health Check failures], and a recovered instance keeps its private IP addresses, Elastic IP addresses and instance ID.",
+   "type": "technical: explanation ignores the default the chapter teaches",
+   "severity": "should",
+   "evidence": "2-deep.md step 2 of the recovery section says simplified automatic recovery is enabled at launch (fact ec2-recovery-simplified-enabled-by-default). A reader will ask why a CloudWatch alarm is the LEAST-overhead answer when recovery is already on. source docs/AWSEC2/latest/UserGuide/cloudwatch-recovery line 15: CloudWatch action based recovery \"provides to-the-minute recovery response time granularity and Amazon Simple Notification Service (Amazon SNS) notifications ... compared to simplified automatic recovery.\" Fix: one sentence in the why, or a stem phrase that rules the default out (for example 'the team must be notified of each recovery').",
+   "status": "fixed",
+   "resolution": "ec2-q020 explanation gained one sentence (explanation only; stem, options and key unchanged, so the blind result stands): on supported types simplified automatic recovery is on at launch, and of these options the alarm is the recovery you configure and control. Fact ec2-recovery-simplified-enabled-by-default added to the question's facts."
+  },
+  {
+   "id": "claims-11",
+   "file": "16-ec2/2-deep.md",
+   "section": "only-a-reservation-holds-capacity-and-a-dedicated-host-holds-a-whole-server (Exam signal); also 1-fast.md signals-and-traps row 7",
+   "quote": "\"GPU capacity on future dates\" points to Capacity Blocks. / GPUs for machine learning on future dates: Capacity Blocks",
+   "type": "claims: claim without a fact link in a strict section",
+   "severity": "should",
+   "evidence": "Exam signal is strict after its quoted phrase (RULINGS 2026-10-09, CONVENTIONS-2 decision 33). A verified fact exists: ec2-faq-capacity-blocks-vs-capacity-reservations, quote \"Capacity Blocks provide scheduled, future-dated GPU capacity specifically for ML workloads\". Fix: link the phrase to that fact in both places.",
+   "status": "fixed",
+   "resolution": "2-deep.md Exam signal now links Capacity Blocks to fact ec2-faq-capacity-blocks-vs-capacity-reservations. The 1-fast.md 'But not if' cell is an exempt example column (TOOLS-rules R2, column 3) and stays short."
+  },
+  {
+   "id": "claims-12",
+   "file": "16-ec2/2-deep.md",
+   "section": "a-burstable-instance-earns-cpu-credits-while-idle-and-spends-them-in-peaks (step 2); numbers-that-decide-answers B-list",
+   "quote": "One credit is [a full CPU core for one minute]",
+   "type": "technical: unit conflicts with the User Guide (vCPU, not core)",
+   "severity": "should",
+   "evidence": "The linked fact quotes the FAQ (\"A CPU Credit provides the performance of a full CPU core for one minute\"), but the User Guide says otherwise: full:awsec2-userguide line 13180 / 100585: \"One CPU credit equals one vCPU running at 100% utilization for one minute or an equivalent combination of vCPUs, utilization, and time\". On most types a vCPU is one thread of a core, so 'core' overstates a credit and conflicts with the vCPU-hour wording of the unlimited-mode trap in the same section. Fix: file a fact from the User Guide sentence and use 'one vCPU at 100% for one minute'.",
+   "status": "rejected",
+   "resolution": "The linked fact ec2-burstable-cpu-credit-one-core-one-minute is a verified verbatim quote of the EC2 FAQ, so the sentence is grounded; the User Guide vCPU wording is not in the canon and cannot be verified in the fix stage. The B-list row was removed (word budget), the step 2 sentence stays. Logged for W14: file a fact from the User Guide sentence and prefer it."
+  },
+  {
+   "id": "claims-13",
+   "file": "data/16-ec2/tasks.json (ec2-t02; renders into 16-ec2/3-do.md)",
+   "section": "ec2-t02 verify",
+   "quote": "aws ec2 describe-instances --filters Name=tag:task,Values=ec2-t02 Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped ... expect: An empty list.",
+   "type": "technical: verify step does not prove the billed resource was removed",
+   "severity": "should",
+   "evidence": "The task allocates an Elastic IP address, which keeps billing after the instance is gone: fact ec2-eip-charged-in-use-and-idle (\"There is a charge for all Elastic IP addresses whether they are in use ... or idle\"); its own still_costs line names it. The verify checks only instances, so it passes while the address is still allocated (for example when release-address failed or ALLOC_ID was lost with the CloudShell session). Fix: add aws ec2 describe-addresses --filters Name=tag:task,Values=ec2-t02 --query \"Addresses[].AllocationId\" with expect 'an empty list' to the verify step.",
+   "status": "fixed",
+   "resolution": "ec2-t02 verify expect now tells the reader to run the describe-addresses command of 'Still costs money if left' and expect an empty list. The verify command is unchanged, so the CLI report (T113) stays valid."
+  },
+  {
+   "id": "claims-14",
+   "file": "data/16-ec2/tasks.json (ec2-t03; renders into 16-ec2/3-do.md)",
+   "section": "ec2-t03 step 6 expect",
+   "quote": "B is not hibernated. AWS returns an error, or B starts a normal stop that clears its memory. Step 8 shows the result.",
+   "type": "technical: hedged expectation that cannot fail; documented result is an error",
+   "severity": "should",
+   "evidence": "source docs/AWSEC2/latest/APIReference/errors-overview line 418: \"UnsupportedHibernationConfiguration | ... Alternatively, the instance could not be hibernated because it is not enabled for hibernation.\" The documented response for B is an error, not a normal stop; the 'or a normal stop' branch is unsupported and makes the break-it step impossible to fail. Fix: 'AWS returns the error UnsupportedHibernationConfiguration, and B keeps running.' Then step 8 expects B running.",
+   "status": "fixed",
+   "resolution": "ec2-t03 step 6 expect: 'An error: UnsupportedHibernationConfiguration. B is not hibernated, and it keeps running.' (corpus: APIReference errors-overview line 418); step 8 expects B running."
+  },
+  {
+   "id": "claims-15",
+   "file": "data/16-ec2/questions.json (ec2-q009; renders into 16-ec2/5-quiz.md Question 10)",
+   "section": "ec2-q009 twin",
+   "quote": "If the stem said \"capacity for all 8 instances is always available in that Availability Zone\" instead: an On-Demand Capacity Reservation",
+   "type": "technical: twin answer drops the discount that still applies",
+   "severity": "note",
+   "evidence": "Fact ec2-capacity-reservation-discount-from-sp-or-regional-ri: \"Billing discounts for Savings Plans and Regional Reserved Instances apply to Capacity Reservations.\" For steady use that also needs held capacity, the MOST cost-effective answer is the reservation plus the Savings Plan, as 2-deep.md's own Stop and answer on Capacity Reservations says. Fix: 'an On-Demand Capacity Reservation, with the Savings Plan still applied to it'.",
+   "status": "fixed",
+   "resolution": "ec2-q009 twin (explanation field only): 'must always be available ... add a Capacity Reservation, and keep the plan, because Savings Plans and Regional Reserved Instances apply to it' (fact ec2-capacity-reservation-discount-from-sp-or-regional-ri added to facts)."
+  },
+  {
+   "id": "claims-16",
+   "file": "16-ec2/2-deep.md",
+   "section": "hibernation-saves-the-memory-to-an-encrypted-ebs-root-volume (Stop and answer)",
+   "quote": "A Linux instance has 192 GiB of RAM, an encrypted root volume, and hibernation turned on at launch. Will hibernation work?",
+   "type": "technical: stem premise is not possible",
+   "severity": "note",
+   "evidence": "source docs/AWSEC2/latest/APIReference/errors-overview line 418: UnsupportedHibernationConfiguration: \"The instance could not be launched because one or more parameter values do not meet the prerequisites for enabling hibernation.\" With RAM above the limit of fact ec2-hibernate-ram-limits-linux-windows (150 GiB), the launch with hibernation is rejected, so 'turned on at launch' does not happen. Fix: 'A team wants to launch a Linux instance with 192 GiB of RAM and hibernation turned on. Can it?' with the answer 'No'.",
+   "status": "fixed",
+   "resolution": "Stem rewritten: 'A team wants to launch a Linux instance with 192 GiB of RAM, an encrypted root volume and hibernation turned on. Can the instance hibernate?'"
+  },
+  {
+   "id": "claims-17",
+   "file": "16-ec2/1-fast.md",
+   "section": "words-that-go-together",
+   "quote": "instance | ... | a server, which is a machine on premises / ephemeral | ... | Temporary: the data disappears when its host stops / Availability Zone | ... | One or more data centers in a Region that fail independently",
+   "type": "claims: plain meanings that conflict with the chapter or say more than a fact",
+   "severity": "note",
+   "evidence": "The chapter's first fact defines an instance as 'a virtual server in the AWS Cloud' (ec2-instance-virtual-server-type-sets-hardware), so 'do not confuse with a server' contradicts it. Instance store data is lost when the instance is 'stopped, hibernated, or terminated' (fact instance-store-data-persists-reboot-not-stop), not when 'its host stops'. 'fail independently' has no link; fact ec2-faq-az-isolation gives 'physically distinct, independent infrastructure'. Fix: 'an on-premises server'; 'when the instance stops or terminates'; 'isolated from failures in other zones'.",
+   "status": "fixed",
+   "resolution": "Words table: instance = 'A virtual server that you run in Amazon EC2', do not confuse with 'an AMI: the image that an instance starts from'; ephemeral = 'the data is lost when the instance stops or ends'; Availability Zone = 'One or more separate data centers in a Region'."
+  },
+  {
+   "id": "claims-18",
+   "file": "16-ec2/1-fast.md",
+   "section": "look-first",
+   "quote": "Open AWS CloudShell and read two instance types",
+   "type": "claims: prose does not match its task",
+   "severity": "note",
+   "evidence": "data/16-ec2/tasks.json ec2-t01 title 'Read the processor of three instance types' and step 1 reads t3.micro, t4g.micro and r6g.large, then also lists bare metal types and two AMI parameters. Fix: 'read three instance types and the two Amazon Linux AMIs'.",
+   "status": "fixed",
+   "resolution": "Look first now names three instance types, two Amazon Linux AMI IDs, a few bare metal types and the metadata defaults."
+  },
+  {
+   "id": "claims-19",
+   "file": "16-ec2/2-deep.md",
+   "section": "the-instance-family-matches-the-resource-that-limits-your-workload (Go deeper)",
+   "quote": "AWS suggests that you [evaluate Bare Metal instances] when you [require access to hardware virtualization extensions].",
+   "type": "claims: possibly stale FAQ advice next to a newer change",
+   "severity": "note",
+   "evidence": "Fact ec2-change-nested-virtualization-2026-02: \"You can run hypervisors, such as Hyper-V and KVM, inside virtualized Amazon EC2 instances. | February 16, 2026\". The sentence presents the FAQ advice as current and only points to Changed recently. Fix: 'Before February 2026, a hypervisor needed a bare metal instance; now supported virtual types can run one too.'",
+   "status": "fixed",
+   "resolution": "Go deeper now adds that from 2026-02-16 supported virtual types can also run a hypervisor (fact ec2-change-nested-virtualization-2026-02), after the FAQ advice."
+  },
+  {
+   "id": "claims-20",
+   "file": "16-ec2/1-fast.md",
+   "section": "changed-recently; also 2-deep.md numbers-that-decide-answers",
+   "quote": "<!-- needs-fact: Set changed.date 2022-11-10 ... --> / <!-- needs-fact: Set changed.date 2026-08-10 ... -->",
+   "type": "rule: open writer markers left in the hand files",
+   "severity": "note",
+   "evidence": "Lint W307 lists both needs-fact markers. Either the facts ec2-change-price-capacity-optimized-2022-11 and ec2-change-application-status-checks-2026-08 get their changed fields and the entries are written, or the markers are removed before finalize.",
+   "status": "fixed",
+   "resolution": "Both needs-fact markers removed. fr-0058 and fr-0060 closed as unfillable: both facts are disputed (entail partial) and cannot be re-voted in the fix stage; the application status check is not examinable yet anyway."
+  },
+  {
+   "id": "claims-21",
+   "file": "data/16-ec2/tasks.json, speak.json, cards.json",
+   "section": "item status",
+   "quote": "\"status\": \"candidate\" (all 3 tasks, 4 spoken items, 24 cards); 16-ec2/3-do.md and 4-say.md read 'Nothing here yet.'",
+   "type": "rule: generated files empty, so the chapter's Try it links point to an empty page",
+   "severity": "note",
+   "evidence": "TOOLS-items.md line 21: \"Only items with status: ready are printed\". 2-deep.md links 'See [3-do.md](3-do.md)' twice and 1-fast.md embeds task ec2-t01, but sync prints nothing. Chapter 14 has its tasks at status ready. The reviewers could read the items only in the JSON. The fixer or finalize must set the passed items to ready and re-sync.",
+   "status": "fixed",
+   "resolution": "Item lint clean, then set ready: 3 tasks, 4 speak items, 32 cards (24 hand cards plus the 8 pending A-list number cards ec2-c007 to ec2-c014). sync 16 printed 3-do.md, 4-say.md and the task region of 1-fast.md."
+  },
+  {
+   "id": "claims-22",
+   "file": "16-ec2/2-deep.md",
+   "section": "decision-record (after diagram ec2-after)",
+   "quote": "three instances in the default VPC: a burstable web instance with an Elastic IP address, a compute optimized worker and a database instance.",
+   "type": "technical: after picture keeps the database in a public default subnet",
+   "severity": "note",
+   "evidence": "Fact vpc-default-subnet-public-ip-and-dns (used by task ec2-t02): instances in a default subnet get a public IPv4 address. STARTUP.md fixes this only in a later chapter ('the database must not be reachable from the internet'), so the story is consistent, but the 'after' picture should say that the database still has a public address and that the VPC redesign of the story moves it, so the reader does not copy it as a target design.",
+   "status": "fixed",
+   "resolution": "Decision record Trade-off now ends: 'The database keeps a public address until the VPC redesign.'"
+  }
+ ],
+ "fixed_by": "fix-16"
+}

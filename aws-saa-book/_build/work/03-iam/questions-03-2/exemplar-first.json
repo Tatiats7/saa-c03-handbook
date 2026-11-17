@@ -1,0 +1,202 @@
+[
+ {
+  "id": "iam-q002",
+  "section": "2-deep.md#a-role-gives-temporary-credentials-to-principals-that-its-trust-policy-names",
+  "pool": "chapter",
+  "layer": "core",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": [
+   "1.1.S3"
+  ],
+  "topics": [
+   "identity",
+   "security"
+  ],
+  "services": [
+   "iam",
+   "sts"
+  ],
+  "concept": "trust-vs-permissions-policy",
+  "difficulty": 2,
+  "type": "single",
+  "select": 1,
+  "qualifier": "LEAST operational overhead",
+  "stem": "A company has an IAM role in its production account for reading reports from an Amazon S3 bucket in the same account. Developers in the company's development account must use the role. Their IAM policies allow sts:AssumeRole on the role ARN. When a developer calls AssumeRole, the call fails with an access denied error. Which change will fix the problem with the LEAST operational overhead?",
+  "keywords": [
+   "the call fails with an access denied error",
+   "Their IAM policies allow sts:AssumeRole",
+   "LEAST operational overhead"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Update the trust policy of the role in the production account so that it names the development account as a principal.",
+    "correct": true,
+    "why": "The AssumeRole call itself fails, and the caller side already allows it. The trust policy [names who can assume the role](../facts/iam.md#iam-role-trust-policy-names-who-can-assume).",
+    "concept": "trust-policy",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Update the permissions policy of the role so that it allows s3:GetObject on the report bucket and on the objects in it.",
+    "correct": false,
+    "why": "The permissions policy acts after the session exists, and here the AssumeRole call itself fails, so the trust side is broken.",
+    "concept": "permissions-policy",
+    "trap": null,
+    "misconception": "fixes the permissions side when the trust check fails",
+    "distractor_type": "sibling-confusion"
+   },
+   {
+    "id": "c",
+    "text": "Add a bucket policy to the report bucket that allows s3:GetObject for the development account as the principal.",
+    "correct": false,
+    "why": "It does not touch the failing AssumeRole call, and across accounts AWS [allows the request only if both evaluations return Allow](../facts/iam.md#iam-eval-cross-account-needs-both-policies).",
+    "concept": "cross-account-resource-policy",
+    "trap": "iam-trap-cross-account-one-policy",
+    "misconception": null,
+    "distractor_type": "different-problem"
+   },
+   {
+    "id": "d",
+    "text": "Create an IAM user in the production account for each developer, with an access key and read access to the bucket.",
+    "correct": false,
+    "why": "It works, but each user brings long-term keys that [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), which is more work and more risk.",
+    "concept": "iam-user-keys",
+    "trap": null,
+    "misconception": "replaces a role with long-term keys",
+    "distractor_type": "violates-qualifier"
+   }
+  ],
+  "explanation": "A role has two policies. The trust policy [names who can assume the role](../facts/iam.md#iam-role-trust-policy-names-who-can-assume), and the permissions policy decides what the session can do. The developers' own allow for sts:AssumeRole is [only half of the cross-account trust](../facts/iam.md#iam-assume-role-two-permissions-checked). The call still fails, so the trust policy lacks the development account.",
+  "takeaway": "AssumeRole fails: check the trust policy and the caller's own allow. A later call fails: fix the permissions policy.",
+  "twin": "If the stem said \"the call succeeds, but the next call to read a report fails\" instead: update the permissions policy, because the trust check already passed.",
+  "say": "AssumeRole itself fails, and their side allows it, so the trust policy is missing the development account.",
+  "facts": [
+   "iam-role-trust-policy-names-who-can-assume",
+   "iam-assume-role-two-permissions-checked",
+   "iam-eval-cross-account-needs-both-policies",
+   "iam-long-term-keys-valid-until-revoked-temporary-expire"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-least-operational-overhead",
+   "ee-must"
+  ],
+  "twin_of": null
+ },
+ {
+  "id": "iam-q004",
+  "section": "2-deep.md#same-account-access-needs-one-allow-but-cross-account-access-needs-two",
+  "pool": "chapter",
+  "layer": "extended",
+  "domain": 1,
+  "task": "1.1",
+  "bullets": [
+   "1.1.S5"
+  ],
+  "topics": [
+   "identity",
+   "security",
+   "storage"
+  ],
+  "services": [
+   "iam",
+   "s3"
+  ],
+  "concept": "cross-account-both-policies",
+  "difficulty": 3,
+  "type": "multi",
+  "select": 2,
+  "qualifier": "MOST securely",
+  "stem": "A company has two AWS accounts. An application runs on Amazon EC2 instances in account A and uses an IAM role. The application must read objects from an Amazon S3 bucket in account B. The security team requires that the bucket stays private and that access is limited to this one application. Which combination of steps will meet these requirements MOST securely? (Select TWO.)",
+  "keywords": [
+   "bucket in account B",
+   "stays private",
+   "MOST securely"
+  ],
+  "options": [
+   {
+    "id": "a",
+    "text": "Add a statement to the bucket policy in account B that allows s3:GetObject for the ARN of the application's IAM role in account A.",
+    "correct": true,
+    "why": "The [resource-based policy in the trusting account must allow the requester](../facts/iam.md#iam-eval-cross-account-needs-both-policies), and this statement names one role.",
+    "concept": "bucket-policy-cross-account",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "b",
+    "text": "Add a statement to the identity-based policy of the IAM role in account A that allows s3:GetObject on the objects in the bucket.",
+    "correct": true,
+    "why": "The [identity-based policy in the trusted account must allow the access](../facts/iam.md#iam-eval-cross-account-needs-both-policies), so account A grants the action too.",
+    "concept": "identity-policy-cross-account",
+    "trap": null,
+    "misconception": null,
+    "distractor_type": null
+   },
+   {
+    "id": "c",
+    "text": "Add a statement to the bucket policy in account B that allows s3:GetObject with the wildcard character as the principal of the statement.",
+    "correct": false,
+    "why": "A wildcard principal with Allow grants access to all users, [including anonymous users (public access)](../facts/iam.md#iam-principal-wildcard-is-public), so the bucket is no longer private.",
+    "concept": "wildcard-principal",
+    "trap": "iam-trap-wildcard-principal-means-account",
+    "misconception": null,
+    "distractor_type": "wrong-configuration"
+   },
+   {
+    "id": "d",
+    "text": "Create an IAM user in account B with read access to the bucket, and store the access key of the user on the EC2 instances.",
+    "correct": false,
+    "why": "It works, but stored access keys [remain valid until you manually revoke them](../facts/iam.md#iam-long-term-keys-valid-until-revoked-temporary-expire), which is less secure than a role.",
+    "concept": "access-key-on-server",
+    "trap": "iam-trap-keys-on-instance",
+    "misconception": null,
+    "distractor_type": "violates-qualifier"
+   },
+   {
+    "id": "e",
+    "text": "Attach an SCP to account B that allows s3:GetObject for the IAM role of the application in account A on the bucket.",
+    "correct": false,
+    "why": "[An SCP never grants permissions](../facts/iam.md#iam-scp-never-grants-permissions), so an SCP does not give the role access to the bucket.",
+    "concept": "scp-ceiling",
+    "trap": "iam-trap-scp-grants",
+    "misconception": null,
+    "distractor_type": "sibling-confusion"
+   }
+  ],
+  "explanation": "The role and the bucket are in different accounts. AWS [allows the request only if both evaluations return Allow](../facts/iam.md#iam-eval-cross-account-needs-both-policies). So account B allows the role in the bucket policy, and account A allows the action in the role's own policy. Both statements name one role and one action, so the bucket stays private.",
+  "takeaway": "Cross-account access needs an allow in the resource's account and in the principal's account.",
+  "twin": "If the stem said \"a bucket in account A\" instead: one statement is enough, because [the permissions of identity-based and resource-based policies are a union](../facts/iam.md#iam-eval-same-account-identity-or-resource-allow).",
+  "say": null,
+  "facts": [
+   "iam-eval-cross-account-needs-both-policies",
+   "iam-principal-wildcard-is-public",
+   "iam-long-term-keys-valid-until-revoked-temporary-expire",
+   "iam-scp-never-grants-permissions",
+   "iam-eval-same-account-identity-or-resource-allow"
+  ],
+  "sources": [],
+  "exam_english": [
+   "ee-which-combination",
+   "ee-select-two",
+   "ee-most-secure"
+  ],
+  "twin_of": null,
+  "worked": {
+   "steps": [
+    "I read the last sentence first: it asks for a combination of two steps that is MOST secure.",
+    "I mark the constraints: the role is in account A, the bucket is in account B, the bucket stays private, and only this application reads it.",
+    "Before I look at the options, I predict one step: a bucket policy in account B that names the role, because a bucket policy names who can read.",
+    "I remove the wildcard principal, because it makes the bucket public. I remove the SCP, because an SCP never grants permissions. I remove the IAM user, because its key is a long-term credential.",
+    "Between the bucket policy alone and the bucket policy with the role's own allow, the difference is the second account. My first idea breaks because the role and the bucket are in different accounts, so both accounts must allow the read; the bucket is in account B and the role is in account A, so I also choose the identity-based policy of the role.",
+    "Check: the two statements name one role and one action, and the bucket stays private. Time: 90 seconds."
+   ],
+   "wrong_path": true
+  }
+ }
+]

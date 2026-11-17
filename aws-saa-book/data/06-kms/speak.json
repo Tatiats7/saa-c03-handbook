@@ -1,0 +1,331 @@
+{
+ "v": 1,
+ "chapter": "kms",
+ "items": [
+  {
+   "id": "kms-s01",
+   "chapter": "kms",
+   "kind": "explain",
+   "prompt": "If an engineer has full S3 permissions, can that engineer still read the bank's recordings?",
+   "persona": "Chen, security lead of Callvale",
+   "ten_second": "No, not without the KMS Decrypt permission on the bank's key. S3 permission opens the bucket, but the key policy decides who decrypts.",
+   "sixty_second": [
+    "The short answer is no. Not without the KMS Decrypt permission on the bank's key.",
+    "It works like this. The recordings are encrypted with the bank's KMS key.",
+    "S3 permission lets the engineer call GetObject on the bucket.",
+    "To return the file, S3 asks KMS to decrypt its data key.",
+    "So the engineer also needs Decrypt on that key.",
+    "Nobody can use the key unless a policy or grant allows it. Not even the root user.",
+    "IAM policies count only when the key policy allows them.",
+    "The thing to watch is the key administrators.",
+    "They can't decrypt, but they can change the key policy and give themselves access.",
+    "Keep that group small, and watch key policy changes in CloudTrail.",
+    "In your case, the bank's key policy names only the roles that need the recordings.",
+    "Which roles must read the bank's recordings today?"
+   ],
+   "skeleton": [
+    "S3 permission is not enough",
+    "Decrypt on the bank's key",
+    "key policy is the gate",
+    "watch the key administrators"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "To download an object encrypted with a KMS key, you need kms:Decrypt permissions for the key; to upload one, you need kms:GenerateDataKey.",
+     "accept": [
+      "needs Decrypt on the key",
+      "S3 permission alone is not enough"
+     ],
+     "facts": [
+      "kms-s3-sse-kms-put-get-permissions"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "No principal, not even the account root user or the key creator, can use a KMS key unless a key policy, IAM policy or grant allows it.",
+     "accept": [
+      "nobody has access unless a policy allows it",
+      "not even the root user"
+     ],
+     "facts": [
+      "kms-no-principal-has-access-unless-allowed"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "IAM policies that allow KMS permissions have no effect unless the key policy allows IAM policies; the default key policy does.",
+     "accept": [
+      "IAM counts only if the key policy allows it",
+      "the key policy is the gate"
+     ],
+     "facts": [
+      "kms-iam-policy-allow-needs-key-policy",
+      "kms-default-key-policy-enables-iam"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "Key administrators cannot use the key in cryptographic operations, but they can change the key policy and create grants, so they can give themselves more permissions.",
+     "accept": [
+      "key administrators can't decrypt",
+      "administrators can change the key policy"
+     ],
+     "facts": [
+      "kms-key-administrators-cannot-use-key"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "CloudTrail records all calls to AWS KMS, including calls by users, roles and AWS services, so key policy changes are logged too.",
+     "accept": [
+      "watch key policy changes in CloudTrail",
+      "every KMS call is in CloudTrail"
+     ],
+     "facts": [
+      "kms-cloudtrail-logs-all-calls"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "an S3 administrator can read everything in the bucket",
+     "correct": "To download an object encrypted with a KMS key, the caller also needs kms:Decrypt permissions for the key.",
+     "fact": "kms-s3-sse-kms-put-get-permissions"
+    },
+    {
+     "error": "encryption alone stops our engineers",
+     "correct": "The key policy does. No principal can use a KMS key unless a key policy, IAM policy or grant allows it.",
+     "fact": "kms-no-principal-has-access-unless-allowed"
+    },
+    {
+     "error": "an IAM policy with kms:Decrypt opens any key in the account",
+     "correct": "Without permission from the key policy, IAM policies that allow permissions have no effect.",
+     "fact": "kms-iam-policy-allow-needs-key-policy"
+    }
+   ],
+   "terms": [
+    {
+     "say": "key policy",
+     "avoid": [
+      "key permission file"
+     ]
+    },
+    {
+     "say": "key administrator",
+     "avoid": [
+      "key owner"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "What if the engineer is a key administrator?",
+     "answer": "A key administrator can manage the key but does not have permissions to use it. But a key administrator can change the key policy and create grants, so keep that group small.",
+     "facts": [
+      "kms-key-administrators-cannot-use-key"
+     ]
+    },
+    {
+     "question": "How do we prove who read the files?",
+     "answer": "CloudTrail records all calls to AWS KMS, including calls by users, roles and AWS services. All KMS actions are logged by default, so keep them in the trail and do not exclude them.",
+     "facts": [
+      "kms-cloudtrail-logs-all-calls"
+     ]
+    }
+   ],
+   "facts": [
+    "kms-s3-sse-kms-put-get-permissions",
+    "kms-no-principal-has-access-unless-allowed",
+    "kms-iam-policy-allow-needs-key-policy",
+    "kms-default-key-policy-enables-iam",
+    "kms-key-administrators-cannot-use-key",
+    "kms-cloudtrail-logs-all-calls"
+   ],
+   "section": "2-deep.md#iam-policies-and-other-accounts-count-only-when-the-key-policy-allows-them",
+   "layer": "core",
+   "pass_route": true,
+   "pack": false,
+   "status": "ready",
+   "rev": 1
+  },
+  {
+   "id": "kms-s02",
+   "chapter": "kms",
+   "kind": "compare",
+   "prompt": "What is the difference between AWS KMS and CloudHSM, and when would we need CloudHSM?",
+   "persona": "a startup founder in office hours",
+   "ten_second": "Both keep keys in validated HSMs. AWS runs KMS for you. Choose CloudHSM when you need single-tenant HSMs under your exclusive control.",
+   "sixty_second": [
+    "Both keep your keys in hardware security modules, or HSMs.",
+    "The difference is who runs them. AWS runs KMS. With CloudHSM, you run the cluster.",
+    "It works like this. The KMS HSMs are validated at FIPS one-forty-three, Security Level three.",
+    "So a Level three requirement alone doesn't mean CloudHSM.",
+    "CloudHSM gives you single-tenant HSMs in your own VPC.",
+    "You control the keys with HSM users, not with IAM, and AWS can't recover them.",
+    "Your applications call standard interfaces, like PKCS eleven or Java JCE.",
+    "The thing to watch is the work. You manage the HSM users.",
+    "AWS takes daily backups, but you keep new keys on a second HSM.",
+    "AWS services like S3 reach those keys through a KMS custom key store.",
+    "In your case, I'd start with customer managed keys in KMS.",
+    "Does a customer contract ask for single-tenant hardware, or for PKCS eleven?"
+   ],
+   "skeleton": [
+    "both use validated HSMs",
+    "KMS is Level three too",
+    "CloudHSM: single-tenant, you operate",
+    "services through custom key store"
+   ],
+   "key_points": [
+    {
+     "id": "kp1",
+     "kind": "must",
+     "point": "Outside the China Regions, all AWS KMS keys are protected by HSMs validated under FIPS 140-3 Security Level 3.",
+     "accept": [
+      "KMS is Level three too",
+      "KMS HSMs are FIPS validated at Level three"
+     ],
+     "facts": [
+      "kms-hsm-fips-140-3-level-3"
+     ]
+    },
+    {
+     "id": "kp2",
+     "kind": "must",
+     "point": "CloudHSM gives you a single-tenant HSM cluster in your VPC, with exclusive control over how your keys are used.",
+     "accept": [
+      "single-tenant HSMs in your VPC",
+      "exclusive control of the keys"
+     ],
+     "facts": [
+      "cloudhsm-vs-kms-faq-single-tenant-vpc-exclusive"
+     ]
+    },
+    {
+     "id": "kp3",
+     "kind": "must",
+     "point": "With CloudHSM you have more responsibility: you use HSM users, not IAM, and AWS has no way to recover your keys if you lose your credentials.",
+     "accept": [
+      "you operate the cluster",
+      "AWS can't recover the keys"
+     ],
+     "facts": [
+      "cloudhsm-more-responsibility-than-managed",
+      "cloudhsm-hsm-users-not-iam",
+      "cloudhsm-aws-cannot-recover-keys"
+     ]
+    },
+    {
+     "id": "kp4",
+     "kind": "must",
+     "point": "AWS services such as S3, EBS and RDS use CloudHSM keys through the KMS custom key store feature.",
+     "accept": [
+      "services reach CloudHSM through a custom key store",
+      "S3 uses CloudHSM keys through KMS"
+     ],
+     "facts": [
+      "cloudhsm-aws-services-via-kms-custom-key-store"
+     ]
+    },
+    {
+     "id": "kp5",
+     "kind": "nice",
+     "point": "CloudHSM supports standard APIs such as PKCS#11, Java JCE and Microsoft KSP/CNG; AWS KMS has no native integration with them.",
+     "accept": [
+      "PKCS eleven needs CloudHSM",
+      "standard crypto interfaces"
+     ],
+     "facts": [
+      "cloudhsm-faq-standard-apis",
+      "kms-faq-no-native-openssl-jce-cng"
+     ]
+    },
+    {
+     "id": "kp6",
+     "kind": "nice",
+     "point": "High availability is automatic when a cluster has at least two HSMs across Availability Zones.",
+     "accept": [
+      "two HSMs in two Availability Zones",
+      "add a second HSM"
+     ],
+     "facts": [
+      "cloudhsm-faq-ha-automatic-two-azs"
+     ]
+    }
+   ],
+   "must_not_say": [
+    {
+     "error": "KMS is only FIPS Level two, so Level three needs CloudHSM",
+     "correct": "All AWS KMS keys are protected by HSMs validated under FIPS 140-3 Security Level 3.",
+     "fact": "kms-hsm-fips-140-3-level-3"
+    },
+    {
+     "error": "AWS can recover our CloudHSM keys if we lose the credentials",
+     "correct": "Amazon has no way to recover your keys if you lose your HSM credentials.",
+     "fact": "cloudhsm-aws-cannot-recover-keys"
+    },
+    {
+     "error": "CloudHSM users are IAM users",
+     "correct": "Inside the cluster you use HSM users directly on the HSMs, not IAM users or IAM policies.",
+     "fact": "cloudhsm-hsm-users-not-iam"
+    }
+   ],
+   "terms": [
+    {
+     "say": "hardware security module",
+     "avoid": [
+      "hardware key box"
+     ]
+    },
+    {
+     "say": "custom key store",
+     "avoid": [
+      "KMS bridge"
+     ]
+    }
+   ],
+   "follow_ups": [
+    {
+     "question": "Can S3 encrypt our objects with keys from CloudHSM?",
+     "answer": "Yes, through AWS KMS. You configure a custom key store in AWS KMS that is backed by your CloudHSM cluster. The cluster needs at least two active HSMs in different Availability Zones.",
+     "facts": [
+      "cloudhsm-aws-services-via-kms-custom-key-store",
+      "kms-cloudhsm-key-store-two-hsms-two-azs"
+     ]
+    },
+    {
+     "question": "What happens if one HSM fails?",
+     "answer": "With at least two HSMs across Availability Zones, high availability is automatic. CloudHSM replaces a failed HSM automatically and updates the clients without interrupting processing.",
+     "facts": [
+      "cloudhsm-faq-ha-automatic-two-azs"
+     ]
+    }
+   ],
+   "facts": [
+    "kms-hsm-fips-140-3-level-3",
+    "cloudhsm-vs-kms-faq-single-tenant-vpc-exclusive",
+    "cloudhsm-more-responsibility-than-managed",
+    "cloudhsm-hsm-users-not-iam",
+    "cloudhsm-aws-cannot-recover-keys",
+    "cloudhsm-aws-services-via-kms-custom-key-store",
+    "cloudhsm-faq-standard-apis",
+    "kms-faq-no-native-openssl-jce-cng",
+    "cloudhsm-faq-ha-automatic-two-azs",
+    "kms-cloudhsm-key-store-two-hsms-two-azs",
+    "cloudhsm-faq-daily-encrypted-backups",
+    "cloudhsm-faq-sync-keys-two-azs-durability"
+   ],
+   "section": "2-deep.md#aws-cloudhsm-gives-you-single-tenant-hardware-security-modules-that-you-operate",
+   "layer": "extended",
+   "pass_route": false,
+   "pack": false,
+   "status": "ready",
+   "rev": 1
+  }
+ ]
+}

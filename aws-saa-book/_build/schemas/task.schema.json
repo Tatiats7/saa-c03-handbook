@@ -1,0 +1,85 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "task.schema.json",
+ "title": "Hands-on task file: data/<NN-slug>/tasks.json",
+ "description": "A Try or a Lab must have a non-empty cleanup list, a verify object, a cost line and a cost-if-forgotten line; a Look has an empty cleanup list and verify null. Those cross-field rules, the banned command patterns and the tag rule are checked by the task lint from SPEC.json (tasks.*).",
+ "type": "object",
+ "required": ["v", "chapter", "items"],
+ "additionalProperties": false,
+ "properties": {
+  "v": {"const": 1},
+  "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+  "items": {"type": "array", "items": {"$ref": "#/$defs/task"}}
+ },
+ "$defs": {
+  "task": {
+   "type": "object",
+   "required": ["id", "chapter", "type", "title", "kills", "section", "pass_route", "minutes", "cost", "cost_if_forgotten", "permissions", "read_only_alternative", "steps", "cleanup", "verify", "still_costs", "label", "checked", "facts", "sources", "status", "rev"],
+   "additionalProperties": false,
+   "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-t[0-9]{2}$"},
+    "chapter": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+    "type": {"enum": ["look", "try", "lab"]},
+    "title": {"type": "string", "minLength": 5, "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]*$", "description": "becomes an H2 in 3-do.md: letters, digits, spaces and hyphens only"},
+    "kills": {"type": "string", "minLength": 5, "pattern": "^\".*\"$", "description": "the misconception this task kills, as the wrong belief in straight double quotes"},
+    "trap": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-trap-[a-z0-9]+(-[a-z0-9]+)*$"},
+    "section": {"type": ["string", "null"], "pattern": "^([0-9]{2}-[a-z0-9-]+/)?[a-z0-9-]+\\.md#[a-z0-9-]+$", "description": "'<file>#<section id>' the task sits next to; a Try or Lab has its Try it callout there"},
+    "pass_route": {"type": "boolean", "description": "true on exactly one Try of a chapter that has a Try; Look tasks are on the Fast route and carry false"},
+    "template": {"type": ["string", "null"], "pattern": "^data/[0-9]{2}-[a-z0-9-]+/templates/[a-z0-9-]+\\.yaml$", "description": "Lab only: path of the template that builds the routine part, 'data/<NN-slug>/templates/<task id>.yaml'"},
+    "minutes": {"type": "integer", "minimum": 1, "maximum": 40},
+    "cost": {"type": "string", "minLength": 2, "description": "cost line, for example '$0' or 'under $0.10'; a dollar figure above zero needs a fact in cost_facts"},
+    "cost_if_forgotten": {"type": "string", "minLength": 2, "description": "what it costs per day if the cleanup is forgotten, for example 'about $1.10 a day' or '$0'"},
+    "cost_facts": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}},
+    "permissions": {"type": "array", "items": {"type": "string", "minLength": 3}, "description": "IAM actions or managed policy names the task needs"},
+    "read_only_alternative": {"type": "string", "minLength": 5, "description": "what to do in an account where she cannot create resources"},
+    "steps": {"type": "array", "minItems": 1, "maxItems": 14, "items": {"$ref": "#/$defs/step"}},
+    "cleanup": {"type": "array", "items": {"$ref": "#/$defs/command_step"}},
+    "verify": {"type": ["object", "null"], "required": ["command", "expect"], "additionalProperties": false, "properties": {
+     "command": {"type": "string", "minLength": 5},
+     "expect": {"type": "string", "minLength": 2}
+    }},
+    "still_costs": {"type": "array", "items": {"type": "string", "minLength": 3}, "description": "resources that still cost money if left"},
+    "label": {"const": "checked against docs, not run in a real account"},
+    "checked": {"type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}$"},
+    "facts": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$"}, "uniqueItems": true},
+    "sources": {"type": "array", "items": {
+     "type": "object",
+     "required": ["title", "url"],
+     "additionalProperties": false,
+     "properties": {
+      "title": {"type": "string", "minLength": 2},
+      "url": {"type": "string", "pattern": "^https://(docs\\.aws\\.amazon\\.com|aws\\.amazon\\.com|d1\\.awsstatic\\.com|repost\\.aws)/"}
+     }
+    }},
+    "status": {"enum": ["candidate", "verified", "ready", "rejected", "retired"]},
+    "rev": {"type": "integer", "minimum": 1}
+   }
+  },
+  "step": {
+   "type": "object",
+   "required": ["text"],
+   "additionalProperties": false,
+   "properties": {
+    "text": {"type": "string", "minLength": 5, "description": "names the thing to find or do, never a click path"},
+    "command": {"type": ["string", "null"], "description": "one plain command for AWS CloudShell (prefixes: tasks.allowed_command_prefixes); can use $NAME of an earlier capture and <UPPER_CASE> placeholders that the step text explains"},
+    "capture": {"type": ["object", "null"], "required": ["name", "query"], "additionalProperties": false, "description": "keeps one value of the output for later steps; printed as NAME=$(<command> --query <query> --output text)", "properties": {
+     "name": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+     "query": {"type": "string", "minLength": 1, "description": "JMESPath for --query, for example 'Vpc.VpcId'"}
+    }},
+    "expect": {"type": ["string", "null"], "description": "the expected result, as she sees it; plain text without AWS facts"},
+    "break_it": {"type": "boolean", "description": "true for a break-it-on-purpose step; the next step is the fix"},
+    "predict": {"type": ["string", "null"], "description": "the question to answer before running a break-it step"},
+    "explain": {"type": ["string", "null"], "description": "break-it step: why the result happens; strict text with fact links"}
+   }
+  },
+  "command_step": {
+   "type": "object",
+   "required": ["text", "command"],
+   "additionalProperties": false,
+   "properties": {
+    "text": {"type": "string", "minLength": 5},
+    "command": {"type": "string", "minLength": 5}
+   }
+  }
+ }
+}

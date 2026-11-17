@@ -1,0 +1,320 @@
+{
+ "v": 1,
+ "chapter": "edge-protection",
+ "items": [
+  {
+   "id": "edge-protection-t01",
+   "type": "try",
+   "title": "Build an IP set and check the capacity of a rule",
+   "kills": "\"A network ACL is the place to block a long list of attacking IP addresses.\"",
+   "trap": "edge-protection-trap-nacl-for-many-attack-ips",
+   "section": "2-deep.md#a-web-acl-checks-each-http-request-against-its-rules-in-priority-order",
+   "pass_route": true,
+   "minutes": 15,
+   "cost": "$0. AWS WAF charges are based on the number of web ACLs, the rules per web ACL and the web requests received. This task creates no web ACL.",
+   "cost_if_forgotten": "$0 a day. The task creates no web ACL, the item that AWS WAF charges are based on.",
+   "cost_facts": [
+    "waf-pricing-dimensions"
+   ],
+   "permissions": [
+    "servicequotas:GetAWSDefaultServiceQuota",
+    "wafv2:CreateIPSet",
+    "wafv2:TagResource",
+    "wafv2:GetIPSet",
+    "wafv2:CheckCapacity",
+    "wafv2:UpdateIPSet",
+    "wafv2:DeleteIPSet",
+    "wafv2:ListIPSets"
+   ],
+   "read_only_alternative": "Use this when you cannot create AWS WAF resources. It changes nothing. Run step 1. List the IP sets of the Region with aws wafv2 list-ip-sets --scope REGIONAL. If a set exists, read its ranges with aws wafv2 get-ip-set --name <NAME> --scope REGIONAL --id <ID> --query \"IPSet.Addresses\". Then find the --addresses option on the create-ip-set page of the AWS CLI Command Reference and read which CIDR range AWS WAF does not support.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Read the default quota for rules in one network ACL. You compare it with an IP set later.",
+     "command": "aws service-quotas get-aws-default-service-quota --service-code vpc --quota-code L-2AEEBF1A --query \"Quota.[QuotaName,Value]\"",
+     "expect": "The quota name, Rules per network ACL, and its default value. Note the number.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Create an IP set for regional resources, such as an Application Load Balancer. It holds one documentation range, 192.0.2.0/24. Keep its ID.",
+     "command": "aws wafv2 create-ip-set --name saa-edge-protection-t01 --scope REGIONAL --ip-address-version IPV4 --addresses 192.0.2.0/24 --tags Key=book,Value=saa Key=task,Value=edge-protection-t01",
+     "capture": {
+      "name": "IPSET_ID",
+      "query": "Summary.Id"
+     },
+     "expect": "No output. IPSET_ID now holds the ID of the new IP set.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the ARN of the set. A rule refers to the set by this ARN.",
+     "command": "aws wafv2 get-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID",
+     "capture": {
+      "name": "IPSET_ARN",
+      "query": "IPSet.ARN"
+     },
+     "expect": "No output. IPSET_ARN now holds the ARN of the set.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Ask AWS WAF how many web ACL capacity units (WCUs) one Block rule with the whole set needs. It creates nothing. The single quotes stop before $IPSET_ARN and start again after it, so the shell inserts the ARN.",
+     "command": "aws wafv2 check-capacity --scope REGIONAL --rules '[{\"Name\":\"saa-block-list\",\"Priority\":0,\"Statement\":{\"IPSetReferenceStatement\":{\"ARN\":\"'$IPSET_ARN'\"}},\"Action\":{\"Block\":{}},\"VisibilityConfig\":{\"SampledRequestsEnabled\":false,\"CloudWatchMetricsEnabled\":false,\"MetricName\":\"saa-block-list\"}}]'",
+     "expect": "Capacity and one number: the WCUs of this one rule.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Get the current lock token of the set. AWS WAF asks for this token on every update and delete.",
+     "command": "aws wafv2 get-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID",
+     "capture": {
+      "name": "LOCK_TOKEN",
+      "query": "LockToken"
+     },
+     "expect": "No output. LOCK_TOKEN now holds the token.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Try to replace the list with 0.0.0.0/0, which covers every IPv4 address.",
+     "command": "aws wafv2 update-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID --addresses 0.0.0.0/0 --lock-token $LOCK_TOKEN",
+     "expect": "An error that rejects the address. The set keeps 192.0.2.0/24.",
+     "break_it": true,
+     "predict": "You want one IP set that blocks every IPv4 address. Will AWS WAF accept the range 0.0.0.0/0?",
+     "explain": "AWS WAF [supports all IPv4 and IPv6 CIDR ranges except for /0](../facts/waf.md#waf-ip-set-cidr-ipv4-ipv6-not-slash-0), so the update fails and the set keeps its old range. An IP set is for a list of attackers. One set holds [10,000](../facts/waf.md#waf-ip-set-max-addresses) addresses or ranges at most, and a network ACL has [20 rules per network ACL](../facts/vpc.md#vpc-quota-rules-per-network-acl) by default."
+    },
+    {
+     "text": "Fix it: list the attacker ranges themselves. An update replaces the whole list, so name every range. This command uses three documentation ranges and the same lock token.",
+     "command": "aws wafv2 update-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID --addresses 192.0.2.0/24 198.51.100.0/24 203.0.113.0/24 --lock-token $LOCK_TOKEN",
+     "capture": {
+      "name": "NEXT_TOKEN",
+      "query": "NextLockToken"
+     },
+     "expect": "No output. NEXT_TOKEN now holds the new lock token. The cleanup uses it.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the addresses in the set.",
+     "command": "aws wafv2 get-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID --query \"IPSet.Addresses\"",
+     "expect": "The three ranges from step 7.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the IP set with the newest lock token. If AWS answers WAFOptimisticLockException, run step 5 again, then run this command with $LOCK_TOKEN in place of $NEXT_TOKEN.",
+     "command": "aws wafv2 delete-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID --lock-token $NEXT_TOKEN"
+    }
+   ],
+   "verify": {
+    "command": "aws wafv2 get-ip-set --name saa-edge-protection-t01 --scope REGIONAL --id $IPSET_ID",
+    "expect": "An error that AWS WAF cannot find the IP set. If the error is about a missing or invalid ID instead, IPSET_ID is empty: run aws wafv2 list-ip-sets --scope REGIONAL and check that saa-edge-protection-t01 is not in the list. If the set still shows, wait one minute and check again."
+   },
+   "still_costs": [
+    "Nothing: this task creates no web ACL, and AWS WAF charges are based on web ACLs, rules per web ACL and web requests. Delete the IP set anyway, so that no unused set stays in the account.",
+    "If the CloudShell session ended before the cleanup, the variables are empty. Find the ID and the lock token again with aws wafv2 list-ip-sets --scope REGIONAL."
+   ],
+   "facts": [
+    "waf-ip-set-collection-of-addresses",
+    "waf-ip-set-cidr-ipv4-ipv6-not-slash-0",
+    "waf-ip-set-max-addresses",
+    "waf-ip-set-global-for-cloudfront",
+    "vpc-quota-rules-per-network-acl",
+    "waf-wcu-included-1500",
+    "waf-max-wcu-per-web-acl",
+    "waf-pricing-dimensions"
+   ],
+   "sources": [
+    {
+     "title": "AWS WAFV2 examples using AWS CLI (create-ip-set, get-ip-set, check-capacity, update-ip-set, delete-ip-set)",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli_wafv2_code_examples.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-ip-set",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/wafv2/create-ip-set.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-ip-set",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/wafv2/get-ip-set.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: check-capacity",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/wafv2/check-capacity.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: update-ip-set",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/wafv2/update-ip-set.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-ip-set",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/wafv2/delete-ip-set.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-ip-sets",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/wafv2/list-ip-sets.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: get-aws-default-service-quota",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/service-quotas/get-aws-default-service-quota.html"
+    },
+    {
+     "title": "Amazon VPC quotas (network ACLs, quota code L-2AEEBF1A)",
+     "url": "https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html"
+    }
+   ],
+   "chapter": "edge-protection",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  },
+  {
+   "id": "edge-protection-t02",
+   "type": "try",
+   "title": "Create a domain allow list for outbound traffic",
+   "kills": "\"Security group rules can limit outbound traffic to approved domain names.\"",
+   "trap": "edge-protection-trap-sg-filters-domains",
+   "section": "2-deep.md#network-firewall-inspects-vpc-traffic-only-when-route-tables-send-it-there",
+   "pass_route": false,
+   "minutes": 12,
+   "cost": "$0. Security groups have no additional charge. Network Firewall pricing is based on the number of firewalls deployed and the amount of traffic inspected, and the task creates no firewall.",
+   "cost_if_forgotten": "$0 a day. The task creates no firewall, and security groups have no additional charge.",
+   "cost_facts": [
+    "vpc-sg-no-charge",
+    "network-firewall-faq-pricing-dimensions"
+   ],
+   "permissions": [
+    "ec2:CreateSecurityGroup",
+    "ec2:CreateTags",
+    "ec2:AuthorizeSecurityGroupEgress",
+    "ec2:DescribeSecurityGroups",
+    "ec2:DeleteSecurityGroup",
+    "network-firewall:CreateRuleGroup",
+    "network-firewall:TagResource",
+    "network-firewall:DescribeRuleGroup",
+    "network-firewall:ListRuleGroups",
+    "network-firewall:DeleteRuleGroup"
+   ],
+   "read_only_alternative": "Use this when you cannot create resources. It changes nothing. Read the outbound destinations of your security groups with aws ec2 describe-security-groups --query \"SecurityGroups[].IpPermissionsEgress[].IpRanges[].CidrIp\". Each value is an address range, not a domain name. List the Network Firewall rule groups with aws network-firewall list-rule-groups. Then read the RulesSourceList part of the create-rule-group page in the AWS CLI Command Reference: Targets holds domain names.",
+   "steps": [
+    {
+     "text": "Open AWS CloudShell. Create a test security group in the default VPC. No resource uses it. If AWS answers that the Region has no default VPC, use the read-only alternative.",
+     "command": "aws ec2 create-security-group --group-name saa-edge-protection-t02 --description \"saa test group with no instances\" --tag-specifications 'ResourceType=security-group,Tags=[{Key=Name,Value=saa-edge-protection-t02},{Key=book,Value=saa},{Key=task,Value=edge-protection-t02}]'",
+     "capture": {
+      "name": "SG_ID",
+      "query": "GroupId"
+     },
+     "expect": "No output. SG_ID now holds the ID of the new security group.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Try to allow outbound HTTPS to one approved domain name, updates.example.com.",
+     "command": "aws ec2 authorize-security-group-egress --group-id $SG_ID --ip-permissions 'IpProtocol=tcp,FromPort=443,ToPort=443,IpRanges=[{CidrIp=updates.example.com}]'",
+     "expect": "An error about the CidrIp value. The group gets no new rule.",
+     "break_it": true,
+     "predict": "A security group rule has a destination. Will the rule accept the domain name updates.example.com as its destination?",
+     "explain": "The destination of a security group rule is an address, [a range of IPv4 addresses, in CIDR block notation](../facts/vpc.md#vpc-sg-rule-sources), a prefix list or another security group, not a name. Security groups give [traffic control at a Layer 4 level (IP address and port ranges)](../facts/well-architected.md#well-architected-sec05-finer-control-services). Network Firewall keeps [allow lists and deny lists with domain names](../facts/network-firewall.md#network-firewall-domain-allow-deny-lists)."
+    },
+    {
+     "text": "Fix it: create a Network Firewall rule group with a domain allow list for .example.com and its subdomains. The step creates no firewall.",
+     "command": "aws network-firewall create-rule-group --rule-group-name saa-edge-protection-t02 --type STATEFUL --capacity 100 --rule-group '{\"RulesSource\":{\"RulesSourceList\":{\"Targets\":[\".example.com\"],\"TargetTypes\":[\"TLS_SNI\",\"HTTP_HOST\"],\"GeneratedRulesType\":\"ALLOWLIST\"}}}' --tags Key=book,Value=saa Key=task,Value=edge-protection-t02",
+     "expect": "JSON with an UpdateToken and a RuleGroupResponse for saa-edge-protection-t02, Type STATEFUL.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Read the domain list back. TLS_SNI is the server name in the HTTPS handshake. HTTP_HOST is the Host header of HTTP traffic.",
+     "command": "aws network-firewall describe-rule-group --rule-group-name saa-edge-protection-t02 --type STATEFUL --query \"RuleGroup.RulesSource.RulesSourceList\"",
+     "expect": "Targets with .example.com, TargetTypes with TLS_SNI and HTTP_HOST, and GeneratedRulesType ALLOWLIST.",
+     "break_it": false,
+     "predict": null
+    },
+    {
+     "text": "Count the firewall policies that use the rule group. A firewall uses a rule group through its firewall policy.",
+     "command": "aws network-firewall describe-rule-group --rule-group-name saa-edge-protection-t02 --type STATEFUL --query \"RuleGroupResponse.NumberOfAssociations\"",
+     "expect": "0. No firewall policy uses the group, so the list inspects no traffic yet.",
+     "break_it": false,
+     "predict": null
+    }
+   ],
+   "cleanup": [
+    {
+     "text": "Delete the rule group. The output shows the status DELETING.",
+     "command": "aws network-firewall delete-rule-group --rule-group-name saa-edge-protection-t02 --type STATEFUL"
+    },
+    {
+     "text": "Delete the test security group.",
+     "command": "aws ec2 delete-security-group --group-id $SG_ID"
+    }
+   ],
+   "verify": {
+    "command": "aws ec2 describe-security-groups --filters Name=tag:task,Values=edge-protection-t02 --query \"SecurityGroups[].GroupId\"",
+    "expect": "An empty list."
+   },
+   "still_costs": [
+    "Nothing: security groups have no additional charge, and a rule group without a firewall adds no Network Firewall charge. Delete both anyway.",
+    "The verify checks only the security group. Also check the rule group: run aws network-firewall describe-rule-group --rule-group-name saa-edge-protection-t02 --type STATEFUL and expect an error that the rule group does not exist. If it still shows the status DELETING, wait one minute and run it again.",
+    "If the CloudShell session ended before the cleanup, SG_ID is empty. Find the group with aws ec2 describe-security-groups --filters Name=group-name,Values=saa-edge-protection-t02."
+   ],
+   "facts": [
+    "vpc-sg-rule-sources",
+    "well-architected-sec05-finer-control-services",
+    "network-firewall-domain-allow-deny-lists",
+    "network-firewall-domain-sni-host-header",
+    "network-firewall-stateful-rule-group-categories",
+    "network-firewall-faq-pricing-dimensions",
+    "vpc-sg-no-charge"
+   ],
+   "sources": [
+    {
+     "title": "Stateful domain list rule groups in AWS Network Firewall (describe-rule-group example)",
+     "url": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/stateful-rule-groups-domain-names.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-rule-group",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/network-firewall/create-rule-group.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-rule-group",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/network-firewall/describe-rule-group.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-rule-group",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/network-firewall/delete-rule-group.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: list-rule-groups",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/network-firewall/list-rule-groups.html"
+    },
+    {
+     "title": "Using security groups in the AWS CLI (create, describe, delete)",
+     "url": "https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-sg.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: create-security-group",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/create-security-group.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: authorize-security-group-egress",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-egress.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: delete-security-group",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-security-group.html"
+    },
+    {
+     "title": "AWS CLI Command Reference: describe-security-groups",
+     "url": "https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-security-groups.html"
+    }
+   ],
+   "chapter": "edge-protection",
+   "status": "ready",
+   "rev": 1,
+   "label": "checked against docs, not run in a real account",
+   "checked": "2026-10-13"
+  }
+ ]
+}

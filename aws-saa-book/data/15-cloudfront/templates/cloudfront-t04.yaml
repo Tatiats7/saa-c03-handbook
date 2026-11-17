@@ -1,0 +1,57 @@
+# Lab cloudfront-t04: the routine part of "Serve a private bucket through CloudFront with origin access control".
+# Step 2 of the lab sends this same template, written as one line of JSON, with
+# aws cloudformation create-stack --template-body. Keep the two in step.
+# It builds a private bucket, an origin access control that signs every request, and a
+# distribution with the bucket as its origin. It adds NO bucket policy: you write that by hand.
+# Sources: AmazonCloudFront DeveloperGuide get-started-cli-tutorial.html (OAC with an S3 origin),
+# using-managed-cache-policies.html (CachingOptimized ID), and the CloudFormation template reference
+# pages of AWS::S3::Bucket, AWS::CloudFront::OriginAccessControl and AWS::CloudFront::Distribution.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "saa-cloudfront-t04: private bucket, origin access control, distribution"
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "saa-cloudfront-t04-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: book
+          Value: saa
+        - Key: task
+          Value: cloudfront-t04
+  Oac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: saa-cloudfront-t04
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: saa-cloudfront-t04
+        Origins:
+          - Id: bucket
+            DomainName: !GetAtt Bucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt Oac.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: bucket
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+      Tags:
+        - Key: book
+          Value: saa
+        - Key: task
+          Value: cloudfront-t04

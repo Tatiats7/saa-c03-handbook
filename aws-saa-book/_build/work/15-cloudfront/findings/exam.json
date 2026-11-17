@@ -1,0 +1,141 @@
+{
+ "lens": "exam",
+ "chapter": "15",
+ "by": "review-15-reader",
+ "date": "2026-10-14",
+ "basis": "First review after edit (edit pass_seq 1, verify-questions pass). sync 15 run first (written=0, unchanged=12); q lint 15: 22 questions, 18 ready, 4 verified, 3 multi, 3 twin pairs. Read 1-fast.md, 2-deep.md, 5-quiz.md (18 shipped questions) and data/15-cloudfront/{questions,cards,speak,tasks}.json as an exam coach and item writer. Bullets from registry show 15; frequency input from _build/spec/FREQUENCY.md (third-party research, not evidence).",
+ "findings": [
+  {
+   "id": "exam-01",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Numbers that decide answers",
+   "quote": "| [first 1,000 invalidation paths](../facts/cloudfront.md#cloudfront-invalidation-first-1000-paths-free) | Free paths a month | Frequent releases pay |",
+   "type": "misleading",
+   "severity": "blocking",
+   "evidence": "The 'Why it decides an answer' cell teaches that frequent invalidations cost money, but fact cloudfront-invalidation-wildcard-counts-one-path says a wildcard path 'counts as one path', and fact cloudfront-invalidation-first-1000-paths-free: 'The first 1,000 invalidation paths that you submit per month are free'. A daily /* release stays far under 1,000 paths. The chapter's own question cloudfront-q015 rejects the /* option because invalidation 'clears the CloudFront caches, not the copies that browsers and corporate proxies keep', and speak cloudfront-s03 says 'It isn't mainly cost'. A reader who learns 'frequent releases pay' will pick the wrong reason, and may reject a correct /* invalidation option in a question about removing one bad file. Rewrite the cell, for example 'Many paths a month cost money; a wildcard counts as one'. Same root as reader-01.",
+   "status": "fixed",
+   "resolution": "fix-15: the cell now reads 'A wildcard path counts as one'; the trap gives the browser and proxy reason (claims-01)."
+  },
+  {
+   "id": "exam-02",
+   "file": "15-cloudfront/5-quiz.md",
+   "section": "Question 15 (cloudfront-q008)",
+   "quote": "The /api/* cache behavior uses a custom cache policy, created by a former team member, with a Minimum TTL of 3600 seconds.",
+   "type": "untaught",
+   "severity": "should",
+   "evidence": "The question's deciding fact is the Minimum TTL floor (fact cloudfront-min-ttl-above-zero-overrides-no-cache), but its Review link points to 2-deep 'Cache headers decide how long a copy lives ...', which teaches only Cache-Control max-age versus Expires and the Default TTL. Minimum TTL appears nowhere in the prose or the Numbers tables. A difficulty-3 question may stretch, but its rule must be taught. Add one step or table row to that subsection: 'If the Minimum TTL is greater than 0, CloudFront caches for at least that long, even when the origin sends no-cache, no-store or private' (linked to the fact), and a trap 'Many think Cache-Control: no-cache at the origin always stops caching'.",
+   "status": "fixed",
+   "resolution": "fix-15: the subsection now says 'If a cache policy's minimum TTL is greater than 0, CloudFront caches at least that long, even when the origin sends no-cache.' (cloudfront-min-ttl-above-zero-overrides-no-cache). No new trap id: trap ids come from brief.json (L905), and the word limit is reached."
+  },
+  {
+   "id": "exam-03",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "VPC origins let CloudFront reach load balancers and instances in private subnets",
+   "quote": "An **internet-facing load balancer** behind CloudFront can still be called directly, around the cache.",
+   "type": "missing-content",
+   "severity": "should",
+   "evidence": "The classic exam case 'make the ALB accept traffic only from CloudFront' has two answers: the security group with the CloudFront managed prefix list, and a secret custom header that the listener checks (because the prefix list admits every distribution, not only yours). Question cloudfront-q012 ships with exactly this pair as its key, and the 1-fast Changed recently entry says the exam probably expects the prefix-list ALB, but 2-deep never teaches either lock in prose (only the ladder label 'Prefix list and header'). Verified facts: elb-alb-cloudfront-prefix-list-sg ('remove any other inbound rules'), cloudfront-prefix-list-origin-facing-servers ('prevents non-CloudFront traffic from reaching your origin'), cloudfront-alb-restrict-custom-header-and-https ('add a custom HTTP header to requests', 'only forward requests that contain the custom HTTP'). Add a short table (origin kind, lock, what it stops) and a Signals row: 'ALB must accept only our distribution' -> prefix list plus custom header; but not if the ALB can be private -> VPC origin.",
+   "status": "fixed",
+   "resolution": "fix-15: the VPC origins subsection now teaches both locks and why both (see reader-07). No Signals row was added: the table already has the maximum of 8 rows."
+  },
+  {
+   "id": "exam-04",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Signals and traps",
+   "quote": "| \"users around the world, lower latency\" | Amazon CloudFront | ... | UDP traffic or fixed IP addresses: AWS Global Accelerator |",
+   "type": "missing-content",
+   "severity": "should",
+   "evidence": "FREQUENCY.md lists 'S3 Transfer Acceleration vs CloudFront vs multipart: Long-distance uploads vs global downloads vs large objects' among the commonly confused pairs, and two shipped questions (cloudfront-q001, cloudfront-q019) use Transfer Acceleration as the main distractor. The chapter prose never names S3 Transfer Acceleration, so the reader meets the contrast only in explanations. Add one Signals row or a 'But not if' guard: 'customers upload large files to one bucket from many countries' -> S3 Transfer Acceleration, fact s3-transfer-acceleration-when-to-use ('upload to a centralized general purpose bucket'), with an xref to chapter 21.",
+   "status": "fixed",
+   "resolution": "fix-15: the Signals table is at its maximum of 8 rows, so Check 3 of 1-fast.md now carries the contrast: worldwide uploads to one bucket point to S3 Transfer Acceleration, linked to s3-transfer-acceleration-when-to-use."
+  },
+  {
+   "id": "exam-05",
+   "file": "15-cloudfront/5-quiz.md",
+   "section": "Question 6 (cloudfront-q019)",
+   "quote": "It adds storage and replication charges, and its reason is false: transfer from S3 to CloudFront is [always free when using AWS origins]",
+   "type": "explanation",
+   "severity": "should",
+   "evidence": "The option's stated reason is 'instead of paying CloudFront transfer charges'. That reason is not false: CloudFront does charge for transfer to viewers (fact cloudfront-price-origin-to-cloudfront-always-free-aws-origins: 'You are only billed for the outbound data transfer from CloudFront to the viewer'), and the same question's Why line says so. The explanation answers a different misconception (an S3-to-CloudFront charge) than the one the option holds, so it does not teach why the option loses. Name the real weakness: each Regional bucket still serves every download with no cache, adds storage and replication, and needs a way to send each user to the nearest bucket; the MOST cost-effective and faster answer caches popular files at the edge.",
+   "status": "fixed",
+   "resolution": "fix-15: the why of option a now reads 'Each regional bucket still serves every download without a cache, and the copies add storage and replication charges, while the fetch from S3 to CloudFront is always free when using AWS origins.' An explanation-only change: stem, options and key are unchanged, so the blind verification stands (the pack hash covers stem, options and key). q lint 15 clean."
+  },
+  {
+   "id": "exam-06",
+   "file": "data/15-cloudfront/questions.json",
+   "section": "cloudfront-q010 (twin_of cloudfront-q004)",
+   "quote": "Only customers who paid for a course can download its files, for a limited time. The bucket already accepts reads only from the distribution through origin access control.",
+   "type": "twin",
+   "severity": "should",
+   "evidence": "Twins should differ by one deciding phrase. cloudfront-q010 replaces the requirement sentence of cloudfront-q004 and adds a second sentence that states OAC is already in place. That added sentence also makes option A ('Configure origin access control on the S3 origin ...') implausible, since the stem says it is done; a distractor that the stem itself excludes has no misconception behind it. Drop the added sentence and let the requirement sentence alone decide (paid users for a limited time -> signed URL); the explanation of option A can then say that OAC stops S3 URLs but does not know who paid (fact cloudfront-faq-secure-origin-oac-supported-origins).",
+   "status": "rejected",
+   "resolution": "fix-15: not changed. Dropping the stem sentence changes the stem, which needs a fresh blind verification (TOOLS-rules.md R5), and the chapter would lose a shipped twin pair while it waits. The item passed all three lenses without a flag. Option a's why already says 'Origin access control is already in place ... and it does not know which customers paid', so the distractor still teaches the misconception. A stated existing setup is a normal exam device."
+  },
+  {
+   "id": "exam-07",
+   "file": "15-cloudfront/1-fast.md",
+   "section": "Choose it or not",
+   "quote": "| Which addresses do users reach? | Edge addresses that [vary based on your end user’s location](../facts/route53.md#route53-faq-cloudfront-ip-addresses-vary-by-location) | [Two IPv4 static IP addresses](...) |",
+   "type": "currency",
+   "severity": "should",
+   "evidence": "Fact cloudfront-change-anycast-static-ips-2024-11: 'You can request Anycast static IPs from CloudFront to use with your distributions. | November 20, 2024', and the chapter's own Changed recently entry marks it 'Status: examinable'. The compare table and the Signals guard ('fixed IP addresses: AWS Global Accelerator') still give the gist that CloudFront has no static addresses, which is no longer current. RULINGS rule 7: teach current truth. Add to the CloudFront cell: 'or Anycast static IPs on request (since 2024-11-20)', linked to the fact, and keep 'the exam probably expects Global Accelerator' from the Changed recently entry.",
+   "status": "fixed",
+   "resolution": "fix-15: the CloudFront cell now reads 'Addresses vary based on your end user's location, or request Anycast static IPs from CloudFront' (cloudfront-change-anycast-static-ips-2024-11). The Signals guard stays, as the exam probably expects Global Accelerator."
+  },
+  {
+   "id": "exam-08",
+   "file": "15-cloudfront/5-quiz.md",
+   "section": "Questions 1 to 18 (qualifier mix)",
+   "quote": "Which solution will meet these requirements with the LEAST operational overhead?",
+   "type": "mix",
+   "severity": "note",
+   "evidence": "Qualifiers of the 18 shipped questions: LEAST operational overhead 10, MOST cost-effective 4, none 3, FASTEST failover 1. No shipped question uses 'LOWEST latency', although FREQUENCY.md lists 'minimize latency for global users' as a top signal for CloudFront and Global Accelerator; the two LOWEST latency twins (cloudfront-q002, cloudfront-q007) are verified but not shipped. Consider shipping q002 in place of one LEAST operational overhead item. Difficulty mix (1: 3, 2: 11, 3: 4) and multiple-response count (2) are within the deep template.",
+   "status": "rejected",
+   "resolution": "fix-15: no change in fix. The shipped set comes from q adjudicate --select (twin pairs, worked items and bullet coverage first); swapping a shipped item is a selection decision for the orchestrator. q002 and q007 stay verified spares."
+  },
+  {
+   "id": "exam-09",
+   "file": "data/15-cloudfront/questions.json",
+   "section": "bullet 4.4.S3",
+   "quote": "\"bullets\": [\"4.4.S3\"] (cloudfront-q019 only)",
+   "type": "coverage",
+   "severity": "note",
+   "evidence": "Bullet 4.4.S3 ('Configuring appropriate network routes to minimize network transfer costs (for example, ... AWS Global Accelerator, VPC endpoints)') has one shipped question, below the coverage warning V11 ('a bullet with fewer than 2 questions'). The other five bullets have 2 or more. The pricing subsection teaches the Global Accelerator hourly fee and DT-Premium (facts global-accelerator-price-fixed-hourly-fee-plus-dt-premium, global-accelerator-price-fixed-fee-enabled-or-disabled), which would support a second cost question (for example: a disabled accelerator still costs the fixed fee).",
+   "status": "rejected",
+   "resolution": "fix-15: no change in fix. A new question must pass the three-lens blind panel; V11 is a warning. Logged for a later question run."
+  },
+  {
+   "id": "exam-10",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "Origin access control keeps the bucket private and lets your distribution read it",
+   "quote": "> **Exam signal:** \"users must reach the files only through CloudFront\" points to OAC, even when an option names OAI.",
+   "type": "signal-guard",
+   "severity": "note",
+   "evidence": "The guard covers a question that offers both OAC and OAI, but not the older question style that 1-fast warns about ('Older practice questions still name OAI'), where OAI is the only private-S3 option. Add: 'If no option names OAC, the OAI option is the intended answer.' Fact cloudfront-oac-oai-two-ways-oac-recommended ('we recommend that you use OAC instead') shows both are current ways.",
+   "status": "fixed",
+   "resolution": "fix-15: the Exam signal now ends 'If no option names OAC, pick OAI.'"
+  },
+  {
+   "id": "exam-11",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "CloudFront encrypts two separate connections and each one has its own setting",
+   "quote": "A request has two legs, viewer to edge and edge to origin. Each needs **encryption in transit**.",
+   "type": "missing-content",
+   "severity": "note",
+   "evidence": "Field-level encryption appears only as a distractor in cloudfront-q006, and bullet 1.3.S3 (encrypting data in transit) is where exam items offer it ('protect sensitive form fields through the whole application stack'). The fact cloudfront-fle-layer-on-https-selected-fields ('adds an additional layer of security' for chosen fields on top of HTTPS) is verified. One sentence or a Go deeper block would let the reader recognise when field-level encryption is the right answer, not only when it is wrong.",
+   "status": "rejected",
+   "resolution": "fix-15: not applied for the 4,500-word limit of 2-deep.md (L201); field-level encryption stays in the explanation of q006."
+  },
+  {
+   "id": "exam-12",
+   "file": "15-cloudfront/2-deep.md",
+   "section": "VPC origins let CloudFront reach load balancers and instances in private subnets",
+   "quote": "Attackers now send requests to the DNS name of the load balancer directly, which bypasses the protections at CloudFront. (cloudfront-q012 stem)",
+   "type": "xref",
+   "severity": "note",
+   "evidence": "AWS WAF and AWS Shield on CloudFront are what make 'bypassing CloudFront' matter (FREQUENCY.md row 29: WAF / Shield / ACM, moderate), and the speak follow-up of cloudfront-s02 says both services integrate with AWS Shield (fact global-accelerator-faq-good-fit-non-http-static-ip-fast-failover). The prose never links to chapter 08 (edge protection), whose facts are verified. Add one sentence with an xref in the VPC origins subsection: locking the origin keeps WAF and Shield at the edge in the path.",
+   "status": "rejected",
+   "resolution": "fix-15: not applied for the 4,500-word limit of 2-deep.md (L201); AWS WAF and AWS Shield at the edge are taught in chapter 08."
+  }
+ ]
+}
